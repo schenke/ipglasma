@@ -1,6 +1,6 @@
 mode 1
 readMultFromFile 0
-size 100
+size 64
 L 4.
 Nc 3			      
 m 0.4

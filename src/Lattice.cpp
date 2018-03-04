@@ -16,7 +16,21 @@ Lattice::Lattice(Parameters *param, int N, int length)
       Cell* cell;
       cell = new Cell(Nc);
       cells.push_back(cell);
+      
     }
+
+  for (int i=0; i<length; i++)
+    {
+      for (int j=0; j<length; j++)
+	{
+          pos = i*N+j;
+	  posX = ((i+1)%N)*N+j;
+	  posY = i*N+(j+1)%N;
+          posmX.push_back();
+        }
+    }
+
+
 
 //   // x (i) is the outer loop, y (j) the inner
 //   for (int i=0; i<length; i++)

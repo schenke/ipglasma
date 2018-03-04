@@ -35,6 +35,11 @@ public:
 
   vector<Cell*> cells;         // the actual array of cells, the "lattice". cells is an array of pointers to cell objects
 
+  vector<int> posmX;
+  vector<int> pospX;
+  vector<int> posmY;
+  vector<int> pospY;
+
 };
 
 #endif

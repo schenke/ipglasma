@@ -189,7 +189,7 @@ void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dt
   Matrix En(Nc);
   Matrix phi(Nc);
   Matrix phiN(Nc); // this is \tilde{phi}_x OR \tilde{phi}_y
- 
+
   //plaquettes:
   Matrix U12(Nc);
   Matrix U1m2(Nc);
@@ -198,14 +198,13 @@ void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dt
   complex<double> trace;
   Matrix one(Nc,1.);
   
-  //#pragma omp parallel for collapse(2)
   for (int i=0; i<N; i++)
     {
       for (int j=0; j<N; j++)
 	{
 	  // define positions
 	  pos = i*N+j;
-	  posX = ((i+1)%N)*N+j;
+	  posX = ((i+1)%N)*N+j; //--> do not use % and do not recalculate every time...
 	  posY = i*N+(j+1)%N;
 	  
 	  if(i>0)

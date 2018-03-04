@@ -67,6 +67,26 @@ Lattice::~Lattice()
   for(int i=0; i<size; i++)
     delete cells[i];
   cells.clear();
-  //delete[] cells;
+}
+
+//constructor
+BufferLattice::BufferLattice(Parameters *param, int N, int length)
+{
+  Nc = N;
+  size = length*length;
+
+  for(int i=0; i<size; i++)
+    {
+      SmallCell* cell;
+      cell = new SmallCell(Nc);
+      cells.push_back(cell);
+    }
+}
+
+BufferLattice::~BufferLattice()
+{
+  for(int i=0; i<size; i++)
+    delete cells[i];
+  cells.clear();
 }
 

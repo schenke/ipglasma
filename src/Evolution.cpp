@@ -5,70 +5,68 @@
 //**************************************************************************
 // Evolution class.
 
-void Evolution::evolveU(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolveU(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
 {
   // tau is the current time. The time argument of E^i is tau+dtau/2
   // we evolve to tau+dtau
-  int Nc = param->getNc();
-  int pos;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-  int n = 2;
-  Matrix one(Nc,1.);
+  const int n = 2;
+  const Matrix one(Nc,1.);
 
-  Matrix E1(Nc);
-  Matrix E2(Nc);
+#pragma omp parallel
+  {
+    Matrix E1(Nc);
+    Matrix E2(Nc);
+    
+    Matrix temp1(Nc);
+    Matrix temp2(Nc);
+
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current E1 and E2 (that's the one defined at half a time step in the future (from tau))
+        E1 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE1();
+        //E1.expm(); // E1 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E1
+        
+        temp2 = one + 1./(double)n * E1;
+        for (int in=0; in<n-1; in++) 
+          {
+            temp1 = E1*temp2;
+            temp2 = one + 1./(double)(n-1-in) * temp1;
+          }
+        
+        E1 = temp2;
+        
+        E2 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE2();
+        // E2.expm(); // E2 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E2
+        
+        temp2 = one + 1./(double)n * E2;
+        for (int in=0; in<n-1; in++) 
+          {
+            temp1 = E2*temp2;
+            temp2 = one + 1./(double)(n-1-in) * temp1;
+          }
+        
+        E2 = temp2;
+        
+        bufferlat->cells[pos]->setbuffer1(E1*lat->cells[pos]->getUx()); 
+        bufferlat->cells[pos]->setbuffer2(E2*lat->cells[pos]->getUy()); 
+      }
   
-  Matrix temp1(Nc);
-  Matrix temp2(Nc);
-	
-  for (int i=0; i<N; i++)
-    {
-      for (int j=0; j<N; j++)
-	{
-	  pos = i*N+j;
-
-	  // retrieve current E1 and E2 (that's the one defined at half a time step in the future (from tau))
-	  E1 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE1();
-	  //E1.expm(); // E1 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E1
-
-	  temp2 = one + 1./(double)n * E1;
-	  for (int in=0; in<n-1; in++) 
-	    {
-	      temp1 = E1*temp2;
-	      temp2 = one + 1./(double)(n-1-in) * temp1;
-	    }
-	  
-	  E1 = temp2;
-	  
-	  E2 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE2();
-	  // E2.expm(); // E2 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E2
-	  
-	  temp2 = one + 1./(double)n * E2;
-	  for (int in=0; in<n-1; in++) 
-	    {
-	      temp1 = E2*temp2;
-	      temp2 = one + 1./(double)(n-1-in) * temp1;
-	    }
-	  
-	  E2 = temp2;
-	  
-	  // retrieve current Ux and Uy
-	  //Ux = lat->cells[pos]->getUx();
-	  //Uy = lat->cells[pos]->getUy();
-	  // set the new Ux and Uy (at time tau+dtau)
-
-	  //	  lat->cells[pos]->setUx(E1*lat->cells[pos]->getUx()); 
-	  //      lat->cells[pos]->setUy(E2*lat->cells[pos]->getUy()); 
-	  lat->cells[pos]->setUx(E1*lat->cells[pos]->getUx()); 
-	  lat->cells[pos]->setUy(E2*lat->cells[pos]->getUy()); 
-	}
-    }
+ #pragma omp for  
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setUx(bufferlat->cells[pos]->getbuffer1()); 
+        lat->cells[pos]->setUy(bufferlat->cells[pos]->getbuffer2()); 
+      }
+  } 
 }
+  
 
-
-void Evolution::evolvePhi(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
 {
   // tau is the current time. The time argument of pi is tau+dtau/2
   // we evolve to tau+dtau
@@ -79,23 +77,23 @@ void Evolution::evolvePhi(Lattice* lat, Group* group, Parameters *param, double 
 
   Matrix phi(Nc);
   Matrix pi(Nc);
-  
-  for (int i=0; i<N; i++)
-    {
-      for (int j=0; j<N; j++)
-	{
-	  pos = i*N+j;
-	  
-	  // retrieve current phi (at time tau)
-	  phi = lat->cells[pos]->getphi();
-	  // retrieve current pi (at time tau+dtau/2)
-	  pi = lat->cells[pos]->getpi();
 
-	  phi = phi + (tau+dtau/2.)*dtau*pi;
-	  
-	  //set the new phi (at time tau+dtau)
-	  lat->cells[pos]->setphi(phi); 
-	}
+  for (int pos=0; pos<N*N; pos++)
+    {
+      // retrieve current phi (at time tau)
+      phi = lat->cells[pos]->getphi();
+      // retrieve current pi (at time tau+dtau/2)
+      pi = lat->cells[pos]->getpi();
+      
+      phi = phi + (tau+dtau/2.)*dtau*pi;
+      
+      //set the new phi (at time tau+dtau)
+      bufferlat->cells[pos]->setbuffer1(phi); 
+    }
+  
+  for (int pos=0; pos<N*N; pos++)
+    {
+      lat->cells[pos]->setphi(bufferlat->cells[pos]->getbuffer1()); 
     }
 }
 
@@ -182,116 +180,82 @@ void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dt
   complex<double> trace;
   Matrix one(Nc,1.);
   
-  for (int i=0; i<N; i++)
+  for (int pos=0; pos<N*N; pos++)
     {
-      for (int j=0; j<N; j++)
-	{
-	  // define positions
-	  pos = i*N+j;
-	  posX = ((i+1)%N)*N+j; //--> do not use % and do not recalculate every time...
-	  posY = i*N+(j+1)%N;
-	  
-	  if(i>0)
-	    posmX = (i-1)*N+j;
-	  else
-	    posmX = (N-1)*N+j;
-	  
-	  if(j>0)
-	    posmY = i*N+(j-1);
-	  else
-	    posmY = i*N+N-1; 
-	  
-	  if(i>0)
-	    posmXpY =  (i-1)*N+(j+1)%N;
-	  else
-	    posmXpY = (N-1)*N+(j+1)%N;
-	  
-	  if(j>0)
-	    pospXmY =  ((i+1)%N)*N+j-1;
-	  else
-	    pospXmY =  ((i+1)%N)*N+N-1;
-		  
-	  // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
-	  En = lat->cells[pos]->getE1();
-	  // retrieve current phi (at time tau) at this x_T
-	  phi = lat->cells[pos]->getphi();
-	  // retrieve current phi (at time tau) at x_T+1
-	  phiN = lat->cells[posX]->getphi();
-	  // parallel transport:
-	  // retrieve current Ux and Uy
-	  Ux = lat->cells[pos]->getUx();
-	  if(i<N-1)
-	    phiN = Ux*Ux.prodABconj(phiN,Ux);
-	  else 
-	    phiN = phi;
-	
-	  // compute plaquettes:
-	  Uy = lat->cells[pos]->getUy();	  
-	  temp1 = lat->cells[posY]->getUx(); //UxYp1Dag
-	  temp1.conjg();
-	  U12 = (Ux*lat->cells[posX]->getUy())*(Ux.prodABconj(temp1,Uy));
-
-	  temp1 = lat->cells[posmY]->getUx(); //UxYm1Dag
-	  temp2 = lat->cells[pospXmY]->getUy(); //UyXp1Ym1Dag
-	  U1m2 = (Ux.prodABconj(Ux,temp2))*(Ux.prodAconjB(temp1,lat->cells[posmY]->getUy()));
-	  
-	  temp1 = lat->cells[posmX]->getUy(); //UyXm1Dag
-	  temp2 = lat->cells[posmXpY]->getUx(); //UxXm1Yp1Dag
-	  U2m1 = (Ux.prodABconj(Uy,temp2))*(Ux.prodAconjB(temp1,lat->cells[posmX]->getUx()));
-
-	  U12Dag = U12;
-	  U12Dag.conjg();
-
-	  // do E1 update:
-
-	  temp3 = U1m2;
-	  temp3.conjg();
-	  
-	  temp1 = U12;
-	  temp1 += U1m2;
-	  temp1 -= U12Dag;
-	  temp1 -= temp3;
-	  
-	  trace = temp1.trace();
-	  temp1 -= trace/static_cast<double>(Nc)*one;
-
-	  temp2 = phiN*phi - phi*phiN;
-
-	  //	  if (i>0 && i<N-1 && j>0 && j<N-1)
-	  En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
-
-	  trace = En.trace();
-	  En -= (trace/static_cast<double>(Nc))*one;
-	  lat->cells[pos]->setE1(En);
-
-	  // do E2 update:
-
-	  temp3 = U2m1;
-	  temp3.conjg();
-
-	  temp1 = U12Dag;
-	  temp1 += U2m1;
-	  temp1 -= U12;
-	  temp1 -= temp3;
-	  trace = temp1.trace();
-	  temp1 -= (trace/static_cast<double>(Nc))*one;
-
-	  phiN = lat->cells[posY]->getphi();
-	  if(j<N-1)
-	    phiN = Uy*Uy.prodABconj(phiN,Uy);
-	  else
-	    phiN = phi;
-
-	  temp2 = phiN*phi - phi*phiN;
-
-	  En = lat->cells[pos]->getE2();
-	  //if (i>0 && i<N-1 && j>0 && j<N-1)
-	  En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
-
-	  trace = En.trace();
-	  En -= (trace/static_cast<double>(Nc))*one;
-	  lat->cells[pos]->setE2(En);
-	}
+      // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
+      En = lat->cells[pos]->getE1();
+      // retrieve current phi (at time tau) at this x_T
+      phi = lat->cells[pos]->getphi();
+      // retrieve current phi (at time tau) at x_T+1
+      phiN = lat->cells[lat->pospX[pos]]->getphi();
+      // parallel transport:
+      // retrieve current Ux and Uy
+      Ux = lat->cells[pos]->getUx();
+      phiN = Ux*Ux.prodABconj(phiN,Ux);
+      
+      // compute plaquettes:
+      Uy = lat->cells[pos]->getUy();	  
+      temp1 = lat->cells[lat->pospY[pos]]->getUx(); //UxYp1Dag
+      temp1.conjg();
+      U12 = (Ux*lat->cells[lat->pospX[pos]]->getUy())*(Ux.prodABconj(temp1,Uy));
+      
+      temp1 = lat->cells[lat->posmY[pos]]->getUx(); //UxYm1Dag
+      temp2 = lat->cells[lat->pospXmY[pos]]->getUy(); //UyXp1Ym1Dag
+      U1m2 = (Ux.prodABconj(Ux,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmY[pos]]->getUy()));
+      
+      temp1 = lat->cells[lat->posmX[pos]]->getUy(); //UyXm1Dag
+      temp2 = lat->cells[lat->posmXpY[pos]]->getUx(); //UxXm1Yp1Dag
+      U2m1 = (Ux.prodABconj(Uy,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmX[pos]]->getUx()));
+      
+      U12Dag = U12;
+      U12Dag.conjg();
+      
+      // do E1 update:
+      
+      temp3 = U1m2;
+      temp3.conjg();
+      
+      temp1 = U12;
+      temp1 += U1m2;
+      temp1 -= U12Dag;
+      temp1 -= temp3;
+      
+      trace = temp1.trace();
+      temp1 -= trace/static_cast<double>(Nc)*one;
+      
+      temp2 = phiN*phi - phi*phiN;
+      
+      //	  if (i>0 && i<N-1 && j>0 && j<N-1)
+      En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+      
+      trace = En.trace();
+      En -= (trace/static_cast<double>(Nc))*one;
+      lat->cells[pos]->setE1(En);
+      
+      // do E2 update:
+      
+      temp3 = U2m1;
+      temp3.conjg();
+      
+      temp1 = U12Dag;
+      temp1 += U2m1;
+      temp1 -= U12;
+      temp1 -= temp3;
+      trace = temp1.trace();
+      temp1 -= (trace/static_cast<double>(Nc))*one;
+      
+      phiN = lat->cells[lat->pospY[pos]]->getphi();
+      phiN = Uy*Uy.prodABconj(phiN,Uy);
+      
+      temp2 = phiN*phi - phi*phiN;
+      
+      En = lat->cells[pos]->getE2();
+      //if (i>0 && i<N-1 && j>0 && j<N-1)
+      En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+      
+      trace = En.trace();
+      En -= (trace/static_cast<double>(Nc))*one;
+      lat->cells[pos]->setE2(En);
     }
 }
 
@@ -340,105 +304,52 @@ void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, dou
   Matrix one(Nc,1.);
   double largest=0;
  
-  for (int i=0; i<N; i++)
+  for (int pos=0; pos<N*N; pos++)
     {
-      for (int j=0; j<N; j++)
-	{
-	  // define positions
-	  pos = i*N+j;
-	  if(i<N-1)
-	    posX = (i+1)*N+j;
-	  else
-	    posX = j;
-	  //	    posX = pos;
-
-	  if(j<N-1)
-	    posY = i*N+(j+1);
-	  else
-	    posY = i*N;
-	  //	    posY = pos;
-
-	  if(i>0)
-	    posmX = (i-1)*N+j;
-	  else
-	    posmX = (N-1)*N+j;
-	  //posmX = pos;
-
-	  if(j>0)
-	    posmY = i*N+(j-1);
-	  else
-	    posmY = i*N+N-1;
-	  //posmY = pos;
-
-	  if(i>0 && j<N-1)
-	    posmXpY =  (i-1)*N+j+1;
-	  else if(i>0)
-	    posmXpY =  (i-1)*N;
-	  //   posmXpY =  (i-1)*N+j;
-	  else if(j<N-1)
-	    posmXpY = (N-1)*N+j+1;
-	  //  posmXpY =  (i)*N+j+1;
-	  else
-	    posmXpY = (N-1)*N;
-	  //  posmXpY = pos;
-	  
-	  if(j>0 && i<N-1)
-	    pospXmY =  (i+1)*N+j-1;
-	  else if(j>0)
-	    pospXmY =  j-1;
-	  //	    pospXmY =  (i)*N+j-1;
-	  else if(i<N-1)
-	    pospXmY =  (i+1)*N+N-1;
-	  //	    pospXmY =  (i+1)*N+j;
-	  else
-	    pospXmY = N-1;
-	  //	    pospXmY = pos;
-	
-	  // retrieve current Ux and Uy
-	  Ux = lat->cells[pos]->getUx();
-	  Uy = lat->cells[pos]->getUy();
-	  UxDag = Ux;
-	  UxDag.conjg();
-	  UyDag = Uy;
-	  UyDag.conjg();
-	  
-	  UxXm1 = lat->cells[posmX]->getUx();
-	  UxYm1 = lat->cells[posmY]->getUx();
-	  UxXm1Dag = UxXm1;
-	  UxXm1Dag.conjg();
-	  UxYm1Dag = UxYm1;
-	  UxYm1Dag.conjg();
-
-	  UyXm1 = lat->cells[posmX]->getUy();
-	  UyYm1 = lat->cells[posmY]->getUy();
-	  UyXm1Dag = UyXm1;
-	  UyXm1Dag.conjg();
-	  UyYm1Dag = UyYm1;
-	  UyYm1Dag.conjg();
-	  
-	  // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
-	  E1 = lat->cells[pos]->getE1();
-	  E2 = lat->cells[pos]->getE2();
-	  E1mX = lat->cells[posmX]->getE1();
-	  E2mY = lat->cells[posmY]->getE2();
-	  // retrieve current phi (at time tau) at this x_T
-	  phi = lat->cells[pos]->getphi();
-	  // retrieve current pi
-	  pi = lat->cells[pos]->getpi();
-	
-	  Gauss = UxXm1Dag*E1mX*UxXm1 - E1 + UyYm1Dag*E2mY*UyYm1 - E2 -complex<double>(0.,1.)*(phi*pi-pi*phi);
-
-	  //	  cout << "Gauss=" << Gauss << endl;
-
-	  if (Gauss.square()>largest && i>5 && j>5 && i<N-5 && j<N-5)
-	    largest = Gauss.square();
-
-	}
+      // retrieve current Ux and Uy
+      Ux = lat->cells[pos]->getUx();
+      Uy = lat->cells[pos]->getUy();
+      UxDag = Ux;
+      UxDag.conjg();
+      UyDag = Uy;
+      UyDag.conjg();
+      
+      UxXm1 = lat->cells[lat->posmX[pos]]->getUx();
+      UxYm1 = lat->cells[lat->posmY[pos]]->getUx();
+      UxXm1Dag = UxXm1;
+      UxXm1Dag.conjg();
+      UxYm1Dag = UxYm1;
+      UxYm1Dag.conjg();
+      
+      UyXm1 = lat->cells[lat->posmX[pos]]->getUy();
+      UyYm1 = lat->cells[lat->posmY[pos]]->getUy();
+      UyXm1Dag = UyXm1;
+      UyXm1Dag.conjg();
+      UyYm1Dag = UyYm1;
+      UyYm1Dag.conjg();
+      
+      // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
+      E1 = lat->cells[pos]->getE1();
+      E2 = lat->cells[pos]->getE2();
+      E1mX = lat->cells[lat->posmX[pos]]->getE1();
+      E2mY = lat->cells[lat->posmY[pos]]->getE2();
+      // retrieve current phi (at time tau) at this x_T
+      phi = lat->cells[pos]->getphi();
+      // retrieve current pi
+      pi = lat->cells[pos]->getpi();
+      
+      Gauss = UxXm1Dag*E1mX*UxXm1 - E1 + UyYm1Dag*E2mY*UyYm1 - E2 -complex<double>(0.,1.)*(phi*pi-pi*phi);
+      
+      //	  cout << "Gauss=" << Gauss << endl;
+      
+      if (Gauss.square()>largest)
+        largest = Gauss.square();
+      
     }
   cout << "Gauss violation=" << largest << endl;
 }
 
-void Evolution::run(Lattice* lat, Group* group, Parameters *param)
+void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parameters *param)
 {
   int nn[2];
   int Nc = param->getNc();
@@ -576,8 +487,8 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
 
   // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
   // now evolve phi and U to time tau=dtau.
-  evolvePhi(lat, group, param, dtau, 0.);
-  evolveU(lat, group, param, dtau, 0.);
+  evolvePhi(lat, bufferlat, group, param, dtau, 0.);
+  evolveU(lat, bufferlat, group, param, dtau, 0.);
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
   int it1 = static_cast<int>(floor(0.2/(a*dtau)+1e-10));
@@ -602,8 +513,8 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
 	  evolveE(lat, group, param, dtau, (it)*dtau);
 	  
 	  // evolve from time tau to tau+dtau
-	  evolvePhi(lat, group, param, dtau, (it)*dtau);
-	  evolveU(lat, group, param, dtau, (it)*dtau);
+	  evolvePhi(lat, bufferlat, group, param, dtau, (it)*dtau);
+	  evolveU(lat, bufferlat, group, param, dtau, (it)*dtau);
 	}
       else if(it==itmax)
 	{

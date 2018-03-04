@@ -277,6 +277,8 @@ int main(int argc, char *argv[])
       // allocate lattice
       Lattice *lat;
       lat = new Lattice(param, param->getNc(), param->getSize());
+      BufferLattice *bufferlat;
+      bufferlat = new BufferLattice(param, param->getNc(), param->getSize());
 
       //initialize random generator using time and seed from input file
       unsigned long long int rnum;
@@ -362,8 +364,8 @@ int main(int argc, char *argv[])
       delete glauber;
 
       // do the CYM evolution of the initialized fields using parmeters in param
-      evolution->run(lat, group, param);
-      
+      evolution->run(lat, bufferlat,  group, param);
+      delete bufferlat;
       delete lat;
     }
 

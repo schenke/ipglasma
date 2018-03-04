@@ -44,5 +44,23 @@ public:
 
 };
 
+
+class BufferLattice
+{
+private:
+
+  int size;             // the total number of cells (length*length)
+  int Nc;               // the number of colors in SU(Nc): Determines the dimension of the used matrices
+ 
+public:
+  //constructor
+  BufferLattice(Parameters *param,int N, int length);
+  //destructor
+  ~BufferLattice();
+
+  vector<SmallCell*> cells;         // the actual array of cells, the "lattice". cells is an array of pointers to cell objects
+
+};
+
 #endif
 

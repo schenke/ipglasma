@@ -177,5 +177,24 @@ public:
   //  void computeAdjointU();
 };
 
+
+class SmallCell
+{
+private:
+
+  int Nc;
+  Matrix* buffer1; 
+  Matrix* buffer2; 
+
+public:
+  SmallCell(int N);
+  ~SmallCell();
+
+  Matrix& getbuffer1() const { return *buffer1; };
+  void setbuffer1(const Matrix& x) { *buffer1 = x; };
+  Matrix& getbuffer2() const { return *buffer2; };
+  void setbuffer2(const Matrix& x) { *buffer2 = x; };
+};
+
 #endif
 

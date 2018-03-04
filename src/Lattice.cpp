@@ -11,6 +11,7 @@ Lattice::Lattice(Parameters *param, int N, int length)
 
   // initialize the array of cells
   //  cells = new Cell*[size];
+ 
   for(int i=0; i<size; i++)
     {
       Cell* cell;
@@ -23,10 +24,28 @@ Lattice::Lattice(Parameters *param, int N, int length)
     {
       for (int j=0; j<length; j++)
 	{
-          pos = i*N+j;
-	  posX = ((i+1)%N)*N+j;
-	  posY = i*N+(j+1)%N;
-          posmX.push_back();
+          // pos = i*N+j;
+          pospX.push_back(((i+1)%N)*N+j);
+          pospY.push_back(i*N+(j+1)%N);
+          
+          if(i>0)
+	    posmX.push_back((i-1)*N+j);
+	  else
+	    posmX.push_back((N-1)*N+j);
+          if(j>0)
+	    posmY.push_back(i*N+(j-1));
+	  else
+	    posmY.push_back(i*N+(N-1));
+
+          if(i>0)
+	    posmXpY.push_back((i-1)*N+(j+1)%N);
+	  else
+	    posmXpY.push_back((N-1)*N+(j+1)%N);
+	  
+	  if(j>0)
+	    pospXmY.push_back(((i+1)%N)*N+j-1);
+	  else
+	    pospXmY.push_back(((i+1)%N)*N+N-1);
         }
     }
 

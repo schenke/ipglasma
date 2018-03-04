@@ -39,6 +39,8 @@ public:
   vector<int> pospX;
   vector<int> posmY;
   vector<int> pospY;
+  vector<int> posmXpY;
+  vector<int> pospXmY;
 
 };
 

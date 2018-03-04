@@ -70,31 +70,36 @@ void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, 
 {
   // tau is the current time. The time argument of pi is tau+dtau/2
   // we evolve to tau+dtau
-  int Nc = param->getNc();
-  int pos;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-  Matrix phi(Nc);
-  Matrix pi(Nc);
 
-  for (int pos=0; pos<N*N; pos++)
-    {
-      // retrieve current phi (at time tau)
-      phi = lat->cells[pos]->getphi();
-      // retrieve current pi (at time tau+dtau/2)
-      pi = lat->cells[pos]->getpi();
-      
-      phi = phi + (tau+dtau/2.)*dtau*pi;
-      
-      //set the new phi (at time tau+dtau)
-      bufferlat->cells[pos]->setbuffer1(phi); 
-    }
-  
-  for (int pos=0; pos<N*N; pos++)
-    {
-      lat->cells[pos]->setphi(bufferlat->cells[pos]->getbuffer1()); 
-    }
+#pragma omp parallel
+  {
+    Matrix phi(Nc);
+    Matrix pi(Nc);
+    
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current phi (at time tau)
+        phi = lat->cells[pos]->getphi();
+        // retrieve current pi (at time tau+dtau/2)
+        pi = lat->cells[pos]->getpi();
+        
+        phi = phi + (tau+dtau/2.)*dtau*pi;
+        
+        //set the new phi (at time tau+dtau)
+        bufferlat->cells[pos]->setbuffer1(phi); 
+      }
+ 
+#pragma omp for   
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setphi(bufferlat->cells[pos]->getbuffer1()); 
+      }
+  }
 }
 
 void Evolution::evolvePi(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)

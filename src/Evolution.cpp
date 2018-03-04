@@ -286,35 +286,34 @@ void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Pa
 
 void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
 {
-  int Nc = param->getNc();
-  int pos, posX, posY, posmX, posmY, posmXpY, pospXmY;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
   Matrix Ux(Nc);
   Matrix UxXm1(Nc);
   Matrix UxYp1(Nc);
   Matrix UxYm1(Nc);
   Matrix UxXm1Yp1(Nc);
-
+  
   Matrix Uy(Nc);
   Matrix UyXm1(Nc);
   Matrix UyXp1(Nc);
   Matrix UyYm1(Nc);
   Matrix UyXp1Ym1(Nc);
-
+  
   Matrix UxDag(Nc);
   Matrix UxXm1Dag(Nc);
   Matrix UxYp1Dag(Nc);
   Matrix UxYm1Dag(Nc);
   Matrix UxXm1Yp1Dag(Nc);
-
+  
   Matrix UyDag(Nc);
   Matrix UyXm1Dag(Nc);
   Matrix UyXp1Dag(Nc);
   Matrix UyYm1Dag(Nc);
   Matrix UyXp1Ym1Dag(Nc);
-
+  
   Matrix E1(Nc);
   Matrix E2(Nc);
   Matrix E1mX(Nc);
@@ -323,12 +322,12 @@ void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, dou
   Matrix pi(Nc);
   Matrix phiX(Nc); // this is \tilde{phi}_x
   Matrix phiY(Nc); // this is \tilde{phi}_y
- 
+  
   Matrix Gauss(Nc);
   complex<double> trace;
   Matrix one(Nc,1.);
   double largest=0;
- 
+  
   for (int pos=0; pos<N*N; pos++)
     {
       // retrieve current Ux and Uy
@@ -364,8 +363,6 @@ void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, dou
       pi = lat->cells[pos]->getpi();
       
       Gauss = UxXm1Dag*E1mX*UxXm1 - E1 + UyYm1Dag*E2mY*UyYm1 - E2 -complex<double>(0.,1.)*(phi*pi-pi*phi);
-      
-      //	  cout << "Gauss=" << Gauss << endl;
       
       if (Gauss.square()>largest)
         largest = Gauss.square();

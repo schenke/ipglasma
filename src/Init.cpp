@@ -1641,444 +1641,179 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber)
 {
-  int pos;
-  int N = param->getSize();
-  int Ny=param->getNy();
-  int Nc = param->getNc();
-  int Nc2m1 = Nc*Nc-1;
-  int nn[2];
-  nn[0]=N;
-  nn[1]=N; 
+  const int N = param->getSize();
+  const int Ny=param->getNy();
+  const int Nc = param->getNc();
+  const int Nc2m1 = Nc*Nc-1;
+  const int nn[2] = {N,N};
 
-  double corr;
-  double g2mu;
-  double L = param->getL();
-  double x, y;
-  double a = L/N; // lattice spacing in fm
-  double kt2, kx, ky;
-  double m = param->getm(); //GeV
-  m=m*a/hbarc;
-  double temp3;
-  Matrix** rhoA;
-  Matrix** rhoB;
-  Matrix** AA;
-  Matrix** AB;
-  Matrix temp(Nc,1.);
-  Matrix temp2(Nc,0.);
-  Matrix tempNew(Nc,0.);
-  Matrix Udag(Nc);
-  Matrix zero(Nc,0.);
-  Matrix one(Nc,1.);
- 
-  //  rhoA = new Matrix*[N*N];
-  //rhoB = new Matrix*[N*N];
+#pragma omp parallel
+  {
+    int pos;
+    double corr;
+    double g2mu;
+    double L = param->getL();
+    double x, y;
+    double a = L/N; // lattice spacing in fm
+    double kt2, kx, ky;
+    double m = param->getm(); //GeV
+    m=m*a/hbarc;
+    double temp3;
+    Matrix** rhoA;
+    Matrix** rhoB;
+    Matrix** AA;
+    Matrix** AB;
+    Matrix temp(Nc,1.);
+    Matrix temp2(Nc,0.);
+    Matrix tempNew(Nc,0.);
+    Matrix Udag(Nc);
+    Matrix zero(Nc,0.);
+    Matrix one(Nc,1.);
+    
+    complex<double>** rhoACoeff;
+    complex<double>** rhoBCoeff;
+    
+    rhoACoeff = new complex<double>*[Nc2m1];
+    rhoBCoeff = new complex<double>*[Nc2m1];
+    
+#pragma omp for
+    for(int i=0; i<Nc2m1; i++)
+      {
+        rhoACoeff[i] = new complex<double>[N*N];
+        rhoBCoeff[i] = new complex<double>[N*N];
+      }
+    
+    // loop over longitudinal direction
 
-  //AA = new Matrix*[N*N];
-  //AB = new Matrix*[N*N];
-
-
-  
-
-
-  complex<double>** rhoACoeff;
-  complex<double>** rhoBCoeff;
-
-  rhoACoeff = new complex<double>*[Nc2m1];
-  rhoBCoeff = new complex<double>*[Nc2m1];
-
-  for(int i=0; i<Nc2m1; i++)
-    {
-      rhoACoeff[i] = new complex<double>[N*N];
-      rhoBCoeff[i] = new complex<double>[N*N];
-    }
-  
-
-  // loop over longitudinal direction
-  for(int k=0; k<Ny; k++)
-    {
-
-      //  for(int i=0; i<N*N; i++)
-      //	{
-	  // rhoA[i] = new Matrix(Nc,0.);
-      	  //rhoB[i] = new Matrix(Nc,0.);
-	  //	  AA[i] = new Matrix(Nc,0.);
-      	  //AB[i] = new Matrix(Nc,0.);
-      //	}
-   
-
-     // compute \rho
-      for (int i=0; i<N; i++)
-	{
-	  for (int j=0; j<N; j++)
-	    {
-	      pos = i*N+j;
-	      for(int n=0; n<Nc2m1; n++)
-		{
-		  g2mu = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
-		  rhoACoeff[n][pos] = g2mu*random->Gauss();
-		  //	  *rhoA[pos]+=rhoACoeff[n][pos]*group->getT(n);
-		  g2mu = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
-		  rhoBCoeff[n][pos] = g2mu*random->Gauss();
-		  //*rhoB[pos]+=rhoBCoeff[n][pos]*group->getT(n);
-		}
-	    }
-	}
-   
-
-      // --------
-
-
-      //// output rho 
-      //      if(k==0)
-      // 	{
-      	  // ofstream foutr("RhoOne.txt",ios::out); 
-      	  // for(int ix=0; ix<N; ix++)
-      	  //   {
-      	  //     for(int iy=0; iy<N; iy++) // loop over all positions
-      	  // 	{
-      	  // 	  pos = ix*N+iy;
-      	  // 	  foutr << ix << " " << iy << " " << setprecision(17) << rhoACoeff[0][pos] << " " << rhoACoeff[1][pos] << " " << rhoACoeff[2][pos] << " " << rhoACoeff[3][pos] << " " << rhoACoeff[4][pos] << " " << rhoACoeff[5][pos] << " " << rhoACoeff[6][pos] << " " << rhoACoeff[7][pos] <<  endl;
-      	  // 	}
-      	  //   }
-      	  // foutr.close();
-      	  // ofstream foutr2("RhoTwo.txt",ios::out); 
-      	  // for(int ix=0; ix<N; ix++)
-      	  //   {
-      	  //     for(int iy=0; iy<N; iy++) // loop over all positions
-      	  // 	{
-      	  // 	  pos = ix*N+iy;
-      	  // 	  foutr2 << ix << " " << iy << " " << setprecision(17) << rhoBCoeff[0][pos] << " " << rhoBCoeff[1][pos] << " " << rhoBCoeff[2][pos] << endl;
-      	  // 	}
-      	  //   }
-      	  // foutr2.close();
-	  //      	  cout << "wrote rho's into file." << endl;
-      
-      //	}
-
-      // delete [] rhoACoeff;
-      //delete [] rhoBCoeff;
-
-	  
-      // for (int i=0; i<N; i++)
-      // 	{
-      // 	  for (int j=0; j<N; j++)
-      // 	    {
-      // 	      pos = i*N+j;
-      // 	      if (j==N/2)
-      // 		{
-      // 		  cout << "k=" << k << ", i=" << i << ", rhoB=" << *rhoB[pos] << endl;
-      // 		}
-      // 	    }
-      // 	}
-      
-      // --------
-
-
-      // Fourier transform rho
-      // fft->fftn(rhoA,AA,nn,2,1);
-      // fft->fftn(rhoB,AB,nn,2,1);
-
-  
-      // begin new
+    for(int k=0; k<Ny; k++)
+      {
+        // compute \rho
+#pragma omp for
+        for (int pos=0; pos<nn[0]*nn[1]; pos++)
+          {
+            for(int n=0; n<Nc2m1; n++)
+              {
+                g2mu = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
+                rhoACoeff[n][pos] = g2mu*random->Gauss();
+                //	  *rhoA[pos]+=rhoACoeff[n][pos]*group->getT(n);
+                g2mu = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
+                rhoBCoeff[n][pos] = g2mu*random->Gauss();
+                //*rhoB[pos]+=rhoBCoeff[n][pos]*group->getT(n);
+              }
+          }
+#pragma omp for  
       for(int n=0; n<Nc2m1; n++)
 	{
 	  fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
 	  fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
 	}
-      // end new
  
       // compute A^+
-      for (int i=0; i<N; i++)
+      
+#pragma omp for collapse(2)
+      for (int i=0; i<nn[0]; i++)
 	{
-	  for (int j=0; j<N; j++)
-	    {
-	      pos = i*N+j;
-	      kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-	      ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
-	      kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
-	      if(m==0)
-		{
-		  if(kt2!=0)
-		    {
-
-		      // begin new
-		      for(int n=0; n<Nc2m1; n++)
-			{
-			  rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2));
-			  rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2));
-			}
-		      // end new
-		      //*AA[pos] = *AA[pos]*(1./(kt2)); // rho contains A to save memory // check a's, is dimensionless as it should be
-		      //*AB[pos] = *AB[pos]*(1./(kt2)); // rho contains A to save memory
-		    }
-		  else
-		    {
-		      // begin new
-		      for(int n=0; n<Nc2m1; n++)
-			{
-			  rhoACoeff[n][pos] = 0.;
-			  rhoBCoeff[n][pos] = 0.;
-			}
-		      // end new
-		      //*AA[pos] = zero; // rho contains A to save memory // check a's, is dimensionless as it should be
-		      //*AB[pos] = zero; // rho contains A to save memory
-		    }
-		}
-	      else
-		{
-		  // begin new
-		  for(int n=0; n<Nc2m1; n++)
-		    {
-		      rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2+m*m));
-		      rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2+m*m));
-	
-		    }
-		  // end new
-		  //		  *AA[pos] = *AA[pos]*(1./(kt2+m*m)); // rho contains A to save memory // check a's, is dimensionless as it should be
-		  //*AB[pos] = *AB[pos]*(1./(kt2+m*m)); // rho contains A to save memory
-		}
-	    }
-	}
+          for (int j=0; j<nn[1]; j++)
+            {
+              pos = i*N+j; 
+              kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+              ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+              kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
+              if(m==0)
+                {
+                  if(kt2!=0)
+                    {
+                      for(int n=0; n<Nc2m1; n++)
+                        {
+                          rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2));
+                          rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2));
+                        }
+                }
+                  else
+                    {
+                      for(int n=0; n<Nc2m1; n++)
+                        {
+                      rhoACoeff[n][pos] = 0.;
+                      rhoBCoeff[n][pos] = 0.;
+                        }
+                    }
+                }
+              else
+                {
+                  for(int n=0; n<Nc2m1; n++)
+                    {
+                      rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2+m*m));
+                      rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2+m*m));
+                      
+                    }
+                }
+            }
+        }
       
       // Fourier transform back A^+
-      //fft->fftn(AA,AA,nn,2,-1);
-      //fft->fftn(AB,AB,nn,2,-1);
-
-      // begin new
+#pragma omp for
       for(int n=0; n<Nc2m1; n++)
-	{
-	  fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
-	  fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
-	}
-      // end new
-
+        {
+          fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+          fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
+        }
       
-
-      // --------
-
-      // // output phi
-      //      if(k==0)
-      // 	{
-      	  // ofstream foutph("PhiOne.txt",ios::out); 
-      	  // for(int ix=0; ix<N; ix++)
-      	  //   {
-      	  //     for(int iy=0; iy<N; iy++) // loop over all positions
-      	  // 	{
-      	  // 	  pos = ix*N+iy;
-	  // 	  //      		  foutph << ix << " " << iy << " " <<  setprecision(17) << 2.* ((*AA[pos])*group->getT(0)).trace().real() << " "
-	  // 	  //	 << 2.* ((*AA[pos])*group->getT(1)).trace().real() << " " << 2.* ((*AA[pos])*group->getT(2)).trace().real() << endl;
-      	  // 	  foutph << ix << " " << iy << " " <<  setprecision(17) 
-	  // 		 << (*AA[pos]).MatrixToString() << endl;
-		  
-      	  // 	}
-      	  //   }
-   
-
-
-   // 	  foutph.close();
-      // 	  ofstream foutph2("PhiTwo.txt",ios::out); 
-      // 	  for(int ix=0; ix<N; ix++)
-      // 	    {
-//       // 	      for(int iy=0; iy<N; iy++) // loop over all positions
-//       // 		{
-//       // 		  pos = ix*N+iy;
-//       // 		  foutph2 << ix << " " << iy << " " << setprecision(17) << 2.* ((*AB[pos])*group->getT(0)).trace().real() << " "
-//       // 			  << 2.* ((*AB[pos])*group->getT(1)).trace().real() << " " << 2.* ((*AB[pos])*group->getT(2)).trace().real() << endl;
-
-//       // 		}
-//       // 	    }
-//       // 	  foutph2.close();
-//       	}
-
-//       // --------
-
-      
-// //       double distanceA, distanceB;
-// //       double BG=param->getBG();
-// //       int check=0;
-
-//       // clean up noise where it shouldn't be - far away from interaction region: causes problems with convergence when solving for U3
-//  //      for (int i=0; i<N; i++)
-// // 	{
-// // 	  for (int j=0; j<N; j++)
-// // 	    {
-// // 	      pos = i*N+j;
-	     
-	   
-// // 	      if(lat->cells[pos]->getTpA() < 0.0019)
-// // 		{
-// // 		  check=1;
-// // 		}
-	      
-// // 	      if(lat->cells[pos]->getTpB() < 0.0019 && check==1)
-// // 		{		
-// // 		  check=2;
-// // 		}
-	  
-// // 	      //if(*rhoB[pos]==zero && *rhoA[pos]==zero && check==2)
-// // 	      if( check==2)
-// // 		{
-// // 		  *AA[pos] = zero;
-// // 		  *AB[pos] = zero;
-// // 		}
-// // 	    }
-      //	}      
-
-
-      
-      
-      // begin new
-      // for (int i=0; i<N; i++)
-      // 	{
-      // 	  for (int j=0; j<N; j++)
-      // 	    {
-      // 	      pos = i*N+j;
-      // 	      *rhoA[pos]=zero;
-      // 	      *rhoB[pos]=zero;
-      // 	    }
-      // 	}
-
-
-      // for (int i=0; i<N; i++)
-      // 	{
-      // 	  for (int j=0; j<N; j++)
-      // 	    {
-      // 	      pos = i*N+j;
-      // 	      for(int n=0; n<Nc2m1; n++)
-      // 		{
-      // 		  *rhoA[pos]+=rhoACoeff[n][pos]*group->getT(n);
-      // 		  *rhoB[pos]+=rhoBCoeff[n][pos]*group->getT(n);
-      // 		}
-      // 	    }
-      // 	}
-    
-
-      // for (int i=0; i<N; i++)
-      // 	{
-      // 	  for (int j=0; j<N; j++)
-      // 	    {
-      // 	      pos = i*N+j;
-	      
-      // 	      cout << "new: \n" <<*rhoA[pos] << " \n old:\n" << *AA[pos] << endl;
-      // 	    }
-      // 	}
-      
-      //      exit(1);
-      // end new
-  
       double in[8];
       vector <complex<double> > U;
       // compute U
-
+      
       // new method
       //  clock_t start;
       //double duration;
       //start = clock();
-      for (int i=0; i<nn[0]; i++)
-	{
-	  for (int j=0; j<nn[1]; j++)
-	    {
-	      pos = i*N+j;
-	      
-	      for (int a=0; a<Nc2m1; a++)
-		{
-		  in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
-		}
-	      
-	      U = temp2.expmCoeff(in, Nc);
-
-	      // if(U[0].real()!=U[0].real())
-	      // 	{
-	      // 	  cout << "PROBLEM 1" << " " << g2mu << endl;
-	      // 	  for (int a=0; a<Nc2m1; a++)
-	      // 	    {
-	      // 	      cout << in[a] << endl; 
-	      // 	    }
-	      // 	}
-	      
-	      tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
-		U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
-
-	      temp = tempNew * lat->cells[pos]->getU();
-	      // set U
-	      lat->cells[pos]->setU(temp);
-	      
-	      
-	      for (int a=0; a<Nc2m1; a++)
-		{
-		  in[a] = -(rhoBCoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
-		}
-	      
-	      U = temp2.expmCoeff(in, Nc);
-	      
-	      // if(U[0].real()!=U[0].real())
-	      // 	{
-	      // 	  cout << "PROBLEM" << endl;
-	      // 	}
-	      
-
-	      tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
-		U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
-
-	      temp = tempNew * lat->cells[pos]->getU2();
-
-	      // set U
-	      lat->cells[pos]->setU2(temp);
-	    }
-	}
-      //      duration = ( clock() - start ) / (double) CLOCKS_PER_SEC;
-      // cout << "duration of new method = " << duration << endl;
-     
-      // start = clock();
-      // // old method
-      // for (int i=0; i<nn[0]; i++)
-      // 	{
-      // 	  for (int j=0; j<nn[1]; j++)
-      // 	    {
-      // 	      pos = i*N+j;
-	      
-      // 	      //multiply by -i:
-      // 	      temp2=complex<double>(0.,-1.)*(*AA[pos]);
-      // 	      temp2.expm();
-
-      // 	      temp = temp2 * lat->cells[pos]->getU();
-      // 	      // set U
-      // 	      lat->cells[pos]->setU(temp);
-	      
-      // 	      if(i==0 && j ==0)
-      // 		cout << "OLD: " << endl << temp2 << endl;
-
-      // 	      //multiply by -i:
-      // 	      temp2=complex<double>(0.,-1.)*(*AB[pos]);
-      // 	      temp2.expm();
+#pragma omp for
+      for (int pos=0; pos<nn[0]*nn[1]; pos++)
+        {
+          for (int a=0; a<Nc2m1; a++)
+            {
+              in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+            }
+          
+          U = temp2.expmCoeff(in, Nc);
+          
+          tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
+            U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
+          
+          temp = tempNew * lat->cells[pos]->getU();
+          // set U
+          lat->cells[pos]->setU(temp);
+          
+          for (int a=0; a<Nc2m1; a++)
+            {
+              in[a] = -(rhoBCoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+            }
+          
+          U = temp2.expmCoeff(in, Nc);
+          
+          
+          tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
+            U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
+          
+          temp = tempNew * lat->cells[pos]->getU2();
+          
+          // set U
+          lat->cells[pos]->setU2(temp);
+        }
+      }//Ny loop
+    
+#pragma omp for
+    for(int ic=0; ic<Nc2m1; ic++)
+      {
+        delete [] rhoACoeff[ic];
+        delete [] rhoBCoeff[ic];
+      }
+    delete [] rhoACoeff;
+    delete [] rhoBCoeff;
+  }
+  //output of U loop over index (real imag)
   
-      // 	      temp = temp2 * lat->cells[pos]->getU2();
-
-      // 	      // set U
-      // 	      lat->cells[pos]->setU2(temp);
-      // 	    }
-      // 	}
-
-      // duration = ( clock() - start ) / (double) CLOCKS_PER_SEC;
-      // cout << "duration of old method = " << duration << endl;
-      
-      
-
-    }//Ny loop
-
-      for(int ic=0; ic<Nc2m1; ic++)
-      	{
-       	  delete [] rhoACoeff[ic];
-       	  delete [] rhoBCoeff[ic];
-       	}
-      delete [] rhoACoeff;
-      delete [] rhoBCoeff;
-
-
-   //output of U loop over index (real imag)
-
   // --------
-
+  
   
         
   // // output U

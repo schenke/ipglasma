@@ -17,7 +17,6 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
   
   double a_data[128];
 
-#pragma omp prallel   
   for(int i=0; i<64; i++)
     {
       a_data[2*i] = real(A[i]); 

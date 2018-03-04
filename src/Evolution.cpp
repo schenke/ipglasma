@@ -102,166 +102,186 @@ void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, 
   }
 }
 
-void Evolution::evolvePi(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolvePi(Lattice* lat, BufferLattice * bufferlat, Group* group, Parameters *param, double dtau, double tau)
 {
-  int Nc = param->getNc();
-  int pos, posX, posY, posmX, posmY;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-  Matrix Ux(Nc);
-  Matrix Uy(Nc);
-  Matrix UxXm1(Nc);
-  Matrix UyYm1(Nc);
+#pragma omp parallel 
+  {
+    Matrix Ux(Nc);
+    Matrix Uy(Nc);
+    Matrix UxXm1(Nc);
+    Matrix UyYm1(Nc);
+    
+    Matrix phi(Nc);
+    Matrix phiX(Nc); // this is \tilde{phi}_x
+    Matrix phiY(Nc); // this is \tilde{phi}_y
+    Matrix phimX(Nc); // this is \tilde{-phi}_x
+    Matrix phimY(Nc); // this is \tilde{-phi}_y
+    Matrix bracket(Nc); // this will hold [phiX+phimX-2*phi+phiY+phimY-2*phi]
+    Matrix pi(Nc);
+    Matrix one(Nc,1.);  
+    // Matrix zero(Nc,0.);  
+    
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current Ux and Uy and compute conjugates
+        Ux = lat->cells[pos]->getUx();
+        Uy = lat->cells[pos]->getUy();
+        // retrieve current pi (at time tau-dtau/2)
+        pi = lat->cells[pos]->getpi();
+        // retrieve current phi (at time tau) at this x_T
+        phi = lat->cells[pos]->getphi();
+        
+        // retrieve current phi (at time tau) at x_T+1
+        // parallel transport:
+        phiX = Ux*Ux.prodABconj(lat->cells[lat->pospX[pos]]->getphi(),Ux);
+        phiY = Uy*Uy.prodABconj(lat->cells[lat->pospY[pos]]->getphi(),Uy);
+        
+        // phi_{-x} should be defined as UxD*phimX*Ux with the Ux and UxD reversed from the phi_{+x} case
+        // retrieve current phi (at time tau) at x_T-1
+        // parallel transport:
+        UxXm1 = lat->cells[lat->posmX[pos]]->getUx();
+        UyYm1 = lat->cells[lat->posmY[pos]]->getUy();
+        
+        phimX = Ux.prodAconjB(UxXm1,lat->cells[lat->posmX[pos]]->getphi())*UxXm1;
+        phimY = Ux.prodAconjB(UyYm1,lat->cells[lat->posmY[pos]]->getphi())*UyYm1;
+        
+        bracket = phiX + phimX + phiY + phimY - 4.*phi; // sum over both directions is included here 
+        
+        //	  if (i>0 && i<N-1 && j>0 && j<N-1)
+        pi += dtau/(tau)*bracket; // divide by \tau because this is computing pi(tau+dtau/2) from pi(tau-dtau/2) and phi(tau)
+        
+        //pi = pi - pi.trace()/static_cast<double>(Nc)*one;
+        
+        // set the new pi (at time tau+dtau/2)
 
-  Matrix phi(Nc);
-  Matrix phiX(Nc); // this is \tilde{phi}_x
-  Matrix phiY(Nc); // this is \tilde{phi}_y
-  Matrix phimX(Nc); // this is \tilde{-phi}_x
-  Matrix phimY(Nc); // this is \tilde{-phi}_y
-  Matrix bracket(Nc); // this will hold [phiX+phimX-2*phi+phiY+phimY-2*phi]
-  Matrix pi(Nc);
-  Matrix one(Nc,1.);  
-  // Matrix zero(Nc,0.);  
+        bufferlat->cells[pos]->setbuffer1(pi); 
 
-  for (int pos=0; pos<N*N; pos++)
-    {
-      // retrieve current Ux and Uy and compute conjugates
-      Ux = lat->cells[pos]->getUx();
-      Uy = lat->cells[pos]->getUy();
-      // retrieve current pi (at time tau-dtau/2)
-      pi = lat->cells[pos]->getpi();
-      // retrieve current phi (at time tau) at this x_T
-      phi = lat->cells[pos]->getphi();
-      
-      // retrieve current phi (at time tau) at x_T+1
-      // parallel transport:
-      phiX = Ux*Ux.prodABconj(lat->cells[lat->pospX[pos]]->getphi(),Ux);
-      phiY = Uy*Uy.prodABconj(lat->cells[lat->pospY[pos]]->getphi(),Uy);
-      
-      // phi_{-x} should be defined as UxD*phimX*Ux with the Ux and UxD reversed from the phi_{+x} case
-      // retrieve current phi (at time tau) at x_T-1
-      // parallel transport:
-      UxXm1 = lat->cells[lat->posmX[pos]]->getUx();
-      UyYm1 = lat->cells[lat->posmY[pos]]->getUy();
-      
-      phimX = Ux.prodAconjB(UxXm1,lat->cells[lat->posmX[pos]]->getphi())*UxXm1;
-      phimY = Ux.prodAconjB(UyYm1,lat->cells[lat->posmY[pos]]->getphi())*UyYm1;
-      
-      bracket = phiX + phimX + phiY + phimY - 4.*phi; // sum over both directions is included here 
-      
-      //	  if (i>0 && i<N-1 && j>0 && j<N-1)
-      pi += dtau/(tau)*bracket; // divide by \tau because this is computing pi(tau+dtau/2) from pi(tau-dtau/2) and phi(tau)
-      
-      //pi = pi - pi.trace()/static_cast<double>(Nc)*one;
-      
-      // set the new pi (at time tau+dtau/2)
-      lat->cells[pos]->setpi(pi); 
-    }
+      }
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setpi(bufferlat->cells[pos]->getbuffer1()); 
+      }
+  }
 }
 
-
-void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
 {
-  int Nc = param->getNc();
-  int pos, posX, posY, posmX, posmY, posmXpY, pospXmY;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-  Matrix Ux(Nc);
-  Matrix Uy(Nc);
-  Matrix temp1(Nc); // can contain p or m
-  Matrix temp2(Nc);
-  Matrix temp3(Nc);
-  Matrix En(Nc);
-  Matrix phi(Nc);
-  Matrix phiN(Nc); // this is \tilde{phi}_x OR \tilde{phi}_y
+#pragma omp parallel
+  {
+    Matrix Ux(Nc);
+    Matrix Uy(Nc);
+    Matrix temp1(Nc); // can contain p or m
+    Matrix temp2(Nc);
+    Matrix temp3(Nc);
+    Matrix En(Nc);
+    Matrix phi(Nc);
+    Matrix phiN(Nc); // this is \tilde{phi}_x OR \tilde{phi}_y
+    
+    //plaquettes:
+    Matrix U12(Nc);
+    Matrix U1m2(Nc);
+    Matrix U12Dag(Nc); // equals (U21)
+    Matrix U2m1(Nc);
+    complex<double> trace;
+    Matrix one(Nc,1.);
+    
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
+        En = lat->cells[pos]->getE1();
+        // retrieve current phi (at time tau) at this x_T
+        phi = lat->cells[pos]->getphi();
+        // retrieve current phi (at time tau) at x_T+1
+        phiN = lat->cells[lat->pospX[pos]]->getphi();
+        // parallel transport:
+        // retrieve current Ux and Uy
+        Ux = lat->cells[pos]->getUx();
+        phiN = Ux*Ux.prodABconj(phiN,Ux);
+        
+        // compute plaquettes:
+        Uy = lat->cells[pos]->getUy();	  
+        temp1 = lat->cells[lat->pospY[pos]]->getUx(); //UxYp1Dag
+        temp1.conjg();
+        U12 = (Ux*lat->cells[lat->pospX[pos]]->getUy())*(Ux.prodABconj(temp1,Uy));
+        
+        temp1 = lat->cells[lat->posmY[pos]]->getUx(); //UxYm1Dag
+        temp2 = lat->cells[lat->pospXmY[pos]]->getUy(); //UyXp1Ym1Dag
+        U1m2 = (Ux.prodABconj(Ux,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmY[pos]]->getUy()));
+        
+        temp1 = lat->cells[lat->posmX[pos]]->getUy(); //UyXm1Dag
+        temp2 = lat->cells[lat->posmXpY[pos]]->getUx(); //UxXm1Yp1Dag
+        U2m1 = (Ux.prodABconj(Uy,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmX[pos]]->getUx()));
+        
+        U12Dag = U12;
+        U12Dag.conjg();
+        
+        // do E1 update:
+        
+        temp3 = U1m2;
+        temp3.conjg();
+        
+        temp1 = U12;
+        temp1 += U1m2;
+        temp1 -= U12Dag;
+        temp1 -= temp3;
+        
+        trace = temp1.trace();
+        temp1 -= trace/static_cast<double>(Nc)*one;
+        
+        temp2 = phiN*phi - phi*phiN;
+        
+        //	  if (i>0 && i<N-1 && j>0 && j<N-1)
+        En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+        
+        trace = En.trace();
+        En -= (trace/static_cast<double>(Nc))*one;
+        bufferlat->cells[pos]->setbuffer1(En); 
+       
+        
+        // do E2 update:
+        
+        temp3 = U2m1;
+        temp3.conjg();
+        
+        temp1 = U12Dag;
+        temp1 += U2m1;
+        temp1 -= U12;
+        temp1 -= temp3;
+        trace = temp1.trace();
+        temp1 -= (trace/static_cast<double>(Nc))*one;
+        
+        phiN = lat->cells[lat->pospY[pos]]->getphi();
+        phiN = Uy*Uy.prodABconj(phiN,Uy);
+        
+        temp2 = phiN*phi - phi*phiN;
+        
+        En = lat->cells[pos]->getE2();
+        //if (i>0 && i<N-1 && j>0 && j<N-1)
+        En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+        
+        trace = En.trace();
+        En -= (trace/static_cast<double>(Nc))*one;
+        bufferlat->cells[pos]->setbuffer2(En); 
+      }
 
-  //plaquettes:
-  Matrix U12(Nc);
-  Matrix U1m2(Nc);
-  Matrix U12Dag(Nc); // equals (U21)
-  Matrix U2m1(Nc);
-  complex<double> trace;
-  Matrix one(Nc,1.);
-  
-  for (int pos=0; pos<N*N; pos++)
-    {
-      // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
-      En = lat->cells[pos]->getE1();
-      // retrieve current phi (at time tau) at this x_T
-      phi = lat->cells[pos]->getphi();
-      // retrieve current phi (at time tau) at x_T+1
-      phiN = lat->cells[lat->pospX[pos]]->getphi();
-      // parallel transport:
-      // retrieve current Ux and Uy
-      Ux = lat->cells[pos]->getUx();
-      phiN = Ux*Ux.prodABconj(phiN,Ux);
-      
-      // compute plaquettes:
-      Uy = lat->cells[pos]->getUy();	  
-      temp1 = lat->cells[lat->pospY[pos]]->getUx(); //UxYp1Dag
-      temp1.conjg();
-      U12 = (Ux*lat->cells[lat->pospX[pos]]->getUy())*(Ux.prodABconj(temp1,Uy));
-      
-      temp1 = lat->cells[lat->posmY[pos]]->getUx(); //UxYm1Dag
-      temp2 = lat->cells[lat->pospXmY[pos]]->getUy(); //UyXp1Ym1Dag
-      U1m2 = (Ux.prodABconj(Ux,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmY[pos]]->getUy()));
-      
-      temp1 = lat->cells[lat->posmX[pos]]->getUy(); //UyXm1Dag
-      temp2 = lat->cells[lat->posmXpY[pos]]->getUx(); //UxXm1Yp1Dag
-      U2m1 = (Ux.prodABconj(Uy,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmX[pos]]->getUx()));
-      
-      U12Dag = U12;
-      U12Dag.conjg();
-      
-      // do E1 update:
-      
-      temp3 = U1m2;
-      temp3.conjg();
-      
-      temp1 = U12;
-      temp1 += U1m2;
-      temp1 -= U12Dag;
-      temp1 -= temp3;
-      
-      trace = temp1.trace();
-      temp1 -= trace/static_cast<double>(Nc)*one;
-      
-      temp2 = phiN*phi - phi*phiN;
-      
-      //	  if (i>0 && i<N-1 && j>0 && j<N-1)
-      En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
-      
-      trace = En.trace();
-      En -= (trace/static_cast<double>(Nc))*one;
-      lat->cells[pos]->setE1(En);
-      
-      // do E2 update:
-      
-      temp3 = U2m1;
-      temp3.conjg();
-      
-      temp1 = U12Dag;
-      temp1 += U2m1;
-      temp1 -= U12;
-      temp1 -= temp3;
-      trace = temp1.trace();
-      temp1 -= (trace/static_cast<double>(Nc))*one;
-      
-      phiN = lat->cells[lat->pospY[pos]]->getphi();
-      phiN = Uy*Uy.prodABconj(phiN,Uy);
-      
-      temp2 = phiN*phi - phi*phiN;
-      
-      En = lat->cells[pos]->getE2();
-      //if (i>0 && i<N-1 && j>0 && j<N-1)
-      En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
-      
-      trace = En.trace();
-      En -= (trace/static_cast<double>(Nc))*one;
-      lat->cells[pos]->setE2(En);
-    }
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setE1(bufferlat->cells[pos]->getbuffer1());
+        lat->cells[pos]->setE2(bufferlat->cells[pos]->getbuffer2());
+      }
+  }
 }
 
 void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
@@ -514,8 +534,8 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       // evolve from time tau-dtau/2 to tau+dtau/2 
       if (it<itmax)
 	{
-	  evolvePi(lat, group, param, dtau, (it)*dtau); // the last argument is the current time tau. 
-	  evolveE(lat, group, param, dtau, (it)*dtau);
+	  evolvePi(lat, bufferlat, group, param, dtau, (it)*dtau); // the last argument is the current time tau. 
+	  evolveE(lat, bufferlat, group, param, dtau, (it)*dtau);
 	  
 	  // evolve from time tau to tau+dtau
 	  evolvePhi(lat, bufferlat, group, param, dtau, (it)*dtau);
@@ -523,8 +543,8 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 	}
       else if(it==itmax)
 	{
-	  evolvePi(lat, group, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
-	  evolveE(lat, group, param, dtau/2., (it)*dtau);
+	  evolvePi(lat, bufferlat, group, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
+	  evolveE(lat, bufferlat, group, param, dtau/2., (it)*dtau);
   	}
 
       //      Tmunu(lat,group,param,it);

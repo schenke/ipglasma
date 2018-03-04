@@ -59,8 +59,8 @@ class Evolution {
   void evolveU(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau);
   void evolveUfast(Lattice* lat, Group* group, Parameters *param, double dtau, double tau);
   void evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau);
-  void evolvePi(Lattice* lat, Group* group, Parameters *param, double dtau, double tau);
-  void evolveE(Lattice* lat, Group* group, Parameters *param, double dtau, double tau);
+  void evolvePi(Lattice* lat, BufferLattice * bufferlat, Group* group, Parameters *param, double dtau, double tau);
+  void evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau);
   void checkGaussLaw(Lattice* lat, Group* group, Parameters *param, double dtau, double tau);
   void eccentricity(Lattice *lat, Group *group, Parameters *param, int it, double cutoff, int doAniso);
   void Tmunu(Lattice *lat, Group *group, Parameters *param, int it);

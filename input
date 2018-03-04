@@ -1,6 +1,6 @@
 mode 1
 readMultFromFile 0
-size 100
+size 40
 L 4.
 Nc 3			      
 m 0.4
@@ -39,8 +39,8 @@ seed 2
 useTimeForSeed 0
 Projectile Pb
 Target Pb
-bmin 0.
-bmax 0.
+bmin 6.
+bmax 6.
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 70.

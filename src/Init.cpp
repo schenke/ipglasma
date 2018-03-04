@@ -63,7 +63,7 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
       xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x,2)),GSL_IMAG(gsl_vector_complex_get(x,2))));
     }
   gsl_vector_complex_free(x);
-  
+   
   return(xvec);
   // delete [] xvec;
 }
@@ -2552,6 +2552,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
 
   // compute Ux(3) Uy(3) after the collision
+  //#pragma omp parallel for collapse(2)
   for (int i=0; i<nn[0]; i++)      //loops over all cells
     {
       for (int j=0; j<nn[1]; j++)      //loops over all cells
@@ -2559,7 +2560,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
 	  pos = i*N+j;
 	  pos1 = (i)*N+j;
-	  posx = ((i+1)%N)*N+j;
+	  posx = ((i+1)%N)*N+j; //<-- this may be a bottleneck
 	  posy = (i)*N+(j+1)%N;
 	  
 	  // get Ux, Uy:
@@ -2660,7 +2661,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  // else
 	  //   UDy=lat->cells[(i)*N+N-1]->getU2();
 	  
-	    UDy=lat->cells[posy]->getU2();
+          UDy=lat->cells[posy]->getU2();
 
 	  UDy.conjg();	 
 
@@ -2759,7 +2760,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 		  F[ai] = (-1.)*temp.trace();
 		    //complex<double>(-temp.getRe(0)-temp.getRe(4)-temp.getRe(8),-temp.getIm(0)-temp.getIm(4)-temp.getIm(8));
 		}
-	      
 	      Dalpha = solveAxb(param,M,F);
 	     
 		
@@ -3342,6 +3342,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
   // compute initial electric field
   // with minus ax, ay
+#pragma omp parallel for collapse(2)
   for (int i=0; i<nn[0]; i++)
     {
       for (int j=0; j<nn[1]; j++)
@@ -3421,6 +3422,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     }
 
   // with plus ax, ay
+#pragma omp parallel for collapse(2)
   for (int i=0; i<nn[0]; i++)
     {
       for (int j=0; j<nn[1]; j++)

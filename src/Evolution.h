@@ -4,6 +4,7 @@
 #ifndef Evolution_H
 #define Evolution_H
 
+#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

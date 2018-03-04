@@ -198,6 +198,7 @@ void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dt
   complex<double> trace;
   Matrix one(Nc,1.);
   
+#pragma omp parallel for collapse(2)
   for (int i=0; i<N; i++)
     {
       for (int j=0; j<N; j++)

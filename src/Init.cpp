@@ -17,6 +17,7 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
   
   double a_data[128];
 
+#pragma omp prallel   
   for(int i=0; i<64; i++)
     {
       a_data[2*i] = real(A[i]); 
@@ -3342,7 +3343,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
   // compute initial electric field
   // with minus ax, ay
-#pragma omp parallel for collapse(2)
+  //#pragma omp parallel for collapse(2)
   for (int i=0; i<nn[0]; i++)
     {
       for (int j=0; j<nn[1]; j++)
@@ -3422,7 +3423,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     }
 
   // with plus ax, ay
-#pragma omp parallel for collapse(2)
+  //#pragma omp parallel for collapse(2)
   for (int i=0; i<nn[0]; i++)
     {
       for (int j=0; j<nn[1]; j++)

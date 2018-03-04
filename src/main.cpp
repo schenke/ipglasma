@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
       cout << "Run using large lattices to improve convergence of the root finder in initial condition. Recommended: 600x600 using L=30fm" << endl;
       cout << endl;
     }
-   
+
   // initialize helper class objects
   MyEigen *myeigen;
   myeigen = new MyEigen();

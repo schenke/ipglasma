@@ -121,58 +121,42 @@ void Evolution::evolvePi(Lattice* lat, Group* group, Parameters *param, double d
   Matrix one(Nc,1.);  
   // Matrix zero(Nc,0.);  
 
-  for (int i=0; i<N; i++)
+  for (int pos=0; pos<N*N; pos++)
     {
-      for (int j=0; j<N; j++)
-	{
-	  pos = i*N+j;
-	  posX = ((i+1)%N)*N+j;
-	  posY = i*N+(j+1)%N;
-	  
-	  // retrieve current Ux and Uy and compute conjugates
-	  Ux = lat->cells[pos]->getUx();
-	  Uy = lat->cells[pos]->getUy();
-	  // retrieve current pi (at time tau-dtau/2)
-	  pi = lat->cells[pos]->getpi();
-	  // retrieve current phi (at time tau) at this x_T
-	  phi = lat->cells[pos]->getphi();
-
-	  // retrieve current phi (at time tau) at x_T+1
-	  // parallel transport:
-	  phiX = Ux*Ux.prodABconj(lat->cells[posX]->getphi(),Ux);
-	  phiY = Uy*Uy.prodABconj(lat->cells[posY]->getphi(),Uy);
-	  
-	  // phi_{-x} should be defined as UxD*phimX*Ux with the Ux and UxD reversed from the phi_{+x} case
-	  if(i>0)
-	    posmX = (i-1)*N+j;
-	  else
-	    posmX = (N-1)*N+j;
-	  
-	  if(j>0)
-	    posmY = i*N+(j-1);
-	  else
-	    posmY = i*N+(N-1);
-	  
-	  // retrieve current phi (at time tau) at x_T-1
-	  // parallel transport:
-	  UxXm1 = lat->cells[posmX]->getUx();
-	  UyYm1 = lat->cells[posmY]->getUy();
-
-	  phimX = Ux.prodAconjB(UxXm1,lat->cells[posmX]->getphi())*UxXm1;
-	  phimY = Ux.prodAconjB(UyYm1,lat->cells[posmY]->getphi())*UyYm1;
-	
-	  bracket = phiX + phimX + phiY + phimY - 4.*phi; // sum over both directions is included here 
-	  
-	  //	  if (i>0 && i<N-1 && j>0 && j<N-1)
-	  pi += dtau/(tau)*bracket; // divide by \tau because this is computing pi(tau+dtau/2) from pi(tau-dtau/2) and phi(tau)
-
-	  //pi = pi - pi.trace()/static_cast<double>(Nc)*one;
-
-	  // set the new pi (at time tau+dtau/2)
-	  lat->cells[pos]->setpi(pi); 
-	}
+      // retrieve current Ux and Uy and compute conjugates
+      Ux = lat->cells[pos]->getUx();
+      Uy = lat->cells[pos]->getUy();
+      // retrieve current pi (at time tau-dtau/2)
+      pi = lat->cells[pos]->getpi();
+      // retrieve current phi (at time tau) at this x_T
+      phi = lat->cells[pos]->getphi();
+      
+      // retrieve current phi (at time tau) at x_T+1
+      // parallel transport:
+      phiX = Ux*Ux.prodABconj(lat->cells[lat->pospX[pos]]->getphi(),Ux);
+      phiY = Uy*Uy.prodABconj(lat->cells[lat->pospY[pos]]->getphi(),Uy);
+      
+      // phi_{-x} should be defined as UxD*phimX*Ux with the Ux and UxD reversed from the phi_{+x} case
+      // retrieve current phi (at time tau) at x_T-1
+      // parallel transport:
+      UxXm1 = lat->cells[lat->posmX[pos]]->getUx();
+      UyYm1 = lat->cells[lat->posmY[pos]]->getUy();
+      
+      phimX = Ux.prodAconjB(UxXm1,lat->cells[lat->posmX[pos]]->getphi())*UxXm1;
+      phimY = Ux.prodAconjB(UyYm1,lat->cells[lat->posmY[pos]]->getphi())*UyYm1;
+      
+      bracket = phiX + phimX + phiY + phimY - 4.*phi; // sum over both directions is included here 
+      
+      //	  if (i>0 && i<N-1 && j>0 && j<N-1)
+      pi += dtau/(tau)*bracket; // divide by \tau because this is computing pi(tau+dtau/2) from pi(tau-dtau/2) and phi(tau)
+      
+      //pi = pi - pi.trace()/static_cast<double>(Nc)*one;
+      
+      // set the new pi (at time tau+dtau/2)
+      lat->cells[pos]->setpi(pi); 
     }
 }
+
 
 void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
 {

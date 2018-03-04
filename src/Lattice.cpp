@@ -24,28 +24,28 @@ Lattice::Lattice(Parameters *param, int N, int length)
     {
       for (int j=0; j<length; j++)
 	{
-          // pos = i*N+j;
-          pospX.push_back(((i+1)%N)*N+j);
-          pospY.push_back(i*N+(j+1)%N);
+          // pos = i*length+j;
+          pospX.push_back(((i+1)%length)*length+j);
+          pospY.push_back(i*length+(j+1)%length);
           
           if(i>0)
-	    posmX.push_back((i-1)*N+j);
+	    posmX.push_back((i-1)*length+j);
 	  else
-	    posmX.push_back((N-1)*N+j);
+	    posmX.push_back((length-1)*length+j);
           if(j>0)
-	    posmY.push_back(i*N+(j-1));
+	    posmY.push_back(i*length+(j-1));
 	  else
-	    posmY.push_back(i*N+(N-1));
+	    posmY.push_back(i*length+(length-1));
 
           if(i>0)
-	    posmXpY.push_back((i-1)*N+(j+1)%N);
+	    posmXpY.push_back((i-1)*length+(j+1)%length);
 	  else
-	    posmXpY.push_back((N-1)*N+(j+1)%N);
+	    posmXpY.push_back((length-1)*length+(j+1)%length);
 	  
 	  if(j>0)
-	    pospXmY.push_back(((i+1)%N)*N+j-1);
+	    pospXmY.push_back(((i+1)%length)*length+j-1);
 	  else
-	    pospXmY.push_back(((i+1)%N)*N+N-1);
+	    pospXmY.push_back(((i+1)%length)*length+length-1);
         }
     }
 

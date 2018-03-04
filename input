@@ -1,6 +1,6 @@
 mode 1
 readMultFromFile 0
-size 100
+size 64
 L 4.
 Nc 3			      
 m 0.4
@@ -35,7 +35,7 @@ runWithLocalQs 0
 runWithkt 0
 Ny 50
 useSeedList 0
-seed 2
+seed 0
 useTimeForSeed 0
 Projectile p
 Target p

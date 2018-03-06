@@ -2736,7 +2736,186 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
  //  // ------
 
 
+
+
+
+	  
+  //  double UDU[bins];
+  
+
+  // for(int i=0; i<bins; i++)
+  //   {
+  //     UDU[i] = 0.;
+  //     count[i]=0;
+  //   }
+
+  // int pos;
+  // for (int i=0; i<nn[0]; i++)
+  //   {
+  //     for (int j=0; j<nn[1]; j++)
+  //       {
+  //         pos = i*N+j;
+  //         UD=lat->cells[pos]->getU();
+  //         UD.conjg();
+  //         Ux = lat->cells[N/2*N+N/2]->getU()*UD;
+  //         x = -L/2.+a*i;
+  //         y = -L/2.+a*j;
+  //         r = sqrt(x*x+y*y);
+  //         ir = static_cast<int>(floor(r/dr+0.000001));
+  //         count[ir]++;
+  //         UDU[ir] += (Ux.trace()).real();
+  //    	}
+  //   }
+
+  // // output UDU
+  // if( param->getWriteOutputs() == 1)
+  //   {
+  //     cout << "output UDU" << endl;
+
+  //     stringstream strUDU_name;
+  //     strUDU_name << "UDU" << param->getMPIRank() << ".dat";
+  //     string UDU_name;
+  //     UDU_name = strUDU_name.str();
+  //     ofstream foutrUDU(UDU_name.c_str(),ios::out); 
+  //     for(int i=0; i<N; i++) // loop over all positions
+  // 	{
+  // 	  foutrUDU << i*dr << " " << 1./param->getNc()*UDU[i]/count[i] << endl;
+  // 	}
+  //     foutrUDU.close();
+  //   }
+  // cout << "done." << endl;
+
+
+  // compute initial electric field
+  // with minus ax, ay
+  #pragma omp for
+  for (int pos=0; pos<nn[0]*nn[1]; pos++)
+    {
+      // x part in sum:
+      Ux1mUx2 = lat->cells[pos]->getUx1()-lat->cells[pos]->getUx2();
+      UDx1 = lat->cells[pos]->getUx1();
+      UDx1.conjg();
+      UDx2 = lat->cells[pos]->getUx2();
+      UDx2.conjg();
+      UDx1mUDx2 = UDx1 - UDx2;
+	  
+      Ux = lat->cells[pos]->getUx();
+      UDx = Ux;
+      UDx.conjg();
+
+      temp2 = Ux1mUx2*UDx - Ux1mUx2 - Ux*UDx1mUDx2 + UDx1mUDx2;
+	  
+      Ux1mUx2 = lat->cells[lat->posmX[pos]]->getUx1()-lat->cells[lat->posmX[pos]]->getUx2();
+      UDx1 = lat->cells[lat->posmX[pos]]->getUx1();
+      UDx1.conjg();
+      UDx2 = lat->cells[lat->posmX[pos]]->getUx2();
+      UDx2.conjg();
+      UDx1mUDx2 = UDx1 - UDx2;
+      
+      Ux = lat->cells[lat->posmX[pos]]->getUx();
+      UDx = Ux;
+      UDx.conjg();
+      
+      temp2 = temp2 - UDx*Ux1mUx2 + Ux1mUx2 + UDx1mUDx2*Ux - UDx1mUDx2; 
+      
+      // y part in sum
+      Uy1mUy2 = lat->cells[pos]->getUy1()-lat->cells[pos]->getUy2();
+      UDy1 = lat->cells[pos]->getUy1();
+      UDy1.conjg();
+      UDy2 = lat->cells[pos]->getUy2();
+      UDy2.conjg();
+      UDy1mUDy2 = UDy1 - UDy2;
+      
+      Uy = lat->cells[pos]->getUy();
+      UDy = Uy;
+      UDy.conjg();
+      
+      // y part of the sum:
+      temp2 = temp2 + Uy1mUy2*UDy - Uy1mUy2 - Uy*UDy1mUDy2 + UDy1mUDy2;
+      
+      Uy1mUy2 = lat->cells[lat->posmY[pos]]->getUy1()-lat->cells[lat->posmY[pos]]->getUy2();
+      UDy1 = lat->cells[lat->posmY[pos]]->getUy1();
+      UDy1.conjg();
+      UDy2 = lat->cells[lat->posmY[pos]]->getUy2();
+      UDy2.conjg();
+      UDy1mUDy2 = UDy1 - UDy2;
+      
+      Uy = lat->cells[lat->posmY[pos]]->getUy();
+      UDy = Uy;
+      UDy.conjg();
+      
+      temp2 = temp2 - UDy*Uy1mUy2 + Uy1mUy2 + UDy1mUDy2*Uy - UDy1mUDy2; 
+      
+      lat->cells[pos]->setE1((1./8.)*temp2);
+    }
+  
+  // with plus ax, ay
+#pragma omp for
+  for (int pos=0; pos<nn[0]*nn[1]; pos++)
+    {
+      // x part in sum:
+      Ux1mUx2 = lat->cells[pos]->getUx1()-lat->cells[pos]->getUx2();
+      UDx1 = lat->cells[pos]->getUx1();
+      UDx1.conjg();
+      UDx2 = lat->cells[pos]->getUx2();
+      UDx2.conjg();
+      UDx1mUDx2 = UDx1 - UDx2;
+      
+      Ux = lat->cells[pos]->getUx();
+      UDx = Ux;
+      UDx.conjg();
+      
+      temp2 = Ux1mUx2*UDx - Ux1mUx2 - Ux*UDx1mUDx2 + UDx1mUDx2;
+      
+      Ux1mUx2 = lat->cells[lat->pospX[pos]]->getUx1()-lat->cells[lat->pospX[pos]]->getUx2();
+      UDx1 = lat->cells[lat->pospX[pos]]->getUx1();
+      UDx1.conjg();
+      UDx2 = lat->cells[lat->pospX[pos]]->getUx2();
+      UDx2.conjg();
+      UDx1mUDx2 = UDx1 - UDx2;
+      
+      Ux = lat->cells[lat->pospX[pos]]->getUx();
+      UDx = Ux;
+      UDx.conjg();
+      
+      temp2 = temp2 - UDx*Ux1mUx2 + Ux1mUx2 + UDx1mUDx2*Ux - UDx1mUDx2; 
+      
+      // y part in sum
+      Uy1mUy2 = lat->cells[pos]->getUy1()-lat->cells[pos]->getUy2();
+      UDy1 = lat->cells[pos]->getUy1();
+      UDy1.conjg();
+      UDy2 = lat->cells[pos]->getUy2();
+      UDy2.conjg();
+      UDy1mUDy2 = UDy1 - UDy2;
+      
+      Uy = lat->cells[pos]->getUy();
+      UDy = Uy;
+      UDy.conjg();
+      
+      // y part of the sum:
+      temp2 = temp2 + Uy1mUy2*UDy - Uy1mUy2 - Uy*UDy1mUDy2 + UDy1mUDy2;
+      
+      Uy1mUy2 = lat->cells[lat->pospY[pos]]->getUy1()-lat->cells[lat->pospY[pos]]->getUy2();
+      UDy1 = lat->cells[lat->pospY[pos]]->getUy1();
+      UDy1.conjg();
+      UDy2 = lat->cells[lat->pospY[pos]]->getUy2();
+      UDy2.conjg();
+      UDy1mUDy2 = UDy1 - UDy2;
+      
+      Uy = lat->cells[lat->pospY[pos]]->getUy();
+      UDy = Uy;
+      UDy.conjg();
+      
+      temp2 = temp2 - UDy*Uy1mUy2 + Uy1mUy2 + UDy1mUDy2*Uy - UDy1mUDy2; 
+      
+      lat->cells[pos]->setE2((1./8.)*temp2);
+      
+    }
   }
+  
+
+  
+
 
 
     int ir;
@@ -2843,209 +3022,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
 
 
-	  
-  double UDU[bins];
-  
-  for(int i=0; i<bins; i++)
-    {
-      UDU[i] = 0.;
-      count[i]=0;
-    }
 
   int pos;
-  for (int i=0; i<nn[0]; i++)
-    {
-      for (int j=0; j<nn[1]; j++)
-	{
-	  pos = i*N+j;
-	  UD=lat->cells[pos]->getU();
-	  UD.conjg();
-	  Ux = lat->cells[N/2*N+N/2]->getU()*UD;
-	  x = -L/2.+a*i;
-	  y = -L/2.+a*j;
-	  r = sqrt(x*x+y*y);
-	  ir = static_cast<int>(floor(r/dr+0.000001));
-	  count[ir]++;
-	  UDU[ir] += (Ux.trace()).real();//Ux.getRe(0)+Ux.getRe(4)+Ux.getRe(8);
-     	}
-    }
-
-  // // output UDU
-  // if( param->getWriteOutputs() == 1)
-  //   {
-  //     cout << "output UDU" << endl;
-
-  //     stringstream strUDU_name;
-  //     strUDU_name << "UDU" << param->getMPIRank() << ".dat";
-  //     string UDU_name;
-  //     UDU_name = strUDU_name.str();
-  //     ofstream foutrUDU(UDU_name.c_str(),ios::out); 
-  //     for(int i=0; i<N; i++) // loop over all positions
-  // 	{
-  // 	  foutrUDU << i*dr << " " << 1./param->getNc()*UDU[i]/count[i] << endl;
-  // 	}
-  //     foutrUDU.close();
-  //   }
-  // cout << "done." << endl;
-
-
-  // compute initial electric field
-  // with minus ax, ay
-  //#pragma omp parallel for collapse(2)
-  for (int i=0; i<nn[0]; i++)
-    {
-      for (int j=0; j<nn[1]; j++)
-	{
-	  pos = i*N+j;
-	  if(i>0)
-	    posxm = (i-1)*N+j;
-	  else
-	    posxm = (N-1)*N+j;
-
-	  if(j>0)
-	    posym = i*N+(j-1);
-	  else
-	    posym = i*N+(N-1);
-
-	  // x part in sum:
-	  Ux1mUx2 = lat->cells[pos]->getUx1()-lat->cells[pos]->getUx2();
-	  UDx1 = lat->cells[pos]->getUx1();
-	  UDx1.conjg();
-	  UDx2 = lat->cells[pos]->getUx2();
-	  UDx2.conjg();
-	  UDx1mUDx2 = UDx1 - UDx2;
-	  
-	  Ux = lat->cells[pos]->getUx();
-	  UDx = Ux;
-	  UDx.conjg();
-
-	  temp2 = Ux1mUx2*UDx - Ux1mUx2 - Ux*UDx1mUDx2 + UDx1mUDx2;
-	  
-	  Ux1mUx2 = lat->cells[posxm]->getUx1()-lat->cells[posxm]->getUx2();
-	  UDx1 = lat->cells[posxm]->getUx1();
-	  UDx1.conjg();
-	  UDx2 = lat->cells[posxm]->getUx2();
-	  UDx2.conjg();
-	  UDx1mUDx2 = UDx1 - UDx2;
-	  
-	  Ux = lat->cells[posxm]->getUx();
-	  UDx = Ux;
-	  UDx.conjg();
-	  
-	  temp2 = temp2 - UDx*Ux1mUx2 + Ux1mUx2 + UDx1mUDx2*Ux - UDx1mUDx2; 
-	  
-	  // y part in sum
-	  Uy1mUy2 = lat->cells[pos]->getUy1()-lat->cells[pos]->getUy2();
-	  UDy1 = lat->cells[pos]->getUy1();
-	  UDy1.conjg();
-	  UDy2 = lat->cells[pos]->getUy2();
-	  UDy2.conjg();
-	  UDy1mUDy2 = UDy1 - UDy2;
-	  
-	  Uy = lat->cells[pos]->getUy();
-	  UDy = Uy;
-	  UDy.conjg();
-
-	  // y part of the sum:
-	  temp2 = temp2 + Uy1mUy2*UDy - Uy1mUy2 - Uy*UDy1mUDy2 + UDy1mUDy2;
-
-	  Uy1mUy2 = lat->cells[posym]->getUy1()-lat->cells[posym]->getUy2();
-	  UDy1 = lat->cells[posym]->getUy1();
-	  UDy1.conjg();
-	  UDy2 = lat->cells[posym]->getUy2();
-	  UDy2.conjg();
-	  UDy1mUDy2 = UDy1 - UDy2;
-	  
-	  Uy = lat->cells[posym]->getUy();
-	  UDy = Uy;
-	  UDy.conjg();
-	  
-	  temp2 = temp2 - UDy*Uy1mUy2 + Uy1mUy2 + UDy1mUDy2*Uy - UDy1mUDy2; 
-	  
-	  lat->cells[pos]->setE1((1./8.)*temp2);
-
-	  //	  if(i==nn[0]-1)
-	  //  lat->cells[pos]->setE1(zero);
-	    
-	}
-    }
-
-  // with plus ax, ay
-  //#pragma omp parallel for collapse(2)
-  for (int i=0; i<nn[0]; i++)
-    {
-      for (int j=0; j<nn[1]; j++)
-	{
-	  pos = i*N+j;
-	  if(i<N-1)
-	    posx = (i+1)*N+j;
-	  else 
-	    posx = (N-1)*N+j;
-
-	  if(j<N-1)
-	    posy = i*N+(j+1);
-	  else
-	    posy = i*N+N-1;
-
-	  // x part in sum:
-	  Ux1mUx2 = lat->cells[pos]->getUx1()-lat->cells[pos]->getUx2();
-	  UDx1 = lat->cells[pos]->getUx1();
-	  UDx1.conjg();
-	  UDx2 = lat->cells[pos]->getUx2();
-	  UDx2.conjg();
-	  UDx1mUDx2 = UDx1 - UDx2;
-	  
-	  Ux = lat->cells[pos]->getUx();
-	  UDx = Ux;
-	  UDx.conjg();
-
-	  temp2 = Ux1mUx2*UDx - Ux1mUx2 - Ux*UDx1mUDx2 + UDx1mUDx2;
-	  
-	  Ux1mUx2 = lat->cells[posx]->getUx1()-lat->cells[posx]->getUx2();
-	  UDx1 = lat->cells[posx]->getUx1();
-	  UDx1.conjg();
-	  UDx2 = lat->cells[posx]->getUx2();
-	  UDx2.conjg();
-	  UDx1mUDx2 = UDx1 - UDx2;
-	  
-	  Ux = lat->cells[posx]->getUx();
-	  UDx = Ux;
-	  UDx.conjg();
-	  
-	  temp2 = temp2 - UDx*Ux1mUx2 + Ux1mUx2 + UDx1mUDx2*Ux - UDx1mUDx2; 
-	  
-	  // y part in sum
-	  Uy1mUy2 = lat->cells[pos]->getUy1()-lat->cells[pos]->getUy2();
-	  UDy1 = lat->cells[pos]->getUy1();
-	  UDy1.conjg();
-	  UDy2 = lat->cells[pos]->getUy2();
-	  UDy2.conjg();
-	  UDy1mUDy2 = UDy1 - UDy2;
-	  
-	  Uy = lat->cells[pos]->getUy();
-	  UDy = Uy;
-	  UDy.conjg();
-
-	  // y part of the sum:
-	  temp2 = temp2 + Uy1mUy2*UDy - Uy1mUy2 - Uy*UDy1mUDy2 + UDy1mUDy2;
-
-	  Uy1mUy2 = lat->cells[posy]->getUy1()-lat->cells[posy]->getUy2();
-	  UDy1 = lat->cells[posy]->getUy1();
-	  UDy1.conjg();
-	  UDy2 = lat->cells[posy]->getUy2();
-	  UDy2.conjg();
-	  UDy1mUDy2 = UDy1 - UDy2;
-	  
-	  Uy = lat->cells[posy]->getUy();
-	  UDy = Uy;
-	  UDy.conjg();
-	  
-	  temp2 = temp2 - UDy*Uy1mUy2 + Uy1mUy2 + UDy1mUDy2*Uy - UDy1mUDy2; 
-	  
-	  lat->cells[pos]->setE2((1./8.)*temp2);
-	  
-	}
-    }
 
   // compute the plaquette
   for (int i=0; i<nn[0]; i++)

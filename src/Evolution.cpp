@@ -3540,7 +3540,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
 
   // compute hadrons using fragmentation function 
-  if(it == itmax)
+  if(it == itmax+1) // remove +1
     {
       //      cout << " before Hadronizing ... " << endl;
       //sleep(10);

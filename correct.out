@@ -38,7 +38,6 @@ Using fixed alpha_s
  done.
 Starting evolution
 itmax=96
-check
 Measuring multiplicity ... 
 gauge fixing
 divA components: 
@@ -64,141 +63,46 @@ dN/dy 1 = 0.0888226, dE/dy 1 = 0.289724
 dN/dy 2 = 0.0628696, dE/dy 2 = 0.196663
 gluon <p_T> = 3.26183
  done.
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.0625 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.125 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.1875 fm/c
 
-check
-check
-check
-0.2 average u^x=0.308306
-0.2 average u^y=0.27663
-0.2 average tau u^eta=0.130484
+0.2 average u^x=0.308624
+0.2 average u^y=0.276916
+0.2 average tau u^eta=0.130619
 WARNING: hydro grid length larger than the computed one.
 Wrote outputs
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.25 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.3125 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.375 fm/c
 
-check
-check
-check
-check
-check
-0.4 average u^x=0.367037
-0.4 average u^y=0.313829
-0.4 average tau u^eta=0.0830748
+0.4 average u^x=0.368131
+0.4 average u^y=0.314765
+0.4 average tau u^eta=0.0833224
 WARNING: hydro grid length larger than the computed one.
 Wrote outputs
-check
-check
-check
-check
-check
 
 Evolving to time 0.4375 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.5 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-check
-check
-check
 
 Evolving to time 0.5625 fm/c
 
-check
-check
-check
-check
-check
-check
-check
-0.6 average u^x=0.798651
-0.6 average u^y=1.31069
-0.6 average tau u^eta=0.0972643
+0.6 average u^x=0.799314
+0.6 average u^y=0.605401
+0.6 average tau u^eta=0.0829527
 WARNING: hydro grid length larger than the computed one.
 Wrote outputs
 Gauss violation=1.41283e-20

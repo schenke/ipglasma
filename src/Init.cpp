@@ -2020,37 +2020,26 @@ void Init::readV(Lattice *lat, Group* group, Parameters *param)
 
 void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber, int READFROMFILE)
 {
-  int maxIterations = 100000;
-  int N = param->getSize();
-  int Ny= param->getNy();
-  int Nc = param->getNc();
-  int bins = param->getSize();
-  int ir;
-  int count[bins];
-  int Nc2m1 = Nc*Nc-1;
-  int nn[2];
-  int pos, pos1, pos2, pos3, posx, posy, posxm, posym, posxmym;
-  int counts, countMe;
-  int checkConvergence;
-  int alphaCheck;
-  int bShift; // number of cells to be shifted by due to impact parameter
-  int posU;
+  const int maxIterations = 100000;
+  const int N = param->getSize();
+  const int Ny= param->getNy();
+  const int Nc = param->getNc();
+  const int bins = param->getSize();
+  const int Nc2m1 = Nc*Nc-1;
+  const int nn[2] ={N,N};
+  const double L = param->getL();
+  const double a = L/N; // lattice spacing in fm
+  const double m = param->getm()*a/hbarc;
+  const double bmin=param->getbmin();
+  const double bmax=param->getbmax();
+  const double dNc = static_cast<double>(Nc);
+  const Matrix one(Nc,1.);
+  const Matrix zero(Nc,0.);
 
-  double dNc = static_cast<double>(Nc);
-  double Fold;
-  double Fnew;
-  double r;
-  double L = param->getL();
-  double x;
-  double y;
-  double a = L/N; // lattice spacing in fm
   cout << "Initializing fields ... " << endl;
   param->setRnp(0.);
   
-  double b;
-  double bmin=param->getbmin();
-  double bmax=param->getbmax();
-  
+  double b; 
   double xb = random->genrand64_real1(); // uniformly distributed random variable                                                               
   
   if(param->getUseNucleus() == 0) // use b=0 fm for the constant g^2 mu case
@@ -2076,6 +2065,21 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   param->setb(b);
   cout << "b=" << b << " fm." << endl;
 
+  int ir;
+  int count[bins];
+  int pos, pos1, pos2, pos3, posx, posy, posxm, posym, posxmym;
+  int counts, countMe;
+  int checkConvergence;
+  int alphaCheck;
+  int bShift; // number of cells to be shifted by due to impact parameter
+  int posU;
+
+  double Fold;
+  double Fnew;
+  double r;
+  double x;
+  double y;
+
   double Qs2G;
   double temp3;
   double g2mu;
@@ -2083,15 +2087,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   double dr=a;
   double rtrAT2[bins];
   double epsilon;
-  double m = param->getm(); //GeV
   double lambda;
   double trATA[N*N];
   double avgEps;
   double avgEpsMag;
   double avgEpsEl;
-
-  m=m*a/hbarc;
-  //  cout << "m_lat =" << m << endl; 
 
   complex<double>* M;
   complex<double>* F;
@@ -2106,13 +2106,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   result = new complex<double>[Nc2m1];
   alpha = new complex<double>[Nc2m1];
   alphaSave = new complex<double>[Nc2m1];
-  //Dalpha = new complex<double>[Nc2m1];
 
-  // read Q_s^2 from file
-  if(param->getUseNucleus() == 1)
-    {
-      readNuclearQs(param);
-    }
 
   Matrix temp(Nc,1.);
   Matrix tempNew(Nc,1.);
@@ -2174,13 +2168,13 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   Matrix Uy1mUy2(int(Nc),0.);
   Matrix UDy1mUDy2(int(Nc),0.);
 
-  Matrix one(Nc,1.);
-  Matrix zero(Nc,0.);
 
+  // read Q_s^2 from file
+  if(param->getUseNucleus() == 1)
+    {
+      readNuclearQs(param);
+    }
   
-
-  nn[0]=N;
-  nn[1]=N;
 
   // sample nucleon positions
   nucleusA.clear();

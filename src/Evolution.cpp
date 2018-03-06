@@ -56,7 +56,7 @@ void Evolution::evolveU(Lattice* lat, BufferLattice *bufferlat, Group* group, Pa
         bufferlat->cells[pos]->setbuffer2(E2*lat->cells[pos]->getUy()); 
       }
   
- #pragma omp for  
+#pragma omp for  
     for (int pos=0; pos<N*N; pos++)
       {
         lat->cells[pos]->setUx(bufferlat->cells[pos]->getbuffer1()); 

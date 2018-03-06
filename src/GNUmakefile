@@ -12,12 +12,12 @@
 
 CXX := mpicxx
 #CFLAGS= -Wall -g -O2 -qopenmp $(shell gsl-config --cflags)
-#
+#-fsanitize=address
 CFLAGS= -g -Wall -std=c++11 -O3 -malign-data=cacheline -finline-functions -march=native -fopenmp $(shell gsl-config --cflags) -DDOCTEST_CONFIG_DISABLE
 
 RM		=	rm -f
 O               =       .o
-LDFLAGS         =       $(CFLAGS) $(shell gsl-config --libs)  -lfftw3
+LDFLAGS         =       $(CFLAGS) $(shell gsl-config --libs) -lfftw3_threads -lfftw3 -lm
 SYSTEMFILES     =       $(SRCGNU)
 
 # --------------- Files involved ------------------

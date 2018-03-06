@@ -1608,33 +1608,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
   //  fout1 << "Q_s ~ x^-" << param->getxExponent() << endl;
   fout1.close();
-
- //  // output gmu 
- //  ofstream foutB("gmuB.dat",ios::out); 
- //  for(int ix=0; ix<N; ix++) // loop over all positions
- //    {
- //      for(int iy=0; iy<N; iy++)
- // 	{
- // 	  pos = ix*N+iy;
- // 	  outvalue = sqrt(lat->cells[pos]->getg2mu2B());
- // 	  foutB << ix << " " << iy << " " << outvalue << endl;
- // 	}
- //      foutB << endl;
- //    }
- //  foutB.close();
- // // output gmu 
- //  ofstream foutA("gmuA.dat",ios::out); 
- //  for(int ix=0; ix<N; ix++) // loop over all positions
- //    {
- //      for(int iy=0; iy<N; iy++)
- // 	{
- // 	  pos = ix*N+iy;
- // 	  outvalue = sqrt(lat->cells[pos]->getg2mu2A());
- // 	  foutA << ix << " " << iy << " " << outvalue << endl;
- // 	}
- //      foutA << endl;
- //    }
- //  foutA.close();
 }
 
 
@@ -1646,154 +1619,139 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   const int Nc = param->getNc();
   const int Nc2m1 = Nc*Nc-1;
   const int nn[2] = {N,N};
+  const double L = param->getL();
+  const double a = L/N; // lattice spacing in fm
+  const double m = param->getm()*a/hbarc;
+  const Matrix one(Nc,1.);
 
-  {
-    int pos;
-    double corr;
-    double g2mu;
-    double L = param->getL();
-    double x, y;
-    double a = L/N; // lattice spacing in fm
-    double kt2, kx, ky;
-    double m = param->getm(); //GeV
-    m=m*a/hbarc;
-    double temp3;
-    Matrix** rhoA;
-    Matrix** rhoB;
-    Matrix** AA;
-    Matrix** AB;
-    Matrix temp(Nc,1.);
-    Matrix temp2(Nc,0.);
-    Matrix tempNew(Nc,0.);
-    Matrix Udag(Nc);
-    Matrix zero(Nc,0.);
-    Matrix one(Nc,1.);
-    
-    complex<double>** rhoACoeff;
-    complex<double>** rhoBCoeff;
-    
-    rhoACoeff = new complex<double>*[Nc2m1];
-    rhoBCoeff = new complex<double>*[Nc2m1];
-    
-    for(int i=0; i<Nc2m1; i++)
-      {
-        rhoACoeff[i] = new complex<double>[N*N];
-        rhoBCoeff[i] = new complex<double>[N*N];
-      }
-    
-    // loop over longitudinal direction
+  complex<double>** rhoACoeff;
+  complex<double>** rhoBCoeff;
 
-    for(int k=0; k<Ny; k++)
-      {
-        // compute \rho
+  rhoACoeff = new complex<double>*[Nc2m1];
+  rhoBCoeff = new complex<double>*[Nc2m1];
+  
+  for(int i=0; i<Nc2m1; i++)
+    {
+      rhoACoeff[i] = new complex<double>[N*N];
+      rhoBCoeff[i] = new complex<double>[N*N];
+    }
+ 
+  // loop over longitudinal direction
+  for(int k=0; k<Ny; k++)
+    {
+      double g2muA;
+      double g2muB;
         for (int pos=0; pos<nn[0]*nn[1]; pos++)
           {
             for(int n=0; n<Nc2m1; n++)
               {
-                g2mu = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
-                rhoACoeff[n][pos] = g2mu*random->Gauss();
-                //	  *rhoA[pos]+=rhoACoeff[n][pos]*group->getT(n);
-                g2mu = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
-                rhoBCoeff[n][pos] = g2mu*random->Gauss();
-                //*rhoB[pos]+=rhoBCoeff[n][pos]*group->getT(n);
+                g2muA = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
+                g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
+                rhoACoeff[n][pos] = g2muA*random->Gauss();
+                rhoBCoeff[n][pos] = g2muB*random->Gauss();
               }
           }
-      for(int n=0; n<Nc2m1; n++)
-	{
-	  fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
-	  fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
-	}
- 
-      // compute A^+
-      
-      for (int i=0; i<nn[0]; i++)
-	{
-          for (int j=0; j<nn[1]; j++)
-            {
-              pos = i*N+j; 
-              kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-              ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
-              kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
-              if(m==0)
-                {
-                  if(kt2!=0)
-                    {
-                      for(int n=0; n<Nc2m1; n++)
-                        {
-                          rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2));
-                          rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2));
-                        }
-                }
-                  else
-                    {
-                      for(int n=0; n<Nc2m1; n++)
-                        {
-                      rhoACoeff[n][pos] = 0.;
-                      rhoBCoeff[n][pos] = 0.;
-                        }
-                    }
-                }
-              else
-                {
-                  for(int n=0; n<Nc2m1; n++)
-                    {
-                      rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2+m*m));
-                      rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2+m*m));
-                      
-                    }
-                }
-            }
+        
+        for(int n=0; n<Nc2m1; n++)
+          {
+            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
+          }
+        
+        // compute A^+
+        int pos;
+        double kt2, kx, ky;
+          
+        for (int i=0; i<nn[0]; i++)
+          {
+            for (int j=0; j<nn[1]; j++)
+              {
+                pos = i*N+j; 
+                kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+                ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+                kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
+                if(m==0)
+                  {
+                    if(kt2!=0)
+                      {
+                        for(int n=0; n<Nc2m1; n++)
+                          {
+                            rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2));
+                            rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2));
+                          }
+                      }
+                    else
+                      {
+                        for(int n=0; n<Nc2m1; n++)
+                          {
+                            rhoACoeff[n][pos] = 0.;
+                            rhoBCoeff[n][pos] = 0.;
+                          }
+                      }
+                  }
+                else
+                  {
+                    for(int n=0; n<Nc2m1; n++)
+                      {
+                        rhoACoeff[n][pos] *= (1./(kt2+m*m));
+                        rhoBCoeff[n][pos] *= (1./(kt2+m*m));
+                      }
+                  }
+              }
+          }
+        
+        // Fourier transform back A^+
+        for(int n=0; n<Nc2m1; n++)
+          {
+            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
+          }
+        // compute U
+  
+#pragma omp parallel
+        {      
+          double in[8];
+          vector <complex<double> > U;
+          Matrix temp(Nc,1.);
+          Matrix temp2(Nc,0.);
+          Matrix tempNew(Nc,0.);
+        
+          #pragma omp for
+             for (int pos=0; pos<nn[0]*nn[1]; pos++)
+               {
+                 for (int a=0; a<Nc2m1; a++)
+                   {
+                     in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                   }
+                 
+                 U = temp2.expmCoeff(in, Nc);
+                 
+                 tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
+                   U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
+                 
+                 temp = tempNew * lat->cells[pos]->getU();
+                 // set U
+                 lat->cells[pos]->setU(temp);
+                 
+                 for (int a=0; a<Nc2m1; a++)
+                   {
+                     in[a] = -(rhoBCoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                   }
+                 
+                 U = temp2.expmCoeff(in, Nc);
+                 
+                 
+                 tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
+                   U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
+                 
+                 temp = tempNew * lat->cells[pos]->getU2();
+                 // set U
+                 lat->cells[pos]->setU2(temp);
+               }
         }
-      
-      // Fourier transform back A^+
-      for(int n=0; n<Nc2m1; n++)
-        {
-          fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
-          fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
-        }
-      
-      double in[8];
-      vector <complex<double> > U;
-      // compute U
-      
-      // new method
-      //  clock_t start;
-      //double duration;
-      //start = clock();
-      for (int pos=0; pos<nn[0]*nn[1]; pos++)
-        {
-          for (int a=0; a<Nc2m1; a++)
-            {
-              in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
-            }
-          
-          U = temp2.expmCoeff(in, Nc);
-          
-          tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
-            U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
-          
-          temp = tempNew * lat->cells[pos]->getU();
-          // set U
-          lat->cells[pos]->setU(temp);
-          
-          for (int a=0; a<Nc2m1; a++)
-            {
-              in[a] = -(rhoBCoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
-            }
-          
-          U = temp2.expmCoeff(in, Nc);
-          
-          
-          tempNew = U[0]*one + U[1]*group->getT(0) + U[2]*group->getT(1) + U[3]*group->getT(2) + U[4]*group->getT(3) + 
-            U[5]*group->getT(4) + U[6]*group->getT(5) + U[7]*group->getT(6) + U[8]*group->getT(7);
-          
-          temp = tempNew * lat->cells[pos]->getU2();
-          
-          // set U
-          lat->cells[pos]->setU2(temp);
-        }
-      }//Ny loop
-    
+    }//Ny loop
+  
+  // --------
     for(int ic=0; ic<Nc2m1; ic++)
       {
         delete [] rhoACoeff[ic];
@@ -1801,10 +1759,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
       }
     delete [] rhoACoeff;
     delete [] rhoBCoeff;
-  }
-  //output of U loop over index (real imag)
-  
-  // --------
   
   
         
@@ -1866,33 +1820,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   // output correlator 
   //  Udag = lat->cells[N*N/2+N/2]->getU();
   //Udag.conjg();
-  
-  if(param->getWriteOutputs() == 1)
-    {
-      // stringstream strVdagV_name;
-      // strVdagV_name << "VdagV" << param->getMPIRank() << ".dat";
-      // string VdagV_name;
-      // VdagV_name = strVdagV_name.str();
-
-      // ofstream fout(VdagV_name.c_str(),ios::out); 
-      
-      // for (int i=0; i<nn[0]; i++)
-      // 	{
-      // 	  for (int j=0; j<nn[1]; j++)
-      // 	    {
-      // 	      pos = i*N+j;
-      // 	      x = -L/2.+a*i;
-      // 	      y = -L/2.+a*j;
-	      
-      // 	      corr = real((Udag*lat->cells[pos]->getU()).trace())/static_cast<double>(Nc);
-	      
-      // 	      //  	      fout << x << ", " << y << ", " << corr << ", " << endl;
-      // 	    }
-      // 	  //  	  fout << endl;
-      // 	}
-      
-      // fout.close();
-    }
 }
 
 

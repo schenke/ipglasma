@@ -2065,7 +2065,115 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   param->setb(b);
   cout << "b=" << b << " fm." << endl;
 
-  int ir;
+ 
+  // read Q_s^2 from file
+  if(param->getUseNucleus() == 1)
+    {
+      readNuclearQs(param);
+    }
+  
+
+  // sample nucleon positions
+  nucleusA.clear();
+  nucleusB.clear();
+
+  // to read Wilson lines from file (e.g. after JIMWLK evolution for the 3DGlasma)
+  if(READFROMFILE)
+    {
+      readV(lat, group, param);
+      param->setSuccess(1);
+    }
+  // to generate your own Wilson lines
+  else
+    {
+      if(param->getUseNucleus() == 1)
+	sampleTA(param, random, glauber);                           // populate the lists nucleusA and nucleusB with position data of the 
+      
+      // set color charge densities
+      setColorChargeDensity(lat, param, random, glauber);
+      
+      if(param->getUseNucleus() == 1 && param->getUseFixedNpart()!=0 && param->getNucleonPositionsFromFile()!=1)
+	{
+	  if(param->getNpart()!=param->getUseFixedNpart())
+	    {
+	      while(param->getNpart()!=param->getUseFixedNpart())
+		{
+		  cout << "resampling... desired Npart=" << param->getUseFixedNpart() << endl;
+		  nucleusA.clear();
+		  nucleusB.clear();
+		  
+		  xb = random->genrand64_real1(); // uniformly distributed random variable                                                               
+		  
+		  if(param->getLinearb()==1) // use a linear probability distribution for b if we are doing nuclei
+		    {
+		      cout << "Sampling linearly distributed b between " << bmin << " and " << bmax << "fm." << endl;
+		      b = sqrt((bmax*bmax-bmin*bmin)*xb+bmin*bmin);
+		    }
+		  else // use a uniform distribution instead
+		    {
+		      cout << "Sampling uniformly distributed b between " << bmin << " and " << bmax << "fm." << endl;
+		      b = (bmax-bmin)*xb+bmin;
+		    }
+		  
+		  param->setb(b);
+		  cout << "Using b=" << b << " fm" << endl;
+		  
+		  sampleTA(param, random, glauber);                           // populate the lists nucleusA and nucleusB with position data of the 
+		  setColorChargeDensity(lat, param, random, glauber);
+		}
+	    }
+	  cout << "Using fixed Npart=" << param->getNpart() << endl;
+	}
+      
+      
+      if(param->getSuccess()==0)
+	{
+	  cout << "No collision happened on rank " << param->getMPIRank() << ". Restarting with new random number..." << endl;
+	  return;
+	}
+      
+     
+      
+      // sample color charges and find Wilson lines V_A and V_B
+      setV(lat, group, param, random, glauber);
+      
+    }
+  
+  // output Wilson lines
+
+  // ofstream fout("V.dat",ios::out); 
+  // fout << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
+
+  // for (int i=0; i<nn[0]; i++)      //loops over all cells
+  //   {
+  //     for (int j=0; j<nn[1]; j++)      //loops over all cells
+  // 	{
+  // 	  pos = i*N+j;
+  // 	  x = -L/2.+a*i;
+  // 	  y = -L/2.+a*j;
+
+  // 	  fout << x << " " << y << " " 
+  // 	       << lat->cells[pos]->getU().getRe(0) << " " << lat->cells[pos]->getU().getIm(0) << " " 
+  // 	       << lat->cells[pos]->getU().getRe(1) << " " << lat->cells[pos]->getU().getIm(1) << " "
+  // 	       << lat->cells[pos]->getU().getRe(2) << " " << lat->cells[pos]->getU().getIm(2) << " "
+  // 	       << lat->cells[pos]->getU().getRe(3) << " " << lat->cells[pos]->getU().getIm(3) << " "
+  // 	       << lat->cells[pos]->getU().getRe(4) << " " << lat->cells[pos]->getU().getIm(4) << " "
+  // 	       << lat->cells[pos]->getU().getRe(5) << " " << lat->cells[pos]->getU().getIm(5) << " "
+  // 	       << lat->cells[pos]->getU().getRe(6) << " " << lat->cells[pos]->getU().getIm(6) << " "
+  // 	       << lat->cells[pos]->getU().getRe(7) << " " << lat->cells[pos]->getU().getIm(7) << " "
+  // 	       << lat->cells[pos]->getU().getRe(8) << " " << lat->cells[pos]->getU().getIm(8) 
+  // 	       << endl;
+	  
+	  
+  // 	}
+  //   }
+
+  // fout.close();      
+
+
+#pragma omp parallel
+  {
+ int ir;
   int count[bins];
   int pos, pos1, pos2, pos3, posx, posy, posxm, posym, posxmym;
   int counts, countMe;
@@ -2168,116 +2276,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   Matrix Uy1mUy2(int(Nc),0.);
   Matrix UDy1mUDy2(int(Nc),0.);
 
-
-  // read Q_s^2 from file
-  if(param->getUseNucleus() == 1)
-    {
-      readNuclearQs(param);
-    }
-  
-
-  // sample nucleon positions
-  nucleusA.clear();
-  nucleusB.clear();
-
-  // to read Wilson lines from file (e.g. after JIMWLK evolution for the 3DGlasma)
-  if(READFROMFILE)
-    {
-      readV(lat, group, param);
-      param->setSuccess(1);
-    }
-  // to generate your own Wilson lines
-  else
-    {
-      if(param->getUseNucleus() == 1)
-	sampleTA(param, random, glauber);                           // populate the lists nucleusA and nucleusB with position data of the 
-      
-      // set color charge densities
-      setColorChargeDensity(lat, param, random, glauber);
-      
-      if(param->getUseNucleus() == 1 && param->getUseFixedNpart()!=0 && param->getNucleonPositionsFromFile()!=1)
-	{
-	  if(param->getNpart()!=param->getUseFixedNpart())
-	    {
-	      while(param->getNpart()!=param->getUseFixedNpart())
-		{
-		  cout << "resampling... desired Npart=" << param->getUseFixedNpart() << endl;
-		  nucleusA.clear();
-		  nucleusB.clear();
-		  
-		  xb = random->genrand64_real1(); // uniformly distributed random variable                                                               
-		  
-		  if(param->getLinearb()==1) // use a linear probability distribution for b if we are doing nuclei
-		    {
-		      cout << "Sampling linearly distributed b between " << bmin << " and " << bmax << "fm." << endl;
-		      b = sqrt((bmax*bmax-bmin*bmin)*xb+bmin*bmin);
-		    }
-		  else // use a uniform distribution instead
-		    {
-		      cout << "Sampling uniformly distributed b between " << bmin << " and " << bmax << "fm." << endl;
-		      b = (bmax-bmin)*xb+bmin;
-		    }
-		  
-		  param->setb(b);
-		  cout << "Using b=" << b << " fm" << endl;
-		  
-		  sampleTA(param, random, glauber);                           // populate the lists nucleusA and nucleusB with position data of the 
-		  setColorChargeDensity(lat, param, random, glauber);
-		}
-	    }
-	  cout << "Using fixed Npart=" << param->getNpart() << endl;
-	}
-      
-      
-      if(param->getSuccess()==0)
-	{
-	  delete M;
-	  delete F;
-	  delete result;
-	  delete alpha;
-	  delete alphaSave;
-	  //delete Dalpha;
-	  cout << "No collision happened on rank " << param->getMPIRank() << ". Restarting with new random number..." << endl;
-	  return;
-	}
-      
-     
-      
-      // sample color charges and find Wilson lines V_A and V_B
-      setV(lat, group, param, random, glauber);
-      
-    }
-  
-  // output Wilson lines
-
-  // ofstream fout("V.dat",ios::out); 
-  // fout << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
-
-  // for (int i=0; i<nn[0]; i++)      //loops over all cells
-  //   {
-  //     for (int j=0; j<nn[1]; j++)      //loops over all cells
-  // 	{
-  // 	  pos = i*N+j;
-  // 	  x = -L/2.+a*i;
-  // 	  y = -L/2.+a*j;
-
-  // 	  fout << x << " " << y << " " 
-  // 	       << lat->cells[pos]->getU().getRe(0) << " " << lat->cells[pos]->getU().getIm(0) << " " 
-  // 	       << lat->cells[pos]->getU().getRe(1) << " " << lat->cells[pos]->getU().getIm(1) << " "
-  // 	       << lat->cells[pos]->getU().getRe(2) << " " << lat->cells[pos]->getU().getIm(2) << " "
-  // 	       << lat->cells[pos]->getU().getRe(3) << " " << lat->cells[pos]->getU().getIm(3) << " "
-  // 	       << lat->cells[pos]->getU().getRe(4) << " " << lat->cells[pos]->getU().getIm(4) << " "
-  // 	       << lat->cells[pos]->getU().getRe(5) << " " << lat->cells[pos]->getU().getIm(5) << " "
-  // 	       << lat->cells[pos]->getU().getRe(6) << " " << lat->cells[pos]->getU().getIm(6) << " "
-  // 	       << lat->cells[pos]->getU().getRe(7) << " " << lat->cells[pos]->getU().getIm(7) << " "
-  // 	       << lat->cells[pos]->getU().getRe(8) << " " << lat->cells[pos]->getU().getIm(8) 
-  // 	       << endl;
-	  
-	  
-  // 	}
-  //   }
-
-  // fout.close();      
 
 
   // compute Ux(3) Uy(3) after the collision
@@ -3353,7 +3351,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   //  delete Dalpha;
   
   // done. 
-  
+  }
   // -----------------------------------------------------------------------------
   // finish
   // -----------------------------------------------------------------------------

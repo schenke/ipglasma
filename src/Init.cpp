@@ -2656,6 +2656,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 		}
 	    }//iteration loop
     }//loop over pos
+
   
   // ofstream foutU5("Ux.txt",ios::out); 
   // foutU5.precision(15);
@@ -2731,59 +2732,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
  //  foutU2.close();
 
 
-
-
- //  // ------
-
-
-
-
-
-	  
-  //  double UDU[bins];
-  
-
-  // for(int i=0; i<bins; i++)
-  //   {
-  //     UDU[i] = 0.;
-  //     count[i]=0;
-  //   }
-
-  // int pos;
-  // for (int i=0; i<nn[0]; i++)
-  //   {
-  //     for (int j=0; j<nn[1]; j++)
-  //       {
-  //         pos = i*N+j;
-  //         UD=lat->cells[pos]->getU();
-  //         UD.conjg();
-  //         Ux = lat->cells[N/2*N+N/2]->getU()*UD;
-  //         x = -L/2.+a*i;
-  //         y = -L/2.+a*j;
-  //         r = sqrt(x*x+y*y);
-  //         ir = static_cast<int>(floor(r/dr+0.000001));
-  //         count[ir]++;
-  //         UDU[ir] += (Ux.trace()).real();
-  //    	}
-  //   }
-
-  // // output UDU
-  // if( param->getWriteOutputs() == 1)
-  //   {
-  //     cout << "output UDU" << endl;
-
-  //     stringstream strUDU_name;
-  //     strUDU_name << "UDU" << param->getMPIRank() << ".dat";
-  //     string UDU_name;
-  //     UDU_name = strUDU_name.str();
-  //     ofstream foutrUDU(UDU_name.c_str(),ios::out); 
-  //     for(int i=0; i<N; i++) // loop over all positions
-  // 	{
-  // 	  foutrUDU << i*dr << " " << 1./param->getNc()*UDU[i]/count[i] << endl;
-  // 	}
-  //     foutrUDU.close();
-  //   }
-  // cout << "done." << endl;
 
 
   // compute initial electric field
@@ -2911,172 +2859,46 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       lat->cells[pos]->setE2((1./8.)*temp2);
       
     }
-  }
-  
-
-  
-
-
-
-    int ir;
-  int count[bins];
-  int pos2, pos3, posx, posy, posxm, posym, posxmym;
-  int counts, countMe;
-  int checkConvergence;
-  int alphaCheck;
-  int bShift; // number of cells to be shifted by due to impact parameter
-  int posU;
-
-  double Fold;
-  double Fnew;
-  double r;
-  double x;
-  double y;
-
-  double Qs2G;
-  double temp3;
-  double g2mu;
-  double trATB[N*N];
-  double dr=a;
-  double rtrAT2[bins];
-  double epsilon;
-  double lambda;
-  double trATA[N*N];
-  double avgEps;
-  double avgEpsMag;
-  double avgEpsEl;
-
-  complex<double>* M;
-  complex<double>* F;
-  complex<double>* result;
-  complex<double>* alpha;
-  complex<double>* alphaSave;
-  vector <complex<double> > Dalpha;
-  Dalpha.reserve(Nc2m1);
-
-  M = new complex<double>[Nc2m1*Nc2m1];
-  F = new complex<double>[Nc2m1];
-  result = new complex<double>[Nc2m1];
-  alpha = new complex<double>[Nc2m1];
-  alphaSave = new complex<double>[Nc2m1];
-
-  Matrix temp(Nc,1.);
-  Matrix tempNew(Nc,1.);
-  double in[8];
-  vector <complex<double> > U;
-  //   Matrix U(Nc,1.);
-  Matrix temp2(Nc,0.);
-  Matrix expAlpha(Nc,0.);
-  Matrix expNegAlpha(Nc,0.);
-  Matrix Ux(int(Nc),0.);
-  Matrix Uy(int(Nc),0.);
-  Matrix Ux1(int(Nc),0.);
-  Matrix Uy1(int(Nc),0.);
-  Matrix Ux2(int(Nc),0.);
-  Matrix Uy2(int(Nc),0.);
-  Matrix UD(int(Nc),0.);
-  Matrix UDx(int(Nc),0.);
-  Matrix UDy(int(Nc),0.);
-  Matrix UDx1(int(Nc),0.);
-  Matrix UDy1(int(Nc),0.);
- 
-  Matrix Uplaq(int(Nc),0.);
-  Matrix Uplaq1(int(Nc),0.);
-  Matrix Uplaq2(int(Nc),0.);
-  Matrix Uplaq3(int(Nc),0.);
-  Matrix Uplaq4(int(Nc),0.);
-
-  Matrix UD2(int(Nc),0.);
-  Matrix UDx2(int(Nc),0.);
-  Matrix UDy2(int(Nc),0.);
-
-  Matrix Ax(int(Nc),0.);
-  Matrix Ay(int(Nc),0.);
-  Matrix Ax1(int(Nc),0.);
-  Matrix Ay1(int(Nc),0.);
-  Matrix AT(int(Nc),0.);
-
-  Matrix Ax2(int(Nc),0.);
-  Matrix Ay2(int(Nc),0.);
-  Matrix AT2(int(Nc),0.);
-
-  // field strength tensor
-  Matrix Fxy(int(Nc),0.);
-  Matrix Fyx(int(Nc),0.);
-
-  Matrix AM(int(Nc),0.);
-  Matrix AP(int(Nc),0.);
-
-  Matrix AxUpY(int(Nc),0.);
-  Matrix AyUpY(int(Nc),0.);
-
-  Matrix Aeta2(int(Nc),0.);
-  Matrix Ux1pUx2(int(Nc),0.);
-  Matrix UDx1pUDx2(int(Nc),0.);
-  Matrix Uy1pUy2(int(Nc),0.);
-  Matrix UDy1pUDy2(int(Nc),0.);
-  Matrix Ux1mUx2(int(Nc),0.);
-  Matrix UDx1mUDx2(int(Nc),0.);
-  Matrix Uy1mUy2(int(Nc),0.);
-  Matrix UDy1mUDy2(int(Nc),0.);
-
-
-
-
-  int pos;
-
   // compute the plaquette
-  for (int i=0; i<nn[0]; i++)
+  #pragma omp for
+  for (int pos=0; pos<nn[0]*nn[1]; pos++)
     {
-      for (int j=0; j<nn[1]; j++)
-	{
-	  pos = i*N+j;
-	  posx = ((i+1)%N)*N+j;
-	  posy = i*N+(j+1)%N;
-
-	  if(i<N-1 && j<N-1)
-	    {
-	      UDx = lat->cells[posy]->getUx();
-	      UDy = lat->cells[pos]->getUy();
-	      UDx.conjg();
-	      UDy.conjg();
-
-	      Uplaq = lat->cells[pos]->getUx()*(lat->cells[posx]->getUy()*(UDx*UDy));
-	    }
-	  else
-	    {
-	      UDx = lat->cells[pos]->getUx();
-	      UDx.conjg();
-	      Uplaq = lat->cells[pos]->getUx()*UDx; //indentity
-	    }
-
-	  lat->cells[pos]->setUplaq(Uplaq);
-	}
+      UDx = lat->cells[lat->pospY[pos]]->getUx();
+      UDy = lat->cells[pos]->getUy();
+      UDx.conjg();
+      UDy.conjg();
+      
+      Uplaq = lat->cells[pos]->getUx()*(lat->cells[lat->pospX[pos]]->getUy()*(UDx*UDy));
+      lat->cells[pos]->setUplaq(Uplaq);
     }
 
-    
-    
-  for (int i=0; i<nn[0]; i++)
+#pragma omp for
+  for (int pos=0; pos<nn[0]*nn[1]; pos++)
     {
-      for (int j=0; j<nn[1]; j++)
-	{
-       	  pos = i*N+j;
-	  
-	  //	  AM = (lat->cells[pos]->getAetaM());//+lat->cells[pos]->getAetaP());
-	  //      AP = (lat->cells[pos]->getAetaP());//+lat->cells[pos]->getAetaP());
-
 	  AM = (lat->cells[pos]->getE1());//+lat->cells[pos]->getAetaP());
 	  AP = (lat->cells[pos]->getE2());//+lat->cells[pos]->getAetaP());
-
 	  // this is pi in lattice units as needed for the evolution. (later, the a^4 gives the right units for the energy density
 	  lat->cells[pos]->setpi(complex<double>(0.,-2./param->getg())*(AM)); // factor -2 because I have A^eta (note the 1/8 before) but want \pi (E^z). Soren sagt, da muss ein minus hin... check .
 	  // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP)); // factor -2 because I have A^eta (note the 1/8 before) but want \pi (E^z). Soren sagt, da muss ein minus hin... check .
-	  lat->cells[pos]->setE1(zero);
-	  lat->cells[pos]->setE2(zero);
-	  lat->cells[pos]->setphi(zero);
-	  lat->cells[pos]->setUx1(one); // reset the Ux1 to be used for other purposes later
-	}
     }
+
+#pragma omp for  
+  for (int pos=0; pos<nn[0]*nn[1]; pos++)
+    {
+      lat->cells[pos]->setE1(zero);
+      lat->cells[pos]->setE2(zero);
+      lat->cells[pos]->setphi(zero);
+      lat->cells[pos]->setUx1(one); // reset the Ux1 to be used for other purposes later
+    }
+
+  delete M;
+  delete F;
+  delete result;
+  delete alpha;
+  delete alphaSave;
+
+  }
+
 
   
 
@@ -3142,12 +2964,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   //   }
   // foutE.close();
 
-
-  delete M;
-  delete F;
-  delete result;
-  delete alpha;
-  delete alphaSave;
   //  delete Dalpha;
   
   // done. 

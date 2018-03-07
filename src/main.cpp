@@ -356,6 +356,7 @@ int main(int argc, char *argv[])
       if(param->getSuccess()==0)
 	{
 	  delete lat;
+          delete bufferlat;
 	  continue;
 	}
 

@@ -2985,17 +2985,11 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   delete gaugefix;
 
   Matrix **E1;
-  //  Matrix **E2;
-  //  Matrix **pi;
   E1 = new Matrix*[N*N];
-  //E2 = new Matrix*[N*N];
-  //pi = new Matrix*[N*N];
   
   for(int i=0; i<N*N; i++)
     {
       E1[i] = new Matrix(Nc,0.);
-      //  E2[i] = new Matrix(Nc,0.);
-      // pi[i] = new Matrix(Nc,0.);
     }
 
   double g2mu2A, g2mu2B, gfactor, alphas, Qs;
@@ -3540,7 +3534,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
 
   // compute hadrons using fragmentation function 
-  if(it == itmax+1) // remove +1
+  if(it == itmax+1)
     {
       //      cout << " before Hadronizing ... " << endl;
       //sleep(10);
@@ -3732,14 +3726,9 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       for(int i=0; i<N*N; i++)
 	{
 	  delete E1[i];
-	  //	  delete E2[i];
-	  // delete pi[i];
 	}
       
       delete[] E1;
-      //      delete[] E2;
-      // delete[] pi;
-      
       //      delete gaugefix;
       return 0;
     }
@@ -3775,15 +3764,10 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   for(int i=0; i<N*N; i++)
     {
       delete E1[i];
-      //     delete E2[i];
-      // delete pi[i];
     }
   
   delete[] E1;
-  //  delete[] E2;
-  //delete[] pi;
-
-  //  delete gaugefix;
+ 
   cout << " done." << endl;
   param->setSuccess(1);
   return 1;

@@ -2304,6 +2304,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  
           Fold = 0.;
           lambda=1.;
+
 #pragma omp simd reduction(+:Fold)
           for(int ai=0; ai<Nc2m1; ai++)
             {
@@ -2379,6 +2380,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
                 }
               
               Fnew = 0.;
+#pragma omp simd reduction(+:Fnew)
               for(int ai=0; ai<Nc2m1; ai++)
                 {
                   Fnew += 0.5*(real(F[ai])*real(F[ai])+imag(F[ai])*imag(F[ai]));
@@ -2475,6 +2477,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	      
 	      Fold = 0.;
 	      lambda=1.;
+#pragma omp simd reduction(+:Fold)
 	      for(int ai=0; ai<Nc2m1; ai++)
 		{
 		  alphaSave[ai] = alpha[ai];
@@ -2550,6 +2553,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 		    }
 		 
                   Fnew = 0.;
+#pragma omp simd reduction(+:Fnew)
 		  for(int ai=0; ai<Nc2m1; ai++)
 		    {
 		      Fnew += 0.5*(real(F[ai])*real(F[ai])+imag(F[ai])*imag(F[ai]));

@@ -2304,6 +2304,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  
           Fold = 0.;
           lambda=1.;
+#pragma omp simd reduction(+:Fold)
           for(int ai=0; ai<Nc2m1; ai++)
             {
               alphaSave[ai] = alpha[ai];

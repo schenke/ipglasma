@@ -1,6 +1,8 @@
 // Init.cpp is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Init.h"
+#include<algorithm>
+#include <utility>
 
 //**************************************************************************
 // Init class.
@@ -63,7 +65,7 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
       xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x,2)),GSL_IMAG(gsl_vector_complex_get(x,2))));
     }
   gsl_vector_complex_free(x);
-   
+  
   return(xvec);
   // delete [] xvec;
 }
@@ -76,9 +78,12 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 
   if(param->getNucleonPositionsFromFile()==0)
     {
-      int A1,A2;
+      int A1,A2,Z1,Z2;
       A1 = static_cast<int>(glauber->nucleusA1())*param->getAverageOverNuclei(); // projectile
       A2 = static_cast<int>(glauber->nucleusA2())*param->getAverageOverNuclei(); // target
+      Z1 = static_cast<int>(glauber->nucleusZ1())*param->getAverageOverNuclei(); // projectile
+      Z2 = static_cast<int>(glauber->nucleusZ2())*param->getAverageOverNuclei(); // target
+
       if((glauber->nucleusA1()==1 || glauber->nucleusA2()==1) && param->getAverageOverNuclei()>1)
 	{
 	  cerr << "Averaging not supported for collisions involving protons ... Exiting." << endl;
@@ -90,6 +95,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  rv.x=0.;
 	  rv.y=0;
 	  rv.collided=0;
+          rv.proton=1;
 	  nucleusA.push_back(rv);  
 	}   
       else if(A1==2) // deuteron
@@ -128,6 +134,8 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  // we sample the neutron proton distance, so distance to the center needs to be divided by 2
 	  rv.x = rv.x/2.;
 	  rv.y = rv.y/2.;
+          rv.proton = 1;
+	  rv.collided=0;
 	  nucleusA.push_back(rv);
 	 
 	  // other nucleon is 180 degrees rotated:	  
@@ -168,7 +176,11 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 		  fin >> rv.y;
 		  fin >> dummy; // don't care about z direction
 		  rv.collided=0;
-		  nucleusA.push_back(rv);
+                  if (A==2) 
+                    rv.proton=0;
+                  else 
+                    rv.proton=1;
+                  nucleusA.push_back(rv);
 		  A++;
 		  cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
 		}
@@ -182,11 +194,17 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else
 	{
-	  for (int i = 0; i < A1; i++) // get all nucleon coordinates
-	    {
-	      rv = glauber->SampleTARejection(random,1);
-	      nucleusA.push_back(rv);
-	    }
+	  //for (int i = 0; i < A1; i++) // get all nucleon coordinates
+	  //  {
+	  //    rv = glauber->SampleTARejection(random,1);
+	  //    nucleusA.push_back(rv);
+	  //  }
+          generate_nucleus_configuration(random, A1, Z1,
+                                         glauber->LexusData.Projectile.a_WS,
+                                         glauber->LexusData.Projectile.R_WS,
+                                         glauber->LexusData.Projectile.beta2,
+                                         glauber->LexusData.Projectile.beta4,
+                                         &nucleusA);
 	}
     
       if(A2==1)
@@ -194,6 +212,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  rv2.x=0.;
 	  rv2.y=0;
 	  rv2.collided=0;
+          rv2.proton=1;
 	  nucleusB.push_back(rv2);
 	}   
       else if(A2==2) // deuteron
@@ -204,11 +223,14 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 
 	  rv.x = rv.x/2.;
 	  rv.y = rv.y/2.;
+          rv2.proton=1;
+	  rv.collided=0;
 	  nucleusB.push_back(rv);
 	 
 	  // other nucleon is 180 degrees rotated:	  
 	  rv.x = -rv.x;
 	  rv.y = -rv.y;
+          rv2.proton=0;
 	  rv.collided=0;
 	  nucleusB.push_back(rv);
 
@@ -244,7 +266,11 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 		  fin >> rv.y;
 		  fin >> dummy; // don't care about z direction
 		  rv.collided=0;
-		  nucleusB.push_back(rv);
+                  if (A==2) 
+                    rv.proton=0;
+                  else 
+                    rv.proton=1;
+                  nucleusB.push_back(rv);
 		  A++;
 		  cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
 		}
@@ -260,11 +286,17 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else
 	{
-	  for (int i = 0; i < A2; i++) // get all nucleon coordinates
-	    {
-	      rv2 = glauber->SampleTARejection(random,2);
-	      nucleusB.push_back(rv2);
-	    }
+	  //for (int i = 0; i < A2; i++) // get all nucleon coordinates
+	  //  {
+	  //    rv2 = glauber->SampleTARejection(random,2);
+	  //    nucleusB.push_back(rv2);
+	  //  }
+          generate_nucleus_configuration(random, A2, Z2,
+                                         glauber->LexusData.Target.a_WS,
+                                         glauber->LexusData.Target.R_WS,
+                                         glauber->LexusData.Target.beta2,
+                                         glauber->LexusData.Target.beta4,
+                                         &nucleusB);
 	}
       cout << "done. " << endl;
     }
@@ -509,10 +541,9 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}
     }  
   
-  
-  void Init::readNuclearQs(Parameters *param)
-  {
-  cout << "Reading Q_s(sum(T_p),y) from file ";
+
+void Init::readNuclearQs(Parameters *param)
+{
   // steps in qs0 and Y in the file
   // double y[iymaxNuc];
   // double qs0[ibmax];
@@ -524,36 +555,36 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 
   cout << param->getNucleusQsTableFileName() << " ... " ;
 
-  if(fin)
-    {
-      for (int iT=0; iT<iTpmax; iT++)
-	{
-	  for (int iy=0; iy<iymaxNuc; iy++)
-	    {
-	      if (!fin.eof())
-		{  
-		  fin >> dummy;
-		  fin >> T;
-		  Tlist[iT]=atof(T.c_str());
-		  fin >> Qs;
-		  Qs2Nuclear[iT][iy]=atof(Qs.c_str());
-		  //cout << iT << " " << iy <<  " " << T << " " << iy*deltaYNuc << " " << Qs2Nuclear[iT][iy] << endl;
-		}
-	      else 
-		{
-		  cerr << " End of file reached prematurely. Did the file change? Exiting." << endl;
-		  exit(1);
-		}
-	    }
-	}
-      fin.close();
-      cout << " done." << endl;
-    }
-  else
-    {
-      cout << "[Init.cpp:readNuclearQs]: File " << (param->getNucleusQsTableFileName()).c_str() << " does not exist. Exiting." << endl;
-      exit(1);
-    }
+      cout << "Reading Q_s(sum(T_p),y) from file ";
+      if(fin)
+        {
+          for (int iT=0; iT<iTpmax; iT++)
+            {
+              for (int iy=0; iy<iymaxNuc; iy++)
+                {
+                  if (!fin.eof())
+                    {  
+                      fin >> dummy;
+                      fin >> T;
+                      Tlist[iT]=atof(T.c_str());
+                      fin >> Qs;
+                      Qs2Nuclear[iT][iy]=atof(Qs.c_str());
+                    }
+                  else 
+                    {
+                      cerr << " End of file reached prematurely. Did the file change? Exiting." << endl;
+                      exit(1);
+                    }
+                }
+            }
+          fin.close();
+          cout << " done." << endl;
+        }
+      else
+        {
+          cout << "[Init.cpp:readNuclearQs]: File " << param->getNucleusQsTableFileName() << " does not exist. Exiting." << endl;
+          exit(1);
+        }
 }  
 
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2 and up)
@@ -823,14 +854,14 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   // compute N_part
   // positions are shifted here. not later as in previous versions. bshift below (in init(..)) is zero.
 
-  if(A1 == 1 && A2 > 1) 
+  if(A1 < 4 && A2 > 1) 
     {
       for (int i = 0; i<A2; i++) 
 	{
 	  nucleusB.at(i).x=nucleusB.at(i).x+b;
 	}   
     }
-  else if(A2 == 1 && A1 > 1) 
+  else if(A2 < 4 && A1 > 1) 
     {
       for (int i = 0; i<A1; i++) 
 	{
@@ -1025,7 +1056,9 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
 		}
 
-	      lat->cells[pos]->setTpA(lat->cells[pos]->getTpA()+T/nucleiInAverage); // add up all T_p
+              // // new edge noise preventer
+              //              if(x > b/2. - 14.)
+                lat->cells[pos]->setTpA(lat->cells[pos]->getTpA()+T/nucleiInAverage); // add up all T_p
 	      
 	      maxT=max(lat->cells[pos]->getTpA()+T,maxT);
 
@@ -1061,7 +1094,9 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
 		}
 	      
-	      lat->cells[pos]->setTpB(lat->cells[pos]->getTpB()+T/nucleiInAverage); // add up all T_p
+              // // new edge noise preventer
+              // if(x < -b/2. + 14.)
+                lat->cells[pos]->setTpB(lat->cells[pos]->getTpB()+T/nucleiInAverage); // add up all T_p
 	    
 	      maxT=max(lat->cells[pos]->getTpB()+T,maxT);
 	      
@@ -1128,6 +1163,24 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
   foutNcoll.close();
   
+  
+  stringstream strNpart_name;
+  strNpart_name << "NpartList" << param->getMPIRank() << ".dat";
+  string Npart_name;  Npart_name = strNpart_name.str();
+
+  ofstream foutNpart(Npart_name.c_str(),ios::out); 
+ 
+  for (int i = 0; i<A1; i++) 
+    {
+      foutNpart << nucleusA.at(i).x << " " << nucleusA.at(i).y << " " << nucleusA.at(i).proton << " " << nucleusA.at(i).collided << endl;
+    }
+  foutNpart << endl;
+  for (int i = 0; i<A2; i++) 
+    {
+      foutNpart << nucleusB.at(i).x << " " << nucleusB.at(i).y << " " << nucleusB.at(i).proton << " " << nucleusB.at(i).collided << endl;
+    }
+  foutNpart.close();
+
 
 //   for (int i = 0; i<A1; i++) 
 //     {
@@ -1419,7 +1472,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  y = -L/2.+a*iy;
 	  //  outvalue = sqrt(lat->cells[pos]->getg2mu2B())/a*hbarc; // in GeV
 	  outvalue = lat->cells[pos]->getg2mu2A();
-	  
+
 	  // posA = static_cast<int>(floor((x-b/2.+L/2.)/a+0.00000001))*N+iy;
 	  // posB = static_cast<int>(floor((x+b/2.+L/2.)/a+0.00000001))*N+iy;
 	  
@@ -1623,13 +1676,14 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   const double a = L/N; // lattice spacing in fm
   const double m = param->getm()*a/hbarc;
   const Matrix one(Nc,1.);
-
+  double UVdamp = param->getUVdamp(); //GeV^-1
+  UVdamp = UVdamp/a*hbarc;
   complex<double>** rhoACoeff;
   complex<double>** rhoBCoeff;
 
   rhoACoeff = new complex<double>*[Nc2m1];
   rhoBCoeff = new complex<double>*[Nc2m1];
-  
+
   for(int i=0; i<Nc2m1; i++)
     {
       rhoACoeff[i] = new complex<double>[N*N];
@@ -1693,8 +1747,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                   {
                     for(int n=0; n<Nc2m1; n++)
                       {
-                        rhoACoeff[n][pos] *= (1./(kt2+m*m));
-                        rhoBCoeff[n][pos] *= (1./(kt2+m*m));
+                        rhoACoeff[n][pos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
+                        rhoBCoeff[n][pos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
                       }
                   }
               }
@@ -3109,3 +3163,254 @@ void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *r
 
   
 
+void Init::generate_nucleus_configuration(
+                Random *random,
+                int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
+                std::vector<ReturnValue> *nucleus) {
+    if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15) {
+        generate_nucleus_configuration_with_woods_saxon(
+                                                        random, A, Z, a_WS, R_WS, nucleus);
+    } else {
+        generate_nucleus_configuration_with_deformed_woods_saxon(
+                                                                 random, A, Z, a_WS, R_WS, beta2, beta4, nucleus);
+    }
+}
+
+void Init::generate_nucleus_configuration_with_woods_saxon(
+                                        Random *random,
+                                        int A, int Z, double a_WS, double R_WS,
+                                        std::vector<ReturnValue> *nucleus) {
+    std::vector<double> r_array(A, 0.);
+    for (int i = 0; i < A; i++) {
+        r_array[i] = sample_r_from_woods_saxon(random, a_WS, R_WS);
+    }
+    std::sort(r_array.begin(), r_array.end());
+
+    std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
+    const double d_min    = 0.9;
+    const double d_min_sq = d_min*d_min;
+    for (unsigned int i = 0; i < r_array.size(); i++) {
+        double r_i = r_array[i];
+        int reject_flag = 0;
+        int iter = 0;
+        double x_i, y_i, z_i;
+        do {
+            iter++;
+            reject_flag = 0;
+            double phi    = 2.*M_PI*random->genrand64_real3();
+            double theta  = acos(1. - 2.*random->genrand64_real3());
+            x_i = r_i*sin(theta)*cos(phi);
+            y_i = r_i*sin(theta)*sin(phi);
+            z_i = r_i*cos(theta);
+            for (int j = i - 1; j >= 0; j--) {
+                if ((r_i - r_array[j])*(r_i - r_array[j]) > d_min_sq) break;
+                double dsq = (  (x_i - x_array[j])*(x_i - x_array[j])
+                              + (y_i - y_array[j])*(y_i - y_array[j])
+                              + (z_i - z_array[j])*(z_i - z_array[j]));
+                if (dsq < d_min_sq) {
+                    reject_flag = 1;
+                    break;
+                }
+            }
+        } while (reject_flag == 1 && iter < 100);
+        //if (iter == 100) {
+        //    cout << "[Warning] can not find configuration : "
+        //         << "r[i] = " << r_i << ", r[i-1] = " << r_array[i-1] << endl;
+        //}
+        x_array[i] = x_i;
+        y_array[i] = y_i;
+        z_array[i] = z_i;
+    }
+
+    recenter_nucleus(x_array, y_array, z_array);
+
+    for (unsigned int i = 0; i < r_array.size(); i++) {
+        ReturnValue rv;
+        rv.x = x_array[i];
+        rv.y = y_array[i];
+        rv.phi = atan2(y_array[i], x_array[i]);
+        rv.collided = 0;
+        nucleus->push_back(rv);
+    }
+
+    std::random_shuffle ( nucleus->begin(), nucleus->end() );
+    
+    for (unsigned int i = 0; i < r_array.size(); i++) 
+      {
+        if(i<Z)
+          nucleus->at(i).proton = 1;
+        else
+          nucleus->at(i).proton = 0;
+      }
+
+}
+
+
+double Init::sample_r_from_woods_saxon(Random *random, double a_WS, double R_WS) const {
+    double rmaxCut = R_WS + 10.*a_WS;
+    double r = 0.;
+    do {
+        r = rmaxCut*pow(random->genrand64_real3(), 1.0/3.0);
+    } while (random->genrand64_real3() > fermi_distribution(r, R_WS, a_WS));
+    return(r);
+}
+
+
+double Init::fermi_distribution(double r, double R_WS, double a_WS) const {
+    double f = 1./(1. + exp((r - R_WS)/a_WS));
+    return (f);
+}
+
+
+void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
+                Random *random,
+                int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
+                std::vector<ReturnValue> *nucleus) {
+    std::vector<double> r_array(A, 0.);
+    std::vector<double> costheta_array(A, 0.);
+    std::vector<std::pair<double, double>> pair_array;
+    for (int i = 0; i < A; i++) {
+        sample_r_and_costheta_from_deformed_woods_saxon(
+                random, a_WS, R_WS, beta2, beta4,
+                r_array[i], costheta_array[i]);
+        pair_array.push_back(std::make_pair(r_array[i], costheta_array[i]));
+    }
+    //std::sort(r_array.begin(), r_array.end());
+    std::sort(pair_array.begin(), pair_array.end());
+
+    std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
+    const double d_min    = 0.9;
+    const double d_min_sq = d_min*d_min;
+    for (unsigned int i = 0; i < A; i++) {
+        //const double r_i     = r_array[i];
+        //const double theta_i = acos(costheta_array[i]);
+        const double r_i     = pair_array[i].first;
+        const double theta_i = acos(pair_array[i].second);
+        int reject_flag = 0;
+        int iter = 0;
+        double x_i, y_i, z_i;
+        do {
+            iter++;
+            reject_flag = 0;
+            double phi    = 2.*M_PI*random->genrand64_real3();
+            x_i = r_i*sin(theta_i)*cos(phi);
+            y_i = r_i*sin(theta_i)*sin(phi);
+            z_i = r_i*cos(theta_i);
+            for (int j = i - 1; j >= 0; j--) {
+                //if ((r_i - r_array[j])*(r_i - r_array[j]) > d_min_sq) break;
+                if ((r_i - pair_array[j].first)*(r_i - pair_array[j].first) > d_min_sq) break;
+                double dsq = (  (x_i - x_array[j])*(x_i - x_array[j])
+                              + (y_i - y_array[j])*(y_i - y_array[j])
+                              + (z_i - z_array[j])*(z_i - z_array[j]));
+                if (dsq < d_min_sq) {
+                    reject_flag = 1;
+                    break;
+                }
+            }
+        } while (reject_flag == 1 && iter < 100);
+        //if (iter == 100) {
+        //    cout << "[Warning] can not find configuration : "
+        //         << "r[i] = " << r_i << ", r[i-1] = " << r_array[i-1] << endl;
+        //}
+        x_array[i] = x_i;
+        y_array[i] = y_i;
+        z_array[i] = z_i;
+    }
+    recenter_nucleus(x_array, y_array, z_array);
+
+    double phi   = 2.*M_PI*random->genrand64_real3();
+    double theta = acos(1. - 2.*random->genrand64_real3());
+    rotate_nucleus(phi, theta, x_array, y_array, z_array);
+
+
+    for (unsigned int i = 0; i < r_array.size(); i++) {
+        ReturnValue rv;
+        rv.x = x_array[i];
+        rv.y = y_array[i];
+        rv.phi = atan2(y_array[i], x_array[i]);
+        rv.collided = 0;
+        nucleus->push_back(rv);
+    }
+
+    std::random_shuffle ( nucleus->begin(), nucleus->end() );
+    
+    for (unsigned int i = 0; i < r_array.size(); i++) 
+      {
+        if(i<Z)
+          nucleus->at(i).proton = 1;
+        else
+          nucleus->at(i).proton = 0;
+      }
+
+}
+
+
+void Init::sample_r_and_costheta_from_deformed_woods_saxon(
+        Random *random, double a_WS, double R_WS, double beta2, double beta4,
+        double &r, double &costheta) const {
+    double rmaxCut = R_WS + 10.*a_WS;
+    double R_WS_theta = R_WS;
+    do {
+        r = rmaxCut*pow(random->genrand64_real3(), 1.0/3.0);
+        costheta = 1.0 - 2.0*random->genrand64_real3();
+        auto y20 = spherical_harmonics(2, costheta);
+        auto y40 = spherical_harmonics(4, costheta);
+        R_WS_theta = R_WS*(1.0 + beta2*y20 + beta4*y40);
+    } while (random->genrand64_real3()
+             > fermi_distribution(r, R_WS_theta, a_WS));
+}
+
+
+double Init::spherical_harmonics(int l, double ct) const {
+    // Currently assuming m=0 and available for Y_{20} and Y_{40}
+    // "ct" is cos(theta)
+    double ylm = 0.0;
+    if (l == 2) {
+        ylm = 3.0*ct*ct-1.0;
+        ylm *= 0.31539156525252005;  // pow(5.0/16.0/M_PI,0.5);
+    } else if (l == 4) {
+        ylm  = 35.0*ct*ct*ct*ct;
+        ylm -= 30.0*ct*ct;
+        ylm += 3.0;
+        ylm *= 0.10578554691520431;  // 3.0/16.0/pow(M_PI,0.5);
+    }
+    return(ylm);
+}
+
+
+void Init::recenter_nucleus(std::vector<double> &x, std::vector<double> &y,
+                            std::vector<double> &z) {
+    // compute the center of mass position and shift it to (0, 0, 0)
+    double meanx = 0., meany = 0., meanz = 0.;
+    for (unsigned int i = 0; i < x.size(); i++) {
+        meanx += x[i];
+        meany += y[i];
+        meanz += z[i];
+    }
+      
+    meanx /= static_cast<double>(x.size());
+    meany /= static_cast<double>(y.size());
+    meanz /= static_cast<double>(z.size());
+
+    for (unsigned int i = 0; i < x.size(); i++) {
+        x[i] -= meanx;
+        y[i] -= meany;
+        z[i] -= meanz;
+    }
+}
+
+
+void Init::rotate_nucleus(double phi, double theta,
+                          std::vector<double> &x, std::vector<double> &y,
+                          std::vector<double> &z) {
+    auto cth  = cos(theta);
+    auto sth  = sin(theta);
+    auto cphi = cos(phi);
+    auto sphi = sin(phi);
+    for (unsigned int i = 0; i < x.size(); i++) {
+        auto x_new = cth*cphi*x[i] - sphi*y[i] + sth*cphi*z[i];
+        auto y_new = cth*sphi*x[i] + cphi*y[i] + sth*sphi*z[i];
+        auto z_new = -sth    *x[i] + 0.  *y[i] + cth     *z[i];
+        x[i] = x_new; y[i] = y_new; z[i] = z_new;
+    }
+}

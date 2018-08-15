@@ -282,6 +282,8 @@ void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Pa
         lat->cells[pos]->setE2(bufferlat->cells[pos]->getbuffer2());
       }
   }
+  cout << lat->cells[N*N/2+N/2]->getE1() << endl;        
+
 }
 
 void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
@@ -649,7 +651,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       // //      foutEB << it*dtau << " " << dtau*it*avgEt2 << " " << dtau*it*avgEl2 << " " << dtau*it*avgBt2 << " " << dtau*it*avgBl2 << endl;
     
 
-      if(it==1 && param->getWriteOutputs() == 2)
+      if(it==1 && param->getWriteOutputs() == 3)
 	{	  
 	  stringstream streI_name;
 	  streI_name << "epsilonInitialPlot" << param->getMPIRank() << ".dat";
@@ -721,7 +723,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
  	}
 
 
-      if(it==itmax/2 && param->getWriteOutputs() == 2)
+      if(it==itmax/2 && param->getWriteOutputs() == 3)
 	{	  
 	  stringstream streInt_name;
 	  streInt_name << "epsilonIntermediatePlot" << param->getMPIRank() << ".dat";
@@ -1311,9 +1313,11 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       // 	}
       
       int success=1;
-      if(it==1 || it==itmax)
-	{	
-	  success = multiplicity(lat,group,param,it);
+      //      if(it==1 || it==itmax)
+      //	{	
+      if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
+	{	  
+          success = multiplicity(lat,group,param,it);
 	  //	  correlationsColor(lat,group,param,it);
 	  //twoPointFunctionInK(param, lat, 0);
 	}
@@ -2937,27 +2941,27 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double Nkxky[N*N];
   
   stringstream strnkxky_name;
-  strnkxky_name << "nkxky" << param->getMPIRank() << ".dat";
+  strnkxky_name << "nkxky-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
   string nkxky_name;
   nkxky_name = strnkxky_name.str();
  
   stringstream strNpartdNdy_name;
-  strNpartdNdy_name << "NpartdNdy" << param->getMPIRank() << ".dat";
+  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
   string NpartdNdy_name;
   NpartdNdy_name = strNpartdNdy_name.str();
 
   stringstream strNpartdNdyH_name;
-  strNpartdNdyH_name << "NpartdNdyHadrons" << param->getMPIRank() << ".dat";
+  strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
   string NpartdNdyH_name;
   NpartdNdyH_name = strNpartdNdyH_name.str();
 
   stringstream strmult_name;
-  strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
+  strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
   string mult_name;
   mult_name = strmult_name.str();
 
   stringstream strdNdy_name;
-  strdNdy_name << "dNdy" << param->getMPIRank() << ".dat";
+  strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
   string dNdy_name;
   dNdy_name = strdNdy_name.str();
 
@@ -3111,6 +3115,16 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     {
       for(int j=0; j<N; j++)
   	{
+  	  pos = i*N+j;     
+          Nkxky[pos] = 0.;
+        }  
+    }
+  
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+  	{
+          nkt=0.;
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
@@ -3159,8 +3173,11 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		    }
   		}
   	    }
-	  Nkxky[pos] = nkt*N*N/Pi/Pi/2./2.;
-  	}
+	  if(i!=0 && j!=0)
+  	    {
+              Nkxky[pos] = nkt*N*N/Pi/Pi/2./2.;
+            }  
+	}
     }
   //foutNkxky.close();
 
@@ -3253,6 +3270,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     {
       for(int j=0; j<N; j++)
   	{
+          nkt=0.;
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
@@ -3298,8 +3316,11 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		    }
   		}
   	    }
-	  Nkxky[pos] += nkt*N*N/Pi/Pi/2./2.;
-	  //	  if (param->getWriteOutputs()==2)
+	  if(i!=0 && j!=0)
+  	    {
+                Nkxky[pos] += nkt*N*N/Pi/Pi/2./2.;
+            }
+                //	  if (param->getWriteOutputs()==2)
 	  //   foutNkxky << i << " " << j << " " << nkt << "\n";
   	}
       //      if (param->getWriteOutputs()==2)
@@ -3397,6 +3418,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     {
       for(int j=0; j<N; j++)
   	{
+          nkt=0.;
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
@@ -3443,10 +3465,13 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		    }
   		}
   	    }
-	  Nkxky[pos] += nkt *N*N/Pi/Pi/2./2.;
-	  if (param->getWriteOutputs()==2)
+	  if(i!=0 && j!=0)
+  	    {
+              Nkxky[pos] += nkt *N*N/Pi/Pi/2./2.;
+            }
+          if (param->getWriteOutputs()==2)
 	    foutNkxky << 2.*sin(kx/2.)/a*0.1973269718 << " " << 2.*sin(ky/2.)/a*0.1973269718 << " " << Nkxky[pos]*a/0.1973269718*a/0.1973269718 << "\n";
-  	}
+        }
       if (param->getWriteOutputs()==2)
 	foutNkxky << endl;
     }
@@ -3460,7 +3485,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   m=param->getJacobianm(); // in GeV
   P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
 
-  ofstream foutMult(mult_name.c_str(),ios::app); 
+  ofstream foutMult(mult_name.c_str(),ios::out); 
   //  ofstream foutdNdy(dNdy_name.c_str(),ios::app); 
   for(int ik=0; ik<bins; ik++)
     {
@@ -3510,7 +3535,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	}
       
       // output dN/d^2k
-      if(it == itmax)
+      if(it > 0)
 	{
 	  foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
 		   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
@@ -3534,7 +3559,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
 
   // compute hadrons using fragmentation function 
-  if(it == itmax+1)
+  if(it == itmax && param->getWriteOutputs() == 3)
     {
       //      cout << " before Hadronizing ... " << endl;
       //sleep(10);
@@ -3701,7 +3726,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	  cout << "dN/dy 2 = " << dNdeta2 << ", dE/dy 2 = " << dEdeta2 << endl; 
 	  cout << "gluon <p_T> = " << dEdeta/dNdeta << endl;
     }
-  else
+  else if(param->getUsePseudoRapidity()==1)
     {
       m=param->getJacobianm(); // in GeV
       P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
@@ -4355,7 +4380,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
 
   // output dN/d^2k
-  ofstream foutPhiMult(PhiMult_name.c_str(),ios::app); 
+  ofstream foutPhiMult(PhiMult_name.c_str(),ios::out); 
   if (it==1)
     {
       foutPhiMult << "3" << " " << bins << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -4456,7 +4481,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	    }
 	}
       // output dN/d^2k
-      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::app); 
+      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out); 
       if (it==1)
 	{
 	  foutPhiMultHad << "3" << " " << hbins << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -4472,7 +4497,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
       foutPhiMultHad.close();
 
 
-  ofstream foutCorr(Corr_name.c_str(),ios::app); 
+  ofstream foutCorr(Corr_name.c_str(),ios::out); 
   foutCorr << it*dtau*a << " " << dNdeta1 << " " << dNdeta2 << " " << dNdeta3 << " " << dNdeta4 << " " << dNdeta5 << " " << dNdeta6 <<  " " << dNdeta  << " " << dNdetaNoMixedTerms << endl;
   foutCorr.close();
   
@@ -4900,7 +4925,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 	}
     }
 
-  ofstream foutmultiplicity(mult_name.c_str(),ios::app); 
+  ofstream foutmultiplicity(mult_name.c_str(),ios::out); 
 	
   for(int ik=0; ik<binsmult; ik++)
     {
@@ -5003,7 +5028,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 
   if(it == itmax)
     {
-      ofstream foutmultiplicity2(mult2_name.c_str(),ios::app); 
+      ofstream foutmultiplicity2(mult2_name.c_str(),ios::out); 
       
       for(int ik=0; ik<bins; ik++)
 	{
@@ -5024,7 +5049,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 
 
   // output dN/d^2k
-  ofstream foutPhiMult(PhiMult_name.c_str(),ios::app); 
+  ofstream foutPhiMult(PhiMult_name.c_str(),ios::out); 
   if (it==1)
     {
       foutPhiMult << "3" << " " << (bins-1) << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -5151,7 +5176,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 	}
 
       // output dN/d^2k
-      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::app); 
+      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out); 
       if (it==1)
   	{
   	  foutPhiMultHad << "3" << " " << hbins << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -5321,7 +5346,7 @@ void Evolution::twoPointFunctionInK(Parameters *param, Lattice *lat, int ids)
       *C[i]/=static_cast<double>(count[i])*size*size; // divide by N^2, because sum_k C_k = N^2* N_c (instead of (2\pi)^2 N_c in continuum
     }
 
-  ofstream fout("k-corr.dat",ios::app); 
+  ofstream fout("k-corr.dat",ios::out); 
   for (int j=0; j<bins; j++)
     {
       fout << (j*step+step/2.) << " "  << *C[j] << endl; // not scaled by g^2 mu (was k->k/g2mu  and C[j]->C[j]/g2mu/g2mu

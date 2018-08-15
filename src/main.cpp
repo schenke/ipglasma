@@ -345,7 +345,7 @@ int main(int argc, char *argv[])
       fout1.close();
       
       // initialize gsl random number generator (used for non-Gaussian distributions)
-      random->gslRandomInit(rnum);
+      //random->gslRandomInit(rnum);
       
       // initialize U-fields on the lattice
       //      init->init(lat, group, param, random, glauber);
@@ -436,6 +436,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setJacobianm(setup->DFind(file_name,"Jacobianm"));
   param->setSigmaNN(setup->DFind(file_name,"SigmaNN"));
   param->setRmax(setup->DFind(file_name,"rmax"));
+  param->setUVdamp(setup->DFind(file_name,"UVdamp"));
   param->setbmin(setup->DFind(file_name,"bmin"));
   param->setbmax(setup->DFind(file_name,"bmax"));
   param->setQsmuRatio(setup->DFind(file_name,"QsmuRatio"));
@@ -499,6 +500,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   fout1 << "smeared mu " << param->getSmearQs() << endl;
   fout1 << "m " << param->getm() << endl;
   fout1 << "rmax " << param->getRmax() << endl;
+  fout1 << "UVdamp " << param->getUVdamp() << endl;
   if (param->getSmearQs()==1)
     {
       fout1 << "smearing width " << param->getSmearingWidth() << endl;

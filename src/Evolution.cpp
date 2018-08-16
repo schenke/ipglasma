@@ -282,7 +282,7 @@ void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Pa
         lat->cells[pos]->setE2(bufferlat->cells[pos]->getbuffer2());
       }
   }
-  cout << lat->cells[N*N/2+N/2]->getE1() << endl;        
+  //  cout << lat->cells[N*N/2+N/2]->getE1() << endl;        
 
 }
 

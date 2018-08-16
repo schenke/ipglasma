@@ -1,7 +1,7 @@
 mode 1
 readMultFromFile 0
 size 400
-L 15.
+L 10.
 Nc 3			      
 m 0.2
 rmax 100.

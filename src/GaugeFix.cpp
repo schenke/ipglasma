@@ -127,7 +127,7 @@ void GaugeFix::FFTChi2(Lattice* lat, Group* group, Parameters *param, int steps)
 	break;
       
       fft->fftn(chi,chi,nn,2,1);
-      
+
       for (int i=0; i<N; i++)
 	{
 	  for (int j=0; j<N; j++)
@@ -402,28 +402,26 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
       fft->fftn(chi,chi,nn,2,1);
       
       for (int i=0; i<N; i++)
-      	{
-      	  for (int j=0; j<N; j++)
-      	    {
-      	      pos = i*N+j;
-      	      kx = sin(param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
-      	      ky = sin(param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
-      	      kt2 = 4.*(kx*kx+ky*ky); //lattice momentum squared
-	      
-      	      
-	      //  *chi[pos] = -0.5 * (1./(kt2+1e-9))*(*chi[pos]); 
-      	      *chi[pos] = -1.5 * (1./(kt2+1e-9))*(*chi[pos]); 
-      	      
-	      //  *chi[pos] = - 0.1 * (1./(kt2))*(*chi[pos]); 
-     
-
- 	      //*chi[pos] = (1./(kt2))*(*chi[pos]); 
-      	      
-      	    }
-      	}
-      
+        {
+          for (int j=0; j<N; j++)
+            {
+              pos = i*N+j;
+              kx = sin(param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
+              ky = sin(param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
+              kt2 = 4.*(kx*kx+ky*ky); //lattice momentum squared
+              
+              
+              //  *chi[pos] = -0.5 * (1./(kt2+1e-9))*(*chi[pos]); 
+              *chi[pos] = -1.5 * (1./(kt2+1e-9))*(*chi[pos]); 
+              //  *chi[pos] = - 0.1 * (1./(kt2))*(*chi[pos]); 
+              //*chi[pos] = (1./(kt2))*(*chi[pos]); 
+              
+            }
+        }
+        
       fft->fftn(chi,chi,nn,2,-1);
-      
+   
+      //#pragma omp parallel for collapse(2) 
       for (int i=0; i<N; i++)
 	{
 	  for (int j=0; j<N; j++)
@@ -448,10 +446,17 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
 		}
 	      
 	      lat->cells[pos]->setg(g);
-	      gaugeTransform(lat, group, param, i, j);
 	      
 	    }
 	}
+
+      for (int i=0; i<N; i++)
+	{
+	  for (int j=0; j<N; j++)
+	    {
+              gaugeTransform(lat, group, param, i, j);
+            }
+        }
       
   //       for(int i=0; i<N; i++)
   // 	{
@@ -485,7 +490,6 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
   // 	}
   
 } // gfiter loop
-
 
 
 for(int i=0; i<N*N; i++)

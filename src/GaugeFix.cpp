@@ -242,7 +242,6 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
   double energy=0.;
   Matrix Uplaq(Nc), U(Nc), UDx(Nc), UDy(Nc), UDxMx(Nc), UDyMy(Nc) , Ux(Nc), Uy(Nc), UxMx(Nc), UyMy(Nc);
   Matrix UmxDag(Nc), UmyDag(Nc);
-  double kx, ky, kt2;
   double tr;
 
   int max_gfiter = steps;
@@ -253,13 +252,14 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
   
   Matrix **chi;
   chi = new Matrix*[N*N];
-
-  cout << "gauge fixing" << endl;
-
+  
   for(int i=0; i<N*N; i++)
     {
       chi[i] = new Matrix(Nc,0.);
     }
+  
+  
+  cout << "gauge fixing" << endl;
   
   for (int gfiter=0; gfiter<max_gfiter; gfiter++)
     {
@@ -400,56 +400,57 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
 	}    
 
       fft->fftn(chi,chi,nn,2,1);
-      
-      for (int i=0; i<N; i++)
+   
+#pragma omp parallel for
+        for (int i=0; i<N; i++)
         {
           for (int j=0; j<N; j++)
             {
-              pos = i*N+j;
+              double kx, ky, kt2;
+              int localpos = i*N+j;
               kx = sin(param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
               ky = sin(param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
               kt2 = 4.*(kx*kx+ky*ky); //lattice momentum squared
-              
-              
               //  *chi[pos] = -0.5 * (1./(kt2+1e-9))*(*chi[pos]); 
-              *chi[pos] = -1.5 * (1./(kt2+1e-9))*(*chi[pos]); 
+              *chi[localpos] = -1.5 * (1./(kt2+1e-9))*(*chi[localpos]); 
               //  *chi[pos] = - 0.1 * (1./(kt2))*(*chi[pos]); 
               //*chi[pos] = (1./(kt2))*(*chi[pos]); 
-              
             }
-        }
+        }        
         
-      fft->fftn(chi,chi,nn,2,-1);
+        fft->fftn(chi,chi,nn,2,-1);
    
-      //#pragma omp parallel for collapse(2) 
-      for (int i=0; i<N; i++)
-	{
+
+#pragma omp parallel 
+        {
+          Matrix localg(Nc);
+#pragma omp for 
+          for (int i=0; i<N; i++)
+            {
 	  for (int j=0; j<N; j++)
 	    {
-	      pos = i*N+j;
-	      
-	      // exponentiate
+          int localpos = i*N+j;
+          // exponentiate
 	      //g = one + complex<double>(1.,0.)*(*chi[pos]);
-	      
-	      g = complex<double>(0,1.)*(*chi[pos]);
-	      g.expm();
+              localg = complex<double>(0,1.)*(*chi[localpos]);
+	      localg.expm();
 	      // cout <<  i << " " << j << "  g=" << g.trace() << endl; 
 	      
-
 	      // reunitarize
-	      g.reu();
+	      localg.reu();
 
-	      if(g(2)!=g(2))
+	      if(localg(2)!=localg(2))
 		{
-		  cout << "problem at " << i << " " << j << " with g=" << g << endl; 
-		  g = one;
+		  cout << "problem at " << i << " " << j << " with g=" << localg << endl; 
+		  localg = one;
 		}
 	      
-	      lat->cells[pos]->setg(g);
+	      lat->cells[localpos]->setg(localg);
 	      
 	    }
 	}
-
+        }
+        
       for (int i=0; i<N; i++)
 	{
 	  for (int j=0; j<N; j++)
@@ -489,15 +490,15 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
   // 	    }
   // 	}
   
-} // gfiter loop
-
-
-for(int i=0; i<N*N; i++)
-  {
-    delete chi[i];
-  }
-
-delete [] chi;
+    } // gfiter loop
+  
+  
+  for(int i=0; i<N*N; i++)
+    {
+      delete chi[i];
+    }
+  
+  delete [] chi;
 }
 
 	

@@ -1695,16 +1695,16 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
     {
       double g2muA;
       double g2muB;
-        for (int pos=0; pos<N*N; pos++)
-          {
-            for(int n=0; n<Nc2m1; n++)
-              {
-                g2muA = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
-                g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
-                rhoACoeff[n][pos] = g2muA*random->Gauss();
-                rhoBCoeff[n][pos] = g2muB*random->Gauss();
-              }
-          }
+      for (int pos=0; pos<N*N; pos++)
+        {
+          for(int n=0; n<Nc2m1; n++)
+            {
+              g2muA = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
+              g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
+              rhoACoeff[n][pos] = g2muA*random->Gauss();
+              rhoBCoeff[n][pos] = g2muB*random->Gauss();
+            }
+        }
         
         for(int n=0; n<Nc2m1; n++)
           {
@@ -1714,13 +1714,13 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         
         // compute A^+
         int pos;
-        double kt2, kx, ky;
-          
+#pragma omp parallel for
         for (int i=0; i<N; i++)
           {
             for (int j=0; j<N; j++)
               {
-                pos = i*N+j; 
+                double kt2, kx, ky;
+                int localpos = i*N+j; 
                 kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
                 ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
                 kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
@@ -1730,16 +1730,16 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                       {
                         for(int n=0; n<Nc2m1; n++)
                           {
-                            rhoACoeff[n][pos] =  rhoACoeff[n][pos]*(1./(kt2));
-                            rhoBCoeff[n][pos] =  rhoBCoeff[n][pos]*(1./(kt2));
+                            rhoACoeff[n][localpos] =  rhoACoeff[n][localpos]*(1./(kt2));
+                            rhoBCoeff[n][localpos] =  rhoBCoeff[n][localpos]*(1./(kt2));
                           }
                       }
                     else
                       {
                         for(int n=0; n<Nc2m1; n++)
                           {
-                            rhoACoeff[n][pos] = 0.;
-                            rhoBCoeff[n][pos] = 0.;
+                            rhoACoeff[n][localpos] = 0.;
+                            rhoBCoeff[n][localpos] = 0.;
                           }
                       }
                   }
@@ -1747,8 +1747,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                   {
                     for(int n=0; n<Nc2m1; n++)
                       {
-                        rhoACoeff[n][pos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
-                        rhoBCoeff[n][pos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
+                        rhoACoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
+                        rhoBCoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
                       }
                   }
               }

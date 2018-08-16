@@ -2138,6 +2138,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
   // fout.close();      
 
+  cout << "Finding fields in forward lightcone..." << endl;
 
 #pragma omp parallel
   {
@@ -2241,6 +2242,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     Matrix UDx1mUDx2(int(Nc),0.);
     Matrix Uy1mUy2(int(Nc),0.);
     Matrix UDy1mUDy2(int(Nc),0.);
+
     
     // compute Ux(3) Uy(3) after the collision
 #pragma omp for 

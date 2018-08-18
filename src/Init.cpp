@@ -662,8 +662,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   int pos,posA,posB;
   int N = param->getSize();
   int A1, A2;
-  int check=0;
-  double xVal;
+  // int check=0;
   if(param->getNucleonPositionsFromFile()==0)
     {
       A1 = static_cast<int>(glauber->nucleusA1())*param->getAverageOverNuclei();
@@ -679,12 +678,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   int Ncoll = 0;
   double g2mu2A, g2mu2B;
   double b = param->getb();
-  double x, xm;
-  double y, ym;
   double r;
   double L = param->getL();
-  double rapidity;
   double P,m;
+  double rapidity;
   if(param->getUsePseudoRapidity()==0)
     rapidity = param->getRapidity();
   else
@@ -830,9 +827,9 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for(int iy=0; iy<N; iy++)
 	    {
-	      pos = ix*N+iy;
-	      lat->cells[pos]->setg2mu2A(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
-	      lat->cells[pos]->setg2mu2B(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+              int localpos = ix*N+iy;
+	      lat->cells[localpos]->setg2mu2A(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+	      lat->cells[localpos]->setg2mu2B(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
 	    }
 	}
       param->setSuccess(1);
@@ -840,14 +837,14 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       return;
     }
   
-
+#pragma omp parallel for
   for(int ix=0; ix<N; ix++) // loop over all positions
     {
       for(int iy=0; iy<N; iy++)
 	{
-	  pos = ix*N+iy;
-	  lat->cells[pos]->setg2mu2A(0.);
-	  lat->cells[pos]->setg2mu2B(0.);
+	  int localpos = ix*N+iy;
+	  lat->cells[localpos]->setg2mu2A(0.);
+	  lat->cells[localpos]->setg2mu2B(0.);
 	}
     }
   
@@ -882,13 +879,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
 
   
-  double maxT=0;
-
-  double bp2,T,BG;
+  double BG;
   BG = param->getBG();
   double BGq = param->getBGq(); // quark size in GeV^-2
   double xi = param->getProtonAnisotropy();
-  double phi;
 
   if(xi!=0.)
     {
@@ -1018,6 +1012,16 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 
   //add all T_p's (new in version 1.2)
+
+#pragma omp parallel
+  {
+    double x, xm;
+    double y, ym;
+    int localpos;
+    double bp2,T, phi;
+    double maxT=0;
+
+#pragma omp for   
   for(int ix=0; ix<N; ix++) // loop over all positions
     {
       x = -L/2.+a*ix;
@@ -1025,10 +1029,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  y = -L/2.+a*iy;
 	   
-	  pos = ix*N+iy;
+	  localpos = ix*N+iy;
 	
 	  // nucleus A 
-	  lat->cells[pos]->setTpA(0.);
+	  lat->cells[localpos]->setTpA(0.);
 	  for (int i = 0; i<A1; i++) 
 	    {
 	      xm = nucleusA.at(i).x;
@@ -1058,14 +1062,14 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
               // // new edge noise preventer
               //              if(x > b/2. - 14.)
-                lat->cells[pos]->setTpA(lat->cells[pos]->getTpA()+T/nucleiInAverage); // add up all T_p
+                lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
 	      
-	      maxT=max(lat->cells[pos]->getTpA()+T,maxT);
+                //	      maxT=max(lat->cells[localpos]->getTpA()+T,maxT);
 
 	    }
 	  
 	  // nucleus B 
-	  lat->cells[pos]->setTpB(0.);
+	  lat->cells[localpos]->setTpB(0.);
 	  for (int i = 0; i<A2; i++) 
 	    {
 	      xm = nucleusB.at(i).x;
@@ -1081,7 +1085,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 		      T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
 		      //	      cout << "B " << i << " " << iq << " " << gaussA[i][iq] << endl;
-
 		    }
 		}
 	      else
@@ -1096,15 +1099,15 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      
               // // new edge noise preventer
               // if(x < -b/2. + 14.)
-                lat->cells[pos]->setTpB(lat->cells[pos]->getTpB()+T/nucleiInAverage); // add up all T_p
+                lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p
 	    
-	      maxT=max(lat->cells[pos]->getTpB()+T,maxT);
+                //	      maxT=max(lat->cells[localpos]->getTpB()+T,maxT);
 	      
 	    }
 	}
     }
+  }
 
-  //  cout << "maximal used T=" << maxT << endl;
 
   stringstream strNcoll_name;
   strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
@@ -1210,13 +1213,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   // gmuA_name = strgmuA_name.str();
 	  
   // ofstream fout(gmuA_name.c_str(),ios::out); 
-  double outvalue;
-  double alphas;
-  double Ydeviation = 10000;
-  double QsA, QsB, distanceA, distanceB;
-
-  QsA = 1;
-  QsB = 1;
 
   Npart = 0;
 
@@ -1247,15 +1243,32 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
 
   // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+#pragma omp parallel
+  {
+    double x;
+    double y;
+    int localpos;
+    //double bp2,T;
+    double outvalue;
+    double alphas;
+    double Ydeviation = 10000;
+    double QsA, QsB, distanceA, distanceB;
+    double xVal;
+    double localrapidity=rapidity;
+    int check, check1, check2;
+    QsA = 1;
+    QsB = 1;
+     
+#pragma omp for   
   for(int ix=0; ix<N; ix++) // loop over all positions
     {
       x = -L/2.+a*ix;
       for(int iy=0; iy<N; iy++)
 	{
+          Ydeviation = 10000;
 	  check = 0;
 	  y = -L/2.+a*iy;
-	  Ydeviation = 10000;
-	  pos = ix*N+iy;
+	  localpos = ix*N+iy;
 	  
 	  // this version removes noise outside the interaction region 
 	  // by checking whether we are inside a wounded nucleon
@@ -1311,12 +1324,12 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 
 //	  cut proton at a radius of rmax [fm] (about twice the gluonic radius to be generous)	  
-	  if(log(2*M_PI*BG*lat->cells[pos]->getTpA())<0.)
-	    distanceA = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[pos]->getTpA()))*hbarc;
+	  if(log(2*M_PI*BG*lat->cells[localpos]->getTpA())<0.)
+	    distanceA = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpA()))*hbarc;
 	  else distanceA=0.;
 
-	  if(log(2*M_PI*BG*lat->cells[pos]->getTpB())<0.)
-	    distanceB = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[pos]->getTpB()))*hbarc;
+	  if(log(2*M_PI*BG*lat->cells[localpos]->getTpB())<0.)
+	    distanceB = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpB()))*hbarc;
 	  else distanceB=0.;
 
 	  // if(distanceA>0.1)
@@ -1332,7 +1345,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      check=2;
 	    }
 
-
 	  double exponent=5.6; // see 1212.2974 Eq. (17)
 	  if(check==2)
 	    {
@@ -1342,8 +1354,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  // _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 		  while (abs(Ydeviation) > 0.001) 
 		    {
-		      if(rapidity>=0)
-			QsA = sqrt(getNuclearQs2(param, random, lat->cells[pos]->getTpA(), abs(rapidity)));
+		      if(localrapidity>=0)
+                        {
+                          QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), abs(localrapidity)));
+                        }
 		      else 
 			{
 			  xVal = QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn);
@@ -1351,7 +1365,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 			  if(xVal==0)
 			    QsA=0.;
 			  else
-			    QsA = sqrt(getNuclearQs2(param, random, lat->cells[pos]->getTpA(), 0.))*
+			    QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), 0.))*
 			      sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
 			  //cout << "xVal=" << xVal << endl;
 			  //cout << "QsA=" << QsA << endl;
@@ -1359,22 +1373,22 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		      if(QsA == 0)
 			{
 			  Ydeviation = 0;
-			  lat->cells[pos]->setg2mu2A(0.);
+			  lat->cells[localpos]->setg2mu2A(0.);
 			}
 		      else
 			{
 			  // nucleus A 
-			  lat->cells[pos]->setg2mu2A(QsA*QsA/param->getQsmuRatio()/param->getQsmuRatio()
+			  lat->cells[localpos]->setg2mu2A(QsA*QsA/param->getQsmuRatio()/param->getQsmuRatio()
 						     *a*a/hbarc/hbarc/param->getg()); // lattice units? check
 			  
 			  
-			  Ydeviation = rapidity - log(0.01/(QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn)));
-			  rapidity = log(0.01/(QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn)));
-			}	    
+			  Ydeviation = localrapidity - log(0.01/(QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn)));
+			  localrapidity = log(0.01/(QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn)));
+			}
 		    }
-		  if(lat->cells[pos]->getg2mu2A()!=lat->cells[pos]->getg2mu2A())
+		  if(lat->cells[localpos]->getg2mu2A()!=lat->cells[localpos]->getg2mu2A())
 		    {
-		      lat->cells[pos]->setg2mu2A(0.);
+		      lat->cells[localpos]->setg2mu2A(0.);
 		    }
 		  
 		  // if(ix==N/2 && iy==N/2)
@@ -1386,33 +1400,32 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  // 	cout  << "xVal=" << xVal << endl;
 		  //     cout  << "Q_sA=" << QsA << endl;
 		  //   }
-		   
-		  
+		  		  
 
+                  localrapidity=rapidity;
 		  Ydeviation = 10000;
-		  
 		  while (abs(Ydeviation) > 0.001) 
 		    {
-		      if(rapidity>=0)
-			QsB = sqrt(getNuclearQs2(param, random, lat->cells[pos]->getTpB(), abs(rapidity)));
+		      if(localrapidity>=0)
+			QsB = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), abs(localrapidity)));
 		      else
 			{
 			  xVal = QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn);
 			  if(xVal==0)
 			    QsB=0.;
 			  else
-			    QsB = sqrt(getNuclearQs2(param, random, lat->cells[pos]->getTpB(), 0.))*
+			    QsB = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), 0.))*
 			    sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
 			}
 		      if(QsB == 0)
 			{
 			  Ydeviation = 0;
-			  lat->cells[pos]->setg2mu2B(0.);
+			  lat->cells[localpos]->setg2mu2B(0.);
 			}
 		      else
 			{
 			  // nucleus B 
-			  lat->cells[pos]->setg2mu2B(QsB*QsB/param->getQsmuRatioB()/param->getQsmuRatioB()
+			  lat->cells[localpos]->setg2mu2B(QsB*QsB/param->getQsmuRatioB()/param->getQsmuRatioB()
 						     *a*a/hbarc/hbarc/param->getg()/param->getg()); 
 			  
 			  
@@ -1420,13 +1433,13 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 			  // 		      cout << " QsB = " << QsB << " GeV" << endl;
 			  // 		      cout << " x= " << (QsB/2./param->getRoots()) << endl;
 			  
-			  Ydeviation = rapidity - log(0.01/(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)));
-			  rapidity = log(0.01/(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)));
+			  Ydeviation = localrapidity - log(0.01/(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)));
+			  localrapidity = log(0.01/(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)));
 			}
 		    }   
-		  if(lat->cells[pos]->getg2mu2B()!=lat->cells[pos]->getg2mu2B())
+		  if(lat->cells[localpos]->getg2mu2B()!=lat->cells[localpos]->getg2mu2B())
 		    {
-		      lat->cells[pos]->setg2mu2B(0.);
+		      lat->cells[localpos]->setg2mu2B(0.);
 		    }
 		// if(ix==N/2 && iy==N/2)
 		//   {
@@ -1444,24 +1457,32 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      else
 		{
 		  // nucleus A 
-		  lat->cells[pos]->setg2mu2A(getNuclearQs2(param, random, lat->cells[pos]->getTpA(), rapidity)/param->getQsmuRatio()/param->getQsmuRatio()
+		  lat->cells[localpos]->setg2mu2A(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
 		  
 		  // nucleus B 
-		  lat->cells[pos]->setg2mu2B(getNuclearQs2(param, random, lat->cells[pos]->getTpB(), rapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
+		  lat->cells[localpos]->setg2mu2B(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); 
 		 
 		}
 	    }
+          //    cout << QsA << " " << QsB << " " << localrapidity << " " << rapidity << " " << xVal <<endl;
+
 	}
     }
+  }
+  
+
   
   
   // output gmu 
   count=0;
   count2=0;
   double Tpp=0.;
-      
+  double x,xm, y,ym;
+  double outvalue;
+  double alphas;
+  int check=0;
   for(int ix=0; ix<N; ix++) // loop over all positions
     {
       for(int iy=0; iy<N; iy++)
@@ -1633,6 +1654,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   if(param->getAverageQs() > 0 && param->getAverageQsAvg()>0 && averageQs2>0  && param->getAverageQsmin()>0 && averageQs2Avg>0 && alphas>0 && Npart>=2)
     param->setSuccess(1);
  
+
   param->setalphas(alphas);
   
   stringstream strup_name;
@@ -2159,12 +2181,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     double Qs2G;
     double temp3;
     double g2mu;
-    double trATB[N*N];
     double dr=a;
-    double rtrAT2[bins];
     double epsilon;
     double lambda;
-    double trATA[N*N];
     double avgEps;
     double avgEpsMag;
     double avgEpsEl;

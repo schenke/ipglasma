@@ -327,35 +327,35 @@ void GaugeFix::FFTChi(Lattice* lat, Group* group, Parameters *param, int steps)
 	      
 
 
-// 	      //redefine UDx
-// 	      UDx = lat->cells[posY]->getUx();
-// 	      UDx.conjg();
+// // 	      //redefine UDx
+// // 	      UDx = lat->cells[posY]->getUx();
+// // 	      UDx.conjg();
 	      
-// 	      Uplaq = Ux*(lat->cells[posX]->getUy()*(UDx*UDy));
-// 	      lat->cells[pos]->setUplaq(Uplaq);
-// 	      if(i==N-1)
-// 		lat->cells[pos]->setUplaq(one);
+// // 	      Uplaq = Ux*(lat->cells[posX]->getUy()*(UDx*UDy));
+// // 	      lat->cells[pos]->setUplaq(Uplaq);
+// // 	      if(i==N-1)
+// // 		lat->cells[pos]->setUplaq(one);
 	      
-// 	      energy += 2.*(static_cast<double>(Nc)-(Uplaq.trace()).real());
+// // 	      energy += 2.*(static_cast<double>(Nc)-(Uplaq.trace()).real());
 		  
-	      if(gfiter%100==0 && i==N/2 && j==N/2)
-		{
-		  // cout << gfiter << ": divA=" << endl << divA << endl << endl;
+// 	      if(gfiter%100==0 && i==N/2 && j==N/2)
+// 		{
+// 		  // cout << gfiter << ": divA=" << endl << divA << endl << endl;
 		  
-		  cout << "divA components: " << endl;
-		  for (int i=0; i<Nc2m1; i++)
-		    {
-		      cout << (-1.*(g)*group->getT(i)).trace().real() << " " <<  (-1.*(g)*group->getT(i)).trace().imag()
-			   << endl;
-		    }
-		  cout << endl;
-		  for (int i=0; i<Nc2m1; i++)
-		    {
-		      cout << (-1.*(Ux-UDx-UxMx+UDxMx+Uy-UDy-UyMy+UDyMy)*group->getT(i)).trace().real() << " " <<  (-1.*(Ux-UDx-UxMx+UDxMx+Uy-UDy-UyMy+UDyMy)*group->getT(i)).trace().imag()
-			   << endl;
-		    }
+// 		  cout << "divA components: " << endl;
+// 		  for (int i=0; i<Nc2m1; i++)
+// 		    {
+// 		      cout << (-1.*(g)*group->getT(i)).trace().real() << " " <<  (-1.*(g)*group->getT(i)).trace().imag()
+// 			   << endl;
+// 		    }
+// 		  cout << endl;
+// 		  for (int i=0; i<Nc2m1; i++)
+// 		    {
+// 		      cout << (-1.*(Ux-UDx-UxMx+UDxMx+Uy-UDy-UyMy+UDyMy)*group->getT(i)).trace().real() << " " <<  (-1.*(Ux-UDx-UxMx+UDxMx+Uy-UDy-UyMy+UDyMy)*group->getT(i)).trace().imag()
+// 			   << endl;
+// 		    }
 		  
-		}
+// 		}
 	      
 	      gdag.conjg();
 	      

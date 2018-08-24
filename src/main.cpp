@@ -75,9 +75,7 @@ int main(int argc, char *argv[])
 
   // read parameters from file
   readInput(setup, param, argc, argv, rank);
-   
-
-
+  
   int cells = param->getSize()*param->getSize();
   int Nc2m1 = param->getNc()*param->getNc()-1; // N_c^2-1
   int nn[2];

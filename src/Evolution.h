@@ -66,6 +66,7 @@ class Evolution {
   void Tmunu(Lattice *lat, Group *group, Parameters *param, int it);
   void u(Lattice *lat, Group *group, Parameters *param, int it);
   int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
+  int multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, int it);
   int correlations(Lattice *lat, Group *group, Parameters *param, int it);
   int correlationsColor(Lattice *lat, Group *group, Parameters *param, int it);
   void anisotropy(Lattice *lat, Group *group, Parameters *param, int it);

@@ -1,0 +1,8 @@
+*.dat
+src/.DS_Store
+src/ipglasma
+src/ipglasma.dSYM/
+src/obj/
+test.out
+ipglasma
+Tmunu

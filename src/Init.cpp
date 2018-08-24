@@ -1701,41 +1701,39 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   double UVdamp = param->getUVdamp(); //GeV^-1
   UVdamp = UVdamp/a*hbarc;
   complex<double>** rhoACoeff;
-  complex<double>** rhoBCoeff;
+  //  complex<double>** rhoBCoeff;
 
   rhoACoeff = new complex<double>*[Nc2m1];
-  rhoBCoeff = new complex<double>*[Nc2m1];
+  //rhoBCoeff = new complex<double>*[Nc2m1];
 
   for(int i=0; i<Nc2m1; i++)
     {
       rhoACoeff[i] = new complex<double>[N*N];
-      rhoBCoeff[i] = new complex<double>[N*N];
+      //  rhoBCoeff[i] = new complex<double>[N*N];
     }
  
   // loop over longitudinal direction
   for(int k=0; k<Ny; k++)
     {
       double g2muA;
-      double g2muB;
       for (int pos=0; pos<N*N; pos++)
         {
           for(int n=0; n<Nc2m1; n++)
             {
               g2muA = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
-              g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
+              //      g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
               rhoACoeff[n][pos] = g2muA*random->Gauss();
-              rhoBCoeff[n][pos] = g2muB*random->Gauss();
+              //rhoBCoeff[n][pos] = g2muB*random->Gauss();
             }
         }
         
         for(int n=0; n<Nc2m1; n++)
           {
             fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
-            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
+            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
           }
         
         // compute A^+
-        int pos;
 #pragma omp parallel for
         for (int i=0; i<N; i++)
           {
@@ -1753,7 +1751,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                         for(int n=0; n<Nc2m1; n++)
                           {
                             rhoACoeff[n][localpos] =  rhoACoeff[n][localpos]*(1./(kt2));
-                            rhoBCoeff[n][localpos] =  rhoBCoeff[n][localpos]*(1./(kt2));
+                            //              rhoBCoeff[n][localpos] =  rhoBCoeff[n][localpos]*(1./(kt2));
                           }
                       }
                     else
@@ -1761,7 +1759,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                         for(int n=0; n<Nc2m1; n++)
                           {
                             rhoACoeff[n][localpos] = 0.;
-                            rhoBCoeff[n][localpos] = 0.;
+                            // rhoBCoeff[n][localpos] = 0.;
                           }
                       }
                   }
@@ -1770,7 +1768,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                     for(int n=0; n<Nc2m1; n++)
                       {
                         rhoACoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
-                        rhoBCoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
+                        //                        rhoBCoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
                       }
                   }
               }
@@ -1780,7 +1778,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         for(int n=0; n<Nc2m1; n++)
           {
             fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
-            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
+            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
           }
         // compute U
   
@@ -1809,9 +1807,97 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                  // set U
                  lat->cells[pos]->setU(temp);
                  
+               }
+        }
+
+    }//Ny loop
+
+  
+  
+  // loop over longitudinal direction
+  for(int k=0; k<Ny; k++)
+    {
+      double g2muB;
+      for (int pos=0; pos<N*N; pos++)
+        {
+          for(int n=0; n<Nc2m1; n++)
+            {
+              g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
+              rhoACoeff[n][pos] = g2muB*random->Gauss();
+            }
+        }
+        
+        for(int n=0; n<Nc2m1; n++)
+          {
+            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
+          }
+        
+        // compute A^+
+        int pos;
+#pragma omp parallel for
+        for (int i=0; i<N; i++)
+          {
+            for (int j=0; j<N; j++)
+              {
+                double kt2, kx, ky;
+                int localpos = i*N+j; 
+                kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+                ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+                kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
+                if(m==0)
+                  {
+                    if(kt2!=0)
+                      {
+                        for(int n=0; n<Nc2m1; n++)
+                          {
+                            rhoACoeff[n][localpos] =  rhoACoeff[n][localpos]*(1./(kt2));
+                            //              rhoBCoeff[n][localpos] =  rhoBCoeff[n][localpos]*(1./(kt2));
+                          }
+                      }
+                    else
+                      {
+                        for(int n=0; n<Nc2m1; n++)
+                          {
+                            rhoACoeff[n][localpos] = 0.;
+                            // rhoBCoeff[n][localpos] = 0.;
+                          }
+                      }
+                  }
+                else
+                  {
+                    for(int n=0; n<Nc2m1; n++)
+                      {
+                        rhoACoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
+                        //                        rhoBCoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
+                      }
+                  }
+              }
+          }
+        
+        // Fourier transform back A^+
+        for(int n=0; n<Nc2m1; n++)
+          {
+            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
+          }
+        // compute U
+  
+#pragma omp parallel
+        {      
+          double in[8];
+          vector <complex<double> > U;
+          Matrix temp(Nc,1.);
+          Matrix temp2(Nc,0.);
+          Matrix tempNew(Nc,0.);
+        
+          #pragma omp for
+             for (int pos=0; pos<N*N; pos++)
+               {
+      
                  for (int a=0; a<Nc2m1; a++)
                    {
-                     in[a] = -(rhoBCoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                     in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
                    }
                  
                  U = temp2.expmCoeff(in, Nc);
@@ -1823,18 +1909,21 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                  temp = tempNew * lat->cells[pos]->getU2();
                  // set U
                  lat->cells[pos]->setU2(temp);
+                 
                }
         }
+
     }//Ny loop
+
   
   // --------
     for(int ic=0; ic<Nc2m1; ic++)
       {
         delete [] rhoACoeff[ic];
-        delete [] rhoBCoeff[ic];
+        //        delete [] rhoBCoeff[ic];
       }
     delete [] rhoACoeff;
-    delete [] rhoBCoeff;
+    //delete [] rhoBCoeff;
   
   
         

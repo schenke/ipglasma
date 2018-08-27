@@ -121,21 +121,21 @@ int main(int argc, char *argv[])
   else
     {
       // clean files
-      stringstream strNpartdNdy_name;
-      strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
-      string NpartdNdy_name;
-      NpartdNdy_name = strNpartdNdy_name.str();
+      // stringstream strNpartdNdy_name;
+      // strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
+      // string NpartdNdy_name;
+      // NpartdNdy_name = strNpartdNdy_name.str();
 
-      ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
-      foutNN.close();
+      // ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
+      // foutNN.close();
 
-      stringstream strNpartdNdyH_name;
-      strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
-      string NpartdNdyH_name;
-      NpartdNdyH_name = strNpartdNdyH_name.str();
+      // stringstream strNpartdNdyH_name;
+      // strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
+      // string NpartdNdyH_name;
+      // NpartdNdyH_name = strNpartdNdyH_name.str();
       
-      ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
-      foutNNH.close();
+      // ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
+      // foutNNH.close();
 
       
       // stringstream strNpartdEdy_name;
@@ -237,8 +237,7 @@ int main(int argc, char *argv[])
       
       // ofstream foutEcc(ecc_name.c_str(),ios::out); 
       // foutEcc.close();
-      
-      
+            
       stringstream strmult_name;
       strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
       string mult_name;

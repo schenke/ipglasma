@@ -553,8 +553,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 	{	  
 	  Tmunu(lat,group,param,it);
 	  //eccentricity(lat,group,param,it,1.,1);
-	  if (it > 1)
-	    u(lat,group,param,it); // computes flow velocity and correct energy density 
+          u(lat,group,param,it); // computes flow velocity and correct energy density 
 	}
 
       // avgEps=0.;
@@ -2943,20 +2942,20 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   string NpartdNdy_name;
   NpartdNdy_name = strNpartdNdy_name.str();
 
-  stringstream strNpartdNdyH_name;
-  strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-  string NpartdNdyH_name;
-  NpartdNdyH_name = strNpartdNdyH_name.str();
+  // stringstream strNpartdNdyH_name;
+  // strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  // string NpartdNdyH_name;
+  // NpartdNdyH_name = strNpartdNdyH_name.str();
 
-  stringstream strmult_name;
-  strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-  string mult_name;
-  mult_name = strmult_name.str();
+  // stringstream strmult_name;
+  // strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  // string mult_name;
+  // mult_name = strmult_name.str();
 
-  stringstream strdNdy_name;
-  strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-  string dNdy_name;
-  dNdy_name = strdNdy_name.str();
+  // stringstream strdNdy_name;
+  // strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  // string dNdy_name;
+  // dNdy_name = strdNdy_name.str();
 
   cout << "Measuring multiplicity ... " << endl;
 
@@ -3719,26 +3718,28 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       cout << "hadron <p_T> = " << dEdetaHadrons/dNdetaHadrons << endl;
       cout << "Hadrons: dN/dy(p_T>250 MeV)=" << dNdetaHadrons << ", dE/dy(p_T>250 MeV)=" << dEdetaHadrons << endl;
       
-      stringstream strmeanpt_name;
-      strmeanpt_name << "meanpt" << param->getMPIRank() << ".dat";
-      string meanpt_name;
-      meanpt_name = strmeanpt_name.str();
+      // stringstream strmeanpt_name;
+      // strmeanpt_name << "meanpt" << param->getMPIRank() << ".dat";
+      // string meanpt_name;
+      // meanpt_name = strmeanpt_name.str();
 
-      ofstream foutNch(meanpt_name.c_str(),ios::out); 
-      foutNch << dNdeta << " " << dEdeta/dNdeta << " " << dNdetaHadrons << " " << dEdetaHadrons/dNdetaHadrons << endl;
-      foutNch.close();
+      // ofstream foutNch(meanpt_name.c_str(),ios::out); 
+      // foutNch << dNdeta << " " << dEdeta/dNdeta << " " << dNdetaHadrons << " " << dEdetaHadrons/dNdetaHadrons << endl;
+      // foutNch.close();
       
-      ofstream foutNN(NpartdNdy_name.c_str(),ios::app); 
+      ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
       foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp() << " " << param->getb() << " " << dEdeta << " " << param->getRandomSeed() 
 	     << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaCut << " " << dEdetaCut 
 	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
       foutNN.close();
 
-      ofstream foutNNH(NpartdNdyH_name.c_str(),ios::app); 
-      foutNNH << param->getNpart() << " " << dNdetaHadrons << " " << param->getTpp() << " " << param->getb() << " " << dEdetaHadrons << " " << param->getRandomSeed()   << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaHadronsCut << " " << dEdetaHadronsCut 
-	      << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
-      foutNNH.close();
-
+      if(param->getWriteOutputs() == 3)
+        {
+          ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
+          foutNNH << param->getNpart() << " " << dNdetaHadrons << " " << param->getTpp() << " " << param->getb() << " " << dEdetaHadrons << " " << param->getRandomSeed()   << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaHadronsCut << " " << dEdetaHadronsCut 
+                  << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+          foutNNH.close();
+        }
     }
   
   for(int i=0; i<N*N; i++)

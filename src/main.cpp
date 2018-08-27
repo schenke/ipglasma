@@ -26,7 +26,7 @@ using namespace std;
 
 int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank);
 
-// main program
+// main program 1
 int main(int argc, char *argv[])
 {
   int rank;

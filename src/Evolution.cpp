@@ -3439,7 +3439,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   m=param->getJacobianm(); // in GeV
   P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
 
-  ofstream foutMult(mult_name.c_str(),ios::out); 
+  //  ofstream foutMult(mult_name.c_str(),ios::out); 
   //  ofstream foutdNdy(dNdy_name.c_str(),ios::app); 
   for(int ik=0; ik<bins; ik++)
     {
@@ -3489,12 +3489,12 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	}
       
       // output dN/d^2k
-      if(it > 0)
-	{
-	  foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
-		   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
-		   << n2[ik]*a/0.1973269718*a/0.1973269718 << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
-	}
+      // if(it > 0)
+      //   {
+      //     foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
+      //   	   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
+      //   	   << n2[ik]*a/0.1973269718*a/0.1973269718 << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
+      //   }
     }
   
   //*ik*dkt*ik*dkt*ik*dkt*ik*dkt/a*0.1973269718/a*0.1973269718/a*0.1973269718/a*0.1973269718 // this is a factor of k_T^4
@@ -3502,7 +3502,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   //  foutdNdy << it*dtau*a << " " << dNdeta << " " << dNdeta2 << " " << dNdetaCut << " " << dEdeta << " " << dEdeta2 << endl;
   // in this version the gfactor is included above (and depends on the position)
   //foutdNdy.close();
-  foutMult.close();
+  //  foutMult.close();
 
   
   double Ech=0.;
@@ -3715,8 +3715,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 
   if (it==itmax)
     {
-      cout << "hadron <p_T> = " << dEdetaHadrons/dNdetaHadrons << endl;
-      cout << "Hadrons: dN/dy(p_T>250 MeV)=" << dNdetaHadrons << ", dE/dy(p_T>250 MeV)=" << dEdetaHadrons << endl;
+      // cout << "hadron <p_T> = " << dEdetaHadrons/dNdetaHadrons << endl;
+      // cout << "Hadrons: dN/dy(p_T>250 MeV)=" << dNdetaHadrons << ", dE/dy(p_T>250 MeV)=" << dEdetaHadrons << endl;
       
       // stringstream strmeanpt_name;
       // strmeanpt_name << "meanpt" << param->getMPIRank() << ".dat";
@@ -3733,13 +3733,13 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
       foutNN.close();
 
-      if(param->getWriteOutputs() == 3)
-        {
-          ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
-          foutNNH << param->getNpart() << " " << dNdetaHadrons << " " << param->getTpp() << " " << param->getb() << " " << dEdetaHadrons << " " << param->getRandomSeed()   << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaHadronsCut << " " << dEdetaHadronsCut 
-                  << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
-          foutNNH.close();
-        }
+      // if(param->getWriteOutputs() == 3)
+      //   {
+      //     ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
+      //     foutNNH << param->getNpart() << " " << dNdetaHadrons << " " << param->getTpp() << " " << param->getb() << " " << dEdetaHadrons << " " << param->getRandomSeed()   << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaHadronsCut << " " << dEdetaHadronsCut 
+      //             << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+      //     foutNNH.close();
+      //   }
     }
   
   for(int i=0; i<N*N; i++)

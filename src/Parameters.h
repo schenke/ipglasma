@@ -108,6 +108,12 @@ class Parameters
   double protonAnisotropy; //anisotropy of the proton thickness function: xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] - as a first test 
   int useConstituentQuarkProton; // if 1 use a proton made up of 3 constituent quarks.
   double UVdamp; // UV damping parameter
+    
+    
+    double yeffmin;     // lower limit in yeff
+    double yeffmax;     // upper limit in yeff
+    double delta_yeff;
+    int Nyeff;          // number of points in the yeff interval
 
  public:
 
@@ -119,6 +125,14 @@ class Parameters
     }
 
   // functions to access the private variables:
+    void setyeffmin(double x){yeffmin=x;}
+    void setyeffmax(double x){yeffmax=x;}
+    void setDeltayeff(double x){delta_yeff=x;}
+    void setNyeff(int x){Nyeff=x;}
+    double getyeffmin(){return yeffmin;}
+    double getyeffmax(){return yeffmax;}
+    int getNyeff(){return Nyeff;}
+    double getdelta_yeff(){return delta_yeff;}
   void setPi(double x){myPI=x;}
   double getPi(){return myPI;}
   void sethbarc(double x){myhbarc=x;}

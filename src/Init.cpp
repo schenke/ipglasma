@@ -2217,7 +2217,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       // sample color charges and find Wilson lines V_A and V_B
       setV(lat, group, param, random, glauber);      
     }
-  
   // output Wilson lines
 
   // ofstream fout("V.dat",ios::out); 

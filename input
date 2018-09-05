@@ -1,7 +1,7 @@
 mode 1
 readMultFromFile 0
-size 400
-L 8.
+size 100
+L 1.
 Nc 3			      
 m 0.2
 rmax 100.
@@ -38,8 +38,8 @@ Ny 50
 useSeedList 0
 seed 1
 useTimeForSeed 0
-Projectile Ru
-Target Ru
+Projectile p
+Target p
 bmin 0
 bmax 0.
 useFixedNpart 0

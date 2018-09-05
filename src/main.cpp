@@ -230,20 +230,20 @@ int main(int argc, char *argv[])
       // ofstream foutAni(aniso_name.c_str(),ios::out); 
       // foutAni.close();
       
-      // stringstream strecc_name;
-      // strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
-      // string ecc_name;
-      // ecc_name = strecc_name.str();
+      stringstream strecc_name;
+      strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
+      string ecc_name;
+      ecc_name = strecc_name.str();
       
-      // ofstream foutEcc(ecc_name.c_str(),ios::out); 
-      // foutEcc.close();
+      ofstream foutEcc(ecc_name.c_str(),ios::out); 
+      foutEcc.close();
             
-      stringstream strmult_name;
-      strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
-      string mult_name;
-      mult_name = strmult_name.str();
-      ofstream foutmult(mult_name.c_str(),ios::out); 
-      foutmult.close();
+      // stringstream strmult_name;
+      // strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
+      // string mult_name;
+      // mult_name = strmult_name.str();
+      // ofstream foutmult(mult_name.c_str(),ios::out); 
+      // foutmult.close();
 
       // stringstream strmult2_name;
       // strmult2_name << "multiplicityCorr" << param->getMPIRank() << ".dat";

@@ -1331,7 +1331,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 
 void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
 {
-  ofstream Tfout("Tmunu",ios::app); 
+  //  ofstream Tfout("Tmunu",ios::app); 
 
   double averageTtautau=0.;
   double averageTtaueta=0.;
@@ -1518,12 +1518,12 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
 	}
     } 
   // magnetic part:
-  stringstream strT_name;
-  strT_name << "T" << param->getMPIRank() << ".dat";
-  string T_name;
-  T_name = strT_name.str();
+  // stringstream strT_name;
+  // strT_name << "T" << param->getMPIRank() << ".dat";
+  // string T_name;
+  // T_name = strT_name.str();
 
-  ofstream fout(T_name.c_str(),ios::out); 
+  //  ofstream fout(T_name.c_str(),ios::out); 
   for (int i=0; i<N; i++)
     {
       for (int j=0; j<N; j++)
@@ -1635,7 +1635,7 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
       //      foutTtt << endl;
     }
   
-  fout.close();
+  //  fout.close();
   //  foutTtt.close();
 
   // T^\tau x, T^\tau y
@@ -1991,8 +1991,8 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
   averageTtautau /= double(N);
   averageTtaueta /= double(N);
   averageTxx /= double(N);
-  Tfout << it*dtau*a << " " << sqrt(averageTtautau) << " " << sqrt(averageTtaueta) << " " << sqrt(averageTxx) << endl;
-  Tfout.close();
+  //  Tfout << it*dtau*a << " " << sqrt(averageTtautau) << " " << sqrt(averageTtaueta) << " " << sqrt(averageTxx) << endl;
+  //Tfout.close();
 }
 
 void Evolution::u(Lattice *lat, Group *group, Parameters *param, int it)
@@ -2071,7 +2071,9 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
   double weight;
 
   double area = 0.;
-  
+  double avgeden = 0.;
+  int sum = 0;
+
   avrSq=0.;
   avr3=0.;
 
@@ -2085,7 +2087,9 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
   double smallestX = 0.;
   double smallestY = 0.;
-  
+  double avgQs2AQs2B = 0.;
+
+
   for(int ix=0; ix<N; ix++) 
     {
       for(int iy=0; iy<N; iy++)
@@ -2177,16 +2181,23 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 		{
 		  weight = lat->cells[pos]->getEpsilon()*gfactor;
 		  area += a*a;
-		}
+                  sum += 1;
+                  avgeden += lat->cells[pos]->getEpsilon()*hbarc*gfactor; //GeV/fm^3
+                  g2mu2A = lat->cells[pos]->getg2mu2A();
+                  g2mu2B = lat->cells[pos]->getg2mu2B();
+                  avgQs2AQs2B += g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()*g2mu2B*param->getQsmuRatioB()*param->getQsmuRatioB()/a/a/a/a;
+                }
 	      avx += x*weight;
 	      avy += y*weight;
 	      toteps += weight;    
 	}
     }
-      
+  
+  
   avx/=toteps;
   avy/=toteps;
-  
+  avgeden/=double(sum);
+  avgQs2AQs2B/=double(sum);
   param->setArea(area);
 
   //  cout << "avx=" << avx << endl;
@@ -2506,7 +2517,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 	  foutEcc << it*a*param->getdtau() << " " << eccentricity1 << " " << Psi1 << " " << eccentricity2 << " " << Psi2 << " " 
 		  << eccentricity3 << " " << Psi3 << " " << eccentricity4 << " " << Psi4 
 		  << " " << eccentricity5 << " " << Psi5 << " " << eccentricity6 << " " << Psi6 << " " << cutoff << " " << sqrt(avrSq) 
-		  << " " << maxX << " " << maxY << " " << param->getb() << " " << param->getTpp() << " " << param->getArea() << " " << Rbar << endl;
+		  << " " << maxX << " " << maxY << " " << param->getb() << " " << param->getTpp() << " " << param->getArea() << " " << Rbar << " " << avgeden << " " << avgQs2AQs2B*hbarc << endl;
 	  foutEcc.close();      
 	}
 

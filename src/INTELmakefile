@@ -16,7 +16,7 @@ CFLAGS= -Wall -g -O2 -fopenmp $(shell gsl-config --cflags) -I /opt/cray/pe/fftw/
 
 RM		=	rm -f
 O               =       .o
-LDFLAGS         =       $(CFLAGS) -L/usr/common/usg/fftw/3.3.4/hsw/intel/lib $(shell gsl-config --libs) -lfftw3
+LDFLAGS         =       $(CFLAGS) -L/usr/common/usg/fftw/3.3.4/hsw/intel/lib $(shell gsl-config --libs)  -lfftw3_threads -lfftw3 -lm
 SYSTEMFILES     =       $(SRCGNU)
 
 # --------------- Files involved ------------------

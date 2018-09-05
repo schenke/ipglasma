@@ -5,344 +5,317 @@
 //**************************************************************************
 // Evolution class.
 
-void Evolution::evolveU(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolveU(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
 {
   // tau is the current time. The time argument of E^i is tau+dtau/2
   // we evolve to tau+dtau
-  int Nc = param->getNc();
-  int pos;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-  int n = 2;
-  Matrix one(Nc,1.);
+  const int n = 2;
+  const Matrix one(Nc,1.);
 
-  Matrix E1(Nc);
-  Matrix E2(Nc);
+#pragma omp parallel
+  {
+    Matrix E1(Nc);
+    Matrix E2(Nc);
+    
+    Matrix temp1(Nc);
+    Matrix temp2(Nc);
+
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current E1 and E2 (that's the one defined at half a time step in the future (from tau))
+        E1 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE1();
+        //E1.expm(); // E1 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E1
+        
+        temp2 = one + 1./(double)n * E1;
+        for (int in=0; in<n-1; in++) 
+          {
+            temp1 = E1*temp2;
+            temp2 = one + 1./(double)(n-1-in) * temp1;
+          }
+        
+        E1 = temp2;
+        
+        E2 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE2();
+        // E2.expm(); // E2 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E2
+        
+        temp2 = one + 1./(double)n * E2;
+        for (int in=0; in<n-1; in++) 
+          {
+            temp1 = E2*temp2;
+            temp2 = one + 1./(double)(n-1-in) * temp1;
+          }
+        
+        E2 = temp2;
+        
+        bufferlat->cells[pos]->setbuffer1(E1*lat->cells[pos]->getUx()); 
+        bufferlat->cells[pos]->setbuffer2(E2*lat->cells[pos]->getUy()); 
+      }
   
-  Matrix temp1(Nc);
-  Matrix temp2(Nc);
-	
-  for (int i=0; i<N; i++)
-    {
-      for (int j=0; j<N; j++)
-	{
-	  pos = i*N+j;
-
-	  // retrieve current E1 and E2 (that's the one defined at half a time step in the future (from tau))
-	  E1 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE1();
-	  //E1.expm(); // E1 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E1
-
-	  temp2 = one + 1./(double)n * E1;
-	  for (int in=0; in<n-1; in++) 
-	    {
-	      temp1 = E1*temp2;
-	      temp2 = one + 1./(double)(n-1-in) * temp1;
-	    }
-	  
-	  E1 = temp2;
-	  
-	  E2 = complex<double>(0.,g*g*dtau/(tau+dtau/2.))*lat->cells[pos]->getE2();
-	  // E2.expm(); // E2 now contains the exponential of i g^2 dtau/(tau+dtau/2)*E2
-	  
-	  temp2 = one + 1./(double)n * E2;
-	  for (int in=0; in<n-1; in++) 
-	    {
-	      temp1 = E2*temp2;
-	      temp2 = one + 1./(double)(n-1-in) * temp1;
-	    }
-	  
-	  E2 = temp2;
-	  
-	  // retrieve current Ux and Uy
-	  //Ux = lat->cells[pos]->getUx();
-	  //Uy = lat->cells[pos]->getUy();
-	  // set the new Ux and Uy (at time tau+dtau)
-
-	  //	  lat->cells[pos]->setUx(E1*lat->cells[pos]->getUx()); 
-	  //      lat->cells[pos]->setUy(E2*lat->cells[pos]->getUy()); 
-	  lat->cells[pos]->setUx(E1*lat->cells[pos]->getUx()); 
-	  lat->cells[pos]->setUy(E2*lat->cells[pos]->getUy()); 
-	}
-    }
+#pragma omp for  
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setUx(bufferlat->cells[pos]->getbuffer1()); 
+        lat->cells[pos]->setUy(bufferlat->cells[pos]->getbuffer2()); 
+      }
+  } 
 }
+  
 
-
-void Evolution::evolvePhi(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
 {
   // tau is the current time. The time argument of pi is tau+dtau/2
   // we evolve to tau+dtau
-  int Nc = param->getNc();
-  int pos;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-  Matrix phi(Nc);
-  Matrix pi(Nc);
-  
-  for (int i=0; i<N; i++)
-    {
-      for (int j=0; j<N; j++)
-	{
-	  pos = i*N+j;
-	  
-	  // retrieve current phi (at time tau)
-	  phi = lat->cells[pos]->getphi();
-	  // retrieve current pi (at time tau+dtau/2)
-	  pi = lat->cells[pos]->getpi();
 
-	  phi = phi + (tau+dtau/2.)*dtau*pi;
-	  
-	  //set the new phi (at time tau+dtau)
-	  lat->cells[pos]->setphi(phi); 
-	}
-    }
-}
-
-void Evolution::evolvePi(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
-{
-  int Nc = param->getNc();
-  int pos, posX, posY, posmX, posmY;
-  int N = param->getSize();
-  double g = param->getg();
-
-  Matrix Ux(Nc);
-  Matrix Uy(Nc);
-  Matrix UxXm1(Nc);
-  Matrix UyYm1(Nc);
-
-  Matrix phi(Nc);
-  Matrix phiX(Nc); // this is \tilde{phi}_x
-  Matrix phiY(Nc); // this is \tilde{phi}_y
-  Matrix phimX(Nc); // this is \tilde{-phi}_x
-  Matrix phimY(Nc); // this is \tilde{-phi}_y
-  Matrix bracket(Nc); // this will hold [phiX+phimX-2*phi+phiY+phimY-2*phi]
-  Matrix pi(Nc);
-  Matrix one(Nc,1.);  
-  // Matrix zero(Nc,0.);  
-
-  for (int i=0; i<N; i++)
-    {
-      for (int j=0; j<N; j++)
-	{
-	  pos = i*N+j;
-	  posX = ((i+1)%N)*N+j;
-	  posY = i*N+(j+1)%N;
-	  
-	  // retrieve current Ux and Uy and compute conjugates
-	  Ux = lat->cells[pos]->getUx();
-	  Uy = lat->cells[pos]->getUy();
-	  // retrieve current pi (at time tau-dtau/2)
-	  pi = lat->cells[pos]->getpi();
-	  // retrieve current phi (at time tau) at this x_T
-	  phi = lat->cells[pos]->getphi();
-
-	  // retrieve current phi (at time tau) at x_T+1
-	  // parallel transport:
-	  phiX = Ux*Ux.prodABconj(lat->cells[posX]->getphi(),Ux);
-	  phiY = Uy*Uy.prodABconj(lat->cells[posY]->getphi(),Uy);
-	  
-	  // phi_{-x} should be defined as UxD*phimX*Ux with the Ux and UxD reversed from the phi_{+x} case
-	  if(i>0)
-	    posmX = (i-1)*N+j;
-	  else
-	    posmX = (N-1)*N+j;
-	  
-	  if(j>0)
-	    posmY = i*N+(j-1);
-	  else
-	    posmY = i*N+(N-1);
-	  
-	  // retrieve current phi (at time tau) at x_T-1
-	  // parallel transport:
-	  UxXm1 = lat->cells[posmX]->getUx();
-	  UyYm1 = lat->cells[posmY]->getUy();
-
-	  phimX = Ux.prodAconjB(UxXm1,lat->cells[posmX]->getphi())*UxXm1;
-	  phimY = Ux.prodAconjB(UyYm1,lat->cells[posmY]->getphi())*UyYm1;
-	
-	  bracket = phiX + phimX + phiY + phimY - 4.*phi; // sum over both directions is included here 
-	  
-	  //	  if (i>0 && i<N-1 && j>0 && j<N-1)
-	  pi += dtau/(tau)*bracket; // divide by \tau because this is computing pi(tau+dtau/2) from pi(tau-dtau/2) and phi(tau)
-
-	  //pi = pi - pi.trace()/static_cast<double>(Nc)*one;
-
-	  // set the new pi (at time tau+dtau/2)
-	  lat->cells[pos]->setpi(pi); 
-	}
-    }
-}
-
-void Evolution::evolveE(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
-{
-  int Nc = param->getNc();
-  int pos, posX, posY, posmX, posmY, posmXpY, pospXmY;
-  int N = param->getSize();
-  double g = param->getg();
-
-  Matrix Ux(Nc);
-  Matrix Uy(Nc);
-  Matrix temp1(Nc); // can contain p or m
-  Matrix temp2(Nc);
-  Matrix temp3(Nc);
-  Matrix En(Nc);
-  Matrix phi(Nc);
-  Matrix phiN(Nc); // this is \tilde{phi}_x OR \tilde{phi}_y
+#pragma omp parallel
+  {
+    Matrix phi(Nc);
+    Matrix pi(Nc);
+    
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current phi (at time tau)
+        phi = lat->cells[pos]->getphi();
+        // retrieve current pi (at time tau+dtau/2)
+        pi = lat->cells[pos]->getpi();
+        
+        phi = phi + (tau+dtau/2.)*dtau*pi;
+        
+        //set the new phi (at time tau+dtau)
+        bufferlat->cells[pos]->setbuffer1(phi); 
+      }
  
-  //plaquettes:
-  Matrix U12(Nc);
-  Matrix U1m2(Nc);
-  Matrix U12Dag(Nc); // equals (U21)
-  Matrix U2m1(Nc);
-  complex<double> trace;
-  Matrix one(Nc,1.);
-  
-  //#pragma omp parallel for collapse(2)
-  for (int i=0; i<N; i++)
-    {
-      for (int j=0; j<N; j++)
-	{
-	  // define positions
-	  pos = i*N+j;
-	  posX = ((i+1)%N)*N+j;
-	  posY = i*N+(j+1)%N;
-	  
-	  if(i>0)
-	    posmX = (i-1)*N+j;
-	  else
-	    posmX = (N-1)*N+j;
-	  
-	  if(j>0)
-	    posmY = i*N+(j-1);
-	  else
-	    posmY = i*N+N-1; 
-	  
-	  if(i>0)
-	    posmXpY =  (i-1)*N+(j+1)%N;
-	  else
-	    posmXpY = (N-1)*N+(j+1)%N;
-	  
-	  if(j>0)
-	    pospXmY =  ((i+1)%N)*N+j-1;
-	  else
-	    pospXmY =  ((i+1)%N)*N+N-1;
-		  
-	  // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
-	  En = lat->cells[pos]->getE1();
-	  // retrieve current phi (at time tau) at this x_T
-	  phi = lat->cells[pos]->getphi();
-	  // retrieve current phi (at time tau) at x_T+1
-	  phiN = lat->cells[posX]->getphi();
-	  // parallel transport:
-	  // retrieve current Ux and Uy
-	  Ux = lat->cells[pos]->getUx();
-	  if(i<N-1)
-	    phiN = Ux*Ux.prodABconj(phiN,Ux);
-	  else 
-	    phiN = phi;
-	
-	  // compute plaquettes:
-	  Uy = lat->cells[pos]->getUy();	  
-	  temp1 = lat->cells[posY]->getUx(); //UxYp1Dag
-	  temp1.conjg();
-	  U12 = (Ux*lat->cells[posX]->getUy())*(Ux.prodABconj(temp1,Uy));
+#pragma omp for   
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setphi(bufferlat->cells[pos]->getbuffer1()); 
+      }
+  }
+}
 
-	  temp1 = lat->cells[posmY]->getUx(); //UxYm1Dag
-	  temp2 = lat->cells[pospXmY]->getUy(); //UyXp1Ym1Dag
-	  U1m2 = (Ux.prodABconj(Ux,temp2))*(Ux.prodAconjB(temp1,lat->cells[posmY]->getUy()));
-	  
-	  temp1 = lat->cells[posmX]->getUy(); //UyXm1Dag
-	  temp2 = lat->cells[posmXpY]->getUx(); //UxXm1Yp1Dag
-	  U2m1 = (Ux.prodABconj(Uy,temp2))*(Ux.prodAconjB(temp1,lat->cells[posmX]->getUx()));
+void Evolution::evolvePi(Lattice* lat, BufferLattice * bufferlat, Group* group, Parameters *param, double dtau, double tau)
+{
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-	  U12Dag = U12;
-	  U12Dag.conjg();
+#pragma omp parallel 
+  {
+    Matrix Ux(Nc);
+    Matrix Uy(Nc);
+    Matrix UxXm1(Nc);
+    Matrix UyYm1(Nc);
+    
+    Matrix phi(Nc);
+    Matrix phiX(Nc); // this is \tilde{phi}_x
+    Matrix phiY(Nc); // this is \tilde{phi}_y
+    Matrix phimX(Nc); // this is \tilde{-phi}_x
+    Matrix phimY(Nc); // this is \tilde{-phi}_y
+    Matrix bracket(Nc); // this will hold [phiX+phimX-2*phi+phiY+phimY-2*phi]
+    Matrix pi(Nc);
+    Matrix one(Nc,1.);  
+    // Matrix zero(Nc,0.);  
+    
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current Ux and Uy and compute conjugates
+        Ux = lat->cells[pos]->getUx();
+        Uy = lat->cells[pos]->getUy();
+        // retrieve current pi (at time tau-dtau/2)
+        pi = lat->cells[pos]->getpi();
+        // retrieve current phi (at time tau) at this x_T
+        phi = lat->cells[pos]->getphi();
+        
+        // retrieve current phi (at time tau) at x_T+1
+        // parallel transport:
+        phiX = Ux*Ux.prodABconj(lat->cells[lat->pospX[pos]]->getphi(),Ux);
+        phiY = Uy*Uy.prodABconj(lat->cells[lat->pospY[pos]]->getphi(),Uy);
+        
+        // phi_{-x} should be defined as UxD*phimX*Ux with the Ux and UxD reversed from the phi_{+x} case
+        // retrieve current phi (at time tau) at x_T-1
+        // parallel transport:
+        UxXm1 = lat->cells[lat->posmX[pos]]->getUx();
+        UyYm1 = lat->cells[lat->posmY[pos]]->getUy();
+        
+        phimX = Ux.prodAconjB(UxXm1,lat->cells[lat->posmX[pos]]->getphi())*UxXm1;
+        phimY = Ux.prodAconjB(UyYm1,lat->cells[lat->posmY[pos]]->getphi())*UyYm1;
+        
+        bracket = phiX + phimX + phiY + phimY - 4.*phi; // sum over both directions is included here 
+        
+        //	  if (i>0 && i<N-1 && j>0 && j<N-1)
+        pi += dtau/(tau)*bracket; // divide by \tau because this is computing pi(tau+dtau/2) from pi(tau-dtau/2) and phi(tau)
+        
+        //pi = pi - pi.trace()/static_cast<double>(Nc)*one;
+        
+        // set the new pi (at time tau+dtau/2)
 
-	  // do E1 update:
+        bufferlat->cells[pos]->setbuffer1(pi); 
 
-	  temp3 = U1m2;
-	  temp3.conjg();
-	  
-	  temp1 = U12;
-	  temp1 += U1m2;
-	  temp1 -= U12Dag;
-	  temp1 -= temp3;
-	  
-	  trace = temp1.trace();
-	  temp1 -= trace/static_cast<double>(Nc)*one;
+      }
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setpi(bufferlat->cells[pos]->getbuffer1()); 
+      }
+  }
+}
 
-	  temp2 = phiN*phi - phi*phiN;
+void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
+{
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
-	  //	  if (i>0 && i<N-1 && j>0 && j<N-1)
-	  En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+#pragma omp parallel
+  {
+    Matrix Ux(Nc);
+    Matrix Uy(Nc);
+    Matrix temp1(Nc); // can contain p or m
+    Matrix temp2(Nc);
+    Matrix temp3(Nc);
+    Matrix En(Nc);
+    Matrix phi(Nc);
+    Matrix phiN(Nc); // this is \tilde{phi}_x OR \tilde{phi}_y
+    
+    //plaquettes:
+    Matrix U12(Nc);
+    Matrix U1m2(Nc);
+    Matrix U12Dag(Nc); // equals (U21)
+    Matrix U2m1(Nc);
+    complex<double> trace;
+    Matrix one(Nc,1.);
+    
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
+        En = lat->cells[pos]->getE1();
+        // retrieve current phi (at time tau) at this x_T
+        phi = lat->cells[pos]->getphi();
+        // retrieve current phi (at time tau) at x_T+1
+        phiN = lat->cells[lat->pospX[pos]]->getphi();
+        // parallel transport:
+        // retrieve current Ux and Uy
+        Ux = lat->cells[pos]->getUx();
+        phiN = Ux*Ux.prodABconj(phiN,Ux);
+        
+        // compute plaquettes:
+        Uy = lat->cells[pos]->getUy();	  
+        temp1 = lat->cells[lat->pospY[pos]]->getUx(); //UxYp1Dag
+        temp1.conjg();
+        U12 = (Ux*lat->cells[lat->pospX[pos]]->getUy())*(Ux.prodABconj(temp1,Uy));
+        
+        temp1 = lat->cells[lat->posmY[pos]]->getUx(); //UxYm1Dag
+        temp2 = lat->cells[lat->pospXmY[pos]]->getUy(); //UyXp1Ym1Dag
+        U1m2 = (Ux.prodABconj(Ux,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmY[pos]]->getUy()));
+        
+        temp1 = lat->cells[lat->posmX[pos]]->getUy(); //UyXm1Dag
+        temp2 = lat->cells[lat->posmXpY[pos]]->getUx(); //UxXm1Yp1Dag
+        U2m1 = (Ux.prodABconj(Uy,temp2))*(Ux.prodAconjB(temp1,lat->cells[lat->posmX[pos]]->getUx()));
+        
+        U12Dag = U12;
+        U12Dag.conjg();
+        
+        // do E1 update:
+        
+        temp3 = U1m2;
+        temp3.conjg();
+        
+        temp1 = U12;
+        temp1 += U1m2;
+        temp1 -= U12Dag;
+        temp1 -= temp3;
+        
+        trace = temp1.trace();
+        temp1 -= trace/static_cast<double>(Nc)*one;
+        
+        temp2 = phiN*phi - phi*phiN;
+        
+        //	  if (i>0 && i<N-1 && j>0 && j<N-1)
+        En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+        
+        trace = En.trace();
+        En -= (trace/static_cast<double>(Nc))*one;
+        bufferlat->cells[pos]->setbuffer1(En); 
+       
+        
+        // do E2 update:
+        
+        temp3 = U2m1;
+        temp3.conjg();
+        
+        temp1 = U12Dag;
+        temp1 += U2m1;
+        temp1 -= U12;
+        temp1 -= temp3;
+        trace = temp1.trace();
+        temp1 -= (trace/static_cast<double>(Nc))*one;
+        
+        phiN = lat->cells[lat->pospY[pos]]->getphi();
+        phiN = Uy*Uy.prodABconj(phiN,Uy);
+        
+        temp2 = phiN*phi - phi*phiN;
+        
+        En = lat->cells[pos]->getE2();
+        //if (i>0 && i<N-1 && j>0 && j<N-1)
+        En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
+        
+        trace = En.trace();
+        En -= (trace/static_cast<double>(Nc))*one;
+        bufferlat->cells[pos]->setbuffer2(En); 
+      }
 
-	  trace = En.trace();
-	  En -= (trace/static_cast<double>(Nc))*one;
-	  lat->cells[pos]->setE1(En);
+#pragma omp for
+    for (int pos=0; pos<N*N; pos++)
+      {
+        lat->cells[pos]->setE1(bufferlat->cells[pos]->getbuffer1());
+        lat->cells[pos]->setE2(bufferlat->cells[pos]->getbuffer2());
+      }
+  }
+  //  cout << lat->cells[N*N/2+N/2]->getE1() << endl;        
 
-	  // do E2 update:
-
-	  temp3 = U2m1;
-	  temp3.conjg();
-
-	  temp1 = U12Dag;
-	  temp1 += U2m1;
-	  temp1 -= U12;
-	  temp1 -= temp3;
-	  trace = temp1.trace();
-	  temp1 -= (trace/static_cast<double>(Nc))*one;
-
-	  phiN = lat->cells[posY]->getphi();
-	  if(j<N-1)
-	    phiN = Uy*Uy.prodABconj(phiN,Uy);
-	  else
-	    phiN = phi;
-
-	  temp2 = phiN*phi - phi*phiN;
-
-	  En = lat->cells[pos]->getE2();
-	  //if (i>0 && i<N-1 && j>0 && j<N-1)
-	  En += complex<double>(0.,1.)*tau*dtau/(2.*g*g)*temp1 + complex<double>(0.,1.)*dtau/tau*temp2;
-
-	  trace = En.trace();
-	  En -= (trace/static_cast<double>(Nc))*one;
-	  lat->cells[pos]->setE2(En);
-	}
-    }
 }
 
 void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
 {
-  int Nc = param->getNc();
-  int pos, posX, posY, posmX, posmY, posmXpY, pospXmY;
-  int N = param->getSize();
-  double g = param->getg();
+  const int Nc = param->getNc();
+  const int N = param->getSize();
+  const double g = param->getg();
 
   Matrix Ux(Nc);
   Matrix UxXm1(Nc);
   Matrix UxYp1(Nc);
   Matrix UxYm1(Nc);
   Matrix UxXm1Yp1(Nc);
-
+  
   Matrix Uy(Nc);
   Matrix UyXm1(Nc);
   Matrix UyXp1(Nc);
   Matrix UyYm1(Nc);
   Matrix UyXp1Ym1(Nc);
-
+  
   Matrix UxDag(Nc);
   Matrix UxXm1Dag(Nc);
   Matrix UxYp1Dag(Nc);
   Matrix UxYm1Dag(Nc);
   Matrix UxXm1Yp1Dag(Nc);
-
+  
   Matrix UyDag(Nc);
   Matrix UyXm1Dag(Nc);
   Matrix UyXp1Dag(Nc);
   Matrix UyYm1Dag(Nc);
   Matrix UyXp1Ym1Dag(Nc);
-
+  
   Matrix E1(Nc);
   Matrix E2(Nc);
   Matrix E1mX(Nc);
@@ -351,111 +324,56 @@ void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, dou
   Matrix pi(Nc);
   Matrix phiX(Nc); // this is \tilde{phi}_x
   Matrix phiY(Nc); // this is \tilde{phi}_y
- 
+  
   Matrix Gauss(Nc);
   complex<double> trace;
   Matrix one(Nc,1.);
   double largest=0;
- 
-  for (int i=0; i<N; i++)
+  
+  for (int pos=0; pos<N*N; pos++)
     {
-      for (int j=0; j<N; j++)
-	{
-	  // define positions
-	  pos = i*N+j;
-	  if(i<N-1)
-	    posX = (i+1)*N+j;
-	  else
-	    posX = j;
-	  //	    posX = pos;
-
-	  if(j<N-1)
-	    posY = i*N+(j+1);
-	  else
-	    posY = i*N;
-	  //	    posY = pos;
-
-	  if(i>0)
-	    posmX = (i-1)*N+j;
-	  else
-	    posmX = (N-1)*N+j;
-	  //posmX = pos;
-
-	  if(j>0)
-	    posmY = i*N+(j-1);
-	  else
-	    posmY = i*N+N-1;
-	  //posmY = pos;
-
-	  if(i>0 && j<N-1)
-	    posmXpY =  (i-1)*N+j+1;
-	  else if(i>0)
-	    posmXpY =  (i-1)*N;
-	  //   posmXpY =  (i-1)*N+j;
-	  else if(j<N-1)
-	    posmXpY = (N-1)*N+j+1;
-	  //  posmXpY =  (i)*N+j+1;
-	  else
-	    posmXpY = (N-1)*N;
-	  //  posmXpY = pos;
-	  
-	  if(j>0 && i<N-1)
-	    pospXmY =  (i+1)*N+j-1;
-	  else if(j>0)
-	    pospXmY =  j-1;
-	  //	    pospXmY =  (i)*N+j-1;
-	  else if(i<N-1)
-	    pospXmY =  (i+1)*N+N-1;
-	  //	    pospXmY =  (i+1)*N+j;
-	  else
-	    pospXmY = N-1;
-	  //	    pospXmY = pos;
-	
-	  // retrieve current Ux and Uy
-	  Ux = lat->cells[pos]->getUx();
-	  Uy = lat->cells[pos]->getUy();
-	  UxDag = Ux;
-	  UxDag.conjg();
-	  UyDag = Uy;
-	  UyDag.conjg();
-	  
-	  UxXm1 = lat->cells[posmX]->getUx();
-	  UxYm1 = lat->cells[posmY]->getUx();
-	  UxXm1Dag = UxXm1;
-	  UxXm1Dag.conjg();
-	  UxYm1Dag = UxYm1;
-	  UxYm1Dag.conjg();
-
-	  UyXm1 = lat->cells[posmX]->getUy();
-	  UyYm1 = lat->cells[posmY]->getUy();
-	  UyXm1Dag = UyXm1;
-	  UyXm1Dag.conjg();
-	  UyYm1Dag = UyYm1;
-	  UyYm1Dag.conjg();
-	  
-	  // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
-	  E1 = lat->cells[pos]->getE1();
-	  E2 = lat->cells[pos]->getE2();
-	  E1mX = lat->cells[posmX]->getE1();
-	  E2mY = lat->cells[posmY]->getE2();
-	  // retrieve current phi (at time tau) at this x_T
-	  phi = lat->cells[pos]->getphi();
-	  // retrieve current pi
-	  pi = lat->cells[pos]->getpi();
-	
-	  Gauss = UxXm1Dag*E1mX*UxXm1 - E1 + UyYm1Dag*E2mY*UyYm1 - E2 -complex<double>(0.,1.)*(phi*pi-pi*phi);
-
-	  //	  cout << "Gauss=" << Gauss << endl;
-
-	  if (Gauss.square()>largest && i>5 && j>5 && i<N-5 && j<N-5)
-	    largest = Gauss.square();
-
-	}
+      // retrieve current Ux and Uy
+      Ux = lat->cells[pos]->getUx();
+      Uy = lat->cells[pos]->getUy();
+      UxDag = Ux;
+      UxDag.conjg();
+      UyDag = Uy;
+      UyDag.conjg();
+      
+      UxXm1 = lat->cells[lat->posmX[pos]]->getUx();
+      UxYm1 = lat->cells[lat->posmY[pos]]->getUx();
+      UxXm1Dag = UxXm1;
+      UxXm1Dag.conjg();
+      UxYm1Dag = UxYm1;
+      UxYm1Dag.conjg();
+      
+      UyXm1 = lat->cells[lat->posmX[pos]]->getUy();
+      UyYm1 = lat->cells[lat->posmY[pos]]->getUy();
+      UyXm1Dag = UyXm1;
+      UyXm1Dag.conjg();
+      UyYm1Dag = UyYm1;
+      UyYm1Dag.conjg();
+      
+      // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
+      E1 = lat->cells[pos]->getE1();
+      E2 = lat->cells[pos]->getE2();
+      E1mX = lat->cells[lat->posmX[pos]]->getE1();
+      E2mY = lat->cells[lat->posmY[pos]]->getE2();
+      // retrieve current phi (at time tau) at this x_T
+      phi = lat->cells[pos]->getphi();
+      // retrieve current pi
+      pi = lat->cells[pos]->getpi();
+      
+      Gauss = UxXm1Dag*E1mX*UxXm1 - E1 + UyYm1Dag*E2mY*UyYm1 - E2 -complex<double>(0.,1.)*(phi*pi-pi*phi);
+      
+      if (Gauss.square()>largest)
+        largest = Gauss.square();
+      
     }
   cout << "Gauss violation=" << largest << endl;
 }
 
-void Evolution::run(Lattice* lat, Group* group, Parameters *param)
+void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parameters *param)
 {
   int nn[2];
   int Nc = param->getNc();
@@ -593,8 +511,8 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
 
   // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
   // now evolve phi and U to time tau=dtau.
-  evolvePhi(lat, group, param, dtau, 0.);
-  evolveU(lat, group, param, dtau, 0.);
+  evolvePhi(lat, bufferlat, group, param, dtau, 0.);
+  evolveU(lat, bufferlat, group, param, dtau, 0.);
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
   int it1 = static_cast<int>(floor(0.2/(a*dtau)+1e-10));
@@ -615,17 +533,17 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
       // evolve from time tau-dtau/2 to tau+dtau/2 
       if (it<itmax)
 	{
-	  evolvePi(lat, group, param, dtau, (it)*dtau); // the last argument is the current time tau. 
-	  evolveE(lat, group, param, dtau, (it)*dtau);
+	  evolvePi(lat, bufferlat, group, param, dtau, (it)*dtau); // the last argument is the current time tau. 
+	  evolveE(lat, bufferlat, group, param, dtau, (it)*dtau);
 	  
 	  // evolve from time tau to tau+dtau
-	  evolvePhi(lat, group, param, dtau, (it)*dtau);
-	  evolveU(lat, group, param, dtau, (it)*dtau);
+	  evolvePhi(lat, bufferlat, group, param, dtau, (it)*dtau);
+	  evolveU(lat, bufferlat, group, param, dtau, (it)*dtau);
 	}
       else if(it==itmax)
 	{
-	  evolvePi(lat, group, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
-	  evolveE(lat, group, param, dtau/2., (it)*dtau);
+	  evolvePi(lat, bufferlat, group, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
+	  evolveE(lat, bufferlat, group, param, dtau/2., (it)*dtau);
   	}
 
       //      Tmunu(lat,group,param,it);
@@ -635,8 +553,7 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
 	{	  
 	  Tmunu(lat,group,param,it);
 	  //eccentricity(lat,group,param,it,1.,1);
-	  if (it > 1)
-	    u(lat,group,param,it); // computes flow velocity and correct energy density 
+          u(lat,group,param,it); // computes flow velocity and correct energy density 
 	}
 
       // avgEps=0.;
@@ -733,7 +650,7 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
       // //      foutEB << it*dtau << " " << dtau*it*avgEt2 << " " << dtau*it*avgEl2 << " " << dtau*it*avgBt2 << " " << dtau*it*avgBl2 << endl;
     
 
-      if(it==1 && param->getWriteOutputs() == 2)
+      if(it==1 && param->getWriteOutputs() == 3)
 	{	  
 	  stringstream streI_name;
 	  streI_name << "epsilonInitialPlot" << param->getMPIRank() << ".dat";
@@ -805,7 +722,7 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
  	}
 
 
-      if(it==itmax/2 && param->getWriteOutputs() == 2)
+      if(it==itmax/2 && param->getWriteOutputs() == 3)
 	{	  
 	  stringstream streInt_name;
 	  streInt_name << "epsilonIntermediatePlot" << param->getMPIRank() << ".dat";
@@ -1395,9 +1312,11 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
       // 	}
       
       int success=1;
-      if(it==1 || it==itmax)
-	{	
-	  success = multiplicity(lat,group,param,it);
+      //      if(it==1 || it==itmax)
+      //	{	
+      if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
+	{	  
+          success = multiplicity(lat,group,param,it);
 	  //	  correlationsColor(lat,group,param,it);
 	  //twoPointFunctionInK(param, lat, 0);
 	}
@@ -1412,7 +1331,7 @@ void Evolution::run(Lattice* lat, Group* group, Parameters *param)
 
 void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
 {
-  ofstream Tfout("Tmunu",ios::app); 
+  //  ofstream Tfout("Tmunu",ios::app); 
 
   double averageTtautau=0.;
   double averageTtaueta=0.;
@@ -1599,12 +1518,12 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
 	}
     } 
   // magnetic part:
-  stringstream strT_name;
-  strT_name << "T" << param->getMPIRank() << ".dat";
-  string T_name;
-  T_name = strT_name.str();
+  // stringstream strT_name;
+  // strT_name << "T" << param->getMPIRank() << ".dat";
+  // string T_name;
+  // T_name = strT_name.str();
 
-  ofstream fout(T_name.c_str(),ios::out); 
+  //  ofstream fout(T_name.c_str(),ios::out); 
   for (int i=0; i<N; i++)
     {
       for (int j=0; j<N; j++)
@@ -1716,7 +1635,7 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
       //      foutTtt << endl;
     }
   
-  fout.close();
+  //  fout.close();
   //  foutTtt.close();
 
   // T^\tau x, T^\tau y
@@ -2072,8 +1991,8 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
   averageTtautau /= double(N);
   averageTtaueta /= double(N);
   averageTxx /= double(N);
-  Tfout << it*dtau*a << " " << sqrt(averageTtautau) << " " << sqrt(averageTtaueta) << " " << sqrt(averageTxx) << endl;
-  Tfout.close();
+  //  Tfout << it*dtau*a << " " << sqrt(averageTtautau) << " " << sqrt(averageTtaueta) << " " << sqrt(averageTxx) << endl;
+  //Tfout.close();
 }
 
 void Evolution::u(Lattice *lat, Group *group, Parameters *param, int it)
@@ -2152,7 +2071,9 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
   double weight;
 
   double area = 0.;
-  
+  double avgeden = 0.;
+  int sum = 0;
+
   avrSq=0.;
   avr3=0.;
 
@@ -2166,7 +2087,9 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
   double smallestX = 0.;
   double smallestY = 0.;
-  
+  double avgQs2AQs2B = 0.;
+
+
   for(int ix=0; ix<N; ix++) 
     {
       for(int iy=0; iy<N; iy++)
@@ -2258,19 +2181,24 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 		{
 		  weight = lat->cells[pos]->getEpsilon()*gfactor;
 		  area += a*a;
-		}
+                  sum += 1;
+                  avgeden += lat->cells[pos]->getEpsilon()*hbarc*gfactor; //GeV/fm^3
+                  g2mu2A = lat->cells[pos]->getg2mu2A();
+                  g2mu2B = lat->cells[pos]->getg2mu2B();
+                  avgQs2AQs2B += g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()*g2mu2B*param->getQsmuRatioB()*param->getQsmuRatioB()/a/a/a/a;
+                }
 	      avx += x*weight;
 	      avy += y*weight;
 	      toteps += weight;    
 	}
     }
-      
+  
+  
   avx/=toteps;
   avy/=toteps;
-  
-  param->setArea(0.);
-  if(it==1 && cutoff==10)
-    param->setArea(area);
+  avgeden/=double(sum);
+  avgQs2AQs2B/=double(sum);
+  param->setArea(area);
 
   //  cout << "avx=" << avx << endl;
   //cout << "avy=" << avy << endl;
@@ -2589,7 +2517,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 	  foutEcc << it*a*param->getdtau() << " " << eccentricity1 << " " << Psi1 << " " << eccentricity2 << " " << Psi2 << " " 
 		  << eccentricity3 << " " << Psi3 << " " << eccentricity4 << " " << Psi4 
 		  << " " << eccentricity5 << " " << Psi5 << " " << eccentricity6 << " " << Psi6 << " " << cutoff << " " << sqrt(avrSq) 
-		  << " " << maxX << " " << maxY << " " << param->getb() << " " << param->getTpp() << " " << param->getArea() << " " << Rbar << endl;
+		  << " " << maxX << " " << maxY << " " << param->getb() << " " << param->getTpp() << " " << param->getArea() << " " << Rbar << " " << avgeden << " " << avgQs2AQs2B*hbarc << endl;
 	  foutEcc.close();      
 	}
 
@@ -3018,32 +2946,27 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaCut2 =0.;
   double dEdeta =0.;
   double dEdeta2 =0.;
-  double Nkxky[N*N];
   
-  stringstream strnkxky_name;
-  strnkxky_name << "nkxky" << param->getMPIRank() << ".dat";
-  string nkxky_name;
-  nkxky_name = strnkxky_name.str();
  
   stringstream strNpartdNdy_name;
-  strNpartdNdy_name << "NpartdNdy" << param->getMPIRank() << ".dat";
+  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
   string NpartdNdy_name;
   NpartdNdy_name = strNpartdNdy_name.str();
 
-  stringstream strNpartdNdyH_name;
-  strNpartdNdyH_name << "NpartdNdyHadrons" << param->getMPIRank() << ".dat";
-  string NpartdNdyH_name;
-  NpartdNdyH_name = strNpartdNdyH_name.str();
+  // stringstream strNpartdNdyH_name;
+  // strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  // string NpartdNdyH_name;
+  // NpartdNdyH_name = strNpartdNdyH_name.str();
 
-  stringstream strmult_name;
-  strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
-  string mult_name;
-  mult_name = strmult_name.str();
+  // stringstream strmult_name;
+  // strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  // string mult_name;
+  // mult_name = strmult_name.str();
 
-  stringstream strdNdy_name;
-  strdNdy_name << "dNdy" << param->getMPIRank() << ".dat";
-  string dNdy_name;
-  dNdy_name = strdNdy_name.str();
+  // stringstream strdNdy_name;
+  // strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  // string dNdy_name;
+  // dNdy_name = strdNdy_name.str();
 
   cout << "Measuring multiplicity ... " << endl;
 
@@ -3064,22 +2987,16 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
   
-  gaugefix->FFTChi(lat,group,param,4000);
+  gaugefix->FFTChi(fft,lat,group,param,4000);
   // gauge is fixed
   delete gaugefix;
 
   Matrix **E1;
-  //  Matrix **E2;
-  //  Matrix **pi;
   E1 = new Matrix*[N*N];
-  //E2 = new Matrix*[N*N];
-  //pi = new Matrix*[N*N];
   
   for(int i=0; i<N*N; i++)
     {
       E1[i] = new Matrix(Nc,0.);
-      //  E2[i] = new Matrix(Nc,0.);
-      // pi[i] = new Matrix(Nc,0.);
     }
 
   double g2mu2A, g2mu2B, gfactor, alphas, Qs;
@@ -3190,17 +3107,12 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       NhH[ih]=0.;
     }
 
-  // if(it==1)
-  //   nkxky_name << "nkxkyInitial.dat";
-  //  if (it==itmax)
-  //  nkxky_name << "nkxkyFinal.dat";
-
-  ofstream foutNkxky((nkxky_name).c_str(),ios::out); 
   
   for(int i=0; i<N; i++)
     {
       for(int j=0; j<N; j++)
   	{
+          nkt=0.;
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
@@ -3249,10 +3161,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		    }
   		}
   	    }
-	  Nkxky[pos] = nkt*N*N/Pi/Pi/2./2.;
-  	}
+	}
     }
-  //foutNkxky.close();
 
   
   
@@ -3343,6 +3253,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     {
       for(int j=0; j<N; j++)
   	{
+          nkt=0.;
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
@@ -3388,14 +3299,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		    }
   		}
   	    }
-	  Nkxky[pos] += nkt*N*N/Pi/Pi/2./2.;
-	  //	  if (param->getWriteOutputs()==2)
-	  //   foutNkxky << i << " " << j << " " << nkt << "\n";
   	}
-      //      if (param->getWriteOutputs()==2)
-      // foutNkxky << endl;
     }
-  //foutNkxky.close();
   
 
   /// ------3 --------
@@ -3487,6 +3392,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     {
       for(int j=0; j<N; j++)
   	{
+          nkt=0.;
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
@@ -3533,14 +3439,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		    }
   		}
   	    }
-	  Nkxky[pos] += nkt *N*N/Pi/Pi/2./2.;
-	  if (param->getWriteOutputs()==2)
-	    foutNkxky << 2.*sin(kx/2.)/a*0.1973269718 << " " << 2.*sin(ky/2.)/a*0.1973269718 << " " << Nkxky[pos]*a/0.1973269718*a/0.1973269718 << "\n";
-  	}
-      if (param->getWriteOutputs()==2)
-	foutNkxky << endl;
+        }
     }
-  foutNkxky.close();
   
 
 
@@ -3550,7 +3450,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   m=param->getJacobianm(); // in GeV
   P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
 
-  ofstream foutMult(mult_name.c_str(),ios::app); 
+  //  ofstream foutMult(mult_name.c_str(),ios::out); 
   //  ofstream foutdNdy(dNdy_name.c_str(),ios::app); 
   for(int ik=0; ik<bins; ik++)
     {
@@ -3600,12 +3500,12 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	}
       
       // output dN/d^2k
-      if(it == itmax)
-	{
-	  foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
-		   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
-		   << n2[ik]*a/0.1973269718*a/0.1973269718 << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
-	}
+      // if(it > 0)
+      //   {
+      //     foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
+      //   	   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
+      //   	   << n2[ik]*a/0.1973269718*a/0.1973269718 << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
+      //   }
     }
   
   //*ik*dkt*ik*dkt*ik*dkt*ik*dkt/a*0.1973269718/a*0.1973269718/a*0.1973269718/a*0.1973269718 // this is a factor of k_T^4
@@ -3613,7 +3513,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   //  foutdNdy << it*dtau*a << " " << dNdeta << " " << dNdeta2 << " " << dNdetaCut << " " << dEdeta << " " << dEdeta2 << endl;
   // in this version the gfactor is included above (and depends on the position)
   //foutdNdy.close();
-  foutMult.close();
+  //  foutMult.close();
 
   
   double Ech=0.;
@@ -3624,7 +3524,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
 
   // compute hadrons using fragmentation function 
-  if(it == itmax)
+  if(it == itmax && param->getWriteOutputs() == 3)
     {
       //      cout << " before Hadronizing ... " << endl;
       //sleep(10);
@@ -3791,7 +3691,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	  cout << "dN/dy 2 = " << dNdeta2 << ", dE/dy 2 = " << dEdeta2 << endl; 
 	  cout << "gluon <p_T> = " << dEdeta/dNdeta << endl;
     }
-  else
+  else if(param->getUsePseudoRapidity()==1)
     {
       m=param->getJacobianm(); // in GeV
       P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
@@ -3816,14 +3716,903 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       for(int i=0; i<N*N; i++)
 	{
 	  delete E1[i];
-	  //	  delete E2[i];
-	  // delete pi[i];
 	}
       
       delete[] E1;
-      //      delete[] E2;
-      // delete[] pi;
+      //      delete gaugefix;
+      return 0;
+    }
+  
+
+  if (it==itmax)
+    {
+      // cout << "hadron <p_T> = " << dEdetaHadrons/dNdetaHadrons << endl;
+      // cout << "Hadrons: dN/dy(p_T>250 MeV)=" << dNdetaHadrons << ", dE/dy(p_T>250 MeV)=" << dEdetaHadrons << endl;
       
+      // stringstream strmeanpt_name;
+      // strmeanpt_name << "meanpt" << param->getMPIRank() << ".dat";
+      // string meanpt_name;
+      // meanpt_name = strmeanpt_name.str();
+
+      // ofstream foutNch(meanpt_name.c_str(),ios::out); 
+      // foutNch << dNdeta << " " << dEdeta/dNdeta << " " << dNdetaHadrons << " " << dEdetaHadrons/dNdetaHadrons << endl;
+      // foutNch.close();
+      
+      ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
+      foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp() << " " << param->getb() << " " << dEdeta << " " << param->getRandomSeed() 
+	     << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaCut << " " << dEdetaCut 
+	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+      foutNN.close();
+
+      // if(param->getWriteOutputs() == 3)
+      //   {
+      //     ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
+      //     foutNNH << param->getNpart() << " " << dNdetaHadrons << " " << param->getTpp() << " " << param->getb() << " " << dEdetaHadrons << " " << param->getRandomSeed()   << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaHadronsCut << " " << dEdetaHadronsCut 
+      //             << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+      //     foutNNH.close();
+      //   }
+    }
+  
+  for(int i=0; i<N*N; i++)
+    {
+      delete E1[i];
+    }
+  
+  delete[] E1;
+ 
+  cout << " done." << endl;
+  param->setSuccess(1);
+  return 1;
+
+}
+
+
+  
+int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, int it)
+{
+  int N = param->getSize();
+  int Nc = param->getNc();
+  int npos, pos, posNew;
+  double L = param->getL();
+  double a = L/N; // lattice spacing in fm
+  double Pi, kx, ky, kt2, omega2;
+  double g = param->getg();
+  Pi = param->getPi();
+  int nn[2];
+  nn[0] = N;
+  nn[1] = N;
+  double dtau = param->getdtau();
+  double nkt;
+  int bins = 100;
+  double n[bins]; //k_T array
+  double E[bins]; //k_T array
+  double n2[bins]; //k_T array
+  int counter[bins]; 
+  double dkt = 2.83/static_cast<double>(bins);
+  double dNdeta =0.;
+  double dNdeta2 =0.;
+  double dNdetaCut =0.;
+  double dNdetaCut2 =0.;
+  double dEdetaCut =0.;
+  double dEdetaCut2 =0.;
+  double dEdeta =0.;
+  double dEdeta2 =0.;
+  double Nkxky[N*N];
+  
+  stringstream strnkxky_name;
+  strnkxky_name << "nkxky-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  string nkxky_name;
+  nkxky_name = strnkxky_name.str();
+ 
+  stringstream strNpartdNdy_name;
+  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  string NpartdNdy_name;
+  NpartdNdy_name = strNpartdNdy_name.str();
+
+  stringstream strNpartdNdyH_name;
+  strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  string NpartdNdyH_name;
+  NpartdNdyH_name = strNpartdNdyH_name.str();
+
+  stringstream strmult_name;
+  strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  string mult_name;
+  mult_name = strmult_name.str();
+
+  stringstream strdNdy_name;
+  strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  string dNdy_name;
+  dNdy_name = strdNdy_name.str();
+
+  cout << "Measuring multiplicity ... " << endl;
+
+  // fix transverse Coulomb gauge
+  GaugeFix *gaugefix;
+  gaugefix = new GaugeFix(nn);
+  
+  double maxtime;
+  if ( param->getInverseQsForMaxTime() == 1 )
+    {
+      maxtime = 1./param->getAverageQs()*hbarc;
+      cout << "maximal evolution time = " << maxtime << " fm" << endl; 
+    }
+  else
+    {
+      maxtime = param->getMaxtime(); // maxtime is in fm
+    }
+
+  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
+  
+  gaugefix->FFTChi(fft,lat,group,param,4000);
+  // gauge is fixed
+  delete gaugefix;
+
+  Matrix **E1;
+  E1 = new Matrix*[N*N];
+  
+  for(int i=0; i<N*N; i++)
+    {
+      E1[i] = new Matrix(Nc,0.);
+    }
+
+  double g2mu2A, g2mu2B, gfactor, alphas, Qs;
+  double c = param->getc();
+  double muZero = param->getMuZero();
+
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+	{
+	  pos = i*N+j;
+	  
+	  if(param->getRunningCoupling())
+	    {
+	  
+	      if(pos>0 && pos<(N-1)*N+N-1)
+		{
+		  g2mu2A = lat->cells[pos]->getg2mu2A();
+		}
+	      else 
+		g2mu2A = 0;
+	      
+	      if(pos>0 && pos<(N-1)*N+N-1)
+		{
+		  g2mu2B = lat->cells[pos]->getg2mu2B();
+		}
+	      else
+		g2mu2B = 0;
+	      
+	      if(param->getRunWithQs()==2)
+		{
+		  if(g2mu2A > g2mu2B)
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  else
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      else if(param->getRunWithQs()==0)
+		{
+		  if(g2mu2A < g2mu2B)
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  else
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      else if(param->getRunWithQs()==1)
+		{
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      
+	      if ( param->getRunWithLocalQs() == 1)
+		{	  
+		  // 3 flavors
+		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  //alphas = 12.*PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*Qs/0.2)); // 3 flavors
+		  gfactor = g*g/(4.*PI*alphas);
+		  // cout << "m Qs=" << Qs << endl;
+		  // cout << alphas << endl;
+		  // run with the local (in transverse plane) coupling
+		}
+	      else
+		{
+		  if ( param->getRunWithQs() == 0 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		  else if ( param->getRunWithQs() == 1 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		  else if ( param->getRunWithQs() == 2 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		  
+		  gfactor = g*g/(4.*PI*alphas);
+		}
+	    }
+	  else
+	    gfactor = 1.;
+
+	  if(param->getRunWithkt()==0)
+	    {
+	      *E1[pos] = lat->cells[pos]->getE1()*sqrt(gfactor); // replace one of the 1/g in the lattice E^i by the running one
+	      //	      cout << "m " << sqrt(gfactor) << endl;
+
+	    }
+	  else
+	    {
+	      *E1[pos] = lat->cells[pos]->getE1(); 
+	    }
+	}
+    }
+
+  // do Fourier transforms
+  fft->fftn(E1,E1,nn,2,1);
+ 
+  for(int ik=0; ik<bins; ik++)
+    {
+      n[ik] = 0.;
+      E[ik] = 0.;
+      n2[ik] = 0.;
+      counter[ik]=0;
+    }
+  
+  int hbins = 2000;
+  int kcounter=0;
+  double Nhad = 0.;
+  double Ehad = 0.;
+  double Nh[hbins+1], Nhgsl[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1], Ng;
+  for (int ih=0; ih<=hbins; ih++)
+    {
+      Nh[ih]=0.;
+      Eh[ih]=0.;
+      NhL[ih]=0.;
+      NhH[ih]=0.;
+    }
+
+  // if(it==1)
+  //   nkxky_name << "nkxkyInitial.dat";
+  //  if (it==itmax)
+  //  nkxky_name << "nkxkyFinal.dat";
+
+  ofstream foutNkxky((nkxky_name).c_str(),ios::out); 
+  
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+  	{
+  	  pos = i*N+j;     
+          Nkxky[pos] = 0.;
+        }  
+    }
+  
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+  	{
+          nkt=0.;
+  	  pos = i*N+j;
+  	  npos = (N-i)*N+(N-j);
+	  
+  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+
+  	  //	  if (sqrt(kx*kx+ky*ky)>2.)
+  	  //continue;
+
+  	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
+  	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
+
+  	  // i=0 or j=0 have no negative k_T value available
+ 
+  	  if(i!=0 && j!=0)
+  	    {
+  	      //cout << ((*E1[pos])*(*E1[npos])).trace()  << endl;
+  	      //cout << ((*E2[pos])*(*E2[npos])).trace()  << endl;
+  	      //cout << ((*pi[pos])*(*pi[npos])).trace()  << endl << endl;
+
+  	      if(omega2!=0)
+  		{
+  		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( g*g/((it-0.5)*dtau)*( (((*E1[pos])*(*E1[npos])).trace()).real() 
+											   )
+  								     );
+  		  if(param->getRunWithkt()==1)
+  		    {
+  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		    }
+  		}
+	      
+	      
+  	      dNdeta += nkt;
+  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+	          
+  	      for(int ik=0; ik<bins; ik++)
+  		{
+  		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
+  		    {
+  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
+  		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
+  		      counter[ik]+=1; // number of entries in n[ik]
+  		    }
+  		}
+  	    }
+	  if(i!=0 && j!=0)
+  	    {
+              Nkxky[pos] = nkt*N*N/Pi/Pi/2./2.;
+            }  
+	}
+    }
+  //foutNkxky.close();
+
+  
+  
+
+  /// -------- 2 ---------
+
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+	{
+	  pos = i*N+j;
+	  
+	  if(param->getRunningCoupling())
+	    {
+	  
+	      if(pos>0 && pos<(N-1)*N+N-1)
+		{
+		  g2mu2A = lat->cells[pos]->getg2mu2A();
+		}
+	      else 
+		g2mu2A = 0;
+	      
+	      if(pos>0 && pos<(N-1)*N+N-1)
+		{
+		  g2mu2B = lat->cells[pos]->getg2mu2B();
+		}
+	      else
+		g2mu2B = 0;
+	      
+	      if(param->getRunWithQs()==2)
+		{
+		  if(g2mu2A > g2mu2B)
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  else
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      else if(param->getRunWithQs()==0)
+		{
+		  if(g2mu2A < g2mu2B)
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  else
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      else if(param->getRunWithQs()==1)
+		{
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      
+	      if ( param->getRunWithLocalQs() == 1)
+		{	  
+		  // 3 flavors
+		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  //alphas = 12.*PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*Qs/0.2)); // 3 flavors
+		  gfactor = g*g/(4.*PI*alphas);
+		  // cout << "m Qs=" << Qs << endl;
+		  // cout << alphas << endl;
+		  // run with the local (in transverse plane) coupling
+		}
+	      else
+		{
+		  if ( param->getRunWithQs() == 0 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		  else if ( param->getRunWithQs() == 1 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		  else if ( param->getRunWithQs() == 2 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		  
+		  gfactor = g*g/(4.*PI*alphas);
+		}
+	    }
+	  else
+	    gfactor = 1.;
+
+	  if(param->getRunWithkt()==0)
+	    {
+	      *E1[pos] = lat->cells[pos]->getE2()*sqrt(gfactor); // "
+	    }
+	  else
+	    {
+	      *E1[pos] = lat->cells[pos]->getE2(); 
+	    }
+	}
+    }
+
+  fft->fftn(E1,E1,nn,2,1);
+  
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+  	{
+          nkt=0.;
+  	  pos = i*N+j;
+  	  npos = (N-i)*N+(N-j);
+	  
+  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+
+  	  //	  if (sqrt(kx*kx+ky*ky)>2.)
+  	  //continue;
+
+  	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
+  	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
+
+  	  // i=0 or j=0 have no negative k_T value available
+ 
+  	  if(i!=0 && j!=0)
+  	    {
+  	      //cout << ((*E1[pos])*(*E1[npos])).trace()  << endl;
+  	      //cout << ((*E2[pos])*(*E2[npos])).trace()  << endl;
+  	      //cout << ((*pi[pos])*(*pi[npos])).trace()  << endl << endl;
+
+  	      if(omega2!=0)
+  		{
+  		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( g*g/((it-0.5)*dtau)*( ((((*E1[pos])*(*E1[npos])).trace()).real())));
+		  if(param->getRunWithkt()==1)
+  		    {
+  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		    }
+  		}
+	      
+  	      dNdeta += nkt;
+  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+	          
+  	      for(int ik=0; ik<bins; ik++)
+  		{
+  		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
+  		    {
+  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
+  		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
+		      // counter[ik]+=1; // number of entries in n[ik]
+  		    }
+  		}
+  	    }
+	  if(i!=0 && j!=0)
+  	    {
+                Nkxky[pos] += nkt*N*N/Pi/Pi/2./2.;
+            }
+                //	  if (param->getWriteOutputs()==2)
+	  //   foutNkxky << i << " " << j << " " << nkt << "\n";
+  	}
+      //      if (param->getWriteOutputs()==2)
+      // foutNkxky << endl;
+    }
+  //foutNkxky.close();
+  
+
+  /// ------3 --------
+
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+	{
+	  pos = i*N+j;
+	  
+	  if(param->getRunningCoupling())
+	    {
+	  
+	      if(pos>0 && pos<(N-1)*N+N-1)
+		{
+		  g2mu2A = lat->cells[pos]->getg2mu2A();
+		}
+	      else 
+		g2mu2A = 0;
+	      
+	      if(pos>0 && pos<(N-1)*N+N-1)
+		{
+		  g2mu2B = lat->cells[pos]->getg2mu2B();
+		}
+	      else
+		g2mu2B = 0;
+	      
+	      if(param->getRunWithQs()==2)
+		{
+		  if(g2mu2A > g2mu2B)
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  else
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      else if(param->getRunWithQs()==0)
+		{
+		  if(g2mu2A < g2mu2B)
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  else
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      else if(param->getRunWithQs()==1)
+		{
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		}
+	      
+	      if ( param->getRunWithLocalQs() == 1)
+		{	  
+		  // 3 flavors
+		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  //alphas = 12.*PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*Qs/0.2)); // 3 flavors
+		  gfactor = g*g/(4.*PI*alphas);
+		  // cout << "m Qs=" << Qs << endl;
+		  // cout << alphas << endl;
+		  // run with the local (in transverse plane) coupling
+		}
+	      else
+		{
+		  if ( param->getRunWithQs() == 0 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		  else if ( param->getRunWithQs() == 1 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		  else if ( param->getRunWithQs() == 2 )
+		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		  
+		  gfactor = g*g/(4.*PI*alphas);
+		}
+	    }
+	  else
+	    gfactor = 1.;
+
+	  if(param->getRunWithkt()==0)
+	    {
+	      *E1[pos] = lat->cells[pos]->getpi()*sqrt(gfactor); // replace the only 1/g by the running one (physical pi goes like 1/g, like physical E^i)
+	      //	      cout << "m " << sqrt(gfactor) << endl;
+
+	    }
+	  else
+	    {
+	      *E1[pos] = lat->cells[pos]->getpi(); 
+	    }
+	}
+    }
+
+  // do Fourier transforms
+  fft->fftn(E1,E1,nn,2,1);
+
+  for(int i=0; i<N; i++)
+    {
+      for(int j=0; j<N; j++)
+  	{
+          nkt=0.;
+  	  pos = i*N+j;
+  	  npos = (N-i)*N+(N-j);
+	  
+  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+
+  	  //	  if (sqrt(kx*kx+ky*ky)>2.)
+  	  //continue;
+
+  	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
+  	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
+
+  	  // i=0 or j=0 have no negative k_T value available
+ 
+  	  if(i!=0 && j!=0)
+  	    {
+  	      //cout << ((*E1[pos])*(*E1[npos])).trace()  << endl;
+  	      //cout << ((*E2[pos])*(*E2[npos])).trace()  << endl;
+  	      //cout << ((*pi[pos])*(*pi[npos])).trace()  << endl << endl;
+
+  	      if(omega2!=0)
+  		{
+  		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( ((it-0.5)*dtau) * ( (((*E1[pos])*(*E1[npos])).trace()).real() ) );
+  		  if(param->getRunWithkt()==1)
+  		    {
+  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		    }
+  		}
+	      
+	      
+  	      dNdeta += nkt;
+  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+	          
+  	      for(int ik=0; ik<bins; ik++)
+  		{
+  		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
+  		    {
+  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
+  		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
+  		      //counter[ik]+=1; // number of entries in n[ik]
+  		    }
+  		}
+  	    }
+	  if(i!=0 && j!=0)
+  	    {
+              Nkxky[pos] += nkt *N*N/Pi/Pi/2./2.;
+            }
+          if (param->getWriteOutputs()==2)
+	    foutNkxky << 2.*sin(kx/2.)/a*0.1973269718 << " " << 2.*sin(ky/2.)/a*0.1973269718 << " " << Nkxky[pos]*a/0.1973269718*a/0.1973269718 << "\n";
+        }
+      if (param->getWriteOutputs()==2)
+	foutNkxky << endl;
+    }
+  foutNkxky.close();
+  
+
+
+
+
+  double m,P;
+  m=param->getJacobianm(); // in GeV
+  P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
+
+  ofstream foutMult(mult_name.c_str(),ios::out); 
+  //  ofstream foutdNdy(dNdy_name.c_str(),ios::app); 
+  for(int ik=0; ik<bins; ik++)
+    {
+      if(counter[ik]>0)
+	{
+	  n[ik] = n[ik]/static_cast<double>(counter[ik]);
+	  E[ik] = E[ik]/static_cast<double>(counter[ik]);
+	  if(param->getUsePseudoRapidity()==0)
+	    {
+	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
+	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
+	      if(ik*dkt/a*0.1973269718>3.) // 
+		{
+		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		  dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		}
+	      if(ik*dkt/a*0.1973269718>6.) // large cut
+		{
+		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		}
+	    }
+	  else
+	    {
+	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI
+		*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));  //integrate, gives a ik*dkt*2pi*dkt
+	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI*
+		cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));  //integrate, gives a ik*dkt*2pi*dkt
+
+	      if(ik*dkt/a*0.1973269718>3.) //
+		{
+		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*PI 
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));     
+		    dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		}
+	      if(ik*dkt/a*0.1973269718>6.) // large cut
+		{
+		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		}
+	  
+	    }
+	  //integrate, gives a ik*dkt*2pi*dkt, in |eta|<2.4, 0.4 GeV p_T cut, charged N_track (offline, factor 0.83)
+	}
+      
+      // output dN/d^2k
+      if(it > 0)
+	{
+	  foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
+		   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
+		   << n2[ik]*a/0.1973269718*a/0.1973269718 << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
+	}
+    }
+  
+  //*ik*dkt*ik*dkt*ik*dkt*ik*dkt/a*0.1973269718/a*0.1973269718/a*0.1973269718/a*0.1973269718 // this is a factor of k_T^4
+
+  //  foutdNdy << it*dtau*a << " " << dNdeta << " " << dNdeta2 << " " << dNdetaCut << " " << dEdeta << " " << dEdeta2 << endl;
+  // in this version the gfactor is included above (and depends on the position)
+  //foutdNdy.close();
+  foutMult.close();
+
+  
+  double Ech=0.;
+  double Ech2=0.;
+  double Nch=0.;
+  int icheck=0;
+  double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
+  double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
+
+  // compute hadrons using fragmentation function 
+  if(it == itmax && param->getWriteOutputs() == 3)
+    {
+      //      cout << " before Hadronizing ... " << endl;
+      //sleep(10);
+      cout << " Hadronizing ... " << endl;
+      double z,frac;
+      double mypt, kt;
+      int ik;
+      int steps=6000;
+      double dz = 0.95/static_cast<double>(steps);
+      double zValues[steps+1];
+      double zintegrand[steps+1];
+      //double Ezintegrand[steps+1];
+      //double Lzintegrand[steps+1];
+      //double Hzintegrand[steps+1];
+      gsl_interp_accel *zacc = gsl_interp_accel_alloc ();
+      gsl_spline *zspline = gsl_spline_alloc (gsl_interp_cspline, steps+1);
+
+      for(int ih=0; ih<=hbins; ih++)
+	{
+
+	  mypt = ih * (20./static_cast<double>(hbins));  
+	  
+	  for (int iz=0; iz<=steps; iz++)
+	    {
+	      z = 0.05 + iz * dz;
+	      zValues[iz] = z;
+	      
+	      kt = mypt/z;
+
+	      ik = static_cast<int>(floor(kt*a/0.1973269718/dkt-0.5+0.00000001));
+	      
+	      frac = (kt - (ik+0.5)*dkt/a*0.1973269718)/(dkt/a*0.1973269718);
+     
+	      if(ik+1<bins && ik >=0)
+		Ng = ((1.-frac)*n[ik]+frac*n[ik+1])*a/0.1973269718*a/0.1973269718; // to make dN/d^2k_T fo k_T in GeV 
+	      else 
+		Ng =0.;
+
+	      
+	      if(param->getUsePseudoRapidity()==0)
+		{
+		  zintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt);
+		  // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * frag->kkp(7,1,z,kt);
+		  // Lzintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt/2.);
+		  // Hzintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt*2.);
+		}
+	      else
+		{
+		  zintegrand[iz] =  1./(z*z) * Ng * 
+			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
+			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
+			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+	
+		  // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng * 
+		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));	
+		  
+		  // Lzintegrand[iz] =  1./(z*z) * Ng * 
+		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+
+		  // Hzintegrand[iz] =  1./(z*z) * Ng * 
+		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+
+		  
+			}
+	    }
+
+	  zValues[steps]=1.; //set exactly 1
+	  
+	  
+	  gsl_spline_init (zspline, zValues, zintegrand, steps+1);
+	  Nhgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
+	  
+
+	  //	  gsl_spline_init (zspline, zValues, Lzintegrand, steps+1);
+	  //NhLgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
+	  
+	  //gsl_spline_init (zspline, zValues, Hzintegrand, steps+1);
+	  //NhHgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
+
+	}
+
+      gsl_spline_free(zspline);
+      gsl_interp_accel_free(zacc);
+          
+      stringstream strmultHad_name;
+      strmultHad_name << "multiplicityHadrons" << param->getMPIRank() << ".dat";
+      string multHad_name;
+      multHad_name = strmultHad_name.str();
+      
+      ofstream foutdNdpt(multHad_name.c_str(),ios::out); 
+      for (int ih=0; ih<=hbins; ih++)
+	{
+	  if (ih%10==0)
+	foutdNdpt << ih * 20. /static_cast<double>(hbins)  << " " << Nhgsl[ih] << " " << 0. << " " << 0. 
+		  << " " << param->getTpp() << " " << param->getb() << endl; // leaving out the L and H ones for now
+	}
+      foutdNdpt.close();
+      
+      cout << " done." << endl;
+    
+      //integrate over pT using gsl      
+      double pt[hbins+1];
+      double integrand[hbins+1];
+      double Eintegrand[hbins+1];
+      for(int ih=0; ih<=hbins; ih++)
+	{
+	  pt[ih] = ih * 20. /static_cast<double>(hbins);
+	  integrand[ih] = Nhgsl[ih]*pt[ih];
+	  Eintegrand[ih] = Nhgsl[ih]*pt[ih]*pt[ih];
+	}
+
+      gsl_interp_accel *ptacc = gsl_interp_accel_alloc ();
+      gsl_spline *ptspline = gsl_spline_alloc (gsl_interp_cspline, hbins+1);
+      gsl_spline_init (ptspline, pt, integrand, hbins+1);
+      dNdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      dNdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      dNdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+
+      gsl_spline_init (ptspline, pt, Eintegrand, hbins+1);
+      dEdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      dEdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      dEdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+
+      gsl_spline_free(ptspline);
+      gsl_interp_accel_free(ptacc);
+      //      cout << "gsl integral: dNdeta= " << dNdetaHadrons << " dEdeta= " << dEdetaHadrons << endl;
+      
+      // icheck=0.;
+      // // compute N_ch and mean p_T
+      // for (int ih=0; ih<=hbins; ih++)
+      // 	{
+      // 	  if ( ih * 20. /static_cast<double>(hbins) > 0.25 &&  ih * 20. /static_cast<double>(hbins) < 20.) // p_T cut in GeV
+      // 	    {
+      // 	      if ( icheck==0 || ih==hbins )
+      // 		{
+      // 		  Nch += 2*Pi* ( ih * 20. /static_cast<double>(hbins) ) * Nh[ih] * (20. /static_cast<double>(hbins)) * 0.5;
+      // 		  Ech += 2*Pi* ( ih * 20. /static_cast<double>(hbins) ) *
+      // 		    Nh[ih] * ( ih * 20. /static_cast<double>(hbins) ) * (20. /static_cast<double>(hbins)) * 0.5;
+      // 		  Ech2 += 2*Pi* ( ih * 20. /static_cast<double>(hbins) ) * Eh[ih]  * (20. /static_cast<double>(hbins)) * 0.5;
+      // 		  icheck=1;
+      // 		}
+      // 	      else
+      // 		{
+      // 		  Nch += 2*Pi* ( ih * 20. /static_cast<double>(hbins) ) * Nh[ih] * (20. /static_cast<double>(hbins));
+      // 		  Ech += 2*Pi* ( ih * 20. /static_cast<double>(hbins) ) * 
+      // 		    Nh[ih] * ( ih * 20. /static_cast<double>(hbins) ) * (20. /static_cast<double>(hbins)) ;
+      // 		  Ech2 += 2*Pi* ( ih * 20. /static_cast<double>(hbins) ) * Eh[ih]  * (20. /static_cast<double>(hbins));
+      // 		}
+      // 	    }
+      // 	}  
+      
+      // cout << "looser intergral: dNdeta= " << Nch << " dEdeta= " << Ech << endl;
+    }
+  
+  if(param->getUsePseudoRapidity()==0 && param->getMPIRank()==0)
+    {
+      cout << "dN/dy 1 = " << dNdeta << ", dE/dy 1 = " << dEdeta << endl; 
+	  cout << "dN/dy 2 = " << dNdeta2 << ", dE/dy 2 = " << dEdeta2 << endl; 
+	  cout << "gluon <p_T> = " << dEdeta/dNdeta << endl;
+    }
+  else if(param->getUsePseudoRapidity()==1)
+    {
+      m=param->getJacobianm(); // in GeV
+      P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
+      dNdeta*=cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(P*P)));
+      dEdeta*=cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(P*P)));
+      
+      if(param->getMPIRank()==0)
+	{
+	  cout << "dN/deta 1 = " << dNdeta << ", dE/deta 1 = " << dEdeta << endl; 
+	  cout << "dN/deta 2 = " << dNdeta2 << ", dE/deta 2 = " << dEdeta2 << endl; 
+	  cout << "dN/deta_cut 1 = " << dNdetaCut << endl; 
+	  cout << "dN/deta_cut 2 = " << dNdetaCut2 << endl; 
+	  cout << "gluon <p_T> = " << dEdeta/dNdeta << endl;
+	}
+    }
+
+  if (dNdeta == 0.)
+    {
+      cout << "No collision happened on rank " << param->getMPIRank() << ". Restarting with new random number..." << endl;
+      //MPI::Finalize();
+      //exit(1);
+      for(int i=0; i<N*N; i++)
+	{
+	  delete E1[i];
+	}
+      
+      delete[] E1;
       //      delete gaugefix;
       return 0;
     }
@@ -3859,15 +4648,10 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   for(int i=0; i<N*N; i++)
     {
       delete E1[i];
-      //     delete E2[i];
-      // delete pi[i];
     }
   
   delete[] E1;
-  //  delete[] E2;
-  //delete[] pi;
-
-  //  delete gaugefix;
+ 
   cout << " done." << endl;
   param->setSuccess(1);
   return 1;
@@ -3947,7 +4731,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  gaugefix->FFTChi(lat,group,param,4000);
+  gaugefix->FFTChi(fft,lat,group,param,4000);
  
   // gauge is fixed
   Matrix U1(Nc,1.);
@@ -4455,7 +5239,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
 
   // output dN/d^2k
-  ofstream foutPhiMult(PhiMult_name.c_str(),ios::app); 
+  ofstream foutPhiMult(PhiMult_name.c_str(),ios::out); 
   if (it==1)
     {
       foutPhiMult << "3" << " " << bins << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -4556,7 +5340,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	    }
 	}
       // output dN/d^2k
-      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::app); 
+      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out); 
       if (it==1)
 	{
 	  foutPhiMultHad << "3" << " " << hbins << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -4572,7 +5356,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
       foutPhiMultHad.close();
 
 
-  ofstream foutCorr(Corr_name.c_str(),ios::app); 
+  ofstream foutCorr(Corr_name.c_str(),ios::out); 
   foutCorr << it*dtau*a << " " << dNdeta1 << " " << dNdeta2 << " " << dNdeta3 << " " << dNdeta4 << " " << dNdeta5 << " " << dNdeta6 <<  " " << dNdeta  << " " << dNdetaNoMixedTerms << endl;
   foutCorr.close();
   
@@ -4712,7 +5496,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
     }
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  gaugefix->FFTChi(lat,group,param,4000);
+  gaugefix->FFTChi(fft,lat,group,param,4000);
 
 
 
@@ -5000,7 +5784,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 	}
     }
 
-  ofstream foutmultiplicity(mult_name.c_str(),ios::app); 
+  ofstream foutmultiplicity(mult_name.c_str(),ios::out); 
 	
   for(int ik=0; ik<binsmult; ik++)
     {
@@ -5103,7 +5887,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 
   if(it == itmax)
     {
-      ofstream foutmultiplicity2(mult2_name.c_str(),ios::app); 
+      ofstream foutmultiplicity2(mult2_name.c_str(),ios::out); 
       
       for(int ik=0; ik<bins; ik++)
 	{
@@ -5124,7 +5908,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 
 
   // output dN/d^2k
-  ofstream foutPhiMult(PhiMult_name.c_str(),ios::app); 
+  ofstream foutPhiMult(PhiMult_name.c_str(),ios::out); 
   if (it==1)
     {
       foutPhiMult << "3" << " " << (bins-1) << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -5251,7 +6035,7 @@ int Evolution::correlationsColor(Lattice *lat, Group *group, Parameters *param, 
 	}
 
       // output dN/d^2k
-      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::app); 
+      ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out); 
       if (it==1)
   	{
   	  foutPhiMultHad << "3" << " " << hbins << " " << phiBins << endl; // 3 is the number of times we read out. modify if needed.
@@ -5421,7 +6205,7 @@ void Evolution::twoPointFunctionInK(Parameters *param, Lattice *lat, int ids)
       *C[i]/=static_cast<double>(count[i])*size*size; // divide by N^2, because sum_k C_k = N^2* N_c (instead of (2\pi)^2 N_c in continuum
     }
 
-  ofstream fout("k-corr.dat",ios::app); 
+  ofstream fout("k-corr.dat",ios::out); 
   for (int j=0; j<bins; j++)
     {
       fout << (j*step+step/2.) << " "  << *C[j] << endl; // not scaled by g^2 mu (was k->k/g2mu  and C[j]->C[j]/g2mu/g2mu

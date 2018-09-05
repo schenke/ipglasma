@@ -107,7 +107,8 @@ class Parameters
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
   double protonAnisotropy; //anisotropy of the proton thickness function: xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] - as a first test 
   int useConstituentQuarkProton; // if 1 use a proton made up of 3 constituent quarks.
-  
+  double UVdamp; // UV damping parameter
+
  public:
 
   // constructor:
@@ -262,6 +263,8 @@ class Parameters
   int getSuccess() {return success;}
   void setRmax(double x) {rmax=x;}
   double getRmax() {return rmax;}
+  void setUVdamp(double x) {UVdamp=x;}
+  double getUVdamp() {return UVdamp;}
 
  
   // switches:

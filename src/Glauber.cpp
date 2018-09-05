@@ -9,212 +9,249 @@ Glauber::Glauber()
 }
 
 // destructor
-Glauber::~Glauber()
-{
-  delete util;
-  delete setup;
+Glauber::~Glauber() {
+    delete util;
+    delete setup;
+    remove("tmp.dat");
 }
 
-string Glauber::strWord(int index, string line)
+void Glauber::FindNucleusData2(Nucleus *nucleus, string name, int rank)
 {
-  int count = 0; // number of read words
-  string word; // the resulting word
-  for (int i = 0 ; i < line.length(); i++) 
-    { // iterate over all characters in 'line'
-      if (line[i] == ' ')
-	{ // if this character is a space we might be done reading a word from 'line'
-	  if (line[i+1] != ' ') 
-	    { // next character is not a space, so we are done reading a word
-	      count++; // increase number of read words
-	      if (count == index) 
-		{ // was this the word we were looking for?
-		  return word;
-		}
-	      word.clear();
-	      word = ""; // nope it wasn't .. so reset word and start over with the next one in 'line'
-	    }
-	}
-      else 
-	{ // not a space .. so append the character to 'word'
-	  word += line[i];
-	}
-    }
-  return word;
-}
-
-
-void Glauber::FindNucleusData2(Nucleus *nucleus, string name, string file_name, int rank)
-{
-  int success = 0;
-  stringstream convert;
-
-  string p_name;
-  stringstream sp_name;
-
-  const char* EOSPATH = ".";
-  char* envPath = getenv(EOSPATH);
-  if (envPath != 0 && *envPath != '\0') 
+  string densityFunction;
+  if(name.compare("Au") == 0)
     {
-      sp_name << envPath;
-      sp_name << "/known_nuclei.in";
-      p_name = sp_name.str();
-    }  
-  else
+      nucleus->A = 197;
+      nucleus->Z =  79;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 6.37;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.535;
+      nucleus->beta2 = -0.13;
+      nucleus->beta4 = -0.03;
+    }
+  else if(name.compare("Pb") == 0)
     {
-      sp_name << "./known_nuclei.in";
-      p_name = sp_name.str();
+      nucleus->A = 208.;
+      nucleus->Z =  82.;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 6.62;
+      nucleus->w_WS = 0.;
+      nucleus->a_WS = 0.546;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("p") == 0)
+    {
+      nucleus->A = 1.;
+      nucleus->Z =  1.;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 1.;
+      nucleus->w_WS = 0.;
+      nucleus->a_WS = 1.;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("He3") == 0)
+    {
+      nucleus->A = 3;
+      nucleus->Z =  2;
+      densityFunction = "readFromFile";
+      nucleus->R_WS = 0;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("d") == 0)
+    {
+      nucleus->A = 2;
+      nucleus->Z =  1;
+      densityFunction = "Hulthen";
+      nucleus->R_WS = 1.0;
+      nucleus->w_WS = 1.18;
+      nucleus->a_WS = 0.228;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("C") == 0)
+    {
+      nucleus->A = 12;
+      nucleus->Z =  6;
+      densityFunction = "2HO";
+      nucleus->R_WS = 2.44;
+      nucleus->w_WS = 1.403;
+      nucleus->a_WS = 1.635;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("O") == 0)
+    {
+      nucleus->A = 16;
+      nucleus->Z =  8;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 2.608;
+      nucleus->w_WS = -0.051;
+      nucleus->a_WS = 0.513;
+      nucleus->beta2 = -0.01;                 // from arXiv:1508.06294
+      nucleus->beta4 = -0.122;                // from arXiv:1508.06294
+    }
+  else if(name.compare("S") == 0)
+    {
+      nucleus->A = 32;
+      nucleus->Z =  16;
+      densityFunction = "3Gauss";
+      nucleus->R_WS = 2.54;
+      nucleus->w_WS = 0.16;
+      nucleus->a_WS = 2.191;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("W") == 0)
+    {
+      nucleus->A = 184;
+      nucleus->Z =  74;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 6.51;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.535;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("Al") == 0)
+    {
+      nucleus->A = 27;
+      nucleus->Z =  13;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 3.07;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.519;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("Ca") == 0)
+    {
+      nucleus->A = 40;
+      nucleus->Z =  20;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 3.766;
+      nucleus->w_WS = -0.161;
+      nucleus->a_WS = 0.586;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("Cu") == 0)
+    {
+      nucleus->A = 63;
+      nucleus->Z =  29;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 4.163;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.606;
+      nucleus->beta2 = 0.162;
+      nucleus->beta4 = 0.006;
+    }
+  else if(name.compare("Fe") == 0)
+    {
+      nucleus->A = 56;
+      nucleus->Z =  26;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 4.106;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.519;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("Pt") == 0)
+    {
+      nucleus->A = 195;
+      nucleus->Z =  78;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 6.78;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.54;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("U") == 0)
+    {
+      nucleus->A = 238;
+      nucleus->Z =  92;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 6.81;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.55;
+      nucleus->beta2 = 0.28;
+      nucleus->beta4 = 0.093;
+    }
+  else if(name.compare("Ru") == 0)
+    {
+      nucleus->A = 96;
+      nucleus->Z = 44;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 5.085;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.46;
+      nucleus->beta2 = 0.158;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("Zr") == 0)
+    {
+      nucleus->A = 96;
+      nucleus->Z = 40;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 5.02;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.46;
+      nucleus->beta2 = 0.0;
+      nucleus->beta4 = 0.0;
+    }
+  else if(name.compare("Xe") == 0)
+    {
+      nucleus->A = 129;
+      nucleus->Z = 54;
+      densityFunction = "3Fermi";
+      nucleus->R_WS = 5.36;
+      nucleus->w_WS = 0;
+      nucleus->a_WS = 0.590;
+      nucleus->beta2 = 0.162;             // from arXiv:1508.06294
+      nucleus->beta4 = -0.003;            // from arXiv:1508.06294
     }
 
-  ifstream inputFile;
-  inputFile.open(p_name.c_str());
-
-
-  string line, variable, value, densityFunction;
-  while ( getline (inputFile,line) )
-   {
-     if ( strWord(1, line) == "Name" )
-       if ( strWord(2, line) == name )
-       { 
-	 success = 1;
- 	 nucleus->name = name;
- 	 getline (inputFile,line);
-	 if (strWord(1, line) == "A") 
-	   {
-	     convert << strWord(2, line);
-	     convert >> nucleus->A;
-	   }
-	 else
-	   {
-	     cerr << "Error reading A. in Glauber::setNucleusParameters. please check structure of nuclei table. Exiting." << endl;
-	     exit(1);
-	   }
-	 getline (inputFile,line);
-	 convert.str(string());
-	 convert.clear();
-	 if (strWord(1, line) == "Z") 
-	   {
-	     convert << strWord(2, line);
-	     convert >> nucleus->Z;
-	   }
-	 else
-	   {
-	     cerr << "Error reading Z. in Glauber::setNucleusParameters. please check structure of nuclei table. Exiting." << endl;
-	     exit(1);
-	   }
-	 getline (inputFile,line);
-	 if (strWord(1, line) == "density_func") 
-	   densityFunction = strWord(2, line);
-	 else
-	   {
-	     cerr << "Error reading density_func. in Glauber::setNucleusParameters. please check structure of nuclei table. Exiting." << endl;
-	     exit(1);
-	   }
-	 getline (inputFile,line);
-	 convert.str(string());
-	 convert.clear();
-	 if (strWord(1, line) == "R_WS") 
-	   {
-	     convert << strWord(2, line);
-	     convert >> nucleus->rho_WS;
-	     nucleus->R_WS = nucleus->rho_WS;
-	   }
-	 else
-	   {
-	     cerr << "Error reading R_WS. in Glauber::setNucleusParameters. please check structure of nuclei table. Exiting." << endl;
-	     exit(1);
-	   }
-	 getline (inputFile,line);
-	 convert.str(string());
-	 convert.clear();
-	 if (strWord(1, line) == "w_WS") 
-	   {
-	     convert << strWord(2, line);
-	     convert >> nucleus->w_WS;
-	   }
-	 else
-	   {
-	     cerr << "Error reading w_WS. in Glauber::setNucleusParameters. please check structure of nuclei table. Exiting." << endl;
-	     exit(1);
-	   }
-	 getline (inputFile,line);
-	 convert.str(string());
-	 convert.clear();
-	 if (strWord(1, line) == "a_WS") 
-	   {
-	     convert << strWord(2, line);
-	     convert >> nucleus->a_WS;
-	   }
-	 else
-	   {
-	     cerr << "Error reading a_WS. in Glauber::setNucleusParameters. please check structure of nuclei table. Exiting." << endl;
-	     exit(1);
-	   }
-       }
-   }
-  inputFile.close(); 
+  nucleus->rho_WS = nucleus->R_WS;
+  
+  if(densityFunction.compare("2HO")==0) 
+    {
+      nucleus->AnumFunc = 1; //Anum2HO;
+      nucleus->AnumFuncIntegrand = 1; //Anum2HOInt;
+      nucleus->DensityFunc = 1; //NuInt2HO;
+    }
+  else if(densityFunction.compare("3Gauss")==0) 
+    {
+      nucleus->AnumFunc = 2; //Anum3Gauss;
+      nucleus->AnumFuncIntegrand = 2; //Anum3GaussInt;
+      nucleus->DensityFunc = 2; //NuInt3Gauss;
+    }
+  else if(densityFunction.compare("3Fermi")==0) 
+    {
+      nucleus->AnumFunc = 3; //Anum3Fermi;
+      nucleus->AnumFuncIntegrand = 3; //Anum3FermiInt;
+      nucleus->DensityFunc = 3; //NuInt3Fermi;
+    }
+  else if(densityFunction.compare("Hulthen")==0) 
+    {
+      nucleus->AnumFunc = 8;//AnumHulthen;
+      nucleus->AnumFuncIntegrand = 8; //AnumHulthenInt;
+      nucleus->DensityFunc = 8; //NuIntHulthen;  
+    }
+  else if(densityFunction.compare("readFromFile")==0) 
+    {
+      nucleus->AnumFunc = 1;
+      nucleus->AnumFuncIntegrand = 1;
+      nucleus->DensityFunc = 1;  
+    }
  
- //  nucleus->rho_WS = setup->DFind(fn, "R_WS");
- // //   0.15; /* default rho.  this WILL change to the right 			 value that gives integral(rho) = A */
- //  nucleus->name = setup->StringFind(fn, "Name");
- //  nucleus->A = setup->DFind(fn, "A");
- //  nucleus->Z = setup->DFind(fn, "Z");
-
- 
- // if(ind != 0)
- //  {
- //    nucleus->w_WS = setup->DFind(fn, "w_WS");
- //    nucleus->a_WS = setup->DFind(fn, "a_WS");
- //    nucleus->R_WS = setup->DFind(fn, "R_WS");
- //    func_name = setup->StringFind(fn, "density_func");
- //  }
- // else
- //  {
- //   nucleus->w_WS = 0.0; 
- //   nucleus->a_WS = 0.53;
- //   nucleus->R_WS = 1.15*pow(nucleus->A, 1.0/3.0);
- //   func_name = "3Fermi";
- //  }
-
- // cout << "name=" << name  << endl;
-
-string funcname;
-stringstream strfuncname;
-strfuncname << densityFunction;
-strfuncname >> funcname;
- 
- if(funcname.compare("2HO")==0) 
-  {
-    nucleus->AnumFunc = 1; //Anum2HO;
-    nucleus->AnumFuncIntegrand = 1; //Anum2HOInt;
-    nucleus->DensityFunc = 1; //NuInt2HO;
-  }
- else if(funcname.compare("3Gauss")==0) 
-  {
-    nucleus->AnumFunc = 2; //Anum3Gauss;
-    nucleus->AnumFuncIntegrand = 2; //Anum3GaussInt;
-    nucleus->DensityFunc = 2; //NuInt3Gauss;
-  }
- else if(funcname.compare("3Fermi")==0) 
-  {
-    nucleus->AnumFunc = 3; //Anum3Fermi;
-    nucleus->AnumFuncIntegrand = 3; //Anum3FermiInt;
-    nucleus->DensityFunc = 3; //NuInt3Fermi;
-  }
- else if(funcname.compare("Hulthen")==0) 
-   {
-     nucleus->AnumFunc = 8;//AnumHulthen;
-     nucleus->AnumFuncIntegrand = 8; //AnumHulthenInt;
-     nucleus->DensityFunc = 8; //NuIntHulthen;  
-   }
- else if(funcname.compare("readFromFile")==0) 
-   {
-     nucleus->AnumFunc = 1;
-     nucleus->AnumFuncIntegrand = 1;
-     nucleus->DensityFunc = 1;  
-   }
- 
- //cout << "name=" << name  << " " << nucleus->w_WS << " " << nucleus->a_WS << " " << nucleus->R_WS << " " << nucleus->rho_WS << " " << nucleus->A << " " << nucleus->Z << endl;
- //exit(1);
+  //cout << "name=" << name  << " " << nucleus->w_WS << " " << nucleus->a_WS << " " << nucleus->R_WS << " " << nucleus->rho_WS << " " << nucleus->A << " " << nucleus->Z << endl;
+  //exit(1);
 }/* FindNucleusData2 */
 
 
@@ -493,7 +530,7 @@ double *Glauber::MakeVy(string st, double *vx, int maxi_num)
  
  vy = util->vector_malloc(maxi_num + 1);
 
- ofstream data_file(st.c_str());
+ // ofstream data_file(st.c_str());
  
  // data_file << "EndOfData" << endl;
  
@@ -504,10 +541,10 @@ double *Glauber::MakeVy(string st, double *vx, int maxi_num)
 //     {
 //       cerr << st << "[" << i << "] = " << vy[i] << endl; 
 //     }
-   data_file << vx[i] << " " << vy[i] << endl;
+   //data_file << vx[i] << " " << vy[i] << endl;
   }
 
- data_file.close();
+ //data_file.close();
 
  return vy;
 }/* MakeVy */
@@ -1390,16 +1427,20 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile, doub
   
   /* energy unit is always GeV and length unit is fm */
 
-  FindNucleusData2(&(LexusData.Target), Target_Name, paf, rank);
+  //  FindNucleusData(&(LexusData.Target), Target_Name, paf, rank);
+  FindNucleusData2(&(LexusData.Target), Target_Name, rank);
   //PrintNucleusData(&(LexusData.Target));
   
-  FindNucleusData2(&(LexusData.Projectile), Projectile_Name, paf, rank);
+  //  FindNucleusData(&(LexusData.Projectile), Projectile_Name, paf, rank);
+  FindNucleusData2(&(LexusData.Projectile), Projectile_Name, rank);
   //PrintNucleusData(&(LexusData.Projectile));
 
  
   LexusData.SigmaNN = 0.1*SigmaNN; // sigma in fm^2 
   currentA1 = LexusData.Projectile.A;
   currentA2 = LexusData.Target.A;
+  currentZ1 = LexusData.Projectile.Z;
+  currentZ2 = LexusData.Target.Z;
   
   /* Run Specific */
   

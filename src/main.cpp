@@ -26,7 +26,7 @@ using namespace std;
 
 int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank);
 
-// main program
+// main program 1
 int main(int argc, char *argv[])
 {
   int rank;
@@ -75,9 +75,7 @@ int main(int argc, char *argv[])
 
   // read parameters from file
   readInput(setup, param, argc, argv, rank);
-   
-
-
+  
   int cells = param->getSize()*param->getSize();
   int Nc2m1 = param->getNc()*param->getNc()-1; // N_c^2-1
   int nn[2];
@@ -123,21 +121,21 @@ int main(int argc, char *argv[])
   else
     {
       // clean files
-      stringstream strNpartdNdy_name;
-      strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
-      string NpartdNdy_name;
-      NpartdNdy_name = strNpartdNdy_name.str();
+      // stringstream strNpartdNdy_name;
+      // strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
+      // string NpartdNdy_name;
+      // NpartdNdy_name = strNpartdNdy_name.str();
 
-      ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
-      foutNN.close();
+      // ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
+      // foutNN.close();
 
-      stringstream strNpartdNdyH_name;
-      strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
-      string NpartdNdyH_name;
-      NpartdNdyH_name = strNpartdNdyH_name.str();
+      // stringstream strNpartdNdyH_name;
+      // strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
+      // string NpartdNdyH_name;
+      // NpartdNdyH_name = strNpartdNdyH_name.str();
       
-      ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
-      foutNNH.close();
+      // ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
+      // foutNNH.close();
 
       
       // stringstream strNpartdEdy_name;
@@ -232,21 +230,20 @@ int main(int argc, char *argv[])
       // ofstream foutAni(aniso_name.c_str(),ios::out); 
       // foutAni.close();
       
-      // stringstream strecc_name;
-      // strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
-      // string ecc_name;
-      // ecc_name = strecc_name.str();
+      stringstream strecc_name;
+      strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
+      string ecc_name;
+      ecc_name = strecc_name.str();
       
-      // ofstream foutEcc(ecc_name.c_str(),ios::out); 
-      // foutEcc.close();
-      
-      
-      stringstream strmult_name;
-      strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
-      string mult_name;
-      mult_name = strmult_name.str();
-      ofstream foutmult(mult_name.c_str(),ios::out); 
-      foutmult.close();
+      ofstream foutEcc(ecc_name.c_str(),ios::out); 
+      foutEcc.close();
+            
+      // stringstream strmult_name;
+      // strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
+      // string mult_name;
+      // mult_name = strmult_name.str();
+      // ofstream foutmult(mult_name.c_str(),ios::out); 
+      // foutmult.close();
 
       // stringstream strmult2_name;
       // strmult2_name << "multiplicityCorr" << param->getMPIRank() << ".dat";
@@ -277,6 +274,8 @@ int main(int argc, char *argv[])
       // allocate lattice
       Lattice *lat;
       lat = new Lattice(param, param->getNc(), param->getSize());
+      BufferLattice *bufferlat;
+      bufferlat = new BufferLattice(param, param->getNc(), param->getSize());
 
       //initialize random generator using time and seed from input file
       unsigned long long int rnum;
@@ -343,7 +342,7 @@ int main(int argc, char *argv[])
       fout1.close();
       
       // initialize gsl random number generator (used for non-Gaussian distributions)
-      random->gslRandomInit(rnum);
+      //random->gslRandomInit(rnum);
       
       // initialize U-fields on the lattice
       //      init->init(lat, group, param, random, glauber);
@@ -354,6 +353,7 @@ int main(int argc, char *argv[])
       if(param->getSuccess()==0)
 	{
 	  delete lat;
+          delete bufferlat;
 	  continue;
 	}
 
@@ -362,8 +362,8 @@ int main(int argc, char *argv[])
       delete glauber;
 
       // do the CYM evolution of the initialized fields using parmeters in param
-      evolution->run(lat, group, param);
-      
+      evolution->run(lat, bufferlat,  group, param);
+      delete bufferlat;
       delete lat;
     }
 
@@ -433,6 +433,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setJacobianm(setup->DFind(file_name,"Jacobianm"));
   param->setSigmaNN(setup->DFind(file_name,"SigmaNN"));
   param->setRmax(setup->DFind(file_name,"rmax"));
+  param->setUVdamp(setup->DFind(file_name,"UVdamp"));
   param->setbmin(setup->DFind(file_name,"bmin"));
   param->setbmax(setup->DFind(file_name,"bmax"));
   param->setQsmuRatio(setup->DFind(file_name,"QsmuRatio"));
@@ -496,6 +497,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   fout1 << "smeared mu " << param->getSmearQs() << endl;
   fout1 << "m " << param->getm() << endl;
   fout1 << "rmax " << param->getRmax() << endl;
+  fout1 << "UVdamp " << param->getUVdamp() << endl;
   if (param->getSmearQs()==1)
     {
       fout1 << "smearing width " << param->getSmearingWidth() << endl;

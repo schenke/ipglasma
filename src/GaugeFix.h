@@ -27,7 +27,7 @@ using namespace std;
 class GaugeFix {
 
  private:
-  FFT *fft;
+  //  FFT *fft;
   Random *random;
   
  public:
@@ -35,7 +35,7 @@ class GaugeFix {
   // Constructor.
   GaugeFix(const int nn[]) 
     {
-      fft = new FFT(nn);
+      //  fft = new FFT(nn);
       random = new Random();
     };
 
@@ -43,13 +43,13 @@ class GaugeFix {
   // Destructor.
   ~GaugeFix() 
     { 
-      delete fft;
+      //delete fft;
       delete random;
     };
   
   void gaugeTransform(Lattice* lat, Group* group, Parameters *param, int i, int j);
-  void FFTChi(Lattice* lat, Group* group, Parameters *param, int steps);
-  void FFTChi2(Lattice* lat, Group* group, Parameters *param, int steps);
+  void FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, int steps);
+  //  void FFTChi2(Lattice* lat, Group* group, Parameters *param, int steps);
 
 };
 

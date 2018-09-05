@@ -76,6 +76,29 @@ class Init {
   // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber);
   void multiplicity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber);
 
+    void generate_nucleus_configuration(
+                Random *random,
+                int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
+                std::vector<ReturnValue> *nucleus);
+    void generate_nucleus_configuration_with_woods_saxon(
+                            Random *random, int A, int Z, double a_WS, double R_WS,
+                            std::vector<ReturnValue> *nucleus);
+    void generate_nucleus_configuration_with_deformed_woods_saxon(
+                Random *random,
+                int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
+                std::vector<ReturnValue> *nucleus);
+    double sample_r_from_woods_saxon(Random *random, double a_WS, double R_WS) const;
+    void sample_r_and_costheta_from_deformed_woods_saxon(
+            Random *random, double a_WS, double R_WS, double beta2, double beta4,
+            double &r, double &costheta) const;
+    double fermi_distribution(double r, double R_WS, double a_WS) const;
+    double spherical_harmonics(int l, double ct) const;
+    void recenter_nucleus(std::vector<double> &x, std::vector<double> &y,
+                          std::vector<double> &z);
+    void rotate_nucleus(double phi, double theta,
+                        std::vector<double> &x, std::vector<double> &y,
+                        std::vector<double> &z);
+
 };
 
 #endif // Init_H

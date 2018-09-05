@@ -35,6 +35,31 @@ public:
 
   vector<Cell*> cells;         // the actual array of cells, the "lattice". cells is an array of pointers to cell objects
 
+  vector<int> posmX;
+  vector<int> pospX;
+  vector<int> posmY;
+  vector<int> pospY;
+  vector<int> posmXpY;
+  vector<int> pospXmY;
+
+};
+
+
+class BufferLattice
+{
+private:
+
+  int size;             // the total number of cells (length*length)
+  int Nc;               // the number of colors in SU(Nc): Determines the dimension of the used matrices
+ 
+public:
+  //constructor
+  BufferLattice(Parameters *param,int N, int length);
+  //destructor
+  ~BufferLattice();
+
+  vector<SmallCell*> cells;         // the actual array of cells, the "lattice". cells is an array of pointers to cell objects
+
 };
 
 #endif

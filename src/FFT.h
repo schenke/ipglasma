@@ -104,7 +104,6 @@ public:
     void fftnMany(T **data, T **outdata, const int nn[], const int ndim, const int isign);
   
   void fftnComplex(complex<double> *data, complex<double> *outdata, const int nn[], const int ndim, const int isign);
-  //  void fftnComplex(complex<double> **data, const int nn[], const int ndim, const int isign);
  
 };
 

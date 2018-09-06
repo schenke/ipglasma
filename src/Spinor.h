@@ -48,8 +48,6 @@ public:
 	mynorm += (conj(e[i])*e[i]);
       
       return (sqrt(mynorm)).real();
-      //return sqrt((conj(e[0])*e[0]+conj(e[1])*e[1]+conj(e[2])*e[2]).real());
-      // cout << e[0] << " " << e[1] << " " << e[2] << " norm=" << sqrt((conj(e[0])*e[0]+conj(e[1])*e[1]+conj(e[2])*e[2]).real()) << endl;
     }
 
     Spinor normalize();

@@ -82,41 +82,6 @@ Matrix operator * (const Matrix& a, const Matrix& b)
     }
   else if (n==3)
     {
-      // complex <double> P[23];
-      // P[0] = (a(0,0)-a(0,1)-a(0,2)+a(1,0)-a(1,1)-a(2,1)-a(2,2)) * (-b(1,1)); //P1
-      // P[1] = (a(0,0)+a(1,0))*(b(0,1)+b(1,1)); //P2
-      // P[2] = a(1,1) * (b(0,0)-b(0,1)+b(1,0)-b(1,1)-b(1,2)+b(2,0)-b(2,2)); //P3
-      // P[3] = (-a(0,0)-a(1,0)+a(1,1)) * (-b(0,0)+b(0,1)+b(1,1)); // P4
-      // P[4] = (-a(1,0)+a(1,1)) * (-b(0,0)+b(0,1)); // P5
-      // P[5] = -a(0,0) * b(0,0); //P6
-      // P[6] = (a(0,0)+a(2,0)+a(2,1)) * (b(0,0)-b(0,2)+b(1,2)); // P7
-      // P[7] = (a(0,0)+a(2,0)) * (-b(0,2)+b(1,2)); // P8
-      // P[8] = (a(2,0)+a(2,1)) * (b(0,0)-b(0,2)); // P9
-      // P[9] = (a(0,0)+a(0,1)-a(0,2)-a(1,1)+a(1,2)+a(2,0)+a(2,1)) * b(1,2); // P10
-      // P[10] = a(2,1) * (-b(0,0)+b(0,2)+b(1,0)-b(1,1)-b(1,2)-b(2,0)+b(2,1)); // P11
-      // P[11] = (a(0,2)+a(2,1)+a(2,2)) * (b(1,1)+b(2,0)-b(2,1)); // P12
-      // P[12] = (a(0,2)+a(2,2)) * (-b(1,1)+b(2,1)); // P13      
-      // P[13] = a(0,2) * b(2,0); // P14
-      // P[14] = (-a(2,1)-a(2,2)) * (-b(2,0)+b(2,1)); // P15
-      // P[15] = (a(0,2)+a(1,1)-a(1,2)) * (b(1,2)-b(2,0)+b(2,2)); // P16
-      // P[16] = (-a(0,2)+a(1,2)) * (b(1,2)+b(2,2)); //P17
-      // P[17] = (a(1,1)-a(1,2)) * (b(2,0)-b(2,2)); // P18
-      // P[18] = a(0,1) * b(1,0); // P19
-      // P[19] = a(1,2) * b(2,1); // P20
-      // P[20] = a(1,0) * b(0,2); // P21
-      // P[21] = a(2,0) * b(0,1); // P22
-      // P[22] = a(2,2) * b(2,2); // P23
-
-      // c.set(0,0,-P[5]+P[13]+P[18]);
-      // c.set(0,1,P[0]-P[3]+P[4]-P[5]-P[11]+P[13]+P[14]);
-      // c.set(0,2,-P[5]-P[6]+P[8]+P[9]+P[13]+P[15]+P[17]);
-      // c.set(1,0,P[1]+P[2]+P[3]+P[5]+P[13]+P[15]+P[16]);
-      // c.set(1,1,P[1]+P[3]-P[4]+P[5]+P[19]);
-      // c.set(1,2,P[13]+P[15]+P[16]+P[17]+P[20]);
-      // c.set(2,0,P[5]+P[6]-P[7]+P[10]+P[11]+P[12]-P[13]);
-      // c.set(2,1,P[11]+P[12]-P[13]-P[14]+P[21]);
-      // c.set(2,2,P[5]+P[6]-P[7]-P[8]+P[22]);
-      
       c.set(0,0,a(0,0)*b(0,0)+a(0,1)*b(1,0)+a(0,2)*b(2,0));
       c.set(0,1,a(0,0)*b(0,1)+a(0,1)*b(1,1)+a(0,2)*b(2,1));
       c.set(0,2,a(0,0)*b(0,2)+a(0,1)*b(1,2)+a(0,2)*b(2,2));
@@ -227,50 +192,32 @@ Matrix& Matrix::conjg()
 
 Matrix Matrix::prodABconj(const Matrix& a, const Matrix& b)
 {
-  //  int n = a.getNDim();
   Matrix c(3);
-  //if (n==3)
-  //  {
-      c.set(0,0,a(0,0)*conj(b(0,0))+a(0,1)*conj(b(0,1))+a(0,2)*conj(b(0,2)));
-      c.set(0,1,a(0,0)*conj(b(1,0))+a(0,1)*conj(b(1,1))+a(0,2)*conj(b(1,2)));
-      c.set(0,2,a(0,0)*conj(b(2,0))+a(0,1)*conj(b(2,1))+a(0,2)*conj(b(2,2)));
-      c.set(1,0,a(1,0)*conj(b(0,0))+a(1,1)*conj(b(0,1))+a(1,2)*conj(b(0,2)));
-      c.set(1,1,a(1,0)*conj(b(1,0))+a(1,1)*conj(b(1,1))+a(1,2)*conj(b(1,2)));
-      c.set(1,2,a(1,0)*conj(b(2,0))+a(1,1)*conj(b(2,1))+a(1,2)*conj(b(2,2)));
-      c.set(2,0,a(2,0)*conj(b(0,0))+a(2,1)*conj(b(0,1))+a(2,2)*conj(b(0,2)));
-      c.set(2,1,a(2,0)*conj(b(1,0))+a(2,1)*conj(b(1,1))+a(2,2)*conj(b(1,2)));
-      c.set(2,2,a(2,0)*conj(b(2,0))+a(2,1)*conj(b(2,1))+a(2,2)*conj(b(2,2)));
-      return c;
-      //  }
-      //else
-      // {
-      //cerr << "Only Nc=3 supported here" << endl;
-      //exit(1);
-      // }
+  c.set(0,0,a(0,0)*conj(b(0,0))+a(0,1)*conj(b(0,1))+a(0,2)*conj(b(0,2)));
+  c.set(0,1,a(0,0)*conj(b(1,0))+a(0,1)*conj(b(1,1))+a(0,2)*conj(b(1,2)));
+  c.set(0,2,a(0,0)*conj(b(2,0))+a(0,1)*conj(b(2,1))+a(0,2)*conj(b(2,2)));
+  c.set(1,0,a(1,0)*conj(b(0,0))+a(1,1)*conj(b(0,1))+a(1,2)*conj(b(0,2)));
+  c.set(1,1,a(1,0)*conj(b(1,0))+a(1,1)*conj(b(1,1))+a(1,2)*conj(b(1,2)));
+  c.set(1,2,a(1,0)*conj(b(2,0))+a(1,1)*conj(b(2,1))+a(1,2)*conj(b(2,2)));
+  c.set(2,0,a(2,0)*conj(b(0,0))+a(2,1)*conj(b(0,1))+a(2,2)*conj(b(0,2)));
+  c.set(2,1,a(2,0)*conj(b(1,0))+a(2,1)*conj(b(1,1))+a(2,2)*conj(b(1,2)));
+  c.set(2,2,a(2,0)*conj(b(2,0))+a(2,1)*conj(b(2,1))+a(2,2)*conj(b(2,2)));
+  return c;
 }
 
 Matrix Matrix::prodAconjB(const Matrix& a, const Matrix& b)
 {
-  // int n = a.getNDim();
   Matrix c(3);
-  //if (n==3)
-  //{
-      c.set(0,0,conj(a(0,0))*b(0,0)+conj(a(1,0))*b(1,0)+conj(a(2,0))*b(2,0));
-      c.set(0,1,conj(a(0,0))*b(0,1)+conj(a(1,0))*b(1,1)+conj(a(2,0))*b(2,1));
-      c.set(0,2,conj(a(0,0))*b(0,2)+conj(a(1,0))*b(1,2)+conj(a(2,0))*b(2,2));
-      c.set(1,0,conj(a(0,1))*b(0,0)+conj(a(1,1))*b(1,0)+conj(a(2,1))*b(2,0));
-      c.set(1,1,conj(a(0,1))*b(0,1)+conj(a(1,1))*b(1,1)+conj(a(2,1))*b(2,1));
-      c.set(1,2,conj(a(0,1))*b(0,2)+conj(a(1,1))*b(1,2)+conj(a(2,1))*b(2,2));
-      c.set(2,0,conj(a(0,2))*b(0,0)+conj(a(1,2))*b(1,0)+conj(a(2,2))*b(2,0));
-      c.set(2,1,conj(a(0,2))*b(0,1)+conj(a(1,2))*b(1,1)+conj(a(2,2))*b(2,1));
-      c.set(2,2,conj(a(0,2))*b(0,2)+conj(a(1,2))*b(1,2)+conj(a(2,2))*b(2,2));
-      return c;
-      // }
-      //else
-      //  {
-      // cerr << "Only Nc=3 supported here" << endl;
-      //exit(1);
-      // }
+  c.set(0,0,conj(a(0,0))*b(0,0)+conj(a(1,0))*b(1,0)+conj(a(2,0))*b(2,0));
+  c.set(0,1,conj(a(0,0))*b(0,1)+conj(a(1,0))*b(1,1)+conj(a(2,0))*b(2,1));
+  c.set(0,2,conj(a(0,0))*b(0,2)+conj(a(1,0))*b(1,2)+conj(a(2,0))*b(2,2));
+  c.set(1,0,conj(a(0,1))*b(0,0)+conj(a(1,1))*b(1,0)+conj(a(2,1))*b(2,0));
+  c.set(1,1,conj(a(0,1))*b(0,1)+conj(a(1,1))*b(1,1)+conj(a(2,1))*b(2,1));
+  c.set(1,2,conj(a(0,1))*b(0,2)+conj(a(1,1))*b(1,2)+conj(a(2,1))*b(2,2));
+  c.set(2,0,conj(a(0,2))*b(0,0)+conj(a(1,2))*b(1,0)+conj(a(2,2))*b(2,0));
+  c.set(2,1,conj(a(0,2))*b(0,1)+conj(a(1,2))*b(1,1)+conj(a(2,2))*b(2,1));
+  c.set(2,2,conj(a(0,2))*b(0,2)+conj(a(1,2))*b(1,2)+conj(a(2,2))*b(2,2));
+  return c;
 }
 
 
@@ -402,7 +349,6 @@ Matrix& Matrix::expm(double t, const int p)
        for(int i = 6; i < p; ++i) 
  	{	    
  	  c[i+1] = c[i] * ((p - i)/((i + 1.0) * (2.0 * p - i)));
- 	  //std::cout << "c(" << i+1 << ")=" << c(i+1) << endl;
  	}
      }
    // Calculate the infinty norm of e, which is defined as the largest row sum of a matrix

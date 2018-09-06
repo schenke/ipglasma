@@ -38,7 +38,6 @@ class MyEigen {
     };
   
   void test();
-  void flowVelocity(Lattice *lat, Group *group, Parameters *param, int it);
   void flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int it);
 
 

@@ -14,9 +14,6 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
 
   vector <complex<double> > xvec;
   xvec.reserve(Nc2m1); 
-  //  xvec = new complex<double>[Nc2m1];
-  //complex<double> xvec[8];
-  
   double a_data[128];
 
   for(int i=0; i<64; i++)
@@ -37,14 +34,10 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
   gsl_vector_complex_view c = gsl_vector_complex_view_array (b_data, Nc2m1);
   gsl_vector_complex *x = gsl_vector_complex_alloc (Nc2m1);
 
-  //  gsl_vector_complex_fprintf (stdout, &c.vector, "%g");
-
   int s;
   gsl_permutation * p = gsl_permutation_alloc (Nc2m1);
   gsl_linalg_complex_LU_decomp (&m.matrix, p, &s);
   gsl_linalg_complex_LU_solve (&m.matrix, p, &c.vector, x);
-  //  printf ("x = \n");
-  //gsl_vector_complex_fprintf (stdout, x, "%g");
   gsl_permutation_free(p);
   
   if(Nc == 3)
@@ -67,7 +60,6 @@ vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, 
   gsl_vector_complex_free(x);
   
   return(xvec);
-  // delete [] xvec;
 }
 
 
@@ -100,35 +92,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else if(A1==2) // deuteron
 	{
-
-// 	  //testing
-// 	  double r, scale=10.;
-// 	  double rbins[100];
-// 	  int count=0;
-// 	  for (int b=0; b<100; b++)
-// 	    {
-// 	      rbins[b]=0;
-// 	    }
-
-// 	  for (int i=0; i<100000; i++)
-// 	    {
-// 	      rv = glauber->SampleTARejection(random,1);
-// 	      r = sqrt((rv.x)*(rv.x)+(rv.y)*(rv.y));
-// 	      for (int b=0; b<100; b++)
-// 		{
-// 		  if (r > scale/100.*(b) && r < scale/100.*(b+1)) 
-// 		    {
-// 		      rbins[b]+=100./scale;
-// 		      count++;
-// 		    }
-// 		}
-// 	    }
-// 	  for (int b=0; b<100; b++)
-// 	    {
-// 	      cout << b*scale/100. << " " << rbins[b]/count <<  endl;
-// 	    }
-
-	  
 	  rv = glauber->SampleTARejection(random,1);
 	  param->setRnp(sqrt(rv.x*rv.x+rv.y*rv.y));
 	  // we sample the neutron proton distance, so distance to the center needs to be divided by 2
@@ -137,7 +100,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
           rv.proton = 1;
 	  rv.collided=0;
 	  nucleusA.push_back(rv);
-	 
 	  // other nucleon is 180 degrees rotated:	  
 	  rv.x = -rv.x;
 	  rv.y = -rv.y;
@@ -194,16 +156,11 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else
 	{
-	  //for (int i = 0; i < A1; i++) // get all nucleon coordinates
-	  //  {
-	  //    rv = glauber->SampleTARejection(random,1);
-	  //    nucleusA.push_back(rv);
-	  //  }
           generate_nucleus_configuration(random, A1, Z1,
-                                         glauber->LexusData.Projectile.a_WS,
-                                         glauber->LexusData.Projectile.R_WS,
-                                         glauber->LexusData.Projectile.beta2,
-                                         glauber->LexusData.Projectile.beta4,
+                                         glauber->GlauberData.Projectile.a_WS,
+                                         glauber->GlauberData.Projectile.R_WS,
+                                         glauber->GlauberData.Projectile.beta2,
+                                         glauber->GlauberData.Projectile.beta4,
                                          &nucleusA);
 	}
     
@@ -280,22 +237,14 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  fin.close();
 	  
 	  param->setA2FromFile(A);
-
-	  //	  cout << glauber->nucleusA1() << " " <<glauber->nucleusA1() << endl;
-	
 	}   
       else
 	{
-	  //for (int i = 0; i < A2; i++) // get all nucleon coordinates
-	  //  {
-	  //    rv2 = glauber->SampleTARejection(random,2);
-	  //    nucleusB.push_back(rv2);
-	  //  }
           generate_nucleus_configuration(random, A2, Z2,
-                                         glauber->LexusData.Target.a_WS,
-                                         glauber->LexusData.Target.R_WS,
-                                         glauber->LexusData.Target.beta2,
-                                         glauber->LexusData.Target.beta4,
+                                         glauber->GlauberData.Target.a_WS,
+                                         glauber->GlauberData.Target.R_WS,
+                                         glauber->GlauberData.Target.beta2,
+                                         glauber->GlauberData.Target.beta4,
                                          &nucleusB);
 	}
       cout << "done. " << endl;
@@ -394,10 +343,8 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	      cerr << "File " << fileName << " not found. Exiting." << endl;
 	      exit(1);
 	    }
-	  
-	  
+
 	  cout << "Reading nucleon positions for nuceus A from file " << fileName << " ... " << endl;
-	  
 	  
 	  //sample the position in the file
 	  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (10,000 events per file)
@@ -417,7 +364,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  // am now at the correct line in the file
 	  
 	  // start reading one nucleus (208 positions)
-
 	  if(glauber->nucleusA1()==1)
 	    {
 	      rv.x = 0;
@@ -444,10 +390,8 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	      
 	    }  
 	  fin.close();
-	    
-	  // do the second nucleus (Target)
-	  
-	  
+          // do the second nucleus (Target)
+	   
 	  //generate the file name
 	  ran = random->genrand64_real3();      //sample the file name uniformly
 	  fileNumber = static_cast<int>(ran*10+1);
@@ -545,8 +489,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 void Init::readNuclearQs(Parameters *param)
 {
   // steps in qs0 and Y in the file
-  // double y[iymaxNuc];
-  // double qs0[ibmax];
   string dummy;
   string T, Qs;
   // open file
@@ -622,21 +564,8 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
 	 
 	  QsYdown = (fracT)*(Qs2Nuclear[iT+1][posy])+(1.-fracT)*(Qs2Nuclear[iT][posy]);
 	  QsYup = (fracT)*(Qs2Nuclear[iT+1][posy+1])+(1.-fracT)*(Qs2Nuclear[iT][posy+1]);
-
-	  //	  cout << posy << endl;
-	  //cout << Qs2Nuclear[iT+1][posy] << " " <<  QsYdown << " " << QsYup << endl;
-
 	  value = (fracy*QsYup+(1.-fracy)*QsYdown);//*hbarc*hbarc;
 		  
-//   	  cout << "T=" << T << ", lowT=" << Tlist[iT] << ", highT=" << Tlist[iT+1] << endl;
-//   	  cout << "y=" << y << ", lowy=" << (posy)*deltaYNuc << ", highy=" << (posy+1)*deltaYNuc << endl;
-// 	  cout << "fracy=" << fracy << endl;
-// 	  cout << "Qs^2=" << value << endl;
-//   	  cout << "Qs2Nuclear[iT][posy]=" << Qs2Nuclear[iT][posy] << endl;
-// 	  cout << "Qs2Nuclear[iT][posy+1]=" << Qs2Nuclear[iT][posy+1] << endl;
-// 	  cout << "Qs2Nuclear[iT+1][posy]=" << Qs2Nuclear[iT+1][posy] << endl;
-// 	  cout << "Qs2Nuclear[iT+1][posy+1]=" << Qs2Nuclear[iT+1][posy+1] << endl;
-
 	  check++;
 	  continue;
 	}
@@ -645,8 +574,6 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
    if (check!=1)
     {
       cout << check << ": T=" << T << endl ;
-      // cerr << " [Init:getNuclearQs2]:ERROR: something went wrong in determining the value of Qs^2. Exiting." << endl;
-      // exit(1);
       cerr << " [Init:getNuclearQs2]:ERROR: something went wrong in determining the value of Qs^2. Using maximal T_p" << endl;
       value = Tlist[iTpmax-1];
     }
@@ -709,17 +636,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
 
-
-
-  //testing distributions
-//   double binsNBD[30];
-//   double binsGauss[30];
-//   double nbd;
-//   double scale=2.;
-//   int bins=30;
-//   int events=2000;
-
-
   double gaussA[A1][3];
   double gaussB[A2][3];
 
@@ -770,55 +686,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	}
     }
 
-//   if(param->getSmearQs() == 1)
-//     {
-//       // set to different ratios for nucleus A and B
-//       gauss = random->Gauss(1,param->getSmearingWidth());
-//       cout << "QsmuRatio before=" << param->getQsmuRatio() << endl;
-//       if (gauss<0)
-// 	gauss=0.;
-//       param->setQsmuRatio(1./(1./param->getQsmuRatio())*gauss);
-
-//       gauss = random->Gauss(1,param->getSmearingWidth());
-//       if (gauss<0)
-// 	gauss=0.;
-//       param->setQsmuRatioB(1./(1./param->getQsmuRatio())*gauss);
-      
-// //       ofstream fout1("NBD.dat",ios::out); 
-// //       ofstream fout2("Gauss.dat",ios::out); 
-      
-// //       for(int ib=0; ib<30; ib++)
-// // 	{
-// // 	  binsNBD[ib]=0.;
-// // 	  binsGauss[ib]=0.;
-// // 	}
-
-// //       for (int l=0; l<events; l++)
-// // 	{
-// // 	  nbd = random->NBD(100,40)/100.;
-// // 	  gauss = random->Gauss(1,0.18);
-	  
-// // 	  for(int ib=0; ib<bins; ib++)
-// // 	    {
-// // 	      if (nbd >= ib*(scale/static_cast<double>(bins)) && nbd < (ib+1)*(scale/static_cast<double>(bins)))
-// // 		binsNBD[ib]+=1/static_cast<double>(events);
-// // 	      if (gauss >= ib*(scale/static_cast<double>(bins)) && gauss < (ib+1)*(scale/static_cast<double>(bins)))
-// // 		binsGauss[ib]+=1/static_cast<double>(events);
-// // 	    }
-// // 	}
-
-// //       for(int ib=0; ib<bins; ib++)
-// // 	{
-// // 	  fout1 << (ib+0.5)*(scale/static_cast<double>(bins)) << " " << binsNBD[ib] << endl;
-// // 	  fout2 << (ib+0.5)*(scale/static_cast<double>(bins)) << " " << binsGauss[ib] << endl;
-// // 	}
-
-
-//       cout << "QsmuRatio for nucleus A smeared with width " << param->getSmearingWidth() << " is " << param->getQsmuRatio() << endl;
-//       cout << "QsmuRatio for nucleus B smeared with width " << param->getSmearingWidth() << " is " << param->getQsmuRatioB() << endl;
-//     }
-//   else
-  
   param->setQsmuRatioB(param->getQsmuRatio());
 
   if(param->getUseNucleus() == 0)
@@ -925,41 +792,9 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    {
 	      xq[i][iq] -= avgxq/3.;
 	      yq[i][iq] -= avgyq/3.;
-	      //	      cout << xq[i][iq] << " " << yq[i][iq] << endl;
 	    }
-	  
-	  
-	  // avgyq=0.;
-	  // for (int iq=0; iq<3; iq++)
-	  //   {
-	  //     avgxq += xq[i][iq];
-	  //     avgyq += yq[i][iq];
-	  //   }
-	  // cout << avgyq << endl;
 	}
     }
-
-
-
-
-      // stringstream strq_name;
-      // strq_name << "qPos-" << param->getMPIRank() + param->getSeed()*16 << ".txt";
-      // string q_name;
-      // q_name = strq_name.str();
-      // ofstream fout(q_name.c_str(),ios::out); 
-      
-      // fout << " x[fm]     y[fm] " << endl;
-      
-      // for (int i=0; i<A1; i++)
-      // 	{
-      // 	  for (int iq=0; iq<3; iq++)
-      // 	    {
-      // 	      fout << xq[i][iq] << " " << yq[i][iq] << endl;
-      // 	    }
-      // 	}
-  //    }
-  
-  
   
   if(param->getUseConstituentQuarkProton()>0)
     {
@@ -983,36 +818,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      xq2[i][iq] -= avgxq/3.;
 	      yq2[i][iq] -= avgyq/3.;
 	    }
-	  // avgyq=0.;
-	  // for (int iq=0; iq<3; iq++)
-	  //   {
-	  //     avgxq += xq2[i][iq];
-	  //     avgyq += yq2[i][iq];
-	  //   }
-	  // cout << avgyq << endl;
 	}
-
-      // stringstream strq_name;
-      // strq_name << "qPos-" << param->getMPISize() + param->getMPIRank() + param->getSeed()*16 << ".txt";
-      // string q_name;
-
-      // q_name = strq_name.str();
-      // ofstream fout(q_name.c_str(),ios::out); 
-      
-      // fout << " x[fm]     y[fm] " << endl;
-      
-      // for (int i=0; i<A2; i++)
-      // 	{
-      // 	  for (int iq=0; iq<3; iq++)
-      // 	    {
-      // 	      fout << xq2[i][iq] << " " << yq2[i][iq] << endl;
-      // 	    }
-      // 	}
     }
 
-
-  //add all T_p's (new in version 1.2)
-
+//add all T_p's (new in version 1.2)
 #pragma omp parallel
   {
     double x, xm;
@@ -1047,7 +856,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		      bp2 /= hbarc*hbarc;
 
 		      T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
-		      //	      cout << "A " << i << " " << iq << " " << gaussA[i][iq] << endl;
 		    }
 		}
 	      else
@@ -1060,11 +868,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
 		}
 
-              // // new edge noise preventer
-              //              if(x > b/2. - 14.)
                 lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
-	      
-                //	      maxT=max(lat->cells[localpos]->getTpA()+T,maxT);
 
 	    }
 	  
@@ -1084,7 +888,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		      bp2 /= hbarc*hbarc;
 
 		      T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
-		      //	      cout << "B " << i << " " << iq << " " << gaussA[i][iq] << endl;
 		    }
 		}
 	      else
@@ -1097,12 +900,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
 		}
 	      
-              // // new edge noise preventer
-              // if(x < -b/2. + 14.)
-                lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p
-	    
-                //	      maxT=max(lat->cells[localpos]->getTpB()+T,maxT);
-	      
+                lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p	      
 	    }
 	}
     }
@@ -1184,22 +982,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
   foutNpart.close();
 
-
-//   for (int i = 0; i<A1; i++) 
-//     {
-//       for (int j = 0 ; j<A2 ;j++) 
-// 	{
-// 	  dx = nucleusB.at(j).x-nucleusA.at(i).x;
-// 	  dy = nucleusB.at(j).y-nucleusA.at(i).y;
-// 	  dij = dx*dx+dy*dy;
-// 	  if (dij < d2) 
-// 	    {
-// 	      nucleusB.at(j).collided=1;
-// 	      nucleusA.at(i).collided=1;
-// 	    }
-// 	}
-//     }
-
   // in p+p assume that they collided in any case
   if ( A1 == 1 && A2 == 1 )
     {
@@ -1207,13 +989,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       nucleusA.at(0).collided=1;
     }
   
-  // stringstream strgmuA_name;
-  // strgmuA_name << "gmuA" << param->getMPIRank() << ".dat";
-  // string gmuA_name;
-  // gmuA_name = strgmuA_name.str();
-	  
-  // ofstream fout(gmuA_name.c_str(),ios::out); 
-
   Npart = 0;
 
   for (int i = 0; i<A1; i++) 
@@ -1228,12 +1003,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	Npart++;
     }
   
-//   if ( Npart == 0 && param->getUseFixedNpart()==0)
-//     {
-//       cout << "no collision happened. Exiting." << endl;
-//       exit(1);
-//     }
-  
   param->setNpart(Npart);
 
   if(param->getUseFixedNpart()!=0 && Npart!=param->getUseFixedNpart())
@@ -1242,7 +1011,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       return;
     }
 
-  // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+// get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
   {
     double x;
@@ -1270,59 +1039,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  y = -L/2.+a*iy;
 	  localpos = ix*N+iy;
 	  
-	  // this version removes noise outside the interaction region 
-	  // by checking whether we are inside a wounded nucleon
-	  // using 2 times the nucleon size as a cutoff
-// 	  for (int i = 0; i<A1; i++) 
-// 	    {
-// 	      xm = nucleusA.at(i).x;
-// 	      ym = nucleusA.at(i).y;
-// 	      r = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym));
-	      
-// 	      if(r<sqrt(2.*0.1*param->getSigmaNN()/PI) && nucleusA.at(i).collided==1)
-// 		{
-// 		  check=1;
-// 		}
-// 	    }
-	  
-// 	  for (int i = 0; i<A2; i++) 
-// 	    {
-// 	      xm = nucleusB.at(i).x;
-// 	      ym = nucleusB.at(i).y;
-// 	      r = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym));
-	      
-// 	      if(r<sqrt(2.*0.1*param->getSigmaNN()/PI) && nucleusB.at(i).collided==1 && check==1)
-// 		check=2;
-// 	    }
-	  
-
-// 	  // cut at a radius of ~1.8 fm
-// 	  for (int i = 0; i<A1; i++) 
-// 	    {
-// 	      if(lat->cells[pos]->getTpA() > 0.0019 && nucleusA.at(i).collided==1)
-// 		{
-// 		  check=1;
-// 		}
-// 	    }
-	  
-// 	  for (int i = 0; i<A2; i++) 
-// 	    {
-// 	      if(lat->cells[pos]->getTpB() > 0.0019 && nucleusB.at(i).collided==1 && check==1)
-// 		check=2;
-// 	    }
-
-
-// 	  // cut at a radius of ~1.8 fm
-// 	  if(lat->cells[pos]->getTpA() > 0.0019 )
-// 	    {
-// 	      check=1;
-// 	    }
-	  
-// 	  if(lat->cells[pos]->getTpB() > 0.0019 && check==1)
-// 	    check=2;
-	  
-
-
 //	  cut proton at a radius of rmax [fm] (about twice the gluonic radius to be generous)	  
 	  if(log(2*M_PI*BG*lat->cells[localpos]->getTpA())<0.)
 	    distanceA = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpA()))*hbarc;
@@ -1331,9 +1047,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  if(log(2*M_PI*BG*lat->cells[localpos]->getTpB())<0.)
 	    distanceB = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpB()))*hbarc;
 	  else distanceB=0.;
-
-	  // if(distanceA>0.1)
-	  //   cout << lat->cells[pos]->getTpA()<< " " << distanceA << " " << param->getRmax() << endl;
 	  
 	  if(distanceA < param->getRmax())
 	    {
@@ -1361,14 +1074,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		      else 
 			{
 			  xVal = QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn);
-			  //cout << " QsA=" << QsA << ", param->getRoots()=" << param->getRoots() << ", exp(yIn)=" << exp(yIn) << endl; 
 			  if(xVal==0)
 			    QsA=0.;
 			  else
 			    QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), 0.))*
 			      sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
-			  //cout << "xVal=" << xVal << endl;
-			  //cout << "QsA=" << QsA << endl;
 			}
 		      if(QsA == 0)
 			{
@@ -1391,17 +1101,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		      lat->cells[localpos]->setg2mu2A(0.);
 		    }
 		  
-		  // if(ix==N/2 && iy==N/2)
-		  //   {
-		  //     if(QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn)<=0.01)
-		  // 	cout  << "rapidity_A=" << rapidity << endl;
-		  //     else
-		  // 	cout  << "rapidity_A=" << log(0.01/xVal) << endl;
-		  // 	cout  << "xVal=" << xVal << endl;
-		  //     cout  << "Q_sA=" << QsA << endl;
-		  //   }
-		  		  
-
                   localrapidity=rapidity;
 		  Ydeviation = 10000;
 		  while (abs(Ydeviation) > 0.001) 
@@ -1426,13 +1125,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 			{
 			  // nucleus B 
 			  lat->cells[localpos]->setg2mu2B(QsB*QsB/param->getQsmuRatioB()/param->getQsmuRatioB()
-						     *a*a/hbarc/hbarc/param->getg()/param->getg()); 
-			  
-			  
-			  //      cout << ix << " " << iy << endl;
-			  // 		      cout << " QsB = " << QsB << " GeV" << endl;
-			  // 		      cout << " x= " << (QsB/2./param->getRoots()) << endl;
-			  
+						     *a*a/hbarc/hbarc/param->getg()/param->getg()); 			  
 			  Ydeviation = localrapidity - log(0.01/(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)));
 			  localrapidity = log(0.01/(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)));
 			}
@@ -1441,16 +1134,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		    {
 		      lat->cells[localpos]->setg2mu2B(0.);
 		    }
-		// if(ix==N/2 && iy==N/2)
-		//   {
-		//     if(QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn)<=0.01)
-		//       cout  << "rapidity_B=" << rapidity << endl;
-		//     else
-		//       cout  << "rapidity_B=" << log(0.01/xVal) << endl;
-		//     cout  << "Q_sB=" << QsB << endl;
-		//   }
-	   
-		  
 		  // _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 		  // end iterative loops here
 		}
@@ -1466,8 +1149,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		 
 		}
 	    }
-          //    cout << QsA << " " << QsB << " " << localrapidity << " " << rapidity << " " << xVal <<endl;
-
 	}
     }
   }
@@ -1491,11 +1172,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  pos = ix*N+iy;
 	  x = -L/2.+a*ix;
 	  y = -L/2.+a*iy;
-	  //  outvalue = sqrt(lat->cells[pos]->getg2mu2B())/a*hbarc; // in GeV
 	  outvalue = lat->cells[pos]->getg2mu2A();
-
-	  // posA = static_cast<int>(floor((x-b/2.+L/2.)/a+0.00000001))*N+iy;
-	  // posB = static_cast<int>(floor((x+b/2.+L/2.)/a+0.00000001))*N+iy;
 	  
 	  posA = pos;
 	  posB = pos;
@@ -1522,9 +1199,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    {
 	      averageQs2min2 += g2mu2B*param->getQsmuRatioB()*param->getQsmuRatioB()/a/a*hbarc*hbarc*param->getg()*param->getg();
 	    }
-	  
-	  // if( param->getWriteOutputs() == 1 )
-	  //   fout << x << " " << y << " " << " " << outvalue << endl;
 	  
 	  for (int i = 0; i<A1; i++) 
 	    {
@@ -1566,17 +1240,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		/2./a/a*hbarc*hbarc*param->getg()*param->getg();
 	      count++;
 	    }
-	  //else
-	  //	    fout << x << " " << y << " " << 0. << endl;
-	  
 	  // compute T_pp
-
 	  Tpp += lat->cells[pos]->getTpB()*lat->cells[pos]->getTpA()*a*a/hbarc/hbarc/hbarc/hbarc; // now this quantity is in fm^-2
 	  // remember: Tp is in GeV^2
 	}
-      //      fout << endl;
     }
-  //  fout.close();
   
   averageQs/=static_cast<double>(count);
   averageQs2/=static_cast<double>(count);
@@ -1609,17 +1277,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
    
   cout << "Color charge densities for nucleus A and B set. " << endl;
   
- 
-  // stringstream strQs2ST_name;
-  // strQs2ST_name << "Qs2ST" << param->getMPIRank() << ".dat";
-  // string Qs2ST_name;
-  // Qs2ST_name = strQs2ST_name.str();
-  // ofstream foutQ(Qs2ST_name.c_str(),ios::out);
-  // foutQ << b << " " << Npart << " " << averageQs2min2*a*a/hbarc/hbarc << " " << a*a*count << endl;
-  // foutQ.close();
-     
-
-
   if(param->getRunningCoupling() && param->getRunWithkt()==0)
     {
       if(param->getRunWithQs()==2)
@@ -1681,7 +1338,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
   else
     fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
-  //  fout1 << "Q_s ~ x^-" << param->getxExponent() << endl;
   fout1.close();
 }
 
@@ -1701,15 +1357,10 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   double UVdamp = param->getUVdamp(); //GeV^-1
   UVdamp = UVdamp/a*hbarc;
   complex<double>** rhoACoeff;
-  //  complex<double>** rhoBCoeff;
-
   rhoACoeff = new complex<double>*[Nc2m1];
-  //rhoBCoeff = new complex<double>*[Nc2m1];
-
   for(int i=0; i<Nc2m1; i++)
     {
       rhoACoeff[i] = new complex<double>[N*N];
-      //  rhoBCoeff[i] = new complex<double>[N*N];
     }
  
   // loop over longitudinal direction
@@ -1721,16 +1372,13 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
           for(int n=0; n<Nc2m1; n++)
             {
               g2muA = param->getg()*sqrt(lat->cells[pos]->getg2mu2A()/static_cast<double>(Ny));
-              //      g2muB = param->getg()*sqrt(lat->cells[pos]->getg2mu2B()/static_cast<double>(Ny));
               rhoACoeff[n][pos] = g2muA*random->Gauss();
-              //rhoBCoeff[n][pos] = g2muB*random->Gauss();
             }
         }
         
         for(int n=0; n<Nc2m1; n++)
           {
             fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
-            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
           }
         
         // compute A^+
@@ -1751,7 +1399,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                         for(int n=0; n<Nc2m1; n++)
                           {
                             rhoACoeff[n][localpos] =  rhoACoeff[n][localpos]*(1./(kt2));
-                            //              rhoBCoeff[n][localpos] =  rhoBCoeff[n][localpos]*(1./(kt2));
                           }
                       }
                     else
@@ -1759,7 +1406,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                         for(int n=0; n<Nc2m1; n++)
                           {
                             rhoACoeff[n][localpos] = 0.;
-                            // rhoBCoeff[n][localpos] = 0.;
                           }
                       }
                   }
@@ -1768,7 +1414,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                     for(int n=0; n<Nc2m1; n++)
                       {
                         rhoACoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
-                        //                        rhoBCoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
                       }
                   }
               }
@@ -1778,7 +1423,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         for(int n=0; n<Nc2m1; n++)
           {
             fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
-            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
           }
         // compute U
   
@@ -1811,8 +1455,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         }
 
     }//Ny loop
-
-  
   
   // loop over longitudinal direction
   for(int k=0; k<Ny; k++)
@@ -1830,7 +1472,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         for(int n=0; n<Nc2m1; n++)
           {
             fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
-            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,1);
           }
         
         // compute A^+
@@ -1852,7 +1493,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                         for(int n=0; n<Nc2m1; n++)
                           {
                             rhoACoeff[n][localpos] =  rhoACoeff[n][localpos]*(1./(kt2));
-                            //              rhoBCoeff[n][localpos] =  rhoBCoeff[n][localpos]*(1./(kt2));
                           }
                       }
                     else
@@ -1860,7 +1500,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                         for(int n=0; n<Nc2m1; n++)
                           {
                             rhoACoeff[n][localpos] = 0.;
-                            // rhoBCoeff[n][localpos] = 0.;
                           }
                       }
                   }
@@ -1869,7 +1508,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                     for(int n=0; n<Nc2m1; n++)
                       {
                         rhoACoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
-                        //                        rhoBCoeff[n][localpos] *= (1./(kt2+m*m))*exp(-sqrt(kt2)*UVdamp);
                       }
                   }
               }
@@ -1879,7 +1517,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         for(int n=0; n<Nc2m1; n++)
           {
             fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
-            //            fft->fftnComplex(rhoBCoeff[n],rhoBCoeff[n],nn,2,-1);
           }
         // compute U
   
@@ -1909,7 +1546,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
                  temp = tempNew * lat->cells[pos]->getU2();
                  // set U
                  lat->cells[pos]->setU2(temp);
-                 
                }
         }
 
@@ -1920,10 +1556,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
     for(int ic=0; ic<Nc2m1; ic++)
       {
         delete [] rhoACoeff[ic];
-        //        delete [] rhoBCoeff[ic];
       }
     delete [] rhoACoeff;
-    //delete [] rhoBCoeff;
   
   
         
@@ -1972,19 +1606,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   // --------
 
 
-  //  delete[] rhoA;
-  //delete[] rhoB;
-  //delete[] AA;
-  //delete[] AB;
-  
   cout << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". " << endl; 
-
-  //  MPI::Finalize();
-  // exit(1);
-
-  // output correlator 
-  //  Udag = lat->cells[N*N/2+N/2]->getU();
-  //Udag.conjg();
 }
 
 
@@ -2213,7 +1835,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  cout << "No collision happened on rank " << param->getMPIRank() << ". Restarting with new random number..." << endl;
 	  return;
 	}
-      
       // sample color charges and find Wilson lines V_A and V_B
       setV(lat, group, param, random, glauber);      
     }
@@ -2737,86 +2358,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
               }
           }//iteration loop
       }//loop over pos
-    
-    
-    // ofstream foutU5("Ux.txt",ios::out); 
-    // foutU5.precision(15);
-    // for(int ix=0; ix<N; ix++)
-    //   {
-    //     for(int iy=0; iy<N; iy++) // loop over all positions
-    // 	{
-    // 	  pos = ix*N+iy;
-    // 	  foutU5 << ix << " " << iy << " "  << (lat->cells[pos]->getUx()).MatrixToString() << endl;
-    // 	}
-    //   }
-    // foutU5.close();
-    
-    // ofstream foutU6("Uy.txt",ios::out); 
-    // foutU6.precision(15);
-    // for(int ix=0; ix<N; ix++)
-    //   {
-    //     for(int iy=0; iy<N; iy++) // loop over all positions
-    // 	{
-    // 	  pos = ix*N+iy;
-    // 	  foutU6 << ix << " " << iy << " "  << (lat->cells[pos]->getUy()).MatrixToString() << endl;
-  // 	}
-  //   }
-  // foutU6.close();
-  
 
-  // ------
-
-
- //  stringstream strtU1_name;
- //  strtU1_name << "VOne-" << param->getMPIRank() << ".dat";
- //  string tU1_name;
- //  tU1_name = strtU1_name.str();
-
- //  ofstream foutU1(tU1_name.c_str(),ios::out); 
-
- // //  // output U
- //  ofstream foutU("UOne.txt",ios::out); 
- //  for(int ix=0; ix<N; ix++)
- //    {
- //      for(int iy=0; iy<N; iy++) // loop over all positions
- // 	{
- // 	  pos = ix*N+iy;
- // 	  foutU << ix << " " << iy << " " <<  setprecision(10) 
- // 		<< (complex<double>(0.,1.)*(lat->cells[pos]->getUx1()*group->getT(0)).trace()).real() << " "
- // 		<< (complex<double>(0.,1.)*(lat->cells[pos]->getUx1()*group->getT(1)).trace()).real() << " " 
- // 		<< (complex<double>(0.,1.) * (lat->cells[pos]->getUx1()*group->getT(2)).trace()).real() << " " 
- // 		<< (lat->cells[pos]->getUx1().trace()).real() << " " 
- // 		<< (complex<double>(0.,1.)*(lat->cells[pos]->getUy1()*group->getT(0)).trace()).real() << " "
- // 		<< (complex<double>(0.,1.)*(lat->cells[pos]->getUy1()*group->getT(1)).trace()).real() << " " 
- // 		<< (complex<double>(0.,1.) * (lat->cells[pos]->getUy1()*group->getT(2)).trace()).real() << " " 
- // 		<< (lat->cells[pos]->getUy1().trace()).real() << endl;
- // 	}
- //    }
- //  foutU.close();
- //  ofstream foutU2("UTwo.txt",ios::out); 
- //  for(int ix=0; ix<N; ix++)
- //    {
- //      for(int iy=0; iy<N; iy++) // loop over all positions
- // 	{
- // 	  pos = ix*N+iy;
- // 	  foutU2 << ix << " " << iy << " " <<  setprecision(10) 
- // 		 << (complex<double>(0.,1.)*(lat->cells[pos]->getUx2()*group->getT(0)).trace()).real() << " "
- // 		 << (complex<double>(0.,1.)*(lat->cells[pos]->getUx2()*group->getT(1)).trace()).real() << " " 
- // 		 << (complex<double>(0.,1.) * (lat->cells[pos]->getUx2()*group->getT(2)).trace()).real() << " " 
- // 		 << (lat->cells[pos]->getUx2().trace()).real() << " " 
- // 		 << (complex<double>(0.,1.)*(lat->cells[pos]->getUy2()*group->getT(0)).trace()).real() << " "
- // 		 << (complex<double>(0.,1.)*(lat->cells[pos]->getUy2()*group->getT(1)).trace()).real() << " " 
- // 		 << (complex<double>(0.,1.) * (lat->cells[pos]->getUy2()*group->getT(2)).trace()).real() << " " 
- // 		 << (lat->cells[pos]->getUy2().trace()).real() << endl;
- // 	}
- //    }
- //  foutU2.close();
-
-
-
-
-  // compute initial electric field
-  // with minus ax, ay
+// compute initial electric field
+// with minus ax, ay
 #pragma omp for
   for (int pos=0; pos<N*N; pos++)
     {
@@ -2959,8 +2503,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  AM = (lat->cells[pos]->getE1());//+lat->cells[pos]->getAetaP());
 	  AP = (lat->cells[pos]->getE2());//+lat->cells[pos]->getAetaP());
 	  // this is pi in lattice units as needed for the evolution. (later, the a^4 gives the right units for the energy density
-	  lat->cells[pos]->setpi(complex<double>(0.,-2./param->getg())*(AM)); // factor -2 because I have A^eta (note the 1/8 before) but want \pi (E^z). Soren sagt, da muss ein minus hin... check .
-	  // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP)); // factor -2 because I have A^eta (note the 1/8 before) but want \pi (E^z). Soren sagt, da muss ein minus hin... check .
+	  lat->cells[pos]->setpi(complex<double>(0.,-2./param->getg())*(AM)); // factor -2 because I have A^eta (note the 1/8 before) but want \pi (E^z).
+	  // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP)); // factor -2 because I have A^eta (note the 1/8 before) but want \pi (E^z). 
     }
 
 #pragma omp for  
@@ -2980,75 +2524,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
   }
 
-
-  
-
- // // output U
- //  ofstream foutU3("U.txt",ios::out); 
- //  for(int ix=0; ix<N; ix++)
- //    {
- //      for(int iy=0; iy<N; iy++) // loop over all positions
- // 	{
- // 	  pos = ix*N+iy;
- // 	  foutU3 << ix << " " << iy << " " << (lat->cells[pos]->getUx()).MatrixToString() << " " 
- // 		 << (lat->cells[pos]->getUy()).MatrixToString() << endl;
- 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(0)).trace()).real() << " "
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(1)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(2)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(3)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(4)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(5)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(6)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUx()*group->getT(7)).trace()).real() << " " 
- // 		// << (lat->cells[pos]->getUx().trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUy()*group->getT(0)).trace()).real() << " "
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUy()*group->getT(1)).trace()).real() << " " 
- // 		// << (complex<double>(0.,1.)*(lat->cells[pos]->getUy()*group->getT(2)).trace()).real() << " " 
- // 		// << (lat->cells[pos]->getUy().trace()).real() << endl;
- // 	}
- //    }
- //  foutU3.close();
-
- //  ofstream foutU4("pi.txt",ios::out); 
- //  for(int ix=0; ix<N; ix++)
- //    {
- //      for(int iy=0; iy<N; iy++) // loop over all positions
- // 	{
- // 	  pos = ix*N+iy;
- // 	  foutU4 << ix << " " << iy << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(0)).trace()).real() << " "
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(1)).trace()).real() << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(2)).trace()).real() << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(3)).trace()).real() << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(4)).trace()).real() << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(5)).trace()).real() << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(6)).trace()).real() << " " 
- // 		 << 2.*((lat->cells[pos]->getpi()*group->getT(7)).trace()).real() << endl;
- // 	}
- //    }
- //  foutU4.close();
-
-
-  // // output E
-  // ofstream foutE("E.txt",ios::out); 
-  // for(int ix=0; ix<N; ix++)
-  //   {
-  //     for(int iy=0; iy<N; iy++) // loop over all positions
-  // 	{
-  // 	  pos = ix*N+iy;
-  // 	  foutE << ix << " " << iy << " " <<  setprecision(10) 
-  // 		<< 2.*((lat->cells[pos]->getpi()*group->getT(0)).trace()).real() << " "
-  // 		<< 2.*((lat->cells[pos]->getpi()*group->getT(1)).trace()).real() << " " 
-  // 		<< 2.*((lat->cells[pos]->getpi()*group->getT(2)).trace()).real() << endl;
-  // 	}
-  //   }
-  // foutE.close();
-
-  //  delete Dalpha;
-  
-  // done. 
-  
   // -----------------------------------------------------------------------------
   // finish
   // -----------------------------------------------------------------------------
@@ -3079,184 +2554,6 @@ void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *r
   fout << epsilonSum << endl;
   fout.close();      
 }
-
-
-// void Init::eccentricity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber)
-// {
-//   int N = param->getSize();
-//   int pos, posNew;
-//   double rA, phiA, x, y;
-//   double L = param->getL();
-//   double a = L/N; // lattice spacing in fm
-//   double eccentricity1, eccentricity2, eccentricity3, eccentricity4, eccentricity5, eccentricity6;
-//   double avcos, avsin, avcos1, avsin1, avcos3, avsin3, avrSq, avr1, avr3, avcos4, avsin4, avr4, avcos5, avsin5, avr5, avcos6, avsin6, avr6;
-//   double Pi;
-//   Pi = param->getPi();
-//   double Psi1, Psi2, Psi3, Psi4, Psi5, Psi6;
-
-
-//   avrSq=0.;
-//   avr3=0.;
-
-//   double avx = 0.;
-//   double avy = 0.;
-//   double toteps = 0.;
-//   int xshift;
-//   int yshift;
-  
-//   // first shift to the center
-//   for(int ix=0; ix<N; ix++) 
-//     {
-//       x = -L/2.+a*ix;
-//       for(int iy=0; iy<N; iy++)
-// 	{
-// 	  pos = ix*N+iy;
-// 	  y = -L/2.+a*iy;
-// 	  avx += x*lat->cells[pos]->getEpsilon();
-// 	  avy += y*lat->cells[pos]->getEpsilon();
-// 	  toteps += lat->cells[pos]->getEpsilon();
-// 	}
-//     }
-      
-//   avx/=toteps;
-//   avy/=toteps;
-  
-//   cout << "avx=" << avx << endl;
-//   cout << "avy=" << avy << endl;
-  
-//   xshift = static_cast<int>(floor(avx/a+0.00000000001));
-//   yshift = static_cast<int>(floor(avy/a+0.00000000001));
-  
-//   cout << "xshift=" << xshift << endl;
-//   cout << "yshift=" << yshift << endl;
-  
-//   cout << "a xshift=" << a*xshift << endl;
-//   cout << "a yshift=" << a*yshift << endl;
-  
-  
-//   avcos1 = 0.;
-//   avsin1 = 0.;
-//   avcos = 0.;
-//   avsin = 0.;
-//   avcos3 = 0.;
-//   avsin3 = 0.;
-//   avcos4 = 0.;
-//   avsin4 = 0.;
-//   avcos5 = 0.;
-//   avsin5 = 0.;
-//   avcos6 = 0.;
-//   avsin6 = 0.;
-//   avr1=0.;
-//   avrSq=0.;
-//   avr3=0.;
-//   avr4=0.;
-//   avr5=0.;
-//   avr6=0.;
-
-   
-//   for(int ix=2; ix<N-2; ix++) 
-// 	{
-// 	  x = -L/2.+a*ix-avx;
-// 	  for(int iy=2; iy<N-2; iy++)
-// 	    {
-// 	      pos = ix*N+iy;
-// 	      y = -L/2.+a*iy-avy;
-// 	      if (x>=0)
-// 		{
-// 		  phiA = atan(y/x);
-// 		  if (x==0) 
-// 		    {
-// 		      if (y>=0) phiA=PI/2.;
-// 		      else if (y<0) phiA=3.*PI/2.;
-// 		    }
-// 		}
-// 	      else
-// 		{
-// 		  phiA = atan(y/x)+PI;
-// 		}
-
-// 	      if (lat->cells[pos]->getEpsilon()<10.) // in fm^{-4}
-// 		lat->cells[pos]->setEpsilon(0.);
-
-// 	      rA = sqrt( x*x + y*y );
-// 	      avr1 += rA*(lat->cells[pos]->getEpsilon());
-// 	      avrSq += rA*rA*(lat->cells[pos]->getEpsilon()); // compute average r^2
-// 	      avr3 += rA*rA*rA*(lat->cells[pos]->getEpsilon());
-// 	      avr4 += rA*rA*rA*rA*(lat->cells[pos]->getEpsilon());
-// 	      avr5 += rA*rA*rA*rA*rA*(lat->cells[pos]->getEpsilon());
-// 	      avr6 += rA*rA*rA*rA*rA*rA*(lat->cells[pos]->getEpsilon());
-	      
-// 	      avcos1 += rA*cos(1.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avsin1 += rA*sin(1.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avcos  += rA*rA*cos(2.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avsin  += rA*rA*sin(2.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avcos3 += rA*rA*rA*cos(3.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avsin3 += rA*rA*rA*sin(3.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avcos4 += rA*rA*rA*rA*cos(4.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avsin4 += rA*rA*rA*rA*sin(4.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avcos5 += rA*rA*rA*rA*rA*cos(5.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avsin5 += rA*rA*rA*rA*rA*sin(5.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avcos6 += rA*rA*rA*rA*rA*rA*cos(6.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	      avsin6 += rA*rA*rA*rA*rA*rA*sin(6.*phiA)*(lat->cells[pos]->getEpsilon());
-// 	    }
-// 	}
-      
-//       // compute and print eccentricity and angles:
-//       Psi1 = (atan(avsin1/avcos1)+PI)/1.;
-//       Psi2 = (atan(avsin/avcos))/2.+PI/2.;
-//       Psi3 = (atan(avsin3/avcos3)+PI)/3.;
-//       Psi4 = (atan(avsin4/avcos4)+PI)/4.;
-//       Psi5 = (atan(avsin5/avcos5)+PI)/5.;
-//       Psi6 = (atan(avsin6/avcos6)+PI)/6.;
-//       eccentricity1 = sqrt(avcos1*avcos1+avsin1*avsin1)/avr1;
-//       eccentricity2 = sqrt(avcos*avcos+avsin*avsin)/avrSq;
-//       eccentricity3 = sqrt(avcos3*avcos3+avsin3*avsin3)/avr3;
-//       eccentricity4 = sqrt(avcos4*avcos4+avsin4*avsin4)/avr4;
-//       eccentricity5 = sqrt(avcos5*avcos5+avsin5*avsin5)/avr5;
-//       eccentricity6 = sqrt(avcos6*avcos6+avsin6*avsin6)/avr6;
-      
-//       cout << endl;
-//       cout << "ecc1=" << eccentricity1 << endl;
-//       cout << "ecc2=" << eccentricity2 << endl;
-//       cout << "ecc3=" << eccentricity3 << endl;
-//       cout << "ecc4=" << eccentricity4 << endl;
-//       cout << "ecc5=" << eccentricity5 << endl;
-//       cout << "ecc6=" << eccentricity6 << endl;
-//       cout << endl;
-  
-//       double avx2 = avx;
-//       double avy2 = avy;
-//       avx=0.;
-//       avy=0.;
-//       toteps=0.;
-
-//       for(int ix=0; ix<N; ix++) 
-// 	{
-// 	  x = -L/2.+a*ix-avx2;
-// 	  for(int iy=0; iy<N; iy++)
-// 	    {
-// 	      pos = ix*N+iy;
-// 	      y = -L/2.+a*iy-avy2;
-// 	      avx += x*lat->cells[pos]->getEpsilon();
-// 	      avy += y*lat->cells[pos]->getEpsilon();
-// 	      toteps += lat->cells[pos]->getEpsilon();
-// 	    }
-// 	}
- 
-//       avx/=toteps;
-//       avy/=toteps;
-      
-//       cout << "new avx=" << avx << endl;
-//       cout << "new avy=" << avy << endl;
-      
-//       ofstream foutEcc("eccentricities.dat",ios::app); 
-//       foutEcc << "0 " << eccentricity1 << " " << Psi1 << " " << eccentricity2 << " " << Psi2 << " " 
-// 	      << eccentricity3 << " " << Psi3 << " " << eccentricity4 << " " << Psi4 
-// 	      << " " << eccentricity5 << " " << Psi5 << " " << eccentricity6 << " " << Psi6 << endl;
-//       foutEcc.close();          
-// }
-
-  
 
 void Init::generate_nucleus_configuration(
                 Random *random,
@@ -3403,10 +2700,6 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
                 }
             }
         } while (reject_flag == 1 && iter < 100);
-        //if (iter == 100) {
-        //    cout << "[Warning] can not find configuration : "
-        //         << "r[i] = " << r_i << ", r[i-1] = " << r_array[i-1] << endl;
-        //}
         x_array[i] = x_i;
         y_array[i] = y_i;
         z_array[i] = z_i;

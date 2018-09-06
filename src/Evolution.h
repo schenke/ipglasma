@@ -68,10 +68,8 @@ class Evolution {
   int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
   int multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, int it);
   int correlations(Lattice *lat, Group *group, Parameters *param, int it);
-  int correlationsColor(Lattice *lat, Group *group, Parameters *param, int it);
   void anisotropy(Lattice *lat, Group *group, Parameters *param, int it);
   void readNkt(Parameters *param);
-  void twoPointFunctionInK(Parameters *param, Lattice *lat, int ids);
 };
 
 #endif // Evolution_H

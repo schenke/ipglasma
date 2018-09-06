@@ -14,11 +14,6 @@ Group::Group(int N)
     {
       tA[i] = new Matrix(Nc*Nc-1,0.); // 3x3 for SU(2), 8x8 for SU(3)
     }
-//   it = new Matrix*[Nc*Nc-1]; // i times generators 
-//   for (int i=0; i<Nc*Nc-1; i++)
-//     {
-//       it[i] = new Matrix(Nc); // 2x2 for SU(2), 3x3 for SU(3)
-//     }
   if(Nc==2)
     {
       // fundamental rep.
@@ -43,20 +38,6 @@ Group::Group(int N)
       tA[2]->set(0,0,0.);                      tA[2]->set(0,1,complex<double>(0.,-1.)); tA[2]->set(0,2,0.);
       tA[2]->set(1,0,complex<double>(0.,1.));  tA[2]->set(1,1,0.);                      tA[2]->set(1,2,0.);
       tA[2]->set(2,0,0.);                      tA[2]->set(2,1,0.);                      tA[2]->set(2,2,0.);
-
-
-//       // fund. times i (not needed, really...)
-//       it[0]->set(0,0,0.);                      it[0]->set(0,1,complex<double>(0.,0.5));
-//       it[0]->set(1,0,complex<double>(0.,0.5)); it[0]->set(1,1,0.);
-
-//       it[1]->set(0,0,0.);                      it[1]->set(0,1,0.5);
-//       it[1]->set(1,0,-0.5);                    it[1]->set(1,1,0.);
-
-//       it[2]->set(0,0,complex<double>(0.,0.5)); it[2]->set(0,1,0.);
-//       it[2]->set(1,0,0.);                      it[2]->set(1,1,complex<double>(0.,-0.5));
-     
-      //cout << "SU(" << Nc << ") generators:" << endl;
-      //cout << endl << *t[0] << endl << endl << *t[1] << endl << endl << *t[2] << endl << endl; 
     }
   else if(Nc==3)
     {
@@ -166,11 +147,6 @@ Group::Group(int N)
       tA[7]->set(4,3,complex<double>(0.,0.8660254037844386));
       tA[7]->set(5,6,complex<double>(0.,-0.8660254037844386));
       tA[7]->set(6,5,complex<double>(0.,0.8660254037844386));
-
-      //cout << "SU(" << Nc << ") generators:" << endl;
-      //cout << endl << *t[0] << endl << endl << *t[1] << endl << endl << *t[2] << endl 
-      //	   << endl << *t[3] << endl << endl << *t[4] << endl << endl << *t[5] << endl 
-      //	   << endl << *t[6] << endl << endl << *t[7] << endl << endl; 
     }
   else
     {

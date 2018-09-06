@@ -249,143 +249,16 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, int rank)
       nucleus->AnumFuncIntegrand = 1;
       nucleus->DensityFunc = 1;  
     }
- 
-  //cout << "name=" << name  << " " << nucleus->w_WS << " " << nucleus->a_WS << " " << nucleus->R_WS << " " << nucleus->rho_WS << " " << nucleus->A << " " << nucleus->Z << endl;
-  //exit(1);
 }/* FindNucleusData2 */
 
 
-void Glauber::FindNucleusData(Nucleus *nucleus, string target, string file_name, int rank)
+
+void Glauber::PrintGlauberData()
 {
- string func_name;
- char *tmp_name, *buf;
- double x;
- static int ind;
- int bytes_read;
- string inputname;
- 
- stringstream tmpfilename;
- inputname = file_name;
- 
- // s = util->char_malloc(120);
- string s;
- // name = util->char_malloc(120);
- string name;
- ifstream input (inputname.c_str());
-
- char c;
- tmpfilename << "tmp";
- tmpfilename << rank;
- tmpfilename << ".dat"; 
- 
- string fn;
- fn = tmpfilename.str();
- 
- ofstream tmp_file(fn.c_str());
- // bytes_read=fscanf(input, "%s", s);
-
- // target;
-
- input >> s;
- 
- ind = 0;
- while(s.compare("EndOfData") != 0)
-   {
-     input >> name;
-     if(name.compare(target) == 0)
-	{
-	  ind++;
-	  tmp_file << "Name " << name << endl;
-	  c = input.get();
-	  while(c != 'N')
-	    {
-	      tmp_file << c;
-	      c = input.get();
-	    }/* while */
-	  break;
-    }/* if target is found */
-     input >> s;
-   }/* while end of the file is not encountered */
- tmp_file << "EndOfData" << endl;
- 
- tmp_file.close();
- input.close();
-
- nucleus->rho_WS = setup->DFind(fn, "R_WS");
- //   0.15; /* default rho.  this WILL change to the right 			 value that gives integral(rho) = A */
- nucleus->name = setup->StringFind(fn, "Name");
- nucleus->A = setup->DFind(fn, "A");
- nucleus->Z = setup->DFind(fn, "Z");
-
- 
- if(ind != 0)
-  {
-    nucleus->w_WS = setup->DFind(fn, "w_WS");
-    nucleus->a_WS = setup->DFind(fn, "a_WS");
-    nucleus->R_WS = setup->DFind(fn, "R_WS");
-    func_name = setup->StringFind(fn, "density_func");
-  }
- else
-  {
-   nucleus->w_WS = 0.0; 
-   nucleus->a_WS = 0.53;
-   nucleus->R_WS = 1.15*pow(nucleus->A, 1.0/3.0);
-   func_name = "3Fermi";
-  }
-
- // cout << "name=" << name  << endl;
-
- string funcname;
- stringstream strfuncname;
- strfuncname << func_name;
- strfuncname >> funcname;
- 
- if(funcname.compare("2HO")==0) 
-  {
-    nucleus->AnumFunc = 1; //Anum2HO;
-    nucleus->AnumFuncIntegrand = 1; //Anum2HOInt;
-    nucleus->DensityFunc = 1; //NuInt2HO;
-  }
- else if(funcname.compare("3Gauss")==0) 
-  {
-    nucleus->AnumFunc = 2; //Anum3Gauss;
-    nucleus->AnumFuncIntegrand = 2; //Anum3GaussInt;
-    nucleus->DensityFunc = 2; //NuInt3Gauss;
-  }
- else if(funcname.compare("3Fermi")==0) 
-  {
-    nucleus->AnumFunc = 3; //Anum3Fermi;
-    nucleus->AnumFuncIntegrand = 3; //Anum3FermiInt;
-    nucleus->DensityFunc = 3; //NuInt3Fermi;
-  }
- else if(funcname.compare("Hulthen")==0) 
-   {
-     nucleus->AnumFunc = 8;//AnumHulthen;
-     nucleus->AnumFuncIntegrand = 8; //AnumHulthenInt;
-     nucleus->DensityFunc = 8; //NuIntHulthen;  
-   }
- else if(funcname.compare("readFromFile")==0) 
-   {
-     nucleus->AnumFunc = 1;
-     nucleus->AnumFuncIntegrand = 1;
-     nucleus->DensityFunc = 1;  
-   }
- 
- // cout << "name=" << name  << endl;
- // cout << "name=" << name  << " " << nucleus->w_WS << " " << nucleus->a_WS << " " << nucleus->R_WS << " " << nucleus->rho_WS << " " << nucleus->A << " " << nucleus->Z << endl;
- // exit(1);
-
- remove(fn.c_str());
-}/* FindNucleusData */
-
-
-
-void Glauber::PrintLexusData()
-{
- fprintf(stderr, "LexusData.SigmaNN = %e\n",  LexusData.SigmaNN);
- fprintf(stderr, "LexusData.InterMax = %d\n", LexusData.InterMax);
- fprintf(stderr, "LexusData.SCutOff = %f\n", LexusData.SCutOff);
-}/* PrintLexusData */
+ fprintf(stderr, "GlauberData.SigmaNN = %e\n",  GlauberData.SigmaNN);
+ fprintf(stderr, "GlauberData.InterMax = %d\n", GlauberData.InterMax);
+ fprintf(stderr, "GlauberData.SCutOff = %f\n", GlauberData.SCutOff);
+}/* PrintGlauberData */
 
 
 void Glauber::PrintNucleusData(Nucleus *nucleus)
@@ -397,7 +270,7 @@ void Glauber::PrintNucleusData(Nucleus *nucleus)
   cout << " Nucleus.a_WS = " << nucleus->a_WS << endl;
   cout << " Nucleus.R_WS = " << nucleus->R_WS << endl;
 
-}/* FindNucleusData */
+}
 
 
 int Glauber::LinearFindXorg(double x, double *Vx, int ymax)
@@ -646,16 +519,16 @@ double Glauber::InterNuPInSP(double s)
 
  string st;
 
- if(LexusData.Projectile.A == 1.0) return 0.0;
+ if(GlauberData.Projectile.A == 1.0) return 0.0;
 
  st = "./NuPInSP.dat";
 
  if(ind == 1)
   {
-    CalcRho(&(LexusData.Projectile));
-    up = 2.0*LexusData.SCutOff;
+    CalcRho(&(GlauberData.Projectile));
+    up = 2.0*GlauberData.SCutOff;
     down = 0.0; 
-    maxi_num = LexusData.InterMax; 
+    maxi_num = GlauberData.InterMax; 
     vx = MakeVx(down, up, maxi_num);
     vy = MakeVy(st, vx, maxi_num);
   }/* if ind */
@@ -683,7 +556,7 @@ double Glauber::InterNuTInST(double s)
   FILE *output;
   
   ind++;
-  if(LexusData.Target.A == 1.0) return 0.0;
+  if(GlauberData.Target.A == 1.0) return 0.0;
   
   string st;
   
@@ -691,11 +564,11 @@ double Glauber::InterNuTInST(double s)
   
   if(ind == 1) 
     {
-      CalcRho(&(LexusData.Target));
+      CalcRho(&(GlauberData.Target));
       
-      up = 2.0*LexusData.SCutOff;
+      up = 2.0*GlauberData.SCutOff;
       down = 0.0; 
-      maxi_num = LexusData.InterMax; 
+      maxi_num = GlauberData.InterMax; 
       
       vx = MakeVx(down, up, maxi_num);
       vy = MakeVy(st, vx, maxi_num);
@@ -832,7 +705,7 @@ double Glauber::NuInt3Fermi(double xi)
 
    c = exp(-R_WS);
    
-   f = 2.0*a_WS*rho*(LexusData.SigmaNN);
+   f = 2.0*a_WS*rho*(GlauberData.SigmaNN);
    f *= 1.0 + w_WS*pow(r/R_WS, 2.);
    f /= xi + c*exp(s*s/(r + z)); 
  
@@ -921,7 +794,7 @@ double Glauber::NuInt3Gauss(double xi)
 
    c = exp(-R_WS*R_WS);
 
-   f = a_WS*rho*(LexusData.SigmaNN);
+   f = a_WS*rho*(GlauberData.SigmaNN);
    f *= 1.0 + w_WS*r_sqr/pow(R_WS, 2.);
    f /= sqrt(z_sqr)*(xi + c*exp(s*s)); 
  
@@ -1005,7 +878,7 @@ double Glauber::NuInt2HO(double xi)
    we integrate only over positive z */
    
    if(z_sqr < 0.0) z_sqr = tiny;
-   f = a_WS*rho*(LexusData.SigmaNN);
+   f = a_WS*rho*(GlauberData.SigmaNN);
    f *= (1.0 + w_WS*r_sqr)*exp(-s*s)/sqrt(z_sqr);
  
  return f;
@@ -1073,7 +946,7 @@ double Glauber::NuIntHulthen(double xi)
 
    /* mult by 2 because the integral is originally over -infty to infty */
 
-   f = 2.0*a_WS*rho*(LexusData.SigmaNN);
+   f = 2.0*a_WS*rho*(GlauberData.SigmaNN);
    g = (1.0/r)*(exp(-r) - exp(-(b_WS/a_WS)*r));
    f *= g*g;
 
@@ -1273,25 +1146,8 @@ double Glauber::qnc7(int id, double tol, double down, double dx, double *f_of,
 
   ans = left_sum + right_sum;
 
-/*printf("ans is %le\n", ans);*/
-
-
-  /* 
-    update total area subtract previously assigned area for this interval
-    and add newly calculated area
-    */
-/*printf("pre_area is %le\n", area);*/
-
   area += -fabs(pre_sum) + fabs(left_sum) + fabs(right_sum);
 
-
-  /* 
-    printf("presum is %le\n", pre_sum);
-    printf("area is %le\n", area);
-    */
-  /*
-    branch if the refined sum is finer than the previous estimate
-    */
 
   if( fabs(ans - pre_sum) > tol*fabs(area) && (*count < limit))
     {
@@ -1347,8 +1203,8 @@ double Glauber::TAB()
 {
   double f;
   int count = 0;
-  f = integral(7, 0.0, LexusData.SCutOff, TOL, &count); // integrate OLSIntegrand(s)
-  f *= 2.0/(LexusData.SigmaNN); //here TAB is the number of binary collisions, dimensionless 
+  f = integral(7, 0.0, GlauberData.SCutOff, TOL, &count); // integrate OLSIntegrand(s)
+  f *= 2.0/(GlauberData.SigmaNN); //here TAB is the number of binary collisions, dimensionless 
                                 //(1/fm^4 integrated over dr_T^2 (gets rid of 1/fm^2), divided by sigma (gets rid of the other))
   return f;
 }/* TAB */
@@ -1358,40 +1214,17 @@ double Glauber::PAB(double x, double y)
 {
   double s1=sqrt(pow(x+b/2.,2.)+y*y);
   double s2=sqrt(pow(x-b/2.,2.)+y*y);
-  return InterNuPInSP(s1)*InterNuTInST(s2)/(currentTAB*LexusData.SigmaNN);
+  return InterNuPInSP(s1)*InterNuTInST(s2)/(currentTAB*GlauberData.SigmaNN);
 }/* PAB */
 
 
 void Glauber::initGlauber(double SigmaNN, string Target, string Projectile, double inb, int imax, int rank)
 {
- //  double package[1];
-//   package[0]=1.;
-
-//   if(rank==0)
-//     {
-//       for(int i=1; i<size; i++)
-// 	{
-// 	  MPI::COMM_WORLD.Recv(package,1,MPI::DOUBLE,i,1);
-// 	  cout << "sending to rank " << i << endl;
-// 	}
-//     }
-//   else
-//     {
-//      MPI::COMM_WORLD.Send(package,1,MPI::DOUBLE,0,1);
-//      cout << "receiving on rank " << rank << endl;
-//     }
-
-
-  //remove("NuTInST.dat");
-  //remove("NuPInSP.dat");
-
   string Target_Name;
   Target_Name = Target;
 
   string Projectile_Name;
   Projectile_Name = Projectile;
-
-  //  char* p_name;
  
   string p_name;
   stringstream sp_name;
@@ -1411,46 +1244,21 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile, doub
     }
 
   string paf;
-  //char *paf;
   paf = p_name;
 
-
-//   if(!util->IsFile(paf))
-//     {
-//       fprintf(stderr, "No known_nuclei.dat.  Please provide one.\n");
-//       fprintf(stderr, "Exiting...\n");
-//       exit(0);
-//     }
-
-  /* pp total cross-section : 40 mb = 4 fm**2 */
-  /* LexusData.SigmaNN = 4.0; */
-  
-  /* energy unit is always GeV and length unit is fm */
-
-  //  FindNucleusData(&(LexusData.Target), Target_Name, paf, rank);
-  FindNucleusData2(&(LexusData.Target), Target_Name, rank);
-  //PrintNucleusData(&(LexusData.Target));
-  
-  //  FindNucleusData(&(LexusData.Projectile), Projectile_Name, paf, rank);
-  FindNucleusData2(&(LexusData.Projectile), Projectile_Name, rank);
-  //PrintNucleusData(&(LexusData.Projectile));
-
+  FindNucleusData2(&(GlauberData.Target), Target_Name, rank);
+  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name, rank);
  
-  LexusData.SigmaNN = 0.1*SigmaNN; // sigma in fm^2 
-  currentA1 = LexusData.Projectile.A;
-  currentA2 = LexusData.Target.A;
-  currentZ1 = LexusData.Projectile.Z;
-  currentZ2 = LexusData.Target.Z;
+  GlauberData.SigmaNN = 0.1*SigmaNN; // sigma in fm^2 
+  currentA1 = GlauberData.Projectile.A;
+  currentA2 = GlauberData.Target.A;
+  currentZ1 = GlauberData.Projectile.Z;
+  currentZ2 = GlauberData.Target.Z;  
   
-  /* Run Specific */
-  
-
-  LexusData.InterMax = imax;
-  LexusData.SCutOff = 12.;
+  GlauberData.InterMax = imax;
+  GlauberData.SCutOff = 12.;
   
   b=inb; 
-  //PrintLexusData();
-  //currentTAB=TAB();
 }/* init */
 
 double Glauber::areaTA(double x, double A)
@@ -1467,7 +1275,7 @@ ReturnValue Glauber::SampleTARejection(Random *random, int PorT)
   double r, x, y, tmp;
   double ratio;
   double phi;
-  double A=1.2*LexusData.SigmaNN/4.21325504715; // increase the envelope for larger sigma_inel (larger root_s) (was originally written
+  double A=1.2*GlauberData.SigmaNN/4.21325504715; // increase the envelope for larger sigma_inel (larger root_s) (was originally written
   // for root(s)=200 GeV, hence the cross section of 4.21325504715 fm^2 (=42.13 mb)
   cout.precision(10);
   if(PorT == 1)
@@ -1476,7 +1284,7 @@ ReturnValue Glauber::SampleTARejection(Random *random, int PorT)
 	{
 	  phi = 2.*M_PI*random->genrand64_real1();
 	  r = 6.32456*sqrt(-log((-0.00454545*(-220.*A+areaTA(15.,A)*random->genrand64_real1()))/A));
-	  // here random->genrand64_real1()*areaTA(LexusData.SCutOff) 
+	  // here random->genrand64_real1()*areaTA(GlauberData.SCutOff) 
 	  // is a uniform random number on [0, area under f(x)]
 	  tmp = random->genrand64_real1();
 
@@ -1492,7 +1300,7 @@ ReturnValue Glauber::SampleTARejection(Random *random, int PorT)
 	{
 	  phi = 2.*M_PI*random->genrand64_real1();
 	  r = 6.32456*sqrt(-log((-0.00454545*(-220.*A+areaTA(15.,A)*random->genrand64_real1()))/A));
-	  // here random->genrand64_real1()*areaTA(LexusData.SCutOff) 
+	  // here random->genrand64_real1()*areaTA(GlauberData.SCutOff) 
 	  // is a uniform random number on [0, area under f(x)]
 	  tmp = random->genrand64_real1();
 	  // x is uniform on [0,1]

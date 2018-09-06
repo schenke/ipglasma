@@ -49,7 +49,6 @@ class GaugeFix {
   
   void gaugeTransform(Lattice* lat, Group* group, Parameters *param, int i, int j);
   void FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, int steps);
-  //  void FFTChi2(Lattice* lat, Group* group, Parameters *param, int steps);
 
 };
 

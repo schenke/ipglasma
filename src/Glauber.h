@@ -61,7 +61,7 @@ class Glauber{
   
     double AnumR, NuInS_S;
     Nucleus *Nuc_WS; 
-    Data LexusData;  
+    Data GlauberData;  
     ptr_func tempFunc;
     double b; // impact parameter
     double currentTAB;
@@ -79,7 +79,7 @@ class Glauber{
     int IsFile(char *file_name);
     void FindNucleusData(Nucleus *nucleus, string target, string file_name, int rank);
     void FindNucleusData2(Nucleus *nucleus, string name, int rank);
-    void PrintLexusData();
+    void PrintGlauberData();
     void PrintNucleusData(Nucleus *nucleus);
     int LinearFindXorg(double x, double *Vx, int ymax);
     double FourPtInterpolate(double x, double *Vx, double *Vy, double h, int x_org, int ymax);

@@ -1562,47 +1562,51 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   
         
   // // output U
-  // stringstream strVOne_name;
-  // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-  // string VOne_name;
-  // VOne_name = strVOne_name.str();
+  if (param->getWriteInitialWilsonLines())
+  {
+   stringstream strVOne_name;
+   //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
+   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize() << ".txt";
+   string VOne_name;
+   VOne_name = strVOne_name.str();
 
-  // ofstream foutU(VOne_name.c_str(),ios::out); 
-  // foutU.precision(15);
+   ofstream foutU(VOne_name.c_str(),ios::out); 
+   foutU.precision(15);
 
-  // for(int ix=0; ix<N; ix++)
-  //   {
-  //     for(int iy=0; iy<N; iy++) // loop over all positions
-  // 	{
-  // 	  pos = ix*N+iy;
-  // 	  foutU << ix << " " << iy << " "  << (lat->cells[pos]->getU()).MatrixToString() << endl;
-  // 	}
-  //     foutU << endl;
-  //   }
-  // foutU.close();
+   for(int ix=0; ix<N; ix++)
+     {
+       for(int iy=0; iy<N; iy++) // loop over all positions
+   	{
+   	  int pos = ix*N+iy;
+   	  foutU << ix << " " << iy << " "  << (lat->cells[pos]->getU()).MatrixToString() << endl;
+   	}
+       foutU << endl;
+     }
+   foutU.close();
 
-  // cout<<"wrote " << strVOne_name.str() <<endl;
+   cout<<"wrote " << strVOne_name.str() <<endl;
   
-  // stringstream strVTwo_name;
-  // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-  // string VTwo_name;
-  // VTwo_name = strVTwo_name.str();
+   stringstream strVTwo_name;
+   // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
+   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
+   string VTwo_name;
+   VTwo_name = strVTwo_name.str();
 
-  // ofstream foutU2(VTwo_name.c_str(),ios::out); 
-  // foutU2.precision(15);
-  // for(int ix=0; ix<N; ix++)
-  //   {
-  //     for(int iy=0; iy<N; iy++) // loop over all positions
-  // 	{
-  // 	  pos = ix*N+iy;
-  // 	  foutU2 << ix << " " << iy << " "  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
-  // 	}
-  //     foutU2 << endl;
-  //   }
-  // foutU2.close();
+   ofstream foutU2(VTwo_name.c_str(),ios::out); 
+   foutU2.precision(15);
+   for(int ix=0; ix<N; ix++)
+     {
+       for(int iy=0; iy<N; iy++) // loop over all positions
+   	{
+   	  int pos = ix*N+iy;
+   	  foutU2 << ix << " " << iy << " "  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
+   	}
+       foutU2 << endl;
+     }
+   foutU2.close();
   
-  // cout<<"wrote " << strVTwo_name.str() <<endl;
- 
+   cout<<"wrote " << strVTwo_name.str() <<endl;
+  } 
   // --------
 
 

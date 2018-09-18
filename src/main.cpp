@@ -452,6 +452,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setLinearb(setup->IFind(file_name,"samplebFromLinearDistribution"));
   param->setWriteOutputs(setup->IFind(file_name,"writeOutputs"));
   param->setWriteEvolution(setup->IFind(file_name,"writeEvolution"));
+  param->setWriteInitialWilsonLines(setup->IFind(file_name, "writeInitialWilsonLines"));
   param->setAverageOverNuclei(setup->IFind(file_name,"averageOverThisManyNuclei"));
   param->setUseTimeForSeed(setup->IFind(file_name,"useTimeForSeed"));
   param->setUseFixedNpart(setup->IFind(file_name,"useFixedNpart"));

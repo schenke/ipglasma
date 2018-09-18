@@ -59,6 +59,7 @@ class Parameters
   double xExponent; // - exponent with which Q_s grows with x (usually 0.31 in IP-Sat for nuclei)
   int writeOutputs; // decide whether to write (1) or not write (0) large output files (like hydro input data)
   int writeEvolution; // decide whether to write (1) or not write (0) time dependent quantities like the anisotropy 
+  int writeInitialWilsonLines; // decide whether to write (1) or not write (0) generated Wilson lines (before any evolution)
   unsigned long long int randomSeed; // stores the random seed used (so the event can be reproduced)
   string NucleusQsTableFileName; // the file name for the table containing Qs^2 as a function of Y and Qs^2(Y=0)
   double BG; // the width of the Gaussian describing the shape of the proton in GeV^(-2)
@@ -284,6 +285,8 @@ class Parameters
   int getWriteOutputs() {return writeOutputs;}
   void setWriteEvolution(int x) {writeEvolution=x;};
   int getWriteEvolution() {return writeEvolution;}
+  void setWriteInitialWilsonLines(int x) {writeInitialWilsonLines=x;}
+  int getWriteInitialWilsonLines(){ return writeInitialWilsonLines; }
   void setNucleonPositionsFromFile(int x) {nucleonPositionsFromFile=x;}
   int getNucleonPositionsFromFile() {return nucleonPositionsFromFile;}
   void setInverseQsForMaxTime(int x) {inverseQsForMaxTime=x;};

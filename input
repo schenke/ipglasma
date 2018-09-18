@@ -55,5 +55,6 @@ etaSizeOutput 1
 detaOutput 0
 writeOutputs 1
 writeEvolution 0
+writeInitialWilsonLines 0
 EndOfFile
 

@@ -783,15 +783,18 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      xq[i][iq] = sqrt(BG*hbarc*hbarc)*random->Gauss();
 	      yq[i][iq] = sqrt(BG*hbarc*hbarc)*random->Gauss();
 	    }
-	  for (int iq=0; iq<3; iq++)
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
 	      avgxq += xq[i][iq];
 	      avgyq += yq[i][iq];
 	    }
-	  for (int iq=0; iq<3; iq++)
+          // Move center of mass to the origin
+          // Note that 1607.01711 this is not done, so parameters quoted in
+          // that paper can't be used if this is done
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
-	      xq[i][iq] -= avgxq/3.;
-	      yq[i][iq] -= avgyq/3.;
+	      xq[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
+	      yq[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
 	    }
 	}
     }
@@ -808,15 +811,16 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      yq2[i][iq] = sqrt(BG*hbarc*hbarc)*random->Gauss();
 	    }
 	  
-	  for (int iq=0; iq<3; iq++)
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
 	      avgxq += xq2[i][iq];
 	      avgyq += yq2[i][iq];
 	    }
-	  for (int iq=0; iq<3; iq++)
+          // Move center of mass to the origin, see comment above
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
-	      xq2[i][iq] -= avgxq/3.;
-	      yq2[i][iq] -= avgyq/3.;
+	      xq2[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
+	      yq2[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
 	    }
 	}
     }

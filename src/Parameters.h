@@ -107,7 +107,7 @@ class Parameters
   int readMultFromFile; // if set, the gluon distribution as a function of k_T is read from file and the integrated rate computed
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
   double protonAnisotropy; //anisotropy of the proton thickness function: xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] - as a first test 
-  int useConstituentQuarkProton; // if 1 use a proton made up of 3 constituent quarks.
+  int useConstituentQuarkProton; // if >0, use proton made up of useConstituentQuarkProton constituent quarks.
   double UVdamp; // UV damping parameter
 
  public:

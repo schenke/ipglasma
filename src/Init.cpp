@@ -641,17 +641,27 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
   for (int i = 0; i<A1; i++) 
     {
-      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
-	{
-	  gaussA[i][iq]=1.;
-	}
-    }    
+      if (param->getUseConstituentQuarkProton()>0)
+      {
+        for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
+	  {
+	    gaussA[i][iq]=1.;
+	  }
+      }
+      else
+        gaussA[i][0]=1.; 
+   }    
   for (int i = 0; i<A2; i++) 
     {
-      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
-	{
-	  gaussB[i][iq]=1.;
-	}    
+      if (param->getUseConstituentQuarkProton()>0)
+      {
+        for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
+	  {
+	    gaussB[i][iq]=1.;
+	  }
+      }
+      else
+        gaussB[i][0]=1.; 
     }
   
   // let the log fluctuate

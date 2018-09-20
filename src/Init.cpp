@@ -636,19 +636,19 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
 
-  double gaussA[A1][3];
-  double gaussB[A2][3];
+  double gaussA[A1][param->getUseConstituentQuarkProton()];
+  double gaussB[A2][param->getUseConstituentQuarkProton()];
 
   for (int i = 0; i<A1; i++) 
     {
-      for (int iq = 0; iq<3; iq++) 
+      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
 	{
 	  gaussA[i][iq]=1.;
 	}
     }    
   for (int i = 0; i<A2; i++) 
     {
-      for (int iq = 0; iq<3; iq++) 
+      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
 	{
 	  gaussB[i][iq]=1.;
 	}    
@@ -661,7 +661,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for (int i = 0; i<A1; i++) 
 	    {
-	      for (int iq = 0; iq<3; iq++) 
+	      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
 		{
 		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13; // dividing by 1.13 restores the same mean Q_s 
 		  //cout << i << " " << iq << " " << gaussA[i][iq] << endl; 
@@ -674,7 +674,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for (int i = 0; i<A2; i++) 
 	    {
-	      for (int iq = 0; iq<3; iq++) 
+	      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
 		{
 		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13;
 		  

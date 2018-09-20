@@ -793,8 +793,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
           // that paper can't be used if this is done
 	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
-	      xq[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
-	      yq[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+              if (param->getShiftConstituentQuarkProtonOrigin())
+              {
+	          xq[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
+	          yq[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+              }
 	    }
 	}
     }
@@ -819,8 +822,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
           // Move center of mass to the origin, see comment above
 	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
-	      xq2[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
-	      yq2[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+              if (param->getShiftConstituentQuarkProtonOrigin())
+              {
+	          xq2[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
+	          yq2[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+              }
 	    }
 	}
     }

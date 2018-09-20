@@ -32,7 +32,7 @@ class Parameters
   int useSeedList; // read random seeds from a file if set to (1) - this overwrites the 'use time for seed' setting
   unsigned long long int seed;    // random seed that's added to the current time to generate the full seed (or the full seed, depending on the value of getUseTimeforSeed())
   double ds;   // 'time' step
-  int Ny;      // longitudinal 'resolution' (see Lappi, Eir. Phys. J. C55,285)
+  int Ny;      // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
   double g2mu; // g^2 mu
   double Qs;   // Q_s, to be dynamically determined
   int steps;   // number of rapidity steps
@@ -108,6 +108,7 @@ class Parameters
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
   double protonAnisotropy; //anisotropy of the proton thickness function: xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] - as a first test 
   int useConstituentQuarkProton; // if >0, use proton made up of useConstituentQuarkProton constituent quarks.
+  int shiftConstituentQuarkProtonOrigin;  // if 1, move constituent quark center of mass to origin
   double UVdamp; // UV damping parameter
 
  public:
@@ -303,5 +304,7 @@ class Parameters
   int getUsePseudoRapidity() {return usePseudoRapidity;}
   void setUseConstituentQuarkProton(int x) {useConstituentQuarkProton=x;}
   int getUseConstituentQuarkProton() {return useConstituentQuarkProton;}
+  void setShiftConstituentQuarkProtonOrigin(int x) {shiftConstituentQuarkProtonOrigin=x; }
+  int getShiftConstituentQuarkProtonOrigin() { return shiftConstituentQuarkProtonOrigin; }
 };
 #endif // Parameters_H

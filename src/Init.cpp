@@ -635,9 +635,13 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   int count2 = 0;
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
-
-  double gaussA[A1][param->getUseConstituentQuarkProton()];
-  double gaussB[A2][param->getUseConstituentQuarkProton()];
+ 
+  // Arrays to store Q_s fluctuations
+  // Make sure that array size is always at least 1 
+  unsigned int len_quark_array=param->getUseConstituentQuarkProton();
+  if (len_quark_array==0) len_quark_array=1;
+  double gaussA[A1][len_quark_array];
+  double gaussB[A2][len_quark_array];
 
   for (int i = 0; i<A1; i++) 
     {
@@ -671,7 +675,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for (int i = 0; i<A1; i++) 
 	    {
-	      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
+              // Note: len_quark_array is the number of constituent quarks if useConstituentQuarkProton>0, and 1, if 
+              // fluctuations are not included. This way Q_s fluctuations can be implemented for each nucleon even
+              // if useConstituentQuarkProton=0
+	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
 		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13; // dividing by 1.13 restores the same mean Q_s 
 		  //cout << i << " " << iq << " " << gaussA[i][iq] << endl; 
@@ -684,7 +691,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for (int i = 0; i<A2; i++) 
 	    {
-	      for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
+	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
 		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13;
 		  
@@ -777,8 +784,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   //  cout << "BG=" << BG << endl;
 
 
-  double xq[A1][param->getUseConstituentQuarkProton()], xq2[A2][param->getUseConstituentQuarkProton()];
-  double yq[A1][param->getUseConstituentQuarkProton()], yq2[A2][param->getUseConstituentQuarkProton()];
+  double xq[A1][len_quark_array], xq2[A2][len_quark_array];
+  double yq[A1][len_quark_array], yq2[A2][len_quark_array];
   double avgxq=0.;
   double avgyq=0.;
 
@@ -859,6 +866,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  y = -L/2.+a*iy;
 	   
 	  localpos = ix*N+iy;
+
 	
 	  // nucleus A 
 	  lat->cells[localpos]->setTpA(0.);
@@ -884,7 +892,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 		  bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
 		  bp2 /= hbarc*hbarc;     	  
-		  
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
 		}
 

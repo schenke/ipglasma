@@ -452,6 +452,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setLinearb(setup->IFind(file_name,"samplebFromLinearDistribution"));
   param->setWriteOutputs(setup->IFind(file_name,"writeOutputs"));
   param->setWriteEvolution(setup->IFind(file_name,"writeEvolution"));
+  param->setWriteInitialWilsonLines(setup->IFind(file_name, "writeInitialWilsonLines"));
   param->setAverageOverNuclei(setup->IFind(file_name,"averageOverThisManyNuclei"));
   param->setUseTimeForSeed(setup->IFind(file_name,"useTimeForSeed"));
   param->setUseFixedNpart(setup->IFind(file_name,"useFixedNpart"));
@@ -461,6 +462,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setReadMultFromFile(setup->IFind(file_name,"readMultFromFile"));
   param->setProtonAnisotropy(setup->DFind(file_name,"protonAnisotropy"));
   param->setUseConstituentQuarkProton(setup->DFind(file_name,"useConstituentQuarkProton"));
+  param->setShiftConstituentQuarkProtonOrigin(setup->DFind(file_name,"shiftConstituentQuarkProtonOrigin"));
   if(rank==0)
     cout << "done." << endl;
 
@@ -487,6 +489,12 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   fout1 << "Ny " << param->getNy() << endl;
   fout1 << "Projectile " << param->getProjectile() << endl;
   fout1 << "Target " << param->getTarget() << endl;
+  if (param->getUseConstituentQuarkProton()>0)
+  {
+    fout1 << "Nucleons consists of " << param->getUseConstituentQuarkProton() << " constituent quarks" << endl;
+    if (param->getShiftConstituentQuarkProtonOrigin())
+      fout1 << "... constituent quark center of mass moved to origin" << endl;
+  }
   fout1 << "Gaussian wounding " << param->getGaussianWounding() << endl;
   fout1 << "Using fluctuating x=Qs/root(s) " << param->getUseFluctuatingx() << endl;
   if( param->getRunWithkt()==0)

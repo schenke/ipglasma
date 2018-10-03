@@ -32,7 +32,7 @@ class Parameters
   int useSeedList; // read random seeds from a file if set to (1) - this overwrites the 'use time for seed' setting
   unsigned long long int seed;    // random seed that's added to the current time to generate the full seed (or the full seed, depending on the value of getUseTimeforSeed())
   double ds;   // 'time' step
-  int Ny;      // longitudinal 'resolution' (see Lappi, Eir. Phys. J. C55,285)
+  int Ny;      // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
   double g2mu; // g^2 mu
   double Qs;   // Q_s, to be dynamically determined
   int steps;   // number of rapidity steps
@@ -59,6 +59,7 @@ class Parameters
   double xExponent; // - exponent with which Q_s grows with x (usually 0.31 in IP-Sat for nuclei)
   int writeOutputs; // decide whether to write (1) or not write (0) large output files (like hydro input data)
   int writeEvolution; // decide whether to write (1) or not write (0) time dependent quantities like the anisotropy 
+  int writeInitialWilsonLines; // decide whether to write (1) or not write (0) generated Wilson lines (before any evolution)
   unsigned long long int randomSeed; // stores the random seed used (so the event can be reproduced)
   string NucleusQsTableFileName; // the file name for the table containing Qs^2 as a function of Y and Qs^2(Y=0)
   double BG; // the width of the Gaussian describing the shape of the proton in GeV^(-2)
@@ -106,7 +107,8 @@ class Parameters
   int readMultFromFile; // if set, the gluon distribution as a function of k_T is read from file and the integrated rate computed
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
   double protonAnisotropy; //anisotropy of the proton thickness function: xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] - as a first test 
-  int useConstituentQuarkProton; // if 1 use a proton made up of 3 constituent quarks.
+  int useConstituentQuarkProton; // if >0, use proton made up of useConstituentQuarkProton constituent quarks.
+  int shiftConstituentQuarkProtonOrigin;  // if 1, move constituent quark center of mass to origin
   double UVdamp; // UV damping parameter
 
  public:
@@ -284,6 +286,8 @@ class Parameters
   int getWriteOutputs() {return writeOutputs;}
   void setWriteEvolution(int x) {writeEvolution=x;};
   int getWriteEvolution() {return writeEvolution;}
+  void setWriteInitialWilsonLines(int x) {writeInitialWilsonLines=x;}
+  int getWriteInitialWilsonLines(){ return writeInitialWilsonLines; }
   void setNucleonPositionsFromFile(int x) {nucleonPositionsFromFile=x;}
   int getNucleonPositionsFromFile() {return nucleonPositionsFromFile;}
   void setInverseQsForMaxTime(int x) {inverseQsForMaxTime=x;};
@@ -300,5 +304,7 @@ class Parameters
   int getUsePseudoRapidity() {return usePseudoRapidity;}
   void setUseConstituentQuarkProton(int x) {useConstituentQuarkProton=x;}
   int getUseConstituentQuarkProton() {return useConstituentQuarkProton;}
+  void setShiftConstituentQuarkProtonOrigin(int x) {shiftConstituentQuarkProtonOrigin=x; }
+  int getShiftConstituentQuarkProtonOrigin() { return shiftConstituentQuarkProtonOrigin; }
 };
 #endif // Parameters_H

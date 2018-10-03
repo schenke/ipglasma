@@ -635,23 +635,37 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   int count2 = 0;
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
-
-  double gaussA[A1][3];
-  double gaussB[A2][3];
+ 
+  // Arrays to store Q_s fluctuations
+  // Make sure that array size is always at least 1 
+  unsigned int len_quark_array=param->getUseConstituentQuarkProton();
+  if (len_quark_array==0) len_quark_array=1;
+  double gaussA[A1][len_quark_array];
+  double gaussB[A2][len_quark_array];
 
   for (int i = 0; i<A1; i++) 
     {
-      for (int iq = 0; iq<3; iq++) 
-	{
-	  gaussA[i][iq]=1.;
-	}
-    }    
+      if (param->getUseConstituentQuarkProton()>0)
+      {
+        for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
+	  {
+	    gaussA[i][iq]=1.;
+	  }
+      }
+      else
+        gaussA[i][0]=1.; 
+   }    
   for (int i = 0; i<A2; i++) 
     {
-      for (int iq = 0; iq<3; iq++) 
-	{
-	  gaussB[i][iq]=1.;
-	}    
+      if (param->getUseConstituentQuarkProton()>0)
+      {
+        for (int iq = 0; iq<param->getUseConstituentQuarkProton(); iq++) 
+	  {
+	    gaussB[i][iq]=1.;
+	  }
+      }
+      else
+        gaussB[i][0]=1.; 
     }
   
   // let the log fluctuate
@@ -661,7 +675,10 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for (int i = 0; i<A1; i++) 
 	    {
-	      for (int iq = 0; iq<3; iq++) 
+              // Note: len_quark_array is the number of constituent quarks if useConstituentQuarkProton>0, and 1, if 
+              // fluctuations are not included. This way Q_s fluctuations can be implemented for each nucleon even
+              // if useConstituentQuarkProton=0
+	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
 		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13; // dividing by 1.13 restores the same mean Q_s 
 		  //cout << i << " " << iq << " " << gaussA[i][iq] << endl; 
@@ -674,7 +691,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	{
 	  for (int i = 0; i<A2; i++) 
 	    {
-	      for (int iq = 0; iq<3; iq++) 
+	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
 		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13;
 		  
@@ -767,8 +784,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   //  cout << "BG=" << BG << endl;
 
 
-  double xq[A1][param->getUseConstituentQuarkProton()], xq2[A2][param->getUseConstituentQuarkProton()];
-  double yq[A1][param->getUseConstituentQuarkProton()], yq2[A2][param->getUseConstituentQuarkProton()];
+  double xq[A1][len_quark_array], xq2[A2][len_quark_array];
+  double yq[A1][len_quark_array], yq2[A2][len_quark_array];
   double avgxq=0.;
   double avgyq=0.;
 
@@ -783,15 +800,21 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      xq[i][iq] = sqrt(BG*hbarc*hbarc)*random->Gauss();
 	      yq[i][iq] = sqrt(BG*hbarc*hbarc)*random->Gauss();
 	    }
-	  for (int iq=0; iq<3; iq++)
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
 	      avgxq += xq[i][iq];
 	      avgyq += yq[i][iq];
 	    }
-	  for (int iq=0; iq<3; iq++)
+          // Move center of mass to the origin
+          // Note that 1607.01711 this is not done, so parameters quoted in
+          // that paper can't be used if this is done
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
-	      xq[i][iq] -= avgxq/3.;
-	      yq[i][iq] -= avgyq/3.;
+              if (param->getShiftConstituentQuarkProtonOrigin())
+              {
+	          xq[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
+	          yq[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+              }
 	    }
 	}
     }
@@ -808,15 +831,19 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      yq2[i][iq] = sqrt(BG*hbarc*hbarc)*random->Gauss();
 	    }
 	  
-	  for (int iq=0; iq<3; iq++)
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
 	      avgxq += xq2[i][iq];
 	      avgyq += yq2[i][iq];
 	    }
-	  for (int iq=0; iq<3; iq++)
+          // Move center of mass to the origin, see comment above
+	  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
 	    {
-	      xq2[i][iq] -= avgxq/3.;
-	      yq2[i][iq] -= avgyq/3.;
+              if (param->getShiftConstituentQuarkProtonOrigin())
+              {
+	          xq2[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
+	          yq2[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+              }
 	    }
 	}
     }
@@ -839,6 +866,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  y = -L/2.+a*iy;
 	   
 	  localpos = ix*N+iy;
+
 	
 	  // nucleus A 
 	  lat->cells[localpos]->setTpA(0.);
@@ -864,7 +892,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 		  bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
 		  bp2 /= hbarc*hbarc;     	  
-		  
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
 		}
 
@@ -1562,47 +1589,51 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   
         
   // // output U
-  // stringstream strVOne_name;
-  // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-  // string VOne_name;
-  // VOne_name = strVOne_name.str();
+  if (param->getWriteInitialWilsonLines())
+  {
+   stringstream strVOne_name;
+   //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
+   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize() << ".txt";
+   string VOne_name;
+   VOne_name = strVOne_name.str();
 
-  // ofstream foutU(VOne_name.c_str(),ios::out); 
-  // foutU.precision(15);
+   ofstream foutU(VOne_name.c_str(),ios::out); 
+   foutU.precision(15);
 
-  // for(int ix=0; ix<N; ix++)
-  //   {
-  //     for(int iy=0; iy<N; iy++) // loop over all positions
-  // 	{
-  // 	  pos = ix*N+iy;
-  // 	  foutU << ix << " " << iy << " "  << (lat->cells[pos]->getU()).MatrixToString() << endl;
-  // 	}
-  //     foutU << endl;
-  //   }
-  // foutU.close();
+   for(int ix=0; ix<N; ix++)
+     {
+       for(int iy=0; iy<N; iy++) // loop over all positions
+   	{
+   	  int pos = ix*N+iy;
+   	  foutU << ix << " " << iy << " "  << (lat->cells[pos]->getU()).MatrixToString() << endl;
+   	}
+       foutU << endl;
+     }
+   foutU.close();
 
-  // cout<<"wrote " << strVOne_name.str() <<endl;
+   cout<<"wrote " << strVOne_name.str() <<endl;
   
-  // stringstream strVTwo_name;
-  // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-  // string VTwo_name;
-  // VTwo_name = strVTwo_name.str();
+   stringstream strVTwo_name;
+   // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
+   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
+   string VTwo_name;
+   VTwo_name = strVTwo_name.str();
 
-  // ofstream foutU2(VTwo_name.c_str(),ios::out); 
-  // foutU2.precision(15);
-  // for(int ix=0; ix<N; ix++)
-  //   {
-  //     for(int iy=0; iy<N; iy++) // loop over all positions
-  // 	{
-  // 	  pos = ix*N+iy;
-  // 	  foutU2 << ix << " " << iy << " "  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
-  // 	}
-  //     foutU2 << endl;
-  //   }
-  // foutU2.close();
+   ofstream foutU2(VTwo_name.c_str(),ios::out); 
+   foutU2.precision(15);
+   for(int ix=0; ix<N; ix++)
+     {
+       for(int iy=0; iy<N; iy++) // loop over all positions
+   	{
+   	  int pos = ix*N+iy;
+   	  foutU2 << ix << " " << iy << " "  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
+   	}
+       foutU2 << endl;
+     }
+   foutU2.close();
   
-  // cout<<"wrote " << strVTwo_name.str() <<endl;
- 
+   cout<<"wrote " << strVTwo_name.str() <<endl;
+  } 
   // --------
 
 

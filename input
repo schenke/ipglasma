@@ -11,6 +11,7 @@ g 1.
 BG 4
 BGq 0.25
 useConstituentQuarkProton 0
+shiftConstituentQuarkProtonOrigin 1
 runningCoupling 0
 muZero 0.3
 c 0.2
@@ -55,5 +56,6 @@ etaSizeOutput 1
 detaOutput 0
 writeOutputs 1
 writeEvolution 0
+writeInitialWilsonLines 0
 EndOfFile
 

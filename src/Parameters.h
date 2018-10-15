@@ -110,6 +110,8 @@ class Parameters
   int useConstituentQuarkProton; // if >0, use proton made up of useConstituentQuarkProton constituent quarks.
   int shiftConstituentQuarkProtonOrigin;  // if 1, move constituent quark center of mass to origin
   double UVdamp; // UV damping parameter
+  double useIPsat;   // if 1, get Qs^2 from IPsat, if 0, use Q_s^2=(g2mu)^2 exp(-b^2/(2Bp)) [no fluctuations], or
+			// (g2mu)^2 1/n \sum exp(-(b-b_i)^2/(2BGq))  [with fluctuations]
 
  public:
 
@@ -267,7 +269,8 @@ class Parameters
   double getRmax() {return rmax;}
   void setUVdamp(double x) {UVdamp=x;}
   double getUVdamp() {return UVdamp;}
-
+  void setUseIPsat(int x) {useIPsat=x;}
+  int getUseIPsat() { return useIPsat;}
  
   // switches:
   void setInitMethod(int x) {initMethod=x;}

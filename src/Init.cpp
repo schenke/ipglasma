@@ -1164,22 +1164,46 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  // _-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-_-
 		  // end iterative loops here
 		}
-	      else
+	      else // param->getUseFluctuatingx() == 0
 		{
-		  // nucleus A 
-		  lat->cells[localpos]->setg2mu2A(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
+                  if (param->getUseIPsat())
+                  { 
+		  	// nucleus A 
+		  	lat->cells[localpos]->setg2mu2A(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
 		  
-		  // nucleus B 
-		  lat->cells[localpos]->setg2mu2B(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
+		  	// nucleus B 
+		  	lat->cells[localpos]->setg2mu2B(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); 
 		 
-		}
-	    }
-	}
-    }
-  }
-  
+		   }
+		   else {
+			// set g^4mu^2 = (g mu^2)^2 exp(-b^2/(2B))
+			// in case of fluctuations
+			// g^4 mu^2 = (g mu^2)^2 \sum exp(-b^2/(2B_q)) / nq
+			// To get exp(..), we take previously computed TpA and scale out 1/(2piB)
+			
+			int nq = param->getUseConstituentQuarkProton();
+			double B = param->getBG();
+			if (nq > 0)
+				B = param->getBGq(); // constituent quark width
+			lat->cells[localpos]->setg2mu2A( pow(param->getg2mu(), 2.0)
+						*lat->cells[localpos]->getTpA()*(2.0*M_PI*B)
+					     	*a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
+		  
+		  	// nucleus B 
+		  	lat->cells[localpos]->setg2mu2B( pow(param->getg2mu(), 2.0)
+						*lat->cells[localpos]->getTpB()*(2.0*M_PI*B)
+					     	*a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
+
+
+
+	   	 }  // end if useIPsat
+	    } // end if useFluctuatingx()
+	} //if check=2
+    } // end loop over y coords
+  } // end  loop over x corodinates 
+  } // end pramga omp parallel 
 
   
   
@@ -1336,7 +1360,9 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
  
   if(param->getAverageQs() > 0 && param->getAverageQsAvg()>0 && averageQs2>0  && param->getAverageQsmin()>0 && averageQs2Avg>0 && alphas>0 && Npart>=2)
+  {
     param->setSuccess(1);
+  }
  
 
   param->setalphas(alphas);

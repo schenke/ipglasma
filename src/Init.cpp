@@ -1614,51 +1614,123 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   
   
         
-  // // output U
+  // // output U in text
   if (param->getWriteInitialWilsonLines())
   {
    stringstream strVOne_name;
    //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize() << ".txt";
+   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize();
+   if (param->getWriteInitialWilsonLines() == 1) strVOne_name << ".txt";
    string VOne_name;
    VOne_name = strVOne_name.str();
 
-   ofstream foutU(VOne_name.c_str(),ios::out); 
-   foutU.precision(15);
-
-   for(int ix=0; ix<N; ix++)
-     {
-       for(int iy=0; iy<N; iy++) // loop over all positions
-   	{
-   	  int pos = ix*N+iy;
-   	  foutU << ix << " " << iy << " "  << (lat->cells[pos]->getU()).MatrixToString() << endl;
-   	}
-       foutU << endl;
-     }
-   foutU.close();
-
-   cout<<"wrote " << strVOne_name.str() <<endl;
-  
    stringstream strVTwo_name;
    // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
+   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
+   if (param->getWriteInitialWilsonLines() == 1) strVTwo_name << ".txt";
+
    string VTwo_name;
    VTwo_name = strVTwo_name.str();
 
-   ofstream foutU2(VTwo_name.c_str(),ios::out); 
-   foutU2.precision(15);
-   for(int ix=0; ix<N; ix++)
-     {
-       for(int iy=0; iy<N; iy++) // loop over all positions
+
+   // Outpu in text
+   if (param->getWriteInitialWilsonLines() == 1)
+   {
+       ofstream foutU(VOne_name.c_str(),ios::out); 
+       foutU.precision(15);
+
+       for(int ix=0; ix<N; ix++)
+       {
+           for(int iy=0; iy<N; iy++) // loop over all positions
+   	   {
+   	      int pos = ix*N+iy;
+   	      foutU << ix << " " << iy << " "  << (lat->cells[pos]->getU()).MatrixToString() << endl;
+   	   }
+           foutU << endl;
+       }
+       foutU.close();
+    
+
+      cout<<"wrote " << strVOne_name.str() <<endl;
+  
+      ofstream foutU2(VTwo_name.c_str(),ios::out); 
+      foutU2.precision(15);
+      for(int ix=0; ix<N; ix++)
+      {
+        for(int iy=0; iy<N; iy++) // loop over all positions
    	{
    	  int pos = ix*N+iy;
    	  foutU2 << ix << " " << iy << " "  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
    	}
-       foutU2 << endl;
-     }
-   foutU2.close();
+        foutU2 << endl;
+      }
+      foutU2.close();
   
-   cout<<"wrote " << strVTwo_name.str() <<endl;
+      cout<<"wrote " << strVTwo_name.str() <<endl;
+   } // end output in text
+   else if (param->getWriteInitialWilsonLines() == 2)
+   {
+       std::ofstream Outfile1, Outfile2;
+       Outfile1.open(VOne_name.c_str(),  ios::out | ios::binary);
+       Outfile2.open(VTwo_name.c_str(), ios::out | ios::binary);
+   
+       double temp= param->getRapidity();
+
+       // print header ------------- //
+       Outfile1.write((char *) &N ,sizeof(int));
+       Outfile1.write((char *) &Nc ,sizeof(int));
+       Outfile1.write((char *) &L ,sizeof(double));
+       Outfile1.write((char *) &a ,sizeof(double));
+       Outfile1.write((char *) &temp ,sizeof(double));
+                                         
+       Outfile2.write((char *) &N ,sizeof(int));
+       Outfile2.write((char *) &Nc ,sizeof(int));
+       Outfile2.write((char *) &L ,sizeof(double));
+       Outfile2.write((char *) &a ,sizeof(double));
+       Outfile2.write((char *) &temp ,sizeof(double));
+       //                                                                                           
+
+       double *val1=new double[2];
+       double *val2=new double[2];
+        
+       for(int ix=0; ix<N; ix++)
+        {
+            for(int iy=0; iy<N; iy++)
+            {
+                for(int a=0; a<3; a++)
+                {
+                    for(int b=0; b<3; b++)
+                    {
+                        int indx = N*iy+ix;
+                        val1[0] = (lat->cells[indx]->getU()).getRe(a*Nc+b);
+                        val1[1] = (lat->cells[indx]->getU()).getIm(a*Nc+b);
+                        val2[0] = (lat->cells[indx]->getU2()).getRe(a*Nc+b);
+                        val2[1] = (lat->cells[indx]->getU2()).getIm(a*Nc+b);
+                        
+                       // std::cout << COMPLEX(val1[0],val1[1]) << std::endl;
+                        
+                        Outfile1.write((char *) val1 ,2*sizeof(double));
+                        Outfile2.write((char *) val2 ,2*sizeof(double));
+                    }
+                }
+            }
+        }
+        
+        if(Outfile1.good()==false || Outfile2.good()==false)
+        {
+            std::cerr << "#CRTICAL ERROR -- BINARY OUTPUT OF VECTOR CURRENTS FAILED" << std::endl;
+            exit(1);
+        }
+        
+        
+        delete [] val1;
+        delete [] val2;
+        
+        Outfile1.close();
+        Outfile2.close();
+
+
+   } // end binary output
   } 
   // --------
 

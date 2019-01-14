@@ -33,10 +33,11 @@ int main(int argc, char *argv[])
   int size;
 
   //initialize MPI
-  MPI::Init(argc, argv);
-  
-  rank = MPI::COMM_WORLD.Get_rank(); //number of current processor
-  size = MPI::COMM_WORLD.Get_size(); //total number of processors
+  MPI_Init(&argc, &argv);
+  MPI_Comm_rank (MPI_COMM_WORLD, &rank);/* get current process id */  
+  MPI_Comm_size (MPI_COMM_WORLD, &size);/* get number of processes */
+  //  rank = MPI::COMM_WORLD.Get_rank(); //number of current processor
+  //size = MPI::COMM_WORLD.Get_size(); //total number of processors
 
   // welcome
   if(rank==0)

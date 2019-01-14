@@ -1,5 +1,5 @@
 # ===========================================================================
-#  Makefile for MUSIC                                 Chun Shen Dec. 12, 2014
+#  Makefile for IP-Glasma                             
 # ===========================================================================
 ##
 ##  Environments :	MAIN	= 	main sourcefile	
@@ -13,7 +13,7 @@
 CXX := mpicxx
 #CFLAGS= -Wall -g -O2 -qopenmp $(shell gsl-config --cflags)
 # -fsanitize=address -qopt-report=5 -qopt-report-phase:vec
-CFLAGS= -g -Wall -std=c++11 -O3 -malign-data=cacheline -finline-functions -march=native -fopenmp $(shell gsl-config --cflags) -DDOCTEST_CONFIG_DISABLE
+CFLAGS= -g -Wall -std=c++11 -O3 -finline-functions -march=native -fopenmp $(shell gsl-config --cflags) -DDOCTEST_CONFIG_DISABLE
 
 RM		=	rm -f
 O               =       .o

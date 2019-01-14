@@ -451,6 +451,12 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   // do evolution
   for (int it=1; it<=itmax; it++)
     {
+      if(it == 1 || it == 2 || it==floor(it1) || it==floor(it2) || it==floor(itmax))
+	{	  
+	  Tmunu(lat,group,param,it);
+          u(lat,group,param,it); // computes flow velocity and correct energy density 
+	}
+
       if(it%10==0)
 	cout << endl << "Evolving to time " << it*a*dtau << " fm/c" << endl << endl;  
       // evolve from time tau-dtau/2 to tau+dtau/2 
@@ -468,12 +474,6 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 	  evolvePi(lat, bufferlat, group, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
 	  evolveE(lat, bufferlat, group, param, dtau/2., (it)*dtau);
   	}
-
-      if(it == 1 || it==floor(it1) || it==floor(it2) || it==floor(itmax))
-	{	  
-	  Tmunu(lat,group,param,it);
-          u(lat,group,param,it); // computes flow velocity and correct energy density 
-	}
 
       if(it==1 && param->getWriteOutputs() == 3)
 	{	  
@@ -637,7 +637,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 	}
      
       int success=1;
-      if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
+      if(it==3 || it==floor(it1) || it==floor(it2) || it==itmax)
 	{	  
           success = multiplicity(lat,group,param,it);
 	}

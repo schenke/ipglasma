@@ -73,9 +73,9 @@ public:
   // Constructor.
   FFT(const int nn[]) 
     {
-      if(fftw_init_threads()==0)
-        cerr << "Error initializing multi-threaded fftw." << endl;
-      fftw_plan_with_nthreads(omp_get_max_threads());
+      //      if(fftw_init_threads()==0)
+      //  cerr << "Error initializing multi-threaded fftw." << endl;
+      //fftw_plan_with_nthreads(omp_get_max_threads());
       input = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
       output = (fftw_complex*) fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
       p = fftw_plan_dft_2d(nn[0], nn[1], input, output, FFTW_FORWARD, FFTW_MEASURE);
@@ -93,7 +93,7 @@ public:
       fftw_destroy_plan(p);
       fftw_destroy_plan(pback);
       fftw_free(input); fftw_free(output);
-      fftw_cleanup_threads();
+      //fftw_cleanup_threads();
     };
   void fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int ndim, const int isign);
   void fftnArray(complex<double> **data, complex<double> **outdata, const int nn[], const int ndim, const int isign, const int mDim);

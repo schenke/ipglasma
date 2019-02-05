@@ -780,6 +780,18 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  nucleusB.at(i).phi = 2*M_PI*random->genrand64_real2();
 	}      
     }
+  else
+    {
+      for (int i = 0; i<A1; i++) 
+	{
+	  nucleusA.at(i).phi = 0.;
+	}      
+      
+      for (int i = 0; i<A2; i++) 
+	{
+	  nucleusB.at(i).phi = 0.;
+	}      
+    }
 
   //  cout << "BG=" << BG << endl;
 

@@ -1128,7 +1128,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 			{
 			  // nucleus A 
 			  lat->cells[localpos]->setg2mu2A(QsA*QsA/param->getQsmuRatio()/param->getQsmuRatio()
-						     *a*a/hbarc/hbarc/param->getg()); // lattice units? check
+						     *a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
 			  
 			  
 			  Ydeviation = localrapidity - log(0.01/(QsA*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(yIn)));

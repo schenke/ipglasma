@@ -259,6 +259,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
   double maxtime = param->getMaxtime(); // maxtime is in fm
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
 
+  double Etot = 0.;
+
   // output for hydro
   if(param->getWriteOutputs() > 0)
     {
@@ -295,7 +297,14 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       string euH_name;
       euH_name = streuH_name.str();
 
+      stringstream strEtot_name;
+      strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+      string Etot_name;
+      Etot_name = strEtot_name.str();
+
       ofstream foutEps2(euH_name.c_str(),ios::out); 
+      ofstream foutEtot(Etot_name.c_str(),ios::out); 
+
       foutEps2 << "# dummy " << 1 << " etamax= " << heta
 	       << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
 	       << " dx= " << ha << " dy= " << ha << endl; 
@@ -556,6 +565,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      else
 			gfactor = 1.;
 		      
+                      Etot += abs(0.1973269718*resultE*gfactor) * a * a * it*dtau*a;
 		     	      
 		      if(abs(0.1973269718*resultE*gfactor) > 0.0000000001)
 			foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
@@ -583,8 +593,11 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 	  foutEps2 << endl;
 	}
        foutEps2.close();
+       cout << "Etot = " << Etot << " GeV " << endl;
+       foutEtot <<  Etot << endl;
+       foutEtot.close();
     }
-
+  
   cout << "Wrote outputs" << endl;
   // done output for hydro
 }

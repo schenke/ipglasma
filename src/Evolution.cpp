@@ -442,8 +442,8 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   evolveU(lat, bufferlat, group, param, dtau, 0.);
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  int it1 = static_cast<int>(floor(0.2/(a*dtau)+1e-10));
-  int it2 = static_cast<int>(floor(0.4/(a*dtau)+1e-10));
+  int it1 = static_cast<int>(floor(0.1/(a*dtau)+1e-10));
+  int it2 = static_cast<int>(floor(0.2/(a*dtau)+1e-10));
     
   cout << "Starting evolution" << endl;
   cout << "itmax=" << itmax << endl;

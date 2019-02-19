@@ -542,7 +542,8 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
       exit(1);
     }
 
-  if ( T > Qs2Nuclear[iTpmax-1][iymaxNuc-1] )
+  //  if ( T > Qs2Nuclear[iTpmax-1][iymaxNuc-1] )
+  if ( T > Tlist[iTpmax-1] )
     {
       cout << "T=" << T << ", maximal T in table=" << Tlist[iTpmax-1] << endl;
       cout << " [Init:getNuclearQs2]:ERROR: out of range. Exiting." << endl;
@@ -555,6 +556,7 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
       return 0.;
     }
   
+
   for(int iT=0; iT<iTpmax; iT++)
     {
       if (T>=Tlist[iT] && T<Tlist[iT+1])
@@ -575,7 +577,7 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
     {
       cout << check << ": T=" << T << endl ;
       cerr << " [Init:getNuclearQs2]:ERROR: something went wrong in determining the value of Qs^2. Using maximal T_p" << endl;
-      value = Tlist[iTpmax-1];
+      value = (fracy*Qs2Nuclear[iTpmax][posy+1]+(1.-fracy)*Qs2Nuclear[iTpmax][posy]);
     }
  
   return value;
@@ -654,7 +656,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       }
       else
         gaussA[i][0]=1.; 
-   }    
+    }    
   for (int i = 0; i<A2; i++) 
     {
       if (param->getUseConstituentQuarkProton()>0)
@@ -824,8 +826,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    {
               if (param->getShiftConstituentQuarkProtonOrigin())
               {
-	          xq[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
-	          yq[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+                xq[i][iq] -= avgxq/double(param->getUseConstituentQuarkProton());
+                yq[i][iq] -= avgyq/double(param->getUseConstituentQuarkProton());
               }
 	    }
 	}
@@ -853,8 +855,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    {
               if (param->getShiftConstituentQuarkProtonOrigin())
               {
-	          xq2[i][iq] -= avgxq/param->getUseConstituentQuarkProton();
-	          yq2[i][iq] -= avgyq/param->getUseConstituentQuarkProton();
+                xq2[i][iq] -= avgxq/double(param->getUseConstituentQuarkProton());
+                yq2[i][iq] -= avgyq/double(param->getUseConstituentQuarkProton());
               }
 	    }
 	}
@@ -906,9 +908,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  bp2 /= hbarc*hbarc;     	  
 		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
 		}
-
                 lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
-
 	    }
 	  
 	  // nucleus B 

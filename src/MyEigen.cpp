@@ -565,7 +565,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      else
 			gfactor = 1.;
 		      
-                      Etot += abs(0.1973269718*resultE*gfactor) * a * a * it*dtau*a;
+                      Etot += abs(0.1973269718*resultE*gfactor) * ha * ha * it*dtau*a;
 		     	      
 		      if(abs(0.1973269718*resultE*gfactor) > 0.0000000001)
 			foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 

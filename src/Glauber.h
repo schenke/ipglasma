@@ -88,7 +88,7 @@ class Glauber{
     double VInterpolate(double x, double *Vx, double *Vy, int ymax);
     int FindXorg(double x, double *Vx, int ymax);
     double *MakeVx(double down, double up, int maxi_num);
-    double *MakeVy(string st, double *vx, int maxi_num);
+    double *MakeVy(double *vx, int maxi_num);
     double *ReadInVx(char *, int maxi_num, int quiet);
     double *ReadInVy(char *, int maxi_num, int quiet);
     

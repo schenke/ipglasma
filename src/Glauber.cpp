@@ -313,9 +313,7 @@ double Glauber::FourPtInterpolate(double x, double *Vx, double *Vy, double h, in
 void Glauber::MakeCoeff(double *a, double *b, double *c, double *d, 
 			double *Vy, double *Vx, double h, int x_org)
 {
- double f0, f1, f2, f3, x1, x2, x3;
- double x1sqr, x2sqr, x3sqr;
- double x1cube, x2cube, x3cube;
+ double f0, f1, f2, f3;
 
  f0 = Vy[x_org];
  f1 = Vy[x_org+1];
@@ -334,7 +332,7 @@ void Glauber::MakeCoeff(double *a, double *b, double *c, double *d,
 
 int Glauber::FindXorg(double x, double *Vx, int ymax)
 {
- int i, ymid, x_org;
+ int i, x_org;
 
  i = 0;
  while(Vx[i] < x) i++;
@@ -392,14 +390,13 @@ double *Glauber::MakeVx(double down, double up, int maxi_num)
 }/* MakeVx */
 
 
-double *Glauber::MakeVy(string st, double *vx, int maxi_num)
+double *Glauber::MakeVy(double *vx, int maxi_num)
 {
- int i, di;
+ int i;
  static double *vy;
- static char *dst;
 
- if(maxi_num > 200) di = 100;
- if(maxi_num <= 200) di = 20;
+ // if(maxi_num > 200) di = 100;
+ // if(maxi_num <= 200) di = 20;
  
  vy = util->vector_malloc(maxi_num + 1);
 
@@ -465,7 +462,7 @@ double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet)
 
 double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet)
 {
- static double y, *vy, x;
+ static double y, *vy;
  int i;
  FILE *input;
  static char *s, *sy;
@@ -512,16 +509,9 @@ double Glauber::InterNuPInSP(double s)
  static double up, down; 
  static int maxi_num; 
  static double *vx, *vy;
- int i;
- double dx;
- FILE *output;
  ind++;
 
- string st;
-
  if(GlauberData.Projectile.A == 1.0) return 0.0;
-
- st = "./NuPInSP.dat";
 
  if(ind == 1)
   {
@@ -530,7 +520,7 @@ double Glauber::InterNuPInSP(double s)
     down = 0.0; 
     maxi_num = GlauberData.InterMax; 
     vx = MakeVx(down, up, maxi_num);
-    vy = MakeVy(st, vx, maxi_num);
+    vy = MakeVy(vx, maxi_num);
   }/* if ind */
  
  if(s > up) return 0.0;
@@ -551,16 +541,9 @@ double Glauber::InterNuTInST(double s)
   static double up, down; 
   static int maxi_num; 
   static double *vx, *vy;
-  int i;
-  double dx;
-  FILE *output;
   
   ind++;
   if(GlauberData.Target.A == 1.0) return 0.0;
-  
-  string st;
-  
-  st = "./NuTInST.dat";
   
   if(ind == 1) 
     {
@@ -571,7 +554,7 @@ double Glauber::InterNuTInST(double s)
       maxi_num = GlauberData.InterMax; 
       
       vx = MakeVx(down, up, maxi_num);
-      vy = MakeVy(st, vx, maxi_num);
+      vy = MakeVy(vx, maxi_num);
     }/* if ind */
   
   // cout << *vx << " " << *vy << endl;
@@ -586,10 +569,9 @@ double Glauber::InterNuTInST(double s)
 
 void Glauber::CalcRho(Nucleus *nucleus)
 {
- double f, R_WS, rho;
+ double f, R_WS;
  double down;
  int count;
- static int ind = 0;
 /* to pass to AnumIntegrand */ 
  
  Nuc_WS = nucleus;
@@ -607,6 +589,9 @@ void Glauber::CalcRho(Nucleus *nucleus)
    f = Anum3Fermi(R_WS)/(nucleus->rho_WS);
  else if (nucleus->AnumFunc==8)
    f = AnumHulthen(R_WS)/(nucleus->rho_WS);
+ else
+   f = Anum3Fermi(R_WS)/(nucleus->rho_WS);
+ 
  nucleus->rho_WS = (nucleus->A)/f;
  //cout << " nucleus->rho_WS=" << nucleus->rho_WS << endl;
 }/* CalcRho */
@@ -618,7 +603,6 @@ double Glauber::NuInS(double s)
 {
  double y;
  int count;
- static int ind = 0;
  int id;
 
 /* to pass to the DensityFunc's */
@@ -680,11 +664,10 @@ double Glauber::Anum3FermiInt(double xi)
 
 double Glauber::NuInt3Fermi(double xi)
 {
- double f, argexp;
+ double f;
  double c;
  double z, r, s;
  double w_WS, R_WS, a_WS, rho;
- static int ind = 0;
 
  a_WS = Nuc_WS->a_WS;
  w_WS = Nuc_WS->w_WS;
@@ -769,11 +752,10 @@ double Glauber::Anum3GaussInt(double xi)
 
 double Glauber::NuInt3Gauss(double xi)
 {
- double f, argexp;
+ double f;
  double c;
  double z_sqr, r_sqr, s;
  double w_WS, R_WS, a_WS, rho;
- static int ind = 0;
 
  a_WS = Nuc_WS->a_WS;
  w_WS = Nuc_WS->w_WS;
@@ -853,10 +835,9 @@ double Glauber::Anum2HOInt(double xi)
 
 double Glauber::NuInt2HO(double xi)
 {
- double f, argexp;
+ double f;
  double z_sqr, r_sqr, s;
  double w_WS, R_WS, a_WS, rho;
- static int ind = 0;
  
  a_WS = Nuc_WS->a_WS;
  w_WS = Nuc_WS->w_WS;
@@ -890,8 +871,7 @@ double Glauber::NuInt2HO(double xi)
 
 double Glauber::AnumHulthen(double R_WS)
 {
- int count=0;
- double up, down, a_WS, b_WS, rho, f, norm;
+ double a_WS, b_WS, rho, f;
 
  /* R_WS is dummy */
 
@@ -922,11 +902,9 @@ double Glauber::AnumHulthenInt(double xi)
 
 double Glauber::NuIntHulthen(double xi)
 {
- double f, g, argexp;
- double c;
+ double f, g;
  double z, r, s;
  double b_WS, R_WS, a_WS, rho;
- static int ind = 0;
 
  a_WS = Nuc_WS->a_WS;
  b_WS = Nuc_WS->w_WS;
@@ -958,7 +936,7 @@ double Glauber::NuIntHulthen(double xi)
 double Glauber::integral (int id, double down, double up, double tol, int *count)
 {
   double dx, y, g1[7];
-  int i, j;
+  int i;
   
   if (down == up) y = 0.0;
   else
@@ -987,7 +965,7 @@ double Glauber::qnc7(int id, double tol, double down, double dx, double *f_of,
 		     double pre_sum, double area, int *count)
 {
   int i;
-  double x, left_sum, right_sum, ans;
+  double left_sum, right_sum, ans;
   static double w[] = 
     {41.0/140.0, 54.0/35.0, 27.0/140.0, 68.0/35.0, 27.0/140, 54.0/35.0,
        41.0/140.0};
@@ -1182,7 +1160,7 @@ double Glauber::qnc7(int id, double tol, double down, double dx, double *f_of,
 
 double Glauber::OLSIntegrand(double s)
 {
-  double sum, arg, x, r, sb;
+  double sum, arg, x, r;
   int k, m;
   m = 20;
   sum = 0.0;
@@ -1273,7 +1251,6 @@ ReturnValue Glauber::SampleTARejection(Random *random, int PorT)
   ReturnValue returnVec;
   
   double r, x, y, tmp;
-  double ratio;
   double phi;
   double A=1.2*GlauberData.SigmaNN/4.21325504715; // increase the envelope for larger sigma_inel (larger root_s) (was originally written
   // for root(s)=200 GeV, hence the cross section of 4.21325504715 fm^2 (=42.13 mb)

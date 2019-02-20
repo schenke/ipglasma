@@ -862,103 +862,149 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	}
     }
 
-//add all T_p's (new in version 1.2)
-#pragma omp parallel
-  {
-    double x, xm;
-    double y, ym;
-    int localpos;
-    double bp2,T, phi;
 
-#pragma omp for   
-  for(int ix=0; ix<N; ix++) // loop over all positions
+  // test what a smmoth Woods-Saxon would give
+  if(param->getUseSmoothNucleus()==1)
     {
-      x = -L/2.+a*ix;
-      for(int iy=0; iy<N; iy++)
-	{
-	  y = -L/2.+a*iy;
-	   
-	  localpos = ix*N+iy;
-
-	
-	  // nucleus A 
-	  lat->cells[localpos]->setTpA(0.);
-          if(param->getUseSmoothNucleus()==1)
+      cout << "Using smooth nucleus for test purposes - use only with Au Au at this point. Does not include deformation." << endl;
+      double x;
+      double y;
+      double T;
+      double localpos;
+      double normA = 0.;
+      double normB = 0.;
+      for(int ix=0; ix<N; ix++) // loop over all positions
+        {
+          x = -L/2.+a*ix;
+          for(int iy=0; iy<N; iy++)
             {
-
-            }
-          else
-            {
-              for (int i = 0; i<A1; i++) 
-                {
-                  xm = nucleusA.at(i).x;
-                  ym = nucleusA.at(i).y;
-                  
-                  if(param->getUseConstituentQuarkProton()>0)
-                    {
-                      T = 0.;
-                      for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
-                        {
-                          bp2 = (xm+xq[i][iq]-x)*(xm+xq[i][iq]-x)+(ym+yq[i][iq]-y)*(ym+yq[i][iq]-y);
-                          bp2 /= hbarc*hbarc;
-                          
-                          T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
-                        }
-                    }
-                  else
-                    {
-                      phi = nucleusA.at(i).phi;
-                      
-                      bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
-                      bp2 /= hbarc*hbarc;     	  
-                      T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
-                    }
-                  lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
-                }
-            }
-
-	  // nucleus B 
-	  lat->cells[localpos]->setTpB(0.);
-          if(param->getUseSmoothNucleus()==1)
-            {
+              y = -L/2.+a*iy;
               
-            }
-          else
-            {
-              for (int i = 0; i<A2; i++) 
-                {
-                  xm = nucleusB.at(i).x;
-                  ym = nucleusB.at(i).y;
-                  
-                  if(param->getUseConstituentQuarkProton()>0)
-                    {
-                      T = 0.;
-                      for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
-                        {
-                          bp2 = (xm+xq2[i][iq]-x)*(xm+xq2[i][iq]-x)+(ym+yq2[i][iq]-y)*(ym+yq2[i][iq]-y);
-                          bp2 /= hbarc*hbarc;
-                          
-                          T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
-                        }
-                    }
-                  else
-                    {
-                      phi = nucleusB.at(i).phi;
-                      
-                      bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
-                      bp2 /= hbarc*hbarc;
-                      
-                      T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
-                    }
-                  
-                  lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p	      
-                }
+              localpos = ix*N+iy;
+              r = sqrt(x*x+y*y);
+ 
+              // nucleus A 
+              T = glauber->InterNuTInST(r);
+              lat->cells[localpos]->setTpA(T);
+              
+              normA+=T*a*a;
+
+              // nucleus B
+              T = glauber->InterNuPInSP(r);
+              lat->cells[localpos]->setTpB(T);
+
+              normB+=T*a*a;
+             
             }
         }
+      for(int ix=0; ix<N; ix++) // loop over all positions
+        {
+          for(int iy=0; iy<N; iy++)
+            {
+              localpos = ix*N+iy;
+              lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()/normA*197.*hbarc*hbarc);
+              lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()/normB*197.*hbarc*hbarc);
+            }
+        }
+
+      // double normTest=0.;
+      // for(int ix=0; ix<N; ix++) // loop over all positions
+      //   {
+      //     for(int iy=0; iy<N; iy++)
+      //       {
+      //         localpos = ix*N+iy;
+      //         normTest+=lat->cells[localpos]->getTpA()*a*a;
+      //       }
+      //   }
+      // cout << "normTest=" << normTest << endl;
+      param->setSuccess(1);
     }
-  }
-  
-  
+  else
+    {
+     
+//add all T_p's (new in version 1.2)
+#pragma omp parallel
+      {
+        double x, xm;
+        double y, ym;
+        int localpos;
+        double bp2,T, phi;
+        
+#pragma omp for   
+        for(int ix=0; ix<N; ix++) // loop over all positions
+          {
+            x = -L/2.+a*ix;
+            for(int iy=0; iy<N; iy++)
+              {
+                y = -L/2.+a*iy;
+                
+                localpos = ix*N+iy;
+                
+                // nucleus A 
+                lat->cells[localpos]->setTpA(0.);
+                for (int i = 0; i<A1; i++) 
+                  {
+                    xm = nucleusA.at(i).x;
+                    ym = nucleusA.at(i).y;
+                    
+                    if(param->getUseConstituentQuarkProton()>0)
+                      {
+                        T = 0.;
+                        for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
+                          {
+                            bp2 = (xm+xq[i][iq]-x)*(xm+xq[i][iq]-x)+(ym+yq[i][iq]-y)*(ym+yq[i][iq]-y);
+                            bp2 /= hbarc*hbarc;
+                            
+                            T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
+                          }
+                      }
+                    else
+                      {
+                        phi = nucleusA.at(i).phi;
+                        
+                        bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
+                        bp2 /= hbarc*hbarc;     	  
+                        T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
+                      }
+                    lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
+                  }
+                
+                
+                // nucleus B 
+                lat->cells[localpos]->setTpB(0.);
+                for (int i = 0; i<A2; i++) 
+                  {
+                    xm = nucleusB.at(i).x;
+                    ym = nucleusB.at(i).y;
+                    
+                    if(param->getUseConstituentQuarkProton()>0)
+                      {
+                        T = 0.;
+                        for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
+                          {
+                            bp2 = (xm+xq2[i][iq]-x)*(xm+xq2[i][iq]-x)+(ym+yq2[i][iq]-y)*(ym+yq2[i][iq]-y);
+                            bp2 /= hbarc*hbarc;
+                            
+                            T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
+                          }
+                      }
+                    else
+                      {
+                        phi = nucleusB.at(i).phi;
+                        
+                        bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
+                        bp2 /= hbarc*hbarc;
+                        
+                        T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
+                      }
+                    
+                    lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p	      
+                  }
+              }
+          }
+      }
+    }
+      
   stringstream strNcoll_name;
   strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
   string Ncoll_name;  Ncoll_name = strNcoll_name.str();

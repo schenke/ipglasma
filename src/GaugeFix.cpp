@@ -12,23 +12,18 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
   int nn[2];
   nn[0] = N;
   nn[1] = N;
-  int pos, posX, posY, posmX, posmY;
+  int pos, posmX, posmY;
   int Nc = param->getNc();
   int Nc2m1 = Nc*Nc-1;
-  int maxi=0;
-  int maxj=0;
   
   Matrix one(Nc,1.);
   Matrix oldg(Nc), g(Nc), gdag(Nc), temp(Nc);
   Matrix divA(Nc), divAdag(Nc);
   Matrix divANew(Nc);
-  double energy=0.;
   Matrix Uplaq(Nc), U(Nc), UDx(Nc), UDy(Nc), UDxMx(Nc), UDyMy(Nc) , Ux(Nc), Uy(Nc), UxMx(Nc), UyMy(Nc);
   Matrix UmxDag(Nc), UmyDag(Nc);
-  double tr;
 
   int max_gfiter = steps;
-  double maxres = 0.;
   
   Matrix zero(Nc,0.);
   double gresidual = 10000.;
@@ -47,8 +42,6 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
   for (int gfiter=0; gfiter<max_gfiter; gfiter++)
     {
       gresidual = 0.;
-      maxres = 0.;
-      energy=0.;
       for(int i=0; i<N; i++)
 	{
 	  for(int j=0; j<N; j++)
@@ -62,16 +55,7 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
 		posmY = i*N+(j-1);
 	      else
 		posmY = i*N+(N-1);
-	      
-	      if(i<N-1)
-		posX = (i+1)*N+j;
-	      else
-		posX = j;
-	      if(j<N-1)
-		posY = i*N+(j+1);
-	      else
-		posY = i*N;
-	      
+	      	      
 	      Ux = UDx = lat->cells[pos]->getUx();
 	      Uy = UDy = lat->cells[pos]->getUy();
 	      UxMx = UDxMx = lat->cells[posmX]->getUx();

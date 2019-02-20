@@ -10,10 +10,7 @@
 
 void FFT::fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int ndim, const int isign)
 {
-    unsigned i1, i2rev, i3rev, ibit;
-    unsigned ip2, ifp1, ifp2, k2, n;
-    unsigned nprev = 1, nrem, ntot = nn[0]*nn[1];
-    register unsigned i2, i3;
+    unsigned ntot = nn[0]*nn[1];
     int pos, newpos;
     vector<complex<double> >::iterator position;	
 		
@@ -146,10 +143,7 @@ void FFT::fftnVector(vector<complex<double> > **data, vector<complex<double> > *
 
 void FFT::fftnArray(complex<double> **data, complex<double>  **outdata, const int nn[], const int ndim, const int isign, const int mDim)
 {
-    unsigned i1, i2rev, i3rev, ibit;
-    unsigned ip2, ifp1, ifp2, k2, n;
-    unsigned nprev = 1, nrem, ntot = nn[0]*nn[1];
-    register unsigned i2, i3;
+    unsigned ntot = nn[0]*nn[1];
     int pos, newpos;
 		
     //    cout << "size=" << mDim << endl;
@@ -282,10 +276,7 @@ void FFT::fftnArray(complex<double> **data, complex<double>  **outdata, const in
 template <class T>
 void FFT::fftn(T **data, T **outdata, const int nn[], const int ndim, const int isign)
 {
-    unsigned i1, i2rev, i3rev, ibit;
-    unsigned ip2, ifp1, ifp2, k2, n;
-    unsigned nprev = 1, nrem, ntot = ntot = nn[0]*nn[1];
-    register unsigned i2, i3;
+    unsigned ntot = nn[0]*nn[1];
     int mDim, pos, newpos; // matrix dimension
     mDim = data[0]->getNDim();
     
@@ -419,10 +410,7 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int ndim, const int 
 template <class T>
 void FFT::fftnMany(T **data, T **outdata, const int nn[], const int ndim, const int isign)
 {
-    unsigned i1, i2rev, i3rev, ibit;
-    unsigned ip2, ifp1, ifp2, k2, n;
-    unsigned nprev = 1, nrem, ntot = ntot = nn[0]*nn[1];
-    register unsigned i2, i3;
+    unsigned ntot = nn[0]*nn[1];
     int mDim, pos, newpos; // matrix dimension
     mDim = data[0]->getNDim();
     
@@ -563,10 +551,7 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int ndim, const 
 
 void FFT::fftnComplex(complex<double> *data, complex<double> *outdata, const int nn[], const int ndim, const int isign)
 {
-    unsigned i1, i2rev, i3rev, ibit;
-    unsigned ip2, ifp1, ifp2, k2, n;
-    unsigned nprev = 1, nrem, ntot = ntot = nn[0]*nn[1];
-    register unsigned i2, i3;
+    unsigned ntot = nn[0]*nn[1];
     int mDim, pos, newpos; // matrix dimension
     mDim = 1;
     

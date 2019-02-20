@@ -64,7 +64,7 @@ double Fragmentation::kkp(int ih, int iset, double x, double qs)
   double dpg, dpu, dps, dpc, dpb;
   double dkg, dku, dks, dkc, dkb;
   double dprg, dpru, dprs, dprc, dprb;
-  double dkd, dk0d, dk0b, dk0c;
+  double dkd;
 
   // --- LO FFs
   if (iset == 0) 
@@ -707,14 +707,12 @@ double Fragmentation::kkp(int ih, int iset, double x, double qs)
       dpb  = 0.;
       dkb  = 0.;
       dprb = 0.;
-      dk0b = 0.;
     }
   if (qs < rmcc) 
     {
       dpc  = 0.;
       dkc  = 0.;
       dprc = 0.;
-      dk0c = 0.;
     }
   if (ih == 1) 
     {

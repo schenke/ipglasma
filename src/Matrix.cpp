@@ -543,7 +543,7 @@ double Matrix::FrobeniusNorm()
   int n = this->getNDim();
   Matrix Q(n);
   Q = *this;
-  double norm;
+  double norm=0.;
  
   for(int i=0; i<n; i++)
     { 
@@ -721,7 +721,7 @@ Matrix& Matrix::logm()
    Matrix L(n);
    int k, p, itk;
    double normdiff;
-   int j1, j2;
+   int j1, j2=0.;
    Matrix M(n);
    int m;
    

@@ -426,7 +426,7 @@ double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet)
  int i;
  FILE *input;
  static char *s, *sx;
- int bytes_read;
+ //int bytes_read;
  s = util->char_malloc(120);
  sx = util->char_malloc(120);
  
@@ -438,18 +438,18 @@ double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet)
    }
  
  input = fopen(file_name, "r");
- bytes_read=fscanf(input, "%s", s);
+ fscanf(input, "%s", s);
  while(strcmp(s, "EndOfData") != 0)
   {
-   bytes_read=fscanf(input, "%s", sx);
-   bytes_read=fscanf(input, "%s", s);
+   fscanf(input, "%s", sx);
+   fscanf(input, "%s", s);
   }
 
  for(i=0; i<=maxi_num; i++)
   {
-   bytes_read=fscanf(input, "%lf", &x);
+   fscanf(input, "%lf", &x);
    vx[i] = x;
-   bytes_read=fscanf(input, "%lf", &x);
+   fscanf(input, "%lf", &x);
   }
  fclose(input);
 
@@ -466,7 +466,7 @@ double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet)
  int i;
  FILE *input;
  static char *s, *sy;
- int bytes_read;
+ // int bytes_read;
  s = util->char_malloc(120);
  sy = util->char_malloc(120);
  
@@ -478,17 +478,17 @@ double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet)
  }
  
  input = fopen(file_name, "r");
- bytes_read=fscanf(input, "%s", s);
+ fscanf(input, "%s", s);
  while(strcmp(s, "EndOfData") != 0)
   {
-   bytes_read=fscanf(input, "%s", sy);
-   bytes_read=fscanf(input, "%s", s);
+   fscanf(input, "%s", sy);
+   fscanf(input, "%s", s);
   }
 
  for(i=0; i<=maxi_num; i++)
   {
-   bytes_read=fscanf(input, "%lf", &y);
-   bytes_read=fscanf(input, "%lf", &y);
+   fscanf(input, "%lf", &y);
+   fscanf(input, "%lf", &y);
    vy[i] = y;
   }
  fclose(input);
@@ -570,14 +570,10 @@ double Glauber::InterNuTInST(double s)
 void Glauber::CalcRho(Nucleus *nucleus)
 {
  double f, R_WS;
- double down;
- int count;
 /* to pass to AnumIntegrand */ 
  
  Nuc_WS = nucleus;
  
- down = 0.0;
- count = 0;
 
  R_WS = nucleus->R_WS;   
  
@@ -620,10 +616,10 @@ double Glauber::NuInS(double s)
 double Glauber::Anum3Fermi(double R_WS)
 {
  int count=0;
- double up, down, a_WS, w_WS, rho, f;
+ double up, down, a_WS, rho, f;
 
  a_WS = Nuc_WS->a_WS;
- w_WS = Nuc_WS->w_WS;
+ // w_WS = Nuc_WS->w_WS;
  rho = Nuc_WS->rho_WS;
 
 /* to pass to Anumintegrand */
@@ -702,10 +698,10 @@ double Glauber::NuInt3Fermi(double xi)
 double Glauber::Anum3Gauss(double R_WS)
 {
  int count=0;
- double up, down, a_WS, w_WS, rho, f;
+ double up, down, a_WS, rho, f;
 
  a_WS = Nuc_WS->a_WS;
- w_WS = Nuc_WS->w_WS;
+ // w_WS = Nuc_WS->w_WS;
  rho = Nuc_WS->rho_WS;
 
 /* to pass to Anumintegrand */
@@ -791,10 +787,10 @@ double Glauber::NuInt3Gauss(double xi)
 double Glauber::Anum2HO(double R_WS)
 {
  int count=0;
- double up, down, a_WS, w_WS, rho, f;
+ double up, down, a_WS, rho, f;
 
  a_WS = Nuc_WS->a_WS;
- w_WS = Nuc_WS->w_WS; /* take this to be alpha */
+ // w_WS = Nuc_WS->w_WS; /* take this to be alpha */
  rho = Nuc_WS->rho_WS;
 
  down = 0.0;
@@ -837,11 +833,11 @@ double Glauber::NuInt2HO(double xi)
 {
  double f;
  double z_sqr, r_sqr, s;
- double w_WS, R_WS, a_WS, rho;
+ double w_WS, a_WS, rho;
  
  a_WS = Nuc_WS->a_WS;
  w_WS = Nuc_WS->w_WS;
- R_WS = Nuc_WS->R_WS;
+ // R_WS = Nuc_WS->R_WS;
  rho = Nuc_WS->rho_WS;
 
 /* xi = exp(-z*z/a/a), r = sqrt(z^2 + s^2) */
@@ -904,11 +900,11 @@ double Glauber::NuIntHulthen(double xi)
 {
  double f, g;
  double z, r, s;
- double b_WS, R_WS, a_WS, rho;
+ double b_WS, a_WS, rho;
 
  a_WS = Nuc_WS->a_WS;
  b_WS = Nuc_WS->w_WS;
- R_WS = Nuc_WS->R_WS;
+ // R_WS = Nuc_WS->R_WS;
  rho = Nuc_WS->rho_WS;
 
 /* xi = exp(-z a), r = sqrt(z^2 + s^2) */

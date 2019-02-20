@@ -18,7 +18,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
   gsl_complex square;
   gsl_complex factor;
   gsl_complex euklidiansquare;
-  double eps;
+  double eps=0.;
   gsl_complex z_aux;
   gsl_complex tau2;
   int foundU;
@@ -27,7 +27,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
   double averageueta=0.;
   double averageeps=0.;
   count = 0;
-  double uxd, uyd, uetad;
   
   for (int si=0; si<N; si++)
     {
@@ -256,8 +255,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
   cout << it*dtau*a << " average u^y=" << sqrt(averageuy/averageeps) << endl;
   cout << it*dtau*a << " average tau u^eta=" << sqrt(averageueta/averageeps) << endl;
 
-  double maxtime = param->getMaxtime(); // maxtime is in fm
-  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
+  //  double maxtime = param->getMaxtime(); // maxtime is in fm
+  //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
 
   double Etot = 0.;
 
@@ -267,7 +266,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       double alphas = param->getalphas();
       double g = param->getg();
       double gfactor;
-      double Qs;
       int hx = param->getSizeOutput();
       int hy = hx;
       int heta = param->getEtaSizeOutput();
@@ -275,7 +273,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       double deta = param->getDetaOutput();
       double c = param->getc();
       double muZero = param->getMuZero();
-      double g2mu2A, g2mu2B;
       double PI = param->getPi();
 
       if(hL>L)
@@ -283,7 +280,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       
       int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3;
       double fracx, fracy, x1, x2;
-      double xlow, xhigh, ylow, yhigh;
+      double xlow, ylow;
       int pos4;
       double resultE, resultutau, resultux, resultuy, resultueta;
       double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
@@ -339,8 +336,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      xlow = -L/2.+a*xpos;
 		      ylow = -L/2.+a*ypos;
 		      
-		      xhigh = -L/2.+a*xposUp;
-		      yhigh = -L/2.+a*yposUp;
+		      //xhigh = -L/2.+a*xposUp;
+		      //yhigh = -L/2.+a*yposUp;
 		      
 		      fracx = (x-xlow)/ha;
 		      

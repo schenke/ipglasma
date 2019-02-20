@@ -72,8 +72,6 @@ void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, 
   // we evolve to tau+dtau
   const int Nc = param->getNc();
   const int N = param->getSize();
-  const double g = param->getg();
-
 
 #pragma omp parallel
   {
@@ -106,7 +104,6 @@ void Evolution::evolvePi(Lattice* lat, BufferLattice * bufferlat, Group* group, 
 {
   const int Nc = param->getNc();
   const int N = param->getSize();
-  const double g = param->getg();
 
 #pragma omp parallel 
   {
@@ -281,7 +278,6 @@ void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, dou
 {
   const int Nc = param->getNc();
   const int N = param->getSize();
-  const double g = param->getg();
 
   Matrix Ux(Nc);
   Matrix UxXm1(Nc);
@@ -366,23 +362,12 @@ void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, dou
 
 void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parameters *param)
 {
-  int nn[2];
   int Nc = param->getNc();
-  int pos, pos1, pos2, pos3, posx, posy, posxm, posym, posxmym;
-  int posX, posY, posXY;
-  int counts, countMe;
+  int pos;
   int N = param->getSize();
-  nn[0] = N;
-  nn[1] = N;
   double g = param->getg();
-  double epsilon;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
-  double avgEps;
-  double avgBl2;
-  double avgEl2;
-  double avgEt2;
-  double avgBt2;
   double x,y;
 
   Matrix one(Nc,1.);
@@ -413,9 +398,9 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   Matrix phiY(int(Nc),0.);
   Matrix pi(Nc);
 
-  double alphas;
+  double alphas=0.;
   double gfactor;
-  double Qs, g2mu2A, g2mu2B;
+  double Qs=0., g2mu2A, g2mu2B;
   double muZero = param->getMuZero();
   double c = param->getc();
   Matrix phiTildeX(Nc);
@@ -657,17 +642,11 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
 
   int N = param->getSize();
   int Nc = param->getNc(); 
-  int pos, posNew, posX, posY, posmX, posmY, posmXmY, posXY, posmXpY, pospXmY, pos2X, pos2Y, posX2Y, pos2XY;
+  int pos, posX, posY, posmX, posmY, posXY, posmXpY, pospXmY, pos2X, pos2Y, posX2Y, pos2XY;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
-  double Pi;
-  Pi = param->getPi();
-  double Ttautau=0.;
   double g = param->getg();
   double dtau = param->getdtau();
-  double alphas = param->getalphas();
-  double gfactor = g*g/(4.*3.141592654*alphas);
-  double maxtime =  param->getMaxtime();
   Matrix one(Nc,1.);
  
   Matrix Ux(Nc);
@@ -731,7 +710,7 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
   Matrix phiTildeXY2(Nc);
  
 
-  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
+  //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
 
   //set plaquette in every cell
   for (int i=0; i<N; i++)
@@ -1263,7 +1242,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
  
   // cutoff on energy density is 'cutoff' times Lambda_QCD^4
   int N = param->getSize();
-  int pos, posNew;
+  int pos;
   double rA, phiA, x, y;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
@@ -1276,7 +1255,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
   double maxEps = 0;
   double g = param->getg();
 
-  double g2mu2A, g2mu2B, gfactor, alphas, Qs;
+  double g2mu2A, g2mu2B, gfactor, alphas=0., Qs=0.;
   double c = param->getc();
   double muZero = param->getMuZero();
 
@@ -1972,8 +1951,8 @@ void Evolution::readNkt(Parameters *param)
   cout << "Reading n(k_T) from file ";
   string Npart, dummy;
   string kt, nkt, Tpp, b;
-  double dkt;
-  double dNdeta;
+  double dkt=0.;
+  double dNdeta=0.;
 
   // open file
 
@@ -2081,7 +2060,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 {
   int N = param->getSize();
   int Nc = param->getNc();
-  int npos, pos, posNew;
+  int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
   double Pi, kx, ky, kt2, omega2;
@@ -2143,7 +2122,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       E1[i] = new Matrix(Nc,0.);
     }
 
-  double g2mu2A, g2mu2B, gfactor, alphas, Qs;
+  double g2mu2A, g2mu2B, gfactor, alphas=0., Qs=0.;
   double c = param->getc();
   double muZero = param->getMuZero();
 
@@ -2234,17 +2213,16 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
   
   int hbins = 2000;
-  int kcounter=0;
-  double Nhad = 0.;
-  double Ehad = 0.;
-  double Nh[hbins+1], Nhgsl[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1], Ng;
-  for (int ih=0; ih<=hbins; ih++)
-    {
-      Nh[ih]=0.;
-      Eh[ih]=0.;
-      NhL[ih]=0.;
-      NhH[ih]=0.;
-    }
+  // double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
+  double Nhgsl[hbins+1];
+  double Ng;
+  // for (int ih=0; ih<=hbins; ih++)
+  //   {
+  //     Nh[ih]=0.;
+  //     Eh[ih]=0.;
+  //     NhL[ih]=0.;
+  //     NhH[ih]=0.;
+  //   }
 
   
   for(int i=0; i<N; i++)
@@ -2599,12 +2577,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	}
     }
 
-  double Ech=0.;
-  double Ech2=0.;
-  double Nch=0.;
-  int icheck=0;
-  double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
-  double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
+  //  double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
+  //  double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
 
   // compute hadrons using fragmentation function 
   if(it == itmax && param->getWriteOutputs() == 3)
@@ -2726,14 +2700,14 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       gsl_interp_accel *ptacc = gsl_interp_accel_alloc ();
       gsl_spline *ptspline = gsl_spline_alloc (gsl_interp_cspline, hbins+1);
       gsl_spline_init (ptspline, pt, integrand, hbins+1);
-      dNdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-      dNdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-      dNdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+      //   dNdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      //dNdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      //dNdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
 
       gsl_spline_init (ptspline, pt, Eintegrand, hbins+1);
-      dEdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-      dEdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-      dEdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+      //dEdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      //dEdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      //dEdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
 
       gsl_spline_free(ptspline);
       gsl_interp_accel_free(ptacc);
@@ -2803,7 +2777,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 {
   int N = param->getSize();
   int Nc = param->getNc();
-  int npos, pos, posNew;
+  int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
   double Pi, kx, ky, kt2, omega2;
@@ -2886,7 +2860,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       E1[i] = new Matrix(Nc,0.);
     }
 
-  double g2mu2A, g2mu2B, gfactor, alphas, Qs;
+  double g2mu2A, g2mu2B, gfactor, alphas=0., Qs=0.;
   double c = param->getc();
   double muZero = param->getMuZero();
 
@@ -2977,17 +2951,16 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
   
   int hbins = 2000;
-  int kcounter=0;
-  double Nhad = 0.;
-  double Ehad = 0.;
-  double Nh[hbins+1], Nhgsl[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1], Ng;
-  for (int ih=0; ih<=hbins; ih++)
-    {
-      Nh[ih]=0.;
-      Eh[ih]=0.;
-      NhL[ih]=0.;
-      NhH[ih]=0.;
-    }
+
+  //  double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
+  double  Nhgsl[hbins+1], Ng;
+  // for (int ih=0; ih<=hbins; ih++)
+  //   {
+  //     Nh[ih]=0.;
+  //     Eh[ih]=0.;
+  //     NhL[ih]=0.;
+  //     NhH[ih]=0.;
+  //   }
 
   ofstream foutNkxky((nkxky_name).c_str(),ios::out); 
   
@@ -3377,10 +3350,6 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   foutMult.close();
 
   
-  double Ech=0.;
-  double Ech2=0.;
-  double Nch=0.;
-  int icheck=0;
   double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
   double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
 
@@ -3599,7 +3568,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 {
   int N = param->getSize();
   int Nc = param->getNc();
-  int npos, pos, posNew;
+  int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
   double Pi, kx, ky, kt2, omega2;
@@ -3609,16 +3578,16 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   nn[0] = N;
   nn[1] = N;
   double dtau = param->getdtau();
-  double nkt, nkt1, nkt2, nkt3, nkt4, nkt5, nkt6, nktNoMixedTerms;
+  double nkt, nkt1, nkt2, nkt3, nkt4, nkt5, nkt6;
   int bins = 40;
   int phiBins = 16;
   double n[bins][phiBins]; // |k_T|, phi array
-  double n2[bins][phiBins]; // |k_T|, phi array
+  //  double n2[bins][phiBins]; // |k_T|, phi array
   double nkxky[N][N]; // kx, ky array
   double nk[bins]; //|k_T| array
-  double nNoMixedTerms[bins][phiBins]; //|k_T|, phi array
-  double nkNoMixedTerms[bins]; //|k_T| array
-  int counter[bins][phiBins]; 
+  //double nNoMixedTerms[bins][phiBins]; //|k_T|, phi array
+  //double nkNoMixedTerms[bins]; //|k_T| array
+  //int counter[bins][phiBins]; 
   int counterk[bins]; 
   double dkt = 2.83/static_cast<double>(bins);
   double dNdeta =0.;
@@ -3665,7 +3634,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
       maxtime = param->getMaxtime(); // maxtime is in fm
     }
 
-  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
+  //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
   gaugefix->FFTChi(fft,lat,group,param,4000);
  
   // gauge is fixed
@@ -3719,7 +3688,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
 
 
-  double g2mu2A, g2mu2B, gfactor, alphas, Qs;
+  double g2mu2A, g2mu2B, gfactor, alphas=0., Qs=0.;
   double c = param->getc();
   double muZero = param->getMuZero();
 
@@ -3819,14 +3788,14 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   for(int ik=0; ik<bins; ik++)
     {
       nk[ik] = 0.;
-      nkNoMixedTerms[ik] = 0.;
+      //nkNoMixedTerms[ik] = 0.;
       counterk[ik] = 0;
       for(int iphi=0; iphi<phiBins; iphi++)
 	{
 	  n[ik][iphi] = 0.;
-	  n2[ik][iphi] = 0.;
-	  nNoMixedTerms[ik][iphi] = 0.;
-	  counter[ik][iphi]=0;
+	  //n2[ik][iphi] = 0.;
+	  //nNoMixedTerms[ik][iphi] = 0.;
+          //	  counter[ik][iphi]=0;
 	}
     }
 
@@ -3939,9 +3908,9 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	}
     }
 
-  double m,P;
-  m=param->getJacobianm(); // in GeV
-  P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
+  //  double m,P;
+  //m=param->getJacobianm(); // in GeV
+  //P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
   double result, fullResult, fullResult2;
   fullResult=0.;
   fullResult2=0.;
@@ -3982,10 +3951,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
    // compute hadrons using fragmentation function 
 
   int hbins = 40;
-  int kcounter=0;
-  double Nhad = 0.;
-  double Ehad = 0.;
-      double Nh[hbins+1][phiBins], Ng;
+  double Nh[hbins+1][phiBins], Ng;
       
       for (int ih=0; ih<=hbins; ih++)
 	{

@@ -3,7 +3,6 @@
 Cell::Cell(int N)
 {
   Nc = N;
-  int Nc2m1 = Nc*Nc-1;
   g2mu2A = new double;
   g2mu2B = new double;
   TpA = new double;

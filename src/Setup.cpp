@@ -57,9 +57,10 @@ string Setup::StringFind(string file_name, string st)
     {
       cerr << str << " not found in " << inputname << endl; 
       cout << "Create a complete input file." << endl;
-      //      return xstr;
+      //return xstr;
       exit(1);
-    }    
+    }   
+  return(0);
 }/* StringFind */
 
 // reads a double using stringfind:
@@ -101,9 +102,6 @@ unsigned long long int Setup::ULLIFind(string file_name, string st)
 
 int Setup::IsFile(string file_name)
 {
- static int isf;
- static int ind = 0;
- char st[80];
  FILE *temp;
 
  if( (temp = fopen(file_name.c_str(),"r")) == NULL) return 0;

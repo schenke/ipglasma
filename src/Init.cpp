@@ -533,7 +533,8 @@ void Init::readNuclearQs(Parameters *param)
 double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y)
 {
   double value, fracy, fracT, QsYdown, QsYup;
-  int posb, posy, check=0;
+  int posy, check=0;
+  fracy=0.;
   posy = static_cast<int>(floor(y/deltaYNuc+0.0000001));
 
   if (y>iymaxNuc*deltaYNuc)
@@ -577,7 +578,7 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
     {
       cout << check << ": T=" << T << endl ;
       cerr << " [Init:getNuclearQs2]:ERROR: something went wrong in determining the value of Qs^2. Using maximal T_p" << endl;
-      value = (fracy*Qs2Nuclear[iTpmax][posy+1]+(1.-fracy)*Qs2Nuclear[iTpmax][posy]);
+      value = (fracy*Qs2Nuclear[iTpmax-1][posy+1]+(1.-fracy)*Qs2Nuclear[iTpmax-1][posy]);
     }
  
   return value;
@@ -634,13 +635,12 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   double averageQs2min = 0.;
   double averageQs2min2 = 0.;
   int count = 0;
-  int count2 = 0;
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
  
   // Arrays to store Q_s fluctuations
   // Make sure that array size is always at least 1 
-  unsigned int len_quark_array=param->getUseConstituentQuarkProton();
+  int len_quark_array=param->getUseConstituentQuarkProton();
   if (len_quark_array==0) len_quark_array=1;
   double gaussA[A1][len_quark_array];
   double gaussB[A2][len_quark_array];
@@ -869,7 +869,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     double y, ym;
     int localpos;
     double bp2,T, phi;
-    double maxT=0;
 
 #pragma omp for   
   for(int ix=0; ix<N; ix++) // loop over all positions
@@ -884,68 +883,82 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	
 	  // nucleus A 
 	  lat->cells[localpos]->setTpA(0.);
-	  for (int i = 0; i<A1; i++) 
-	    {
-	      xm = nucleusA.at(i).x;
-	      ym = nucleusA.at(i).y;
-	      
-	      if(param->getUseConstituentQuarkProton()>0)
-		{
-		  T = 0.;
-		  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
-		    {
-		      bp2 = (xm+xq[i][iq]-x)*(xm+xq[i][iq]-x)+(ym+yq[i][iq]-y)*(ym+yq[i][iq]-y);
-		      bp2 /= hbarc*hbarc;
+          if(param->getUseSmoothNucleus()==1)
+            {
 
-		      T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
-		    }
-		}
-	      else
-		{
-		  phi = nucleusA.at(i).phi;
+            }
+          else
+            {
+              for (int i = 0; i<A1; i++) 
+                {
+                  xm = nucleusA.at(i).x;
+                  ym = nucleusA.at(i).y;
+                  
+                  if(param->getUseConstituentQuarkProton()>0)
+                    {
+                      T = 0.;
+                      for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
+                        {
+                          bp2 = (xm+xq[i][iq]-x)*(xm+xq[i][iq]-x)+(ym+yq[i][iq]-y)*(ym+yq[i][iq]-y);
+                          bp2 /= hbarc*hbarc;
+                          
+                          T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
+                        }
+                    }
+                  else
+                    {
+                      phi = nucleusA.at(i).phi;
+                      
+                      bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
+                      bp2 /= hbarc*hbarc;     	  
+                      T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
+                    }
+                  lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
+                }
+            }
 
-		  bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
-		  bp2 /= hbarc*hbarc;     	  
-		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
-		}
-                lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
-	    }
-	  
 	  // nucleus B 
 	  lat->cells[localpos]->setTpB(0.);
-	  for (int i = 0; i<A2; i++) 
-	    {
-	      xm = nucleusB.at(i).x;
-	      ym = nucleusB.at(i).y;
-
-	      if(param->getUseConstituentQuarkProton()>0)
-		{
-		  T = 0.;
-		  for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
-		    {
-		      bp2 = (xm+xq2[i][iq]-x)*(xm+xq2[i][iq]-x)+(ym+yq2[i][iq]-y)*(ym+yq2[i][iq]-y);
-		      bp2 /= hbarc*hbarc;
-
-		      T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
-		    }
-		}
-	      else
-		{
-		  phi = nucleusB.at(i).phi;
-	      
-		  bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
-		  bp2 /= hbarc*hbarc;
-		  
-		  T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
-		}
-	      
-                lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p	      
-	    }
-	}
+          if(param->getUseSmoothNucleus()==1)
+            {
+              
+            }
+          else
+            {
+              for (int i = 0; i<A2; i++) 
+                {
+                  xm = nucleusB.at(i).x;
+                  ym = nucleusB.at(i).y;
+                  
+                  if(param->getUseConstituentQuarkProton()>0)
+                    {
+                      T = 0.;
+                      for (int iq=0; iq<param->getUseConstituentQuarkProton(); iq++)
+                        {
+                          bp2 = (xm+xq2[i][iq]-x)*(xm+xq2[i][iq]-x)+(ym+yq2[i][iq]-y)*(ym+yq2[i][iq]-y);
+                          bp2 /= hbarc*hbarc;
+                          
+                          T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
+                        }
+                    }
+                  else
+                    {
+                      phi = nucleusB.at(i).phi;
+                      
+                      bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
+                      bp2 /= hbarc*hbarc;
+                      
+                      T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
+                    }
+                  
+                  lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p	      
+                }
+            }
+        }
     }
   }
-
-
+  
+  
   stringstream strNcoll_name;
   strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
   string Ncoll_name;  Ncoll_name = strNcoll_name.str();
@@ -1053,29 +1066,26 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
   {
-    double x;
-    double y;
+    //    double x;
+    //    double y;
     int localpos;
-    //double bp2,T;
-    double outvalue;
-    double alphas;
     double Ydeviation = 10000;
     double QsA, QsB, distanceA, distanceB;
     double xVal;
     double localrapidity=rapidity;
-    int check, check1, check2;
+    int check;
     QsA = 1;
     QsB = 1;
      
 #pragma omp for   
   for(int ix=0; ix<N; ix++) // loop over all positions
     {
-      x = -L/2.+a*ix;
+      // x = -L/2.+a*ix;
       for(int iy=0; iy<N; iy++)
 	{
           Ydeviation = 10000;
 	  check = 0;
-	  y = -L/2.+a*iy;
+          // y = -L/2.+a*iy;
 	  localpos = ix*N+iy;
 	  
 //	  cut proton at a radius of rmax [fm] (about twice the gluonic radius to be generous)	  
@@ -1197,11 +1207,9 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   
   // output gmu 
   count=0;
-  count2=0;
   double Tpp=0.;
   double x,xm, y,ym;
-  double outvalue;
-  double alphas;
+  double alphas=0.;
   int check=0;
   for(int ix=0; ix<N; ix++) // loop over all positions
     {
@@ -1211,7 +1219,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	  pos = ix*N+iy;
 	  x = -L/2.+a*ix;
 	  y = -L/2.+a*iy;
-	  outvalue = lat->cells[pos]->getg2mu2A();
+          //	  outvalue = lat->cells[pos]->getg2mu2A();
 	  
 	  posA = pos;
 	  posB = pos;
@@ -1514,7 +1522,6 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
           }
         
         // compute A^+
-        int pos;
 #pragma omp parallel for
         for (int i=0; i<N; i++)
           {
@@ -1657,9 +1664,7 @@ void Init::readV(Lattice *lat, Group* group, Parameters *param)
 {
   int pos;
   int N = param->getSize();
-  int Ny=param->getNy();
   int Nc = param->getNc();
-  int Nc2m1 = Nc*Nc-1;
   int nn[2];
   nn[0]=N;
   nn[1]=N; 
@@ -1771,17 +1776,10 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 {
   const int maxIterations = 100000;
   const int N = param->getSize();
-  const int Ny= param->getNy();
   const int Nc = param->getNc();
-  const int bins = param->getSize();
   const int Nc2m1 = Nc*Nc-1;
-  const int nn[2] ={N,N};
-  const double L = param->getL();
-  const double a = L/N; // lattice spacing in fm
-  const double m = param->getm()*a/hbarc;
   const double bmin=param->getbmin();
   const double bmax=param->getbmax();
-  const double dNc = static_cast<double>(Nc);
   const Matrix one(Nc,1.);
   const Matrix zero(Nc,0.);
 
@@ -1916,29 +1914,14 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
 #pragma omp parallel
   {
-    int ir;
-    int pos2, pos3, posx, posy, posxm, posym, posxmym;
-    int counts, countMe;
+    int countMe;
     int checkConvergence;
     int alphaCheck;
-    int bShift; // number of cells to be shifted by due to impact parameter
-    int posU;
     
     double Fold;
     double Fnew;
-    double r;
-    double x;
-    double y;
-    
-    double Qs2G;
-    double temp3;
-    double g2mu;
-    double dr=a;
-    double epsilon;
+    Fnew = 0.;  
     double lambda;
-    double avgEps;
-    double avgEpsMag;
-    double avgEpsEl;
     
     complex<double>* M;
     complex<double>* F;
@@ -2672,7 +2655,7 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
     
     for (unsigned int i = 0; i < r_array.size(); i++) 
       {
-        if(i<Z)
+        if(i<abs(Z))
           nucleus->at(i).proton = 1;
         else
           nucleus->at(i).proton = 0;
@@ -2716,7 +2699,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
     const double d_min    = 0.9;
     const double d_min_sq = d_min*d_min;
-    for (unsigned int i = 0; i < A; i++) {
+    for (unsigned int i = 0; i < abs(A); i++) {
         //const double r_i     = r_array[i];
         //const double theta_i = acos(costheta_array[i]);
         const double r_i     = pair_array[i].first;
@@ -2767,7 +2750,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     
     for (unsigned int i = 0; i < r_array.size(); i++) 
       {
-        if(i<Z)
+        if(i<abs(Z))
           nucleus->at(i).proton = 1;
         else
           nucleus->at(i).proton = 0;

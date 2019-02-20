@@ -108,6 +108,7 @@ class Parameters
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
   double protonAnisotropy; //anisotropy of the proton thickness function: xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] - as a first test 
   int useConstituentQuarkProton; // if >0, use proton made up of useConstituentQuarkProton constituent quarks.
+  int useSmoothNucleus; // if 1, use a smooth Woods-Saxon distribution for a heavy nucleus
   int shiftConstituentQuarkProtonOrigin;  // if 1, move constituent quark center of mass to origin
   double UVdamp; // UV damping parameter
 
@@ -304,6 +305,8 @@ class Parameters
   int getUsePseudoRapidity() {return usePseudoRapidity;}
   void setUseConstituentQuarkProton(int x) {useConstituentQuarkProton=x;}
   int getUseConstituentQuarkProton() {return useConstituentQuarkProton;}
+  void setUseSmoothNucleus(int x) {useSmoothNucleus=x;}
+  int getUseSmoothNucleus() {return useSmoothNucleus;}
   void setShiftConstituentQuarkProtonOrigin(int x) {shiftConstituentQuarkProtonOrigin=x; }
   int getShiftConstituentQuarkProtonOrigin() { return shiftConstituentQuarkProtonOrigin; }
 };

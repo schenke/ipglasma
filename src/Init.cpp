@@ -867,34 +867,45 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   if(param->getUseSmoothNucleus()==1)
     {
       cout << "Using smooth nucleus for test purposes - use only with Au Au at this point. Does not include deformation." << endl;
-      double x;
+      Npart = 2; //avoid break below 
+      double xA, xB;
       double y;
       double T;
       double localpos;
       double normA = 0.;
       double normB = 0.;
+      double b = param->getb();
       for(int ix=0; ix<N; ix++) // loop over all positions
         {
-          x = -L/2.+a*ix;
+          xA = -L/2.+a*ix-b/2.;
+          xB = -L/2.+a*ix+b/2.;
           for(int iy=0; iy<N; iy++)
             {
               y = -L/2.+a*iy;
               
               localpos = ix*N+iy;
-              r = sqrt(x*x+y*y);
- 
+              
               // nucleus A 
+              r = sqrt(xA*xA+y*y);
               T = glauber->InterNuTInST(r);
               lat->cells[localpos]->setTpA(T);
               
               normA+=T*a*a;
 
               // nucleus B
+              r = sqrt(xB*xB+y*y);
               T = glauber->InterNuPInSP(r);
               lat->cells[localpos]->setTpB(T);
 
               normB+=T*a*a;
-             
+
+              //remove potential stuff outside the interaction region
+              if (lat->cells[localpos]->getTpA() < 0.0000000001 || lat->cells[localpos]->getTpB() < 0.0000000001)
+                {
+                  lat->cells[localpos]->setTpA(0.);
+                  lat->cells[localpos]->setTpB(0.);
+                }
+
             }
         }
       for(int ix=0; ix<N; ix++) // loop over all positions
@@ -921,8 +932,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
   else
     {
-     
-//add all T_p's (new in version 1.2)
+      
+      //add all T_p's (new in version 1.2)
 #pragma omp parallel
       {
         double x, xm;
@@ -1004,112 +1015,114 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
           }
       }
     }
-      
-  stringstream strNcoll_name;
-  strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
-  string Ncoll_name;  Ncoll_name = strNcoll_name.str();
-
- ofstream foutNcoll(Ncoll_name.c_str(),ios::out); 
  
-
-  if (param->getGaussianWounding() == 0)
+  if(param->getUseSmoothNucleus()==0)
     {
-      for (int i = 0; i<A1; i++) 
-	{
-	  for (int j = 0 ; j<A2 ;j++) 
-	    {
-	      dx = nucleusB.at(j).x-nucleusA.at(i).x;
-	      dy = nucleusB.at(j).y-nucleusA.at(i).y;
-	      dij = dx*dx+dy*dy;
-	      if (dij < d2) 
-		{
-		  foutNcoll << (nucleusB.at(j).x+nucleusA.at(i).x)/2. << " " << (nucleusB.at(j).y+nucleusA.at(i).y)/2. << endl;
-		  Ncoll++;
-		  nucleusB.at(j).collided=1;
-		  nucleusA.at(i).collided=1;
-		}
-	    }
-	}
-    }
-  else
-    {
-      double p;
-      double G=0.92;
-      double ran;
+      stringstream strNcoll_name;
+      strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
+      string Ncoll_name;  Ncoll_name = strNcoll_name.str();
+      
+      ofstream foutNcoll(Ncoll_name.c_str(),ios::out); 
+      
+      
+      if (param->getGaussianWounding() == 0)
+        {
+          for (int i = 0; i<A1; i++) 
+            {
+              for (int j = 0 ; j<A2 ;j++) 
+                {
+                  dx = nucleusB.at(j).x-nucleusA.at(i).x;
+                  dy = nucleusB.at(j).y-nucleusA.at(i).y;
+                  dij = dx*dx+dy*dy;
+                  if (dij < d2) 
+                    {
+                      foutNcoll << (nucleusB.at(j).x+nucleusA.at(i).x)/2. << " " << (nucleusB.at(j).y+nucleusA.at(i).y)/2. << endl;
+                      Ncoll++;
+                      nucleusB.at(j).collided=1;
+                      nucleusA.at(i).collided=1;
+                    }
+                }
+            }
+        }
+      else
+        {
+          double p;
+          double G=0.92;
+          double ran;
+          
+          for (int i = 0; i<A1; i++) 
+            {
+              for (int j = 0 ; j<A2 ;j++) 
+                {
+                  dx = nucleusB.at(j).x-nucleusA.at(i).x;
+                  dy = nucleusB.at(j).y-nucleusA.at(i).y;
+                  dij = dx*dx+dy*dy;
+                  
+                  p = G * exp(-G*dij/d2); // Gaussian profile 
+                  
+                  ran = random->genrand64_real1();
+                  
+                  if (ran < p) 
+                    {
+                      foutNcoll << (nucleusB.at(j).x+nucleusA.at(i).x)/2. << " " << (nucleusB.at(j).y+nucleusA.at(i).y)/2. << endl;
+                      Ncoll++;
+                      nucleusB.at(j).collided=1;
+                      nucleusA.at(i).collided=1;
+                    }
+                }
+            }
+        }
+      
+      foutNcoll.close();
+      
+      
+      stringstream strNpart_name;
+      strNpart_name << "NpartList" << param->getMPIRank() << ".dat";
+      string Npart_name;  Npart_name = strNpart_name.str();
+      
+      ofstream foutNpart(Npart_name.c_str(),ios::out); 
       
       for (int i = 0; i<A1; i++) 
-	{
-	  for (int j = 0 ; j<A2 ;j++) 
-	    {
-	      dx = nucleusB.at(j).x-nucleusA.at(i).x;
-	      dy = nucleusB.at(j).y-nucleusA.at(i).y;
-	      dij = dx*dx+dy*dy;
-	      
-	      p = G * exp(-G*dij/d2); // Gaussian profile 
-	      
-	      ran = random->genrand64_real1();
-	      
-	      if (ran < p) 
-		{
-		  foutNcoll << (nucleusB.at(j).x+nucleusA.at(i).x)/2. << " " << (nucleusB.at(j).y+nucleusA.at(i).y)/2. << endl;
-		  Ncoll++;
-		  nucleusB.at(j).collided=1;
-		  nucleusA.at(i).collided=1;
-		}
-	    }
-	}
+        {
+          foutNpart << nucleusA.at(i).x << " " << nucleusA.at(i).y << " " << nucleusA.at(i).proton << " " << nucleusA.at(i).collided << endl;
+        }
+      foutNpart << endl;
+      for (int i = 0; i<A2; i++) 
+        {
+          foutNpart << nucleusB.at(i).x << " " << nucleusB.at(i).y << " " << nucleusB.at(i).proton << " " << nucleusB.at(i).collided << endl;
+        }
+      foutNpart.close();
+      
+      // in p+p assume that they collided in any case
+      if ( A1 == 1 && A2 == 1 )
+        {
+          nucleusB.at(0).collided=1;
+          nucleusA.at(0).collided=1;
+        }
+      
+      Npart = 0;
+      
+      for (int i = 0; i<A1; i++) 
+        {
+          if (nucleusA.at(i).collided==1)
+            Npart++;
+        }
+      
+      for (int i = 0; i<A2; i++) 
+        {
+          if (nucleusB.at(i).collided==1)
+            Npart++;
+        }
+      
+      param->setNpart(Npart);
+      
+      if(param->getUseFixedNpart()!=0 && Npart!=param->getUseFixedNpart())
+        {
+          cout << "current Npart = " << Npart << endl;
+          return;
+        }
     }
-
-  foutNcoll.close();
-  
-  
-  stringstream strNpart_name;
-  strNpart_name << "NpartList" << param->getMPIRank() << ".dat";
-  string Npart_name;  Npart_name = strNpart_name.str();
-
-  ofstream foutNpart(Npart_name.c_str(),ios::out); 
- 
-  for (int i = 0; i<A1; i++) 
-    {
-      foutNpart << nucleusA.at(i).x << " " << nucleusA.at(i).y << " " << nucleusA.at(i).proton << " " << nucleusA.at(i).collided << endl;
-    }
-  foutNpart << endl;
-  for (int i = 0; i<A2; i++) 
-    {
-      foutNpart << nucleusB.at(i).x << " " << nucleusB.at(i).y << " " << nucleusB.at(i).proton << " " << nucleusB.at(i).collided << endl;
-    }
-  foutNpart.close();
-
-  // in p+p assume that they collided in any case
-  if ( A1 == 1 && A2 == 1 )
-    {
-      nucleusB.at(0).collided=1;
-      nucleusA.at(0).collided=1;
-    }
-  
-  Npart = 0;
-
-  for (int i = 0; i<A1; i++) 
-    {
-      if (nucleusA.at(i).collided==1)
-	Npart++;
-    }
-  
-  for (int i = 0; i<A2; i++) 
-    {
-      if (nucleusB.at(i).collided==1)
-	Npart++;
-    }
-  
-  param->setNpart(Npart);
-
-  if(param->getUseFixedNpart()!=0 && Npart!=param->getUseFixedNpart())
-    {
-      cout << "current Npart = " << Npart << endl;
-      return;
-    }
-
-// get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+  // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
   {
     //    double x;
@@ -1249,9 +1262,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   }
   
 
-  
-  
-  // output gmu 
+ 
   count=0;
   double Tpp=0.;
   double x,xm, y,ym;
@@ -1438,6 +1449,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber)
 {
+  cout << "Setting Wilson lines ..." << endl;
   const int N = param->getSize();
   const int Ny=param->getNy();
   const int Nc = param->getNc();

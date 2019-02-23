@@ -13,7 +13,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
   int count;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
-  double x, y, ux=0., uy=0., ueta=0., utau=0.;
+  double x, y, ux=0., uy=0., ueta=0., utau=0.;// [GeV^2]
   double dtau = param->getdtau();
   gsl_complex square;
   gsl_complex factor;
@@ -285,6 +285,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       double resultE, resultutau, resultux, resultuy, resultueta;
       double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
       double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy, resultpietaeta;
+      double g2mu2A, g2mu2B;
 
       double ha;
       ha = hL/static_cast<double>(hx);
@@ -347,7 +348,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      pos4 = xposUp*N+yposUp;
 		      
 
-		      // -----------------------------epsilon--------------------------------- //
+                      // -----------------------------epsilon--------------------------------- //
 		      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
 			x1 = (1-fracx)*abs(lat->cells[pos1]->getEpsilon())+fracx*abs(lat->cells[pos2]->getEpsilon());
 		      else
@@ -362,7 +363,35 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      
 		      resultE = (1.-fracy)*x1+fracy*x2;
 		      
-		      // -----------------------------utau------------------------------------ //
+		      // -----------------------------g2mu2A---------------------------------- //
+                      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
+                        x1 = (1-fracx)*abs(lat->cells[pos1]->getg2mu2A())+fracx*abs(lat->cells[pos2]->getg2mu2A());
+		      else
+			x1 = 0.;
+	
+                      if(pos3>0 && pos3<N*N && pos4>0 && pos4<N*N)
+			x2 = (1-fracx)*abs(lat->cells[pos3]->getg2mu2A())+fracx*abs(lat->cells[pos4]->getg2mu2A());
+		      else
+			x2 = 0.;
+                      
+                      
+                      g2mu2A = (1.-fracy)*x1+fracy*x2;
+	
+                      // -----------------------------g2mu2B---------------------------------- //
+                      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
+                        x1 = (1-fracx)*abs(lat->cells[pos1]->getg2mu2B())+fracx*abs(lat->cells[pos2]->getg2mu2B());
+		      else
+			x1 = 0.;
+	
+                      if(pos3>0 && pos3<N*N && pos4>0 && pos4<N*N)
+			x2 = (1-fracx)*abs(lat->cells[pos3]->getg2mu2B())+fracx*abs(lat->cells[pos4]->getg2mu2B());
+		      else
+			x2 = 0.;
+                      
+                      
+                      g2mu2B = (1.-fracy)*x1+fracy*x2;
+		     
+                      // -----------------------------utau------------------------------------ //
 		      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
 			x1 = (1-fracx)*(lat->cells[pos1]->getutau())+fracx*(lat->cells[pos2]->getutau());
 		      else
@@ -579,13 +608,13 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 				 << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
 				 << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
 				 << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-		    } 
+                    }
 		  else
 		    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
 			     << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-		}
+      		}
 	    }
 	  foutEps2 << endl;
 	}
@@ -593,8 +622,170 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
        cout << "Etot = " << Etot << " GeV " << endl;
        foutEtot <<  Etot << endl;
        foutEtot.close();
+       
+       double Jaztot=0.;
+       //Jazma output:
+       // compute sum first for normalization
+       for(int ieta=0; ieta<heta; ieta++) // loop over all positions
+         {
+           for(int ix=0; ix<hx; ix++) // loop over all positions
+             {
+               for(int iy=0; iy<hy; iy++)
+                 {
+		  x = -hL/2.+ha*ix;
+		  y = -hL/2.+ha*iy;
+		  
+		  if (abs(x) < L/2. && abs(y) < L/2.)
+		    {
+		      xpos = static_cast<int>(floor((x+L/2.)/a+0.0000000001));
+		      ypos = static_cast<int>(floor((y+L/2.)/a+0.0000000001));
+		           
+		      if(xpos<N-1)
+			xposUp = xpos+1;
+		      else
+			xposUp = xpos;
+		      
+		      if(ypos<N-1)
+			yposUp = ypos+1;
+		      else
+			yposUp = ypos;
+		      
+		      xlow = -L/2.+a*xpos;
+		      ylow = -L/2.+a*ypos;
+		      
+	      
+		      fracx = (x-xlow)/ha;
+		      
+		      pos1 = xpos*N+ypos;
+		      pos2 = xposUp*N+ypos;
+		      pos3 = xpos*N+yposUp;
+		      pos4 = xposUp*N+yposUp;
+		                             
+		      // -----------------------------g2mu2A---------------------------------- //
+                      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
+                        x1 = (1-fracx)*abs(lat->cells[pos1]->getg2mu2A())+fracx*abs(lat->cells[pos2]->getg2mu2A());
+		      else
+			x1 = 0.;
+	
+                      if(pos3>0 && pos3<N*N && pos4>0 && pos4<N*N)
+			x2 = (1-fracx)*abs(lat->cells[pos3]->getg2mu2A())+fracx*abs(lat->cells[pos4]->getg2mu2A());
+		      else
+			x2 = 0.;
+                      
+                      fracy = (y-ylow)/ha;
+		   
+                      g2mu2A = (1.-fracy)*x1+fracy*x2;
+	
+                      // -----------------------------g2mu2B---------------------------------- //
+                      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
+                        x1 = (1-fracx)*abs(lat->cells[pos1]->getg2mu2B())+fracx*abs(lat->cells[pos2]->getg2mu2B());
+		      else
+			x1 = 0.;
+	
+                      if(pos3>0 && pos3<N*N && pos4>0 && pos4<N*N)
+			x2 = (1-fracx)*abs(lat->cells[pos3]->getg2mu2B())+fracx*abs(lat->cells[pos4]->getg2mu2B());
+		      else
+			x2 = 0.;
+                                            
+                      g2mu2B = (1.-fracy)*x1+fracy*x2;
+		     
+                      Jaztot += g2mu2A*g2mu2B * ha * ha * it*dtau*a; //same units as in Etot above        
+                      
+                    }
+                 }
+             }
+         }
+       
+       stringstream strJaz_name;
+       strJaz_name << "Jazma-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+       string Jaz_name;
+       Jaz_name = strJaz_name.str();
+       
+       ofstream foutEps3(Jaz_name.c_str(),ios::out); 
+       
+       foutEps3 << "# dummy " << 1 << " etamax= " << heta
+                << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
+                << " dx= " << ha << " dy= " << ha << endl; 
+       
+        for(int ieta=0; ieta<heta; ieta++) // loop over all positions
+         {
+           for(int ix=0; ix<hx; ix++) // loop over all positions
+             {
+               for(int iy=0; iy<hy; iy++)
+                 {
+		  x = -hL/2.+ha*ix;
+		  y = -hL/2.+ha*iy;
+		  
+		  if (abs(x) < L/2. && abs(y) < L/2.)
+		    {
+		      xpos = static_cast<int>(floor((x+L/2.)/a+0.0000000001));
+		      ypos = static_cast<int>(floor((y+L/2.)/a+0.0000000001));
+		      
+		      
+		      if(xpos<N-1)
+			xposUp = xpos+1;
+		      else
+			xposUp = xpos;
+		      
+		      if(ypos<N-1)
+			yposUp = ypos+1;
+		      else
+			yposUp = ypos;
+		      
+		      xlow = -L/2.+a*xpos;
+		      ylow = -L/2.+a*ypos;
+		      
+	      
+		      fracx = (x-xlow)/ha;
+		      
+		      pos1 = xpos*N+ypos;
+		      pos2 = xposUp*N+ypos;
+		      pos3 = xpos*N+yposUp;
+		      pos4 = xposUp*N+yposUp;
+		                             
+		      // -----------------------------g2mu2A---------------------------------- //
+                      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
+                        x1 = (1-fracx)*abs(lat->cells[pos1]->getg2mu2A())+fracx*abs(lat->cells[pos2]->getg2mu2A());
+		      else
+			x1 = 0.;
+	
+                      if(pos3>0 && pos3<N*N && pos4>0 && pos4<N*N)
+			x2 = (1-fracx)*abs(lat->cells[pos3]->getg2mu2A())+fracx*abs(lat->cells[pos4]->getg2mu2A());
+		      else
+			x2 = 0.;
+                      
+                      fracy = (y-ylow)/ha;
+		   
+                      g2mu2A = (1.-fracy)*x1+fracy*x2;
+	
+                      // -----------------------------g2mu2B---------------------------------- //
+                      if(pos1>0 && pos1<(N)*(N) && pos2>0 && pos2<(N)*(N))
+                        x1 = (1-fracx)*abs(lat->cells[pos1]->getg2mu2B())+fracx*abs(lat->cells[pos2]->getg2mu2B());
+		      else
+			x1 = 0.;
+	
+                      if(pos3>0 && pos3<N*N && pos4>0 && pos4<N*N)
+			x2 = (1-fracx)*abs(lat->cells[pos3]->getg2mu2B())+fracx*abs(lat->cells[pos4]->getg2mu2B());
+		      else
+			x2 = 0.;
+                                            
+                      g2mu2B = (1.-fracy)*x1+fracy*x2;
+		     
+                      foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                               << g2mu2A*g2mu2B/Jaztot*Etot << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
+                               << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
+                               << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;	
+                        }
+                  else
+		    foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+			     << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
+			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
+			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
+
+                 }
+             }
+         }
     }
-  
   cout << "Wrote outputs" << endl;
   // done output for hydro
 }

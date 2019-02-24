@@ -273,7 +273,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       double deta = param->getDetaOutput();
       double c = param->getc();
       double muZero = param->getMuZero();
-      double PI = param->getPi();
+      //      double PI = param->getPi();
 
       if(hL>L)
 	cout << "WARNING: hydro grid length larger than the computed one." << endl;
@@ -285,7 +285,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       double resultE, resultutau, resultux, resultuy, resultueta;
       double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
       double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy, resultpietaeta;
-      double g2mu2A, g2mu2B;
+      double g2mu2A, g2mu2B, QsAsqr, QsBsqr;
 
       double ha;
       ha = hL/static_cast<double>(hx);
@@ -700,10 +700,21 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
        strJaz_name << "Jazma-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
        string Jaz_name;
        Jaz_name = strJaz_name.str();
+
+       stringstream strtwo_name;
+       strtwo_name << "twopointfct-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+       string two_name;
+       two_name = strtwo_name.str();
        
        ofstream foutEps3(Jaz_name.c_str(),ios::out); 
        
        foutEps3 << "# dummy " << 1 << " etamax= " << heta
+                << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
+                << " dx= " << ha << " dy= " << ha << endl; 
+
+       ofstream foutEps4(two_name.c_str(),ios::out); 
+       
+       foutEps4 << "# dummy " << 1 << " etamax= " << heta
                 << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
                 << " dx= " << ha << " dy= " << ha << endl; 
        
@@ -770,12 +781,22 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 			x2 = 0.;
                                             
                       g2mu2B = (1.-fracy)*x1+fracy*x2;
-		     
+
+                      QsAsqr= g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
+                      QsBsqr= g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
+                      
                       foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
                                << g2mu2A*g2mu2B/Jaztot*Etot << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
                                << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
                                << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;	
-                        }
+                      
+                      // write two point and one point functions in [1/fm^6] and [1/fm^4] from https://arxiv.org/pdf/1902.07168.pdf
+                      foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                               << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
+                                                                                   +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.))) 
+                               << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << endl;	
+                      cout << QsAsqr << " " << QsBsqr << " " << " " << param->getm()*param->getm() << endl;
+                    }
                   else
 		    foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
 			     << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 

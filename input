@@ -42,8 +42,8 @@ seed 1
 useTimeForSeed 1
 Projectile Au
 Target Au
-bmin 14
-bmax 14
+bmin 4
+bmax 4
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 42.

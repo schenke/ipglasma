@@ -11,7 +11,6 @@
 #include <fstream>
 #include <iomanip>
 #include <complex>
-
 #include "gsl/gsl_eigen.h"
 #include "gsl/gsl_complex.h"
 #include "gsl/gsl_complex_math.h"
@@ -20,6 +19,7 @@
 #include "Parameters.h"
 #include "Matrix.h"
 #include "Group.h"
+#include "Util.h"
 
 using namespace std;
 

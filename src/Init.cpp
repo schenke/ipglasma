@@ -900,7 +900,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
               normB+=T*a*a;
 
               //remove potential stuff outside the interaction region
-              if (lat->cells[localpos]->getTpA() < 0.0000000001 || lat->cells[localpos]->getTpB() < 0.0000000001)
+              if (lat->cells[localpos]->getTpA() < 0.001 || lat->cells[localpos]->getTpB() < 0.001)
                 {
                   lat->cells[localpos]->setTpA(0.);
                   lat->cells[localpos]->setTpB(0.);
@@ -1147,25 +1147,33 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
           // y = -L/2.+a*iy;
 	  localpos = ix*N+iy;
 	  
-//	  cut proton at a radius of rmax [fm] (about twice the gluonic radius to be generous)	  
-	  if(log(2*M_PI*BG*lat->cells[localpos]->getTpA())<0.)
-	    distanceA = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpA()))*hbarc;
-	  else distanceA=0.;
 
-	  if(log(2*M_PI*BG*lat->cells[localpos]->getTpB())<0.)
-	    distanceB = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpB()))*hbarc;
-	  else distanceB=0.;
-	  
-	  if(distanceA < param->getRmax())
-	    {
-	      check=1;
-	    }
-	 
-	  if(distanceB < param->getRmax() && check==1)
-	    {		
-	      check=2;
-	    }
+          if(param->getUseSmoothNucleus()==1)
+            check=2;
+          else
+            {
 
+              //	  cut proton at a radius of rmax [fm] (about twice the gluonic radius to be generous)	  
+              
+              if(log(2*M_PI*BG*lat->cells[localpos]->getTpA())<0.)
+                distanceA = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpA()))*hbarc;
+              else distanceA=0.;
+              
+              if(log(2*M_PI*BG*lat->cells[localpos]->getTpB())<0.)
+                distanceB = sqrt(-2.*BG*log(2*M_PI*BG*lat->cells[localpos]->getTpB()))*hbarc;
+              else distanceB=0.;
+              
+              if(distanceA < param->getRmax())
+                {
+                  check=1;
+                }
+              
+              if(distanceB < param->getRmax() && check==1)
+                {		
+                  check=2;
+                }
+            }
+            
 	  double exponent=5.6; // see 1212.2974 Eq. (17)
 	  if(check==2)
 	    {

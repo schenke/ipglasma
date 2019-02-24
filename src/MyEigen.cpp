@@ -782,6 +782,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                                             
                       g2mu2B = (1.-fracy)*x1+fracy*x2;
 
+                      
                       QsAsqr= g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
                       QsBsqr= g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
                       
@@ -791,18 +792,29 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                                << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;	
                       
                       // write two point and one point functions in [1/fm^6] and [1/fm^4] from https://arxiv.org/pdf/1902.07168.pdf
-                      foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-                               << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
-                                                                                   +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.))) 
-                               << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << endl;	
-                      cout << QsAsqr << " " << QsBsqr << " " << " " << param->getm()*param->getm() << endl;
-                    }
+                      if (QsAsqr>0 && QsBsqr>0)
+                        {
+                          foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                                   << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
+                                                                                       +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.))) 
+                                   << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << endl;	
+                          //        cout << QsAsqr << " " << QsBsqr << " " << " " << param->getm()*param->getm() << endl;
+                        }
+                      else
+                        {
+                          foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                                   << 0. << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << endl;	
+                        }
+                    }                   
                   else
-		    foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                    {
+                      foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
 			     << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-
+                      foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+			     << 0. << " " << 0. << endl;
+                    }
                  }
              }
          }

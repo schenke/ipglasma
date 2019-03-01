@@ -866,7 +866,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   // test what a smmoth Woods-Saxon would give
   if(param->getUseSmoothNucleus()==1)
     {
-      cout << "Using smooth nucleus for test purposes - use only with Au Au at this point. Does not include deformation." << endl;
+      cout << "Using smooth nucleus for test purposes. Does not include deformation." << endl;
       Npart = 2; //avoid break below 
       double xA, xB;
       double y;
@@ -913,8 +913,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
           for(int iy=0; iy<N; iy++)
             {
               localpos = ix*N+iy;
-              lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()/normA*197.*hbarc*hbarc);
-              lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()/normB*197.*hbarc*hbarc);
+              lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()/normA*glauber->nucleusA1()*hbarc*hbarc);
+              lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()/normB*glauber->nucleusA2()*hbarc*hbarc);
             }
         }
 

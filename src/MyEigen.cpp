@@ -797,13 +797,17 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                           foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
                                    << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
                                                                                        +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.))) 
-                                   << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << endl;	
+                                   << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc 
+                                   << " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << " " 
+                                   << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.)+1.)
+                                                                                       +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.)+1.)) << endl;	
                           //        cout << QsAsqr << " " << QsBsqr << " " << " " << param->getm()*param->getm() << endl;
                         }
                       else
                         {
                           foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-                                   << 0. << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << endl;	
+                                   << 0. << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << 
+                            " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << " " << 0. << endl;	
                         }
                     }                   
                   else
@@ -813,7 +817,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
                       foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-			     << 0. << " " << 0. << endl;
+                               << 0. << " " << 0. << " "  << 0. << " " << 0. << " " << 0. << endl;
                     }
                  }
              }

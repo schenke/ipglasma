@@ -3,7 +3,7 @@ readMultFromFile 0
 size 256
 L 15.
 Nc 3			      
-m 0.2
+m 0.15
 rmax 1000000.
 UVdamp 0.
 Jacobianm 0.35
@@ -39,9 +39,9 @@ runWithkt 0
 Ny 50
 useSeedList 0
 seed 1
-useTimeForSeed 1
-Projectile Au
-Target Au
+useTimeForSeed 0
+Projectile Pb
+Target Pb
 bmin 4
 bmax 4
 useFixedNpart 0
@@ -49,10 +49,10 @@ averageOverThisManyNuclei 1
 SigmaNN 42.
 gaussianWounding 0
 inverseQsForMaxTime 0
-maxtime 0.05
+maxtime 0.01
 dtau 0.01
 sizeOutput 256
-LOutput 16
+LOutput 15
 etaSizeOutput 1
 detaOutput 0
 writeOutputs 1

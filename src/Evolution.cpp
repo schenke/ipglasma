@@ -626,7 +626,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       if(it==3 || it==floor(it1) || it==floor(it2) || it==itmax)
 	{	  
           success = multiplicity(lat,group,param,it);
-	}
+        }
       
       if (success==0)
 	break;

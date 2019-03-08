@@ -109,64 +109,118 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else if(A1==3) // He3
 	{
-	  //sample the position in the file
-	  ifstream fin;
-
-          stringstream strhe3_name;
-          strhe3_name << "he3_plaintext-" << param->getMPIRank()%10 << ".dat";
-          string he3_name;
-          he3_name = strhe3_name.str();
-          cout << "reading from file " << he3_name << "." << endl;
-	  fin.open(he3_name); 
-	     
-	  double dummy;
-	  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (13699 events in file)
-	  int nucleusNumber = static_cast<int>(ran2*13699);
-
-	  cout << "using nucleus Number = " << nucleusNumber << endl;
-	  
-	  // go to the correct line in the file
-          if(fin)
+          int rank = param->getMPIRank();
+          int size;
+          MPI_Comm_size (MPI_COMM_WORLD, &size);
+          double package[6]; 
+ 
+          if (rank==0)
             {
-              fin.seekg(std::ios::beg);
-              for(int i=0; i < nucleusNumber; ++i)
-                {
-                  fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-                }
-              // am now at the correct line in the file
+              //sample the position in the file
+              ifstream fin;
               
-              // start reading one nucleus (3 positions)
-              int A=0;
-
-              while(A<glauber->nucleusA1())
+              // stringstream strhe3_name;
+              // strhe3_name << "he3_plaintext-" << param->getMPIRank()%10 << ".dat";
+              // string he3_name;
+              // he3_name = strhe3_name.str();
+              // cout << "reading from file " << he3_name << "." << endl;
+              // fin.open(he3_name); 
+              
+              fin.open("he3_plaintext.dat"); 
+              
+              double dummy;
+              
+              for (int event=0;event<size;event++)
                 {
-                  if(!fin.eof())
-                    {  
-                      fin >> rv.x;
-                      fin >> rv.y;
-                      fin >> dummy; // don't care about z direction
-                      rv.collided=0;
-                      if (A==2) 
-                        rv.proton=0;
-                      else 
-                        rv.proton=1;
-                      nucleusA.push_back(rv);
-                      A++;
-                      cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
+                  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (13699 events in file)
+                  int nucleusNumber = static_cast<int>(ran2*13699);
+                  
+                  cout << "using nucleus Number = " << nucleusNumber << endl;
+                  
+                  // go to the correct line in the file
+                  if(fin)
+                    {
+                      fin.seekg(std::ios::beg);
+                      for(int i=0; i < nucleusNumber; ++i)
+                        {
+                          fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                        }
+                      // am now at the correct line in the file
+                      
+                      // start reading one nucleus (3 positions)
+                      int A=0;
+                      
+                      while(A<glauber->nucleusA1())
+                        {
+                          if(!fin.eof())
+                            {  
+                              fin >> rv.x;
+                              fin >> rv.y;
+                              fin >> dummy; // don't care about z direction
+                              rv.collided=0;
+                              if (A==2) 
+                                rv.proton=0;
+                              else 
+                                rv.proton=1;
+                              if (event==0)
+                                nucleusA.push_back(rv);
+                              else 
+                                {
+                                  if(A==0)
+                                    {
+                                      package[0] = rv.x;
+                                      package[1] = rv.y;
+                                    }
+                                  else if (A==1)
+                                    {
+                                      package[2] = rv.x;
+                                      package[3] = rv.y;
+                                    }
+                                  else if (A==2)
+                                    {
+                                      package[4] = rv.x;
+                                      package[5] = rv.y;
+                                    }
+                                }
+                              A++;
+                              cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
+                            }
+                        }
+                      if(event>0)
+                        MPI::COMM_WORLD.Send(package,6,MPI::DOUBLE,event,1);
+                      
+                      param->setA1FromFile(A);
+                    }
+                  else
+                    {
+                      cerr << " file he3_plaintext.dat not found. exiting." << endl;
+                      exit(1);
                     }
                 }
-              
-	  	  
               fin.close();
-	  
-              param->setA1FromFile(A);
+                     
             }
           else
             {
-              cerr << " file he3_plaintext.dat not found. exiting." << endl;
-              exit(1);
+              MPI::COMM_WORLD.Recv(package,6,MPI::DOUBLE,0,1);
+              rv.x = package[0];
+              rv.y = package[1];
+              rv.proton = 1;
+              nucleusA.push_back(rv);
+              cout << "A=1, x=" << rv.x << ", y=" << rv.y << endl;
+              rv.x = package[2];
+              rv.y = package[3];
+              rv.proton = 0;
+              nucleusA.push_back(rv);
+              cout << "A=2, x=" << rv.x << ", y=" << rv.y << endl;
+              rv.x = package[4];
+              rv.y = package[5];
+              rv.proton = 0;
+              nucleusA.push_back(rv);
+              cout << "A=3, x=" << rv.x << ", y=" << rv.y << endl;
+              param->setA1FromFile(3);
             }
-	}   
+        }
       else
 	{
           generate_nucleus_configuration(random, A1, Z1,

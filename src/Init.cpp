@@ -647,9 +647,17 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
   //  if ( T > Qs2Nuclear[iTpmax-1][iymaxNuc-1] )
   if ( T > Tlist[iTpmax-1] )
     {
-      cout << "T=" << T << ", maximal T in table=" << Tlist[iTpmax-1] << endl;
-      cout << " [Init:getNuclearQs2]:ERROR: out of range. Exiting." << endl;
-      exit(1);
+      cerr << "T=" << T << ", maximal T in table=" << Tlist[iTpmax-1] << endl;
+      cerr << " [Init:getNuclearQs2]:WARNING: out of range. Using maximal T in table." << endl;
+      check = 1;
+      fracy = (y-static_cast<double>(posy)*deltaYNuc)/deltaYNuc;
+      
+      QsYdown = (Qs2Nuclear[iTpmax-1][posy]);
+      QsYup =   (Qs2Nuclear[iTpmax-1][posy+1]);
+      value = (fracy*QsYup+(1.-fracy)*QsYdown);//*hbarc*hbarc;
+      
+      return value;
+      
     }
 
   if ( T < Tlist[0] )

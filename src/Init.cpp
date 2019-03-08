@@ -111,7 +111,13 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	{
 	  //sample the position in the file
 	  ifstream fin;
-	  fin.open("he3_plaintext.dat"); 
+
+          stringstream strhe3_name;
+          strhe3_name << "he3_plaintext-" << param->getMPIRank()%10 << ".dat";
+          string he3_name;
+          he3_name = strhe3_name.str();
+          cout << "reading from file " << he3_name << "." << endl;
+	  fin.open(he3_name); 
 	     
 	  double dummy;
 	  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (13699 events in file)
@@ -511,37 +517,37 @@ void Init::readNuclearQs(Parameters *param)
   fin.open((param->getNucleusQsTableFileName()).c_str()); 
 
   cout << param->getNucleusQsTableFileName() << " ... " ;
-
-      cout << "Reading Q_s(sum(T_p),y) from file ";
-      if(fin)
+  
+  cout << "Reading Q_s(sum(T_p),y) from file ";
+  if(fin)
+    {
+      for (int iT=0; iT<iTpmax; iT++)
         {
-          for (int iT=0; iT<iTpmax; iT++)
+          for (int iy=0; iy<iymaxNuc; iy++)
             {
-              for (int iy=0; iy<iymaxNuc; iy++)
+              if (!fin.eof())
+                {  
+                  fin >> dummy;
+                  fin >> T;
+                  Tlist[iT]=atof(T.c_str());
+                  fin >> Qs;
+                  Qs2Nuclear[iT][iy]=atof(Qs.c_str());
+                }
+              else 
                 {
-                  if (!fin.eof())
-                    {  
-                      fin >> dummy;
-                      fin >> T;
-                      Tlist[iT]=atof(T.c_str());
-                      fin >> Qs;
-                      Qs2Nuclear[iT][iy]=atof(Qs.c_str());
-                    }
-                  else 
-                    {
-                      cerr << " End of file reached prematurely. Did the file change? Exiting." << endl;
-                      exit(1);
-                    }
+                  cerr << " End of file reached prematurely. Did the file change? Exiting." << endl;
+                  exit(1);
                 }
             }
-          fin.close();
-          cout << " done." << endl;
         }
-      else
-        {
-          cout << "[Init.cpp:readNuclearQs]: File " << param->getNucleusQsTableFileName() << " does not exist. Exiting." << endl;
-          exit(1);
-        }
+      fin.close();
+      cout << " done." << endl;
+    }
+  else
+    {
+      cout << "[Init.cpp:readNuclearQs]: File " << param->getNucleusQsTableFileName() << " does not exist. Exiting." << endl;
+      exit(1);
+    }
 }  
 
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2 and up)

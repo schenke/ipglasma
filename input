@@ -10,8 +10,8 @@ Jacobianm 0.35
 g 1.
 BG 4
 BGq 0.25
-useSmoothNucleus 1
-useConstituentQuarkProton 0
+useSmoothNucleus 0
+useConstituentQuarkProton 3
 shiftConstituentQuarkProtonOrigin 1
 runningCoupling 0
 muZero 0.3
@@ -40,10 +40,10 @@ Ny 50
 useSeedList 0
 seed 1
 useTimeForSeed 0
-Projectile Pb
+Projectile He3
 Target Pb
-bmin 4
-bmax 4
+bmin 0
+bmax 0
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 42.

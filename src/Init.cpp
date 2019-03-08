@@ -120,39 +120,46 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  cout << "using nucleus Number = " << nucleusNumber << endl;
 	  
 	  // go to the correct line in the file
-	  fin.seekg(std::ios::beg);
-	  for(int i=0; i < nucleusNumber; ++i)
-	    {
-	      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-	    }
-	  // am now at the correct line in the file
-	  
-	  // start reading one nucleus (3 positions)
-	  int A=0;
+          if(fin)
+            {
+              fin.seekg(std::ios::beg);
+              for(int i=0; i < nucleusNumber; ++i)
+                {
+                  fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                }
+              // am now at the correct line in the file
+              
+              // start reading one nucleus (3 positions)
+              int A=0;
 
-	  while(A<glauber->nucleusA1())
-	    {
-	      if(!fin.eof())
-		{  
-		  fin >> rv.x;
-		  fin >> rv.y;
-		  fin >> dummy; // don't care about z direction
-		  rv.collided=0;
-                  if (A==2) 
-                    rv.proton=0;
-                  else 
-                    rv.proton=1;
-                  nucleusA.push_back(rv);
-		  A++;
-		  cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
-		}
-	    }
-	  
+              while(A<glauber->nucleusA1())
+                {
+                  if(!fin.eof())
+                    {  
+                      fin >> rv.x;
+                      fin >> rv.y;
+                      fin >> dummy; // don't care about z direction
+                      rv.collided=0;
+                      if (A==2) 
+                        rv.proton=0;
+                      else 
+                        rv.proton=1;
+                      nucleusA.push_back(rv);
+                      A++;
+                      cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
+                    }
+                }
+              
 	  	  
-	  fin.close();
+              fin.close();
 	  
-	  param->setA1FromFile(A);
-	
+              param->setA1FromFile(A);
+            }
+          else
+            {
+              cerr << " file he3_plaintext.dat not found. exiting." << endl;
+              exit(1);
+            }
 	}   
       else
 	{

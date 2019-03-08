@@ -1,4 +1,10 @@
 *.dat
+*.plt
+*.pdf
+*.png
+*#
+*.pages
+*.py
 src/.DS_Store
 src/ipglasma
 src/ipglasma.dSYM/

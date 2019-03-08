@@ -651,13 +651,10 @@ double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y
       cerr << " [Init:getNuclearQs2]:WARNING: out of range. Using maximal T in table." << endl;
       check = 1;
       fracy = (y-static_cast<double>(posy)*deltaYNuc)/deltaYNuc;
-      
       QsYdown = (Qs2Nuclear[iTpmax-1][posy]);
       QsYup =   (Qs2Nuclear[iTpmax-1][posy+1]);
-      value = (fracy*QsYup+(1.-fracy)*QsYdown);//*hbarc*hbarc;
-      
+      value = (fracy*QsYup+(1.-fracy)*QsYdown);//*hbarc*hbarc;      
       return value;
-      
     }
 
   if ( T < Tlist[0] )

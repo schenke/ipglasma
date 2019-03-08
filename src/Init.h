@@ -32,7 +32,7 @@ class Init {
  private:
   int const static iymaxNuc = 44; // for the Tp-y table
 
-  int const static iTpmax = 100;
+  int const static iTpmax = 200; // updated in March 2019 to a larger T_A range
  
   double const deltaYNuc = 0.25; // for the new table
   

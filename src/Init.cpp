@@ -559,26 +559,21 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  exit(1);
 	}
     }  
-  
-
+ 
 void Init::readNuclearQs(Parameters *param)
 {
-  int rank = param->getMPIRank();
-  int size;
-  MPI_Comm_size (MPI_COMM_WORLD, &size);
-  if(rank==0)
-    {
-      double package[iTpmax*iymaxNuc];
-      // steps in qs0 and Y in the file
-      string dummy;
-      string T, Qs;
-      // open file
+  // steps in qs0 and Y in the file
+  // double y[iymaxNuc];
+  // double qs0[ibmax];
+  string dummy;
+  string T, Qs;
+  // open file
+
+  cout << param->getNucleusQsTableFileName() << " ... " ;
+
+      cout << "Reading Q_s(sum(T_p),y) from file ";
       ifstream fin;
       fin.open((param->getNucleusQsTableFileName()).c_str()); 
-      
-      cout << param->getNucleusQsTableFileName() << " ... " ;
-      
-      cout << "Reading Q_s(sum(T_p),y) from file ";
       if(fin)
         {
           for (int iT=0; iT<iTpmax; iT++)
@@ -592,7 +587,6 @@ void Init::readNuclearQs(Parameters *param)
                       Tlist[iT]=atof(T.c_str());
                       fin >> Qs;
                       Qs2Nuclear[iT][iy]=atof(Qs.c_str());
-                      package[iT*iymaxNuc+iy] = Qs2Nuclear[iT][iy];
                     }
                   else 
                     {
@@ -602,11 +596,6 @@ void Init::readNuclearQs(Parameters *param)
                 }
             }
           fin.close();
-          for (int target=1; target<size; target++)
-            {
-              MPI::COMM_WORLD.Send(package,iTpmax*iymaxNuc,MPI::DOUBLE,target,target);
-              MPI::COMM_WORLD.Send(Tlist,iTpmax,MPI::DOUBLE,target,target+size);
-            }
           cout << " done." << endl;
         }
       else
@@ -614,21 +603,77 @@ void Init::readNuclearQs(Parameters *param)
           cout << "[Init.cpp:readNuclearQs]: File " << param->getNucleusQsTableFileName() << " does not exist. Exiting." << endl;
           exit(1);
         }
-    }
-  else
-    {
-      double package[iTpmax*iymaxNuc];
-      MPI::COMM_WORLD.Recv(package,iTpmax*iymaxNuc,MPI::DOUBLE,0,rank);
-      MPI::COMM_WORLD.Recv(Tlist,iTpmax,MPI::DOUBLE,0,rank+size);
-      for (int iT=0; iT<iTpmax; iT++)
-        {
-          for (int iy=0; iy<iymaxNuc; iy++)
-            {
-              Qs2Nuclear[iT][iy]= package[iT*iymaxNuc+iy];
-            }
-        }
-    }
-}
+}  
+
+
+// void Init::readNuclearQs(Parameters *param)
+// {
+//   int rank = param->getMPIRank();
+//   int size;
+//   MPI_Comm_size (MPI_COMM_WORLD, &size);
+//   if(rank==0)
+//     {
+//       double package[iTpmax*iymaxNuc];
+//       // steps in qs0 and Y in the file
+//       string dummy;
+//       string T, Qs;
+//       // open file
+//       ifstream fin;
+//       fin.open((param->getNucleusQsTableFileName()).c_str()); 
+      
+//       cout << param->getNucleusQsTableFileName() << " ... " ;
+      
+//       cout << "Reading Q_s(sum(T_p),y) from file ";
+//       if(fin)
+//         {
+//           for (int iT=0; iT<iTpmax; iT++)
+//             {
+//               for (int iy=0; iy<iymaxNuc; iy++)
+//                 {
+//                   if (!fin.eof())
+//                     {  
+//                       fin >> dummy;
+//                       fin >> T;
+//                       Tlist[iT]=atof(T.c_str());
+//                       fin >> Qs;
+//                       Qs2Nuclear[iT][iy]=atof(Qs.c_str());
+//                       package[iT*iymaxNuc+iy] = Qs2Nuclear[iT][iy];
+//                     }
+//                   else 
+//                     {
+//                       cerr << " End of file reached prematurely. Did the file change? Exiting." << endl;
+//                       exit(1);
+//                     }
+//                 }
+//             }
+//           fin.close();
+//           for (int target=1; target<size; target++)
+//             {
+//               MPI::COMM_WORLD.Send(package,iTpmax*iymaxNuc,MPI::DOUBLE,target,target);
+//               MPI::COMM_WORLD.Send(Tlist,iTpmax,MPI::DOUBLE,target,target+size);
+//             }
+//           cout << " done." << endl;
+//         }
+//       else
+//         {
+//           cout << "[Init.cpp:readNuclearQs]: File " << param->getNucleusQsTableFileName() << " does not exist. Exiting." << endl;
+//           exit(1);
+//         }
+//     }
+//   else
+//     {
+//       double package[iTpmax*iymaxNuc];
+//       MPI::COMM_WORLD.Recv(package,iTpmax*iymaxNuc,MPI::DOUBLE,0,rank);
+//       MPI::COMM_WORLD.Recv(Tlist,iTpmax,MPI::DOUBLE,0,rank+size);
+//       for (int iT=0; iT<iTpmax; iT++)
+//         {
+//           for (int iy=0; iy<iymaxNuc; iy++)
+//             {
+//               Qs2Nuclear[iT][iy]= package[iT*iymaxNuc+iy];
+//             }
+//         }
+//     }
+// }
 
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2 and up)
 double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y)

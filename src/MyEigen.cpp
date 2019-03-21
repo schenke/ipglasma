@@ -623,6 +623,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
        foutEtot <<  Etot << endl;
        foutEtot.close();
        
+       if(param->getWriteOutputs() > 2)
+         {
        double Jaztot=0.;
        //Jazma output:
        // compute sum first for normalization
@@ -821,6 +823,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                     }
                  }
              }
+         }
          }
     }
   cout << "Wrote outputs" << endl;

@@ -1632,7 +1632,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
    string VTwo_name;
    VTwo_name = strVTwo_name.str();
 
-
+	cout << "Output files " << VOne_name << " and " << VTwo_name << endl;
    // Outpu in text
    if (param->getWriteInitialWilsonLines() == 1)
    {

@@ -252,8 +252,12 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
   else if (param->getNucleonPositionsFromFile()==1)
     {
       ifstream fin;
-      fin.open("nucleus1.dat"); 
-      cout << "Reading nucleon positions from files 'nucleus1.dat' and 'nucleus2.dat' ... " << endl;
+      std::stringstream read1; read1 << "input_nuclei/nucleus_" <<  param->getMPIRank() + (0+2*param->getSeed())*param->getMPISize();
+     std::stringstream read2; read2 << "input_nuclei/nucleus_" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
+
+      //fin.open("nucleus1.dat"); 
+      fin.open(read1.str().c_str());
+      cout << "Reading nucleon positions from files " << read1.str() << " and " << read2.str() << " ... " << endl;
       int A=0;
       int A2=0;
       if(fin)
@@ -262,6 +266,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	    {  
 	      fin >> rv.x;
 	      fin >> rv.y;
+		cout << "Read nuke " << rv.x << " " << rv.y << endl;
 	      rv.collided=0;
 	      nucleusA.push_back(rv);
 	      A++;
@@ -270,7 +275,8 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
     
       
       fin.close();
-      fin.open("nucleus2.dat"); 
+//      fin.open("nucleus2.dat"); 
+	fin.open(read2.str().c_str());
       
       if(fin)
 	{
@@ -284,8 +290,8 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	    }
 	}
       
-      A=A-1;
-      A2=A2-1;
+//      A=A-1;
+//      A2=A2-1;
 
       cout << "A1 (from file) = " << A << endl;
       cout << "A2 (from file) = " << A2 << endl;
@@ -1086,7 +1092,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    }
 
 	  double exponent=5.6; // see 1212.2974 Eq. (17)
-	  if(check==2)
+	  if(check==2 or (A1==2 and A2==2))
 	    {
 	      if ( param->getUseFluctuatingx() == 1)
 		{
@@ -1619,14 +1625,14 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   {
    stringstream strVOne_name;
    //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize();
+   strVOne_name << "/global/cscratch1/sd/heikki/V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize();
    if (param->getWriteInitialWilsonLines() == 1) strVOne_name << ".txt";
    string VOne_name;
    VOne_name = strVOne_name.str();
 
    stringstream strVTwo_name;
    // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
+   strVTwo_name << "/global/cscratch1/sd/heikki/V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
    if (param->getWriteInitialWilsonLines() == 1) strVTwo_name << ".txt";
 
    string VTwo_name;
@@ -1962,7 +1968,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       if(param->getSuccess()==0)
 	{
 	  cout << "No collision happened on rank " << param->getMPIRank() << ". Restarting with new random number..." << endl;
-	  return;
+		cout <<"Eiku sittenkin hyvaksytaan!" << endl;
+	param->setSuccess(1);
+	  //return;
 	}
       // sample color charges and find Wilson lines V_A and V_B
       setV(lat, group, param, random, glauber);      

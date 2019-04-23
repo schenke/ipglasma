@@ -1,5 +1,5 @@
 # ===========================================================================
-#  Makefile for IP-Glasma                             
+#  Makefile for MUSIC                                 Chun Shen Dec. 12, 2014
 # ===========================================================================
 ##
 ##  Environments :	MAIN	= 	main sourcefile	
@@ -10,14 +10,14 @@
 ##			distclean	remove all objectsfiles and binaries
 ##  
 
-CXX := mpicxx
+CXX := CC
 #CFLAGS= -Wall -g -O2 -qopenmp $(shell gsl-config --cflags)
 # -fsanitize=address -qopt-report=5 -qopt-report-phase:vec
-CFLAGS= -g -Wall -std=c++11 -O3 -finline-functions -march=native -fopenmp $(shell gsl-config --cflags) -DDOCTEST_CONFIG_DISABLE
+CFLAGS= -g -Wall -xMIC-AVX512 -std=c++11 -O3 -qopenmp -finline-functions -march=knl $(shell gsl-config --cflags) -DDOCTEST_CONFIG_DISABLE
 
 RM		=	rm -f
 O               =       .o
-LDFLAGS         =       $(CFLAGS) $(shell gsl-config --libs) -lfftw3_threads -lfftw3 -lm
+LDFLAGS         =       $(CFLAGS) $(shell gsl-config --libs) -lfftw3 -lm
 SYSTEMFILES     =       $(SRCGNU)
 
 # --------------- Files involved ------------------

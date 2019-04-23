@@ -437,7 +437,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   // do evolution
   for (int it=1; it<=itmax; it++)
     {
-      if(it == 1 || it == 2 || it==floor(it1) || it==floor(it2) || it==floor(itmax))
+      if(it == 1 || it==floor(it1) || it==floor(it2) || it==floor(itmax))
 	{	  
 	  Tmunu(lat,group,param,it);
           u(lat,group,param,it); // computes flow velocity and correct energy density 
@@ -610,12 +610,12 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 	  foutEps2.close();
  	}
 
-      if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
-	{	  
-	  eccentricity(lat,group,param,it,0.1,0);
-	  eccentricity(lat,group,param,it,1.,0);
-	  eccentricity(lat,group,param,it,10.,0);
-	}
+      // if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
+      // 	{	  
+      // 	  eccentricity(lat,group,param,it,0.1,0);
+      // 	  eccentricity(lat,group,param,it,1.,0);
+      // 	  eccentricity(lat,group,param,it,10.,0);
+      // 	}
 
       if(it==itmax)
 	{	  

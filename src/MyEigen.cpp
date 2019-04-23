@@ -295,13 +295,13 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
       string euH_name;
       euH_name = streuH_name.str();
 
-      stringstream strEtot_name;
-      strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-      string Etot_name;
-      Etot_name = strEtot_name.str();
+      // stringstream strEtot_name;
+      // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+      // string Etot_name;
+      // Etot_name = strEtot_name.str();
 
       ofstream foutEps2(euH_name.c_str(),ios::out); 
-      ofstream foutEtot(Etot_name.c_str(),ios::out); 
+      //      ofstream foutEtot(Etot_name.c_str(),ios::out); 
 
       foutEps2 << "# dummy " << 1 << " etamax= " << heta
 	       << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
@@ -620,8 +620,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 	}
        foutEps2.close();
        cout << "Etot = " << Etot << " GeV " << endl;
-       foutEtot <<  Etot << endl;
-       foutEtot.close();
+       //       foutEtot <<  Etot << endl;
+       //foutEtot.close();
        
        if(param->getWriteOutputs() > 2)
          {
@@ -703,10 +703,10 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
        string Jaz_name;
        Jaz_name = strJaz_name.str();
 
-       stringstream strtwo_name;
-       strtwo_name << "twopointfct-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-       string two_name;
-       two_name = strtwo_name.str();
+       // stringstream strtwo_name;
+       // strtwo_name << "twopointfct-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+       // string two_name;
+       // two_name = strtwo_name.str();
        
        ofstream foutEps3(Jaz_name.c_str(),ios::out); 
        
@@ -714,11 +714,11 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                 << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
                 << " dx= " << ha << " dy= " << ha << endl; 
 
-       ofstream foutEps4(two_name.c_str(),ios::out); 
+       // ofstream foutEps4(two_name.c_str(),ios::out); 
        
-       foutEps4 << "# dummy " << 1 << " etamax= " << heta
-                << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
-                << " dx= " << ha << " dy= " << ha << endl; 
+       // foutEps4 << "# dummy " << 1 << " etamax= " << heta
+       //          << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
+       //          << " dx= " << ha << " dy= " << ha << endl; 
        
         for(int ieta=0; ieta<heta; ieta++) // loop over all positions
          {
@@ -793,24 +793,24 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                                << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
                                << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;	
                       
-                      // write two point and one point functions in [1/fm^6] and [1/fm^4] from https://arxiv.org/pdf/1902.07168.pdf
-                      if (QsAsqr>0 && QsBsqr>0)
-                        {
-                          foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-                                   << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
-                                                                                       +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.))) 
-                                   << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc 
-                                   << " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << " " 
-                                   << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.)+1.)
-                                                                                       +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.)+1.)) << endl;	
-                          //        cout << QsAsqr << " " << QsBsqr << " " << " " << param->getm()*param->getm() << endl;
-                        }
-                      else
-                        {
-                          foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-                                   << 0. << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << 
-                            " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << " " << 0. << endl;	
-                        }
+                      // // write two point and one point functions in [1/fm^6] and [1/fm^4] from https://arxiv.org/pdf/1902.07168.pdf
+                      // if (QsAsqr>0 && QsBsqr>0)
+                      //   {
+                      //     foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                      //              << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
+                      //                                                                  +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.))) 
+                      //              << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc 
+                      //              << " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << " " 
+                      //              << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.)+1.)
+                      //                                                                  +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.)+1.)) << endl;	
+                      //     //        cout << QsAsqr << " " << QsBsqr << " " << " " << param->getm()*param->getm() << endl;
+                      //   }
+                      // else
+                      //   {
+                      //     foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                      //              << 0. << " " << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc << 
+                      //       " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << " " << 0. << endl;	
+                      //   }
                     }                   
                   else
                     {
@@ -818,8 +818,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 			     << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
 			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-                      foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-                               << 0. << " " << 0. << " "  << 0. << " " << 0. << " " << 0. << endl;
+                      // foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                      //          << 0. << " " << 0. << " "  << 0. << " " << 0. << " " << 0. << endl;
                     }
                  }
              }

@@ -371,7 +371,7 @@ int main(int argc, char *argv[])
   delete setup;
   delete myeigen;
   //cout << "done." << endl;
-  MPI::Finalize();
+  MPI_Finalize();
   return 1;
 }/* main */
 

@@ -187,7 +187,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                             }
                         }
                       if(event>0)
-                        MPI::COMM_WORLD.Send(package,6,MPI::DOUBLE,event,1);
+                        MPI_Send(package,6,MPI_DOUBLE, event, 1, MPI_COMM_WORLD);
                       
                       param->setA1FromFile(A);
                     }
@@ -202,7 +202,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
             }
           else
             {
-              MPI::COMM_WORLD.Recv(package,6,MPI::DOUBLE,0,1);
+              MPI_Recv(package,6,MPI_DOUBLE,0,1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
               rv.x = package[0];
               rv.y = package[1];
               rv.proton = 1;

@@ -265,6 +265,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  while(!fin.eof())
 	    {  
 	      fin >> rv.x;
+          if (fin.eof()) continue;
 	      fin >> rv.y;
 		cout << "Read nuke " << rv.x << " " << rv.y << endl;
 	      rv.collided=0;
@@ -282,8 +283,11 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	{
 	  while(!fin.eof())
 	    {  
+
 	      fin >> rv.x;
+        if (fin.eof()) continue;
 	      fin >> rv.y;
+cout << "read nuke 2 " <<  rv.x << " " << rv.y << endl;
 	      rv.collided=0;
 	      nucleusB.push_back(rv);
 	      A2++;
@@ -1625,14 +1629,14 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   {
    stringstream strVOne_name;
    //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-   strVOne_name << "/global/cscratch1/sd/heikki/V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize();
+   strVOne_name << "./V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize();
    if (param->getWriteInitialWilsonLines() == 1) strVOne_name << ".txt";
    string VOne_name;
    VOne_name = strVOne_name.str();
 
    stringstream strVTwo_name;
    // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-   strVTwo_name << "/global/cscratch1/sd/heikki/V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
+   strVTwo_name << "./V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
    if (param->getWriteInitialWilsonLines() == 1) strVTwo_name << ".txt";
 
    string VTwo_name;
@@ -2007,7 +2011,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   // fout.close();      
 
   cout << "Finding fields in forward lightcone..." << endl;
-
+ return;
 #pragma omp parallel
   {
     int ir;

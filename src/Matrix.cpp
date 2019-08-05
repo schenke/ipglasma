@@ -314,6 +314,15 @@ vector <complex<double> > Matrix::expmCoeff(double *Q, int Nc)
    for(int i=0; i<8; i++)
     {
       result.push_back(ua[i]*0.5*f2);
+       if (std::isnan((result[result.size()-1].real())))
+       {
+
+               //cout << "expMcoeff color " << i << " was " << result[result.size()-1] << " with input ";
+              //for (int k=0; k < Nc*Nc-1; k++) cout << Q[k] << " ";
+               //cout << endl;
+               result[result.size()-1]=0.0;
+       }
+     
     }
 
   return result;

@@ -1,7 +1,10 @@
 // Fragmentation.cpp is part of the IP-Glasma solver.
 // Copyright (C) 2013 Bjoern Schenke.
 #include "Fragmentation.h"
+#include <cmath>
+#include <iostream>
 
+namespace Fragmentation {
 //**************************************************************************
 // Fragmentation functions
 
@@ -43,10 +46,9 @@
 //
 //=====================================================================
 
-double Fragmentation::kkp(int ih, int iset, double x, double qs)
-{
+double kkp(int ih, int iset, double x, double qs) {
   //(a-h,o-z)
-  
+
   double rlam, s, sc, sb;
   // --- Mass-thresholds:
   double rmcc = 2.9788;
@@ -375,20 +377,21 @@ double Fragmentation::kkp(int ih, int iset, double x, double qs)
       a[10]=                           -0.04290;
       a[11]=                           -0.30359;
       dprb = (b[1] +a[1]*sb + a[2]*sb*sb +a[3]*sb*sb*sb)*pow(x,(b[2] +a[4]*sb + a[5]*sb*sb +a[6]*sb*sb*sb))
-	*pow((1.-x),(b[3] +a[7]*sb + a[8]*sb*sb +a[9]*sb*sb*sb))*(1.+(a[10]*sb +a[11]*sb*sb)/x);                  
+	*pow((1.-x),(b[3] +a[7]*sb + a[8]*sb*sb +a[9]*sb*sb*sb))*(1.+(a[10]*sb +a[11]*sb*sb)/x);
 //          dprb= (b[1] +a[1]*sb + a[2]*sb**2 +a[3]*sb**3)*x**
 //      .        (b[2] +a[4]*sb + a[5]*sb**2 +a[6]*sb**3)*(1d0-x)**
 //      .        (b[3] +a[7]*sb + a[8]*sb**2 +a[9]*sb**3)
 //      .        *(1d0+(a[10]*sb +a[11]*sb**2)/x)
-    }
-  else 
-    {
-// --- NLO FFs
-      if(iset != 1) cerr << "ERROR [Fragmentation::kkp]: iset must be 0 (LO) or 1 (NLO)" << endl;
-      rlam= 0.213;
-      s=  log(log(qs*qs/(rlam*rlam))/log(q0*q0/(rlam*rlam)));
-      sc= log(log(qs*qs/(rlam*rlam))/log(rmcc*rmcc/(rlam*rlam)));
-      sb= log(log(qs*qs/(rlam*rlam))/log(rmbb*rmbb/(rlam*rlam)));
+    } else {
+        // --- NLO FFs
+        if (iset != 1) {
+            std::cerr << "ERROR [Fragmentation::kkp]: iset must be 0 (LO) or 1 (NLO)"
+                      << std::endl;
+        }
+        rlam= 0.213;
+        s=  log(log(qs*qs/(rlam*rlam))/log(q0*q0/(rlam*rlam)));
+        sc= log(log(qs*qs/(rlam*rlam))/log(rmcc*rmcc/(rlam*rlam)));
+        sb= log(log(qs*qs/(rlam*rlam))/log(rmbb*rmbb/(rlam*rlam)));
 
 // ---------------------- NLO PION ------------------------------
       b[1]=                            3.73331;
@@ -406,7 +409,7 @@ double Fragmentation::kkp(int ih, int iset, double x, double qs)
       a[10]=                            0.09466;
       a[11]=                           -0.10222;
       dpg= (b[1] + a[1]*s + a[2]*s*s +a[3]*s*s*s)*pow(x,(b[2] +a[4]*s + a[5]*s*s +a[6]*s*s*s))
-	*pow((1.-x),(b[3] +a[7]*s + a[8]*s*s +a[9]*s*s*s))*(1.+(a[10]*s +a[11]*s*s)/x);                  
+	*pow((1.-x),(b[3] +a[7]*s + a[8]*s*s +a[9]*s*s*s))*(1.+(a[10]*s +a[11]*s*s)/x);
 	     //       dpg= (b[1] +a[1]*s + a[2]*s**2 +a[3]*s**3)*x**
 //      .        (b[2] +a[4]*s + a[5]*s**2 +a[6]*s**3)*(1d0-x)**
 //      .        (b[3] +a[7]*s + a[8]*s**2 +a[9]*s**3)*
@@ -696,122 +699,108 @@ double Fragmentation::kkp(int ih, int iset, double x, double qs)
 //      .        (b[3] +a[7]*sb + a[8]*sb**2 +a[9]*sb**3)
 //      .        *(1d0+(a[10]*sb +a[11]*sb**2)/x)
     }
-  
-// --- Evaluate different contributions
-  
-  double dpd =      dpu;
-  dks =      dku;
-  double dprd= 0.5*dpru;
-  if (qs < rmbb) 
-    {
-      dpb  = 0.;
-      dkb  = 0.;
-      dprb = 0.;
-    }
-  if (qs < rmcc) 
-    {
-      dpc  = 0.;
-      dkc  = 0.;
-      dprc = 0.;
-    }
-  if (ih == 1) 
-    {
-      dh[0]= dpg/2.;
-      dh[1]= dpu/2.;
-      dh[2]= dpu/2.;
-      dh[3]= dpd/2.;
-      dh[4]= dpd/2.;
-      dh[5]= dps/2.;
-      dh[6]= dps/2.;
-      dh[7]= dpc/2.;
-      dh[8]= dpc/2.;
-      dh[9]= dpb/2.;
-      dh[10]=dpb/2.;
-    }
-  else if (ih == 2) 
-    {
-      dh[0]= dkg/2.;
-      dh[1]= dku/2.;
-      dh[2]= dku/2.;
-      dh[3]= dkd/2.;
-      dh[4]= dkd/2.;
-      dh[5]= dks/2.;
-      dh[6]= dks/2.;
-      dh[7]= dkc/2.;
-      dh[8]= dkc/2.;
-      dh[9]= dkb/2.;
-      dh[10]=dkb/2.;
-    }
-  else if (ih == 3) 
-    {
-      dh[0]= dkg/2.;
-      dh[1]= dkd/2.;
-      dh[2]= dkd/2.;
-      dh[3]= dku/2.;
-      dh[4]= dku/2.;
-      dh[5]= dks/2.;
-      dh[6]= dks/2.;
-      dh[7]= dkc/2.;
-      dh[8]= dkc/2.;
-      dh[9]= dkb/2.;
-      dh[10]=dkb/2.;
-    }      
-  else if (ih == 4) 
-    {
-      dh[0]= dprg/2.;
-      dh[1]= dpru/2.;
-      dh[2]= dpru/2.;
-      dh[3]= dprd/2.;
-      dh[4]= dprd/2.;
-      dh[5]= dprs/2.;
-      dh[6]= dprs/2.;
-      dh[7]= dprc/2.;
-      dh[8]= dprc/2.;
-      dh[9]= dprb/2.;
-      dh[10]=dprb/2.;
-    }
-  else if (ih == 5) 
-    {
-      dh[0]= dpg/2.;
-      dh[1]= dpu/2.;
-      dh[2]= dpu/2.;
-      dh[3]= dpd/2.;
-      dh[4]= dpd/2.;
-      dh[5]= dps/2.;
-      dh[6]= dps/2.;
-      dh[7]= dpc/2.;
-      dh[8]= dpc/2.;
-      dh[9]= dpb/2.;
-      dh[10]=dpb/2.;
-    }
-  else if (ih == 6)
-    {
-      dh[0]= dprg/2.;
-      dh[1]= dpru/4.;
-      dh[2]= dpru/4.;
-      dh[3]= dprd;
-      dh[4]= dprd;
-      dh[5]= dprs/2.;
-      dh[6]= dprs/2.;
-      dh[7]= dprc/2.;
-      dh[8]= dprc/2.;
-      dh[9]= dprb/2.;
-      dh[10]=dprb/2.;
-    }      
-  else
-    {  
-      dh[0]= dpg+dkg+dprg;
-      dh[1]= dpu+dku+dpru;
-      dh[2]= dpu+dku+dpru;
-      dh[3]= dpd+dkd+dprd;
-      dh[4]= dpd+dkd+dprd;
-      dh[5]= dps+dks+dprs;
-      dh[6]= dps+dks+dprs;
-      dh[7]= dpc+dkc+dprc;
-      dh[8]= dpc+dkc+dprc;
-      dh[9]= dpb+dkb+dprb;
-      dh[10]=dpb+dkb+dprb;
-    }  
 
-  return dh[0]; // return gluon part
+// --- Evaluate different contributions
+    double dpd = dpu;
+    dks = dku;
+    double dprd = 0.5*dpru;
+    if (qs < rmbb) {
+        dpb  = 0.;
+        dkb  = 0.;
+        dprb = 0.;
+    }
+    if (qs < rmcc) {
+        dpc  = 0.;
+        dkc  = 0.;
+        dprc = 0.;
+    }
+    if (ih == 1) {
+        dh[0]= dpg/2.;
+        dh[1]= dpu/2.;
+        dh[2]= dpu/2.;
+        dh[3]= dpd/2.;
+        dh[4]= dpd/2.;
+        dh[5]= dps/2.;
+        dh[6]= dps/2.;
+        dh[7]= dpc/2.;
+        dh[8]= dpc/2.;
+        dh[9]= dpb/2.;
+        dh[10]=dpb/2.;
+    } else if (ih == 2) {
+        dh[0]= dkg/2.;
+        dh[1]= dku/2.;
+        dh[2]= dku/2.;
+        dh[3]= dkd/2.;
+        dh[4]= dkd/2.;
+        dh[5]= dks/2.;
+        dh[6]= dks/2.;
+        dh[7]= dkc/2.;
+        dh[8]= dkc/2.;
+        dh[9]= dkb/2.;
+        dh[10]=dkb/2.;
+    } else if (ih == 3) {
+        dh[0]= dkg/2.;
+        dh[1]= dkd/2.;
+        dh[2]= dkd/2.;
+        dh[3]= dku/2.;
+        dh[4]= dku/2.;
+        dh[5]= dks/2.;
+        dh[6]= dks/2.;
+        dh[7]= dkc/2.;
+        dh[8]= dkc/2.;
+        dh[9]= dkb/2.;
+        dh[10]=dkb/2.;
+    } else if (ih == 4) {
+        dh[0]= dprg/2.;
+        dh[1]= dpru/2.;
+        dh[2]= dpru/2.;
+        dh[3]= dprd/2.;
+        dh[4]= dprd/2.;
+        dh[5]= dprs/2.;
+        dh[6]= dprs/2.;
+        dh[7]= dprc/2.;
+        dh[8]= dprc/2.;
+        dh[9]= dprb/2.;
+        dh[10]=dprb/2.;
+    } else if (ih == 5) {
+        dh[0]= dpg/2.;
+        dh[1]= dpu/2.;
+        dh[2]= dpu/2.;
+        dh[3]= dpd/2.;
+        dh[4]= dpd/2.;
+        dh[5]= dps/2.;
+        dh[6]= dps/2.;
+        dh[7]= dpc/2.;
+        dh[8]= dpc/2.;
+        dh[9]= dpb/2.;
+        dh[10]=dpb/2.;
+    } else if (ih == 6) {
+        dh[0]= dprg/2.;
+        dh[1]= dpru/4.;
+        dh[2]= dpru/4.;
+        dh[3]= dprd;
+        dh[4]= dprd;
+        dh[5]= dprs/2.;
+        dh[6]= dprs/2.;
+        dh[7]= dprc/2.;
+        dh[8]= dprc/2.;
+        dh[9]= dprb/2.;
+        dh[10]=dprb/2.;
+    } else {
+        dh[0]= dpg+dkg+dprg;
+        dh[1]= dpu+dku+dpru;
+        dh[2]= dpu+dku+dpru;
+        dh[3]= dpd+dkd+dprd;
+        dh[4]= dpd+dkd+dprd;
+        dh[5]= dps+dks+dprs;
+        dh[6]= dps+dks+dprs;
+        dh[7]= dpc+dkc+dprc;
+        dh[8]= dpc+dkc+dprc;
+        dh[9]= dpb+dkb+dprb;
+        dh[10]=dpb+dkb+dprb;
+    }
+
+    return dh[0]; // return gluon part
+}
+
 }

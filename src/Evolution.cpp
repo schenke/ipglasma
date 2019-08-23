@@ -2,11 +2,13 @@
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Evolution.h"
 #include "Phys_consts.h"
+#include "Fragmentation.h"
 
 using PhysConst::hbarc;
 using PhysConst::m_pion;
 using PhysConst::m_kaon;
 using PhysConst::m_proton;
+using Fragmentation::kkp;
 
 //**************************************************************************
 // Evolution class.
@@ -2628,32 +2630,32 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	      
 	      if(param->getUsePseudoRapidity()==0)
 		{
-		  zintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt);
-		  // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * frag->kkp(7,1,z,kt);
-		  // Lzintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt/2.);
-		  // Hzintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt*2.);
+		  zintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt);
+		  // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * kkp(7,1,z,kt);
+		  // Lzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt/2.);
+		  // Hzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt*2.);
 		}
 	      else
 		{
 		  zintegrand[iz] =  1./(z*z) * Ng * 
-			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+ m_pion*m_pion/(mypt*mypt)))
-			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
+			2. * (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+ m_pion*m_pion/(mypt*mypt)))
+			      +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+			      +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 	
 		  // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));	
+		  // 	2. * (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));	
 		  
 		  // Lzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
+		  // 	2. * (kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  // Hzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
+		  // 	2. * (kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  
 			}
@@ -3401,32 +3403,32 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	      
 	      if(param->getUsePseudoRapidity()==0)
 		{
-		  zintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt);
-		  // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * frag->kkp(7,1,z,kt);
-		  // Lzintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt/2.);
-		  // Hzintegrand[iz] = 1./(z*z) * Ng * frag->kkp(7,1,z,kt*2.);
+		  zintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt);
+		  // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * kkp(7,1,z,kt);
+		  // Lzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt/2.);
+		  // Hzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt*2.);
 		}
 	      else
 		{
 		  zintegrand[iz] =  1./(z*z) * Ng * 
-			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
+			2. * (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+			      +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+			      +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 	
 		  // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));	
+		  // 	2. * (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));	
 		  
 		  // Lzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
+		  // 	2. * (kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  // Hzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
+		  // 	2. * (kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  
 			}
@@ -4002,11 +4004,11 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 		    {
 		      if (z == 0.05 || z == 1.)
 			{
-			  Nh[ih][iphi] += 1./(z*z) * Ng * frag->kkp(7,1,z,kt) *dz *0.5; 
+			  Nh[ih][iphi] += 1./(z*z) * Ng * kkp(7,1,z,kt) *dz *0.5; 
 			}
 		      else 
 			{
-			  Nh[ih][iphi] += 1./(z*z) * Ng * frag->kkp(7,1,z,kt)*dz; 
+			  Nh[ih][iphi] += 1./(z*z) * Ng * kkp(7,1,z,kt)*dz; 
 			}
 		    }
 		  else
@@ -4014,17 +4016,17 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 		      if (z == 0.05 || z == 1.)
 			{
 			  Nh[ih][iphi] += 1./(z*z) * Ng * 
-			    2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-				  +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-				  +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))))
+			    2. * (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+				  +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+				  +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))))
 			    *dz *0.5; 
 			}
 		      else 
 			{
 			  Nh[ih][iphi] += 1./(z*z) * Ng * 
-			    2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-				  +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-				  +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))))
+			    2. * (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+				  +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+				  +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))))
 			    *dz;
 			}
 		    }

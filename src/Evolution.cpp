@@ -1,6 +1,12 @@
 // Evolution.cpp is part of the IP-Glasma evolution solver.
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Evolution.h"
+#include "Phys_consts.h"
+
+using PhysConst::hbarc;
+using PhysConst::m_pion;
+using PhysConst::m_kaon;
+using PhysConst::m_proton;
 
 //**************************************************************************
 // Evolution class.
@@ -496,31 +502,31 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 		      if(param->getRunWithQs()==2)
 			{
 			  if(g2mu2A > g2mu2B)
-			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			  else
-			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			}
 		      else if(param->getRunWithQs()==0)
 			{
 			  if(g2mu2A < g2mu2B)
-			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			  else
-			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			}
 		      else if(param->getRunWithQs()==1)
 			{
-			  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			}
 		      
 		      // 3 flavors
-		      alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-                      gfactor = g*g/(4.*PI*alphas);
+		      alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+                      gfactor = g*g/(4.*M_PI*alphas);
 		      // run with the local (in transverse plane) coupling
 		    }
 		  else
 		    gfactor = 1.;
 
-		  foutEps << x << " " << y << " " << 0.1973269718*gfactor*abs(lat->cells[pos]->getEpsilon()) << endl; 
+		  foutEps << x << " " << y << " " << hbarc*gfactor*abs(lat->cells[pos]->getEpsilon()) << endl; 
 		  // abs just to get rid of negative 10^(-17) numbers at edge
 		}
 	      foutEps << endl;
@@ -564,45 +570,45 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 		      if(param->getRunWithQs()==2)
 			{
 			  if(g2mu2A > g2mu2B)
-			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			  else
-			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			}
 		      else if(param->getRunWithQs()==0)
 			{
 			  if(g2mu2A < g2mu2B)
-			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			  else
-			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			}
 		      else if(param->getRunWithQs()==1)
 			{
-			  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 			}
 
 		      if (param->getRunWithLocalQs() == 1)
 			{
 			  // 3 flavors
-			  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));				      
-                          gfactor = g*g/(4.*PI*alphas);
+			  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));				      
+                          gfactor = g*g/(4.*M_PI*alphas);
 			  // run with the local (in transverse plane) coupling
 			}
 		      else
  			{
 			  if ( param->getRunWithQs() == 0 )
-			    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+			    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 			  else if ( param->getRunWithQs() == 1 )
-			    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+			    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 			  else if ( param->getRunWithQs() == 2 )
-			    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+			    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 
-			  gfactor = g*g/(4.*PI*alphas);
+			  gfactor = g*g/(4.*M_PI*alphas);
 			}
 		    }
 		  else
 		    gfactor = 1.;
 
-		  foutEps2 << x << " " << y << " " << 0.1973269718*gfactor*abs(lat->cells[pos]->getEpsilon()) << endl; 
+		  foutEps2 << x << " " << y << " " << hbarc*gfactor*abs(lat->cells[pos]->getEpsilon()) << endl; 
 		  // abs just to get rid of negative 10^(-17) numbers at edge
 		}
 	      foutEps2 << endl;
@@ -1319,39 +1325,39 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 		  if(param->getRunWithQs()==2)
 		    {
 		      if(g2mu2A > g2mu2B)
-			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		      else
-			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  else if(param->getRunWithQs()==0)
 		    {
 		      if(g2mu2A < g2mu2B)
-			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		      else
-			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  else if(param->getRunWithQs()==1)
 		    {
-		      Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		      Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  
 		  if ( param->getRunWithLocalQs() == 1 )
 		    {
 		      // 3 flavors
-		      alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		      gfactor = g*g/(4.*PI*alphas);
+		      alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		      gfactor = g*g/(4.*M_PI*alphas);
 		      // run with the local (in transverse plane) coupling
 		    }
 		  else
 		    {
 		      if ( param->getRunWithQs() == 0 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		      else if ( param->getRunWithQs() == 1 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		      else if ( param->getRunWithQs() == 2 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		      
-		      gfactor = g*g/(4.*PI*alphas);
+		      gfactor = g*g/(4.*M_PI*alphas);
 		    }
 		}
 	      else
@@ -1420,13 +1426,13 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 		  phiA = atan(y/x);
 		  if (x==0) 
 		    {
-		      if (y>=0) phiA=PI/2.;
-		      else if (y<0) phiA=3.*PI/2.;
+		      if (y>=0) phiA=M_PI/2.;
+		      else if (y<0) phiA=3.*M_PI/2.;
 		    }
 		}
 	      else
 		{
-		  phiA = atan(y/x)+PI;
+		  phiA = atan(y/x)+M_PI;
 		}
 	      
 	      if(param->getRunningCoupling())
@@ -1448,39 +1454,39 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 		  if(param->getRunWithQs()==2)
 		    {
 		      if(g2mu2A > g2mu2B)
-			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		      else
-			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  else if(param->getRunWithQs()==0)
 		    {
 		      if(g2mu2A < g2mu2B)
-			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		      else
-			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  else if(param->getRunWithQs()==1)
 		    {
-		      Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		      Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  
 		  if ( param->getRunWithLocalQs() == 1 )
 		    {
 		      // 3 flavors
-		      alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		      gfactor = g*g/(4.*PI*alphas);
+		      alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		      gfactor = g*g/(4.*M_PI*alphas);
 		      // run with the local (in transverse plane) coupling
 		    }
 		  else
 		    {
 		      if ( param->getRunWithQs() == 0 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		      else if ( param->getRunWithQs() == 1 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		      else if ( param->getRunWithQs() == 2 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		      
-		      gfactor = g*g/(4.*PI*alphas);
+		      gfactor = g*g/(4.*M_PI*alphas);
 		    }
 		}
 	      else
@@ -1538,12 +1544,12 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 	}
       
       // compute and print eccentricity and angles:
-      Psi1 = (atan(avsin1/avcos1)+PI)/1.;
-      Psi2 = (atan(avsin/avcos)+PI)/2.;
-      Psi3 = (atan(avsin3/avcos3)+PI)/3.;
-      Psi4 = (atan(avsin4/avcos4)+PI)/4.;
-      Psi5 = (atan(avsin5/avcos5)+PI)/5.;
-      Psi6 = (atan(avsin6/avcos6)+PI)/6.;
+      Psi1 = (atan(avsin1/avcos1)+M_PI)/1.;
+      Psi2 = (atan(avsin/avcos)+M_PI)/2.;
+      Psi3 = (atan(avsin3/avcos3)+M_PI)/3.;
+      Psi4 = (atan(avsin4/avcos4)+M_PI)/4.;
+      Psi5 = (atan(avsin5/avcos5)+M_PI)/5.;
+      Psi6 = (atan(avsin6/avcos6)+M_PI)/6.;
       eccentricity1 = sqrt(avcos1*avcos1+avsin1*avsin1)/avr1;
       eccentricity2 = sqrt(avcos*avcos+avsin*avsin)/avrSq;
       eccentricity3 = sqrt(avcos3*avcos3+avsin3*avsin3)/avr3;
@@ -1584,39 +1590,39 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 		  if(param->getRunWithQs()==2)
 		    {
 		      if(g2mu2A > g2mu2B)
-			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		      else
-			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  else if(param->getRunWithQs()==0)
 		    {
 		      if(g2mu2A < g2mu2B)
-			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		      else
-			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+			Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  else if(param->getRunWithQs()==1)
 		    {
-		      Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		      Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		    }
 		  
 		  if ( param->getRunWithLocalQs() == 1 )
 		    {
 		      // 3 flavors
-		      alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));		      
-		      gfactor = g*g/(4.*PI*alphas);
+		      alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));		      
+		      gfactor = g*g/(4.*M_PI*alphas);
 		      // run with the local (in transverse plane) coupling
 		    }
 		  else
 		    {
 		      if ( param->getRunWithQs() == 0 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		      else if ( param->getRunWithQs() == 1 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		      else if ( param->getRunWithQs() == 2 )
-			alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+			alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		      
-		      gfactor = g*g/(4.*PI*alphas);
+		      gfactor = g*g/(4.*M_PI*alphas);
 		    }
 		}
 	      else
@@ -2036,11 +2042,11 @@ void Evolution::readNkt(Parameters *param)
     {
       if(param->getUsePseudoRapidity()==0)
 	{
-	  dNdeta2 += nIn[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
+	  dNdeta2 += nIn[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; //integrate, gives a ik*dkt*2pi*dkt
 	}
       else
 	{
-	  dNdeta2 += nIn[ik]*(ik+0.5)*dkt*dkt *2.*PI
+	  dNdeta2 += nIn[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
 	    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt)*((ik+0.5)*dkt)))); 
 	}
     }
@@ -2153,39 +2159,39 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{	  
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -2247,20 +2253,20 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   								     );
   		  if(param->getRunWithkt()==1)
   		    {
-  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		      nkt *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
   		    }
   		}
 	      
 	      
   	      dNdeta += nkt;
-  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+  	      dEdeta += nkt*sqrt(omega2)*hbarc/a;
 	          
   	      for(int ik=0; ik<bins; ik++)
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
   		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
   		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
@@ -2302,39 +2308,39 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{	  
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -2375,19 +2381,19 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( g*g/((it-0.5)*dtau)*( ((((*E1[pos])*(*E1[npos])).trace()).real())));
 		  if(param->getRunWithkt()==1)
   		    {
-  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		      nkt *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
   		    }
   		}
 	      
   	      dNdeta += nkt;
-  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+  	      dEdeta += nkt*sqrt(omega2)*hbarc/a;
 	          
   	      for(int ik=0; ik<bins; ik++)
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
   		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
   		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
@@ -2426,39 +2432,39 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{	  
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -2500,20 +2506,20 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( ((it-0.5)*dtau) * ( (((*E1[pos])*(*E1[npos])).trace()).real() ) );
   		  if(param->getRunWithkt()==1)
   		    {
-  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		      nkt *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
   		    }
   		}
 	      
 	      
   	      dNdeta += nkt;
-  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+  	      dEdeta += nkt*sqrt(omega2)*hbarc/a;
 	          
   	      for(int ik=0; ik<bins; ik++)
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
   		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
   		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
@@ -2539,39 +2545,39 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	  E[ik] = E[ik]/static_cast<double>(counter[ik]);
 	  if(param->getUsePseudoRapidity()==0)
 	    {
-	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
-	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
-	      if(ik*dkt/a*0.1973269718>3.) // 
+	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; //integrate, gives a ik*dkt*2pi*dkt
+	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; //integrate, gives a ik*dkt*2pi*dkt
+	      if(ik*dkt/a*hbarc>3.) // 
 		{
-		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
-		  dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
+		  dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
 		}
-	      if(ik*dkt/a*0.1973269718>6.) // large cut
+	      if(ik*dkt/a*hbarc>6.) // large cut
 		{
-		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
-		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
+		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
 		}
 	    }
 	  else
 	    {
-	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));  //integrate, gives a ik*dkt*2pi*dkt
-	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI*
-		cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));  //integrate, gives a ik*dkt*2pi*dkt
+	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc))));  //integrate, gives a ik*dkt*2pi*dkt
+	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI*
+		cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc))));  //integrate, gives a ik*dkt*2pi*dkt
 
-	      if(ik*dkt/a*0.1973269718>3.) //
+	      if(ik*dkt/a*hbarc>3.) //
 		{
-		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*PI 
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));     
-		    dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI 
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc))));     
+		    dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc)))); 
 		}
-	      if(ik*dkt/a*0.1973269718>6.) // large cut
+	      if(ik*dkt/a*hbarc>6.) // large cut
 		{
-		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
-		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc)))); 
+		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc)))); 
 		}
 	  
 	    }
@@ -2610,12 +2616,12 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	      
 	      kt = mypt/z;
 
-	      ik = static_cast<int>(floor(kt*a/0.1973269718/dkt-0.5+0.00000001));
+	      ik = static_cast<int>(floor(kt*a/hbarc/dkt-0.5+0.00000001));
 	      
-	      frac = (kt - (ik+0.5)*dkt/a*0.1973269718)/(dkt/a*0.1973269718);
+	      frac = (kt - (ik+0.5)*dkt/a*hbarc)/(dkt/a*hbarc);
      
 	      if(ik+1<bins && ik >=0)
-		Ng = ((1.-frac)*n[ik]+frac*n[ik+1])*a/0.1973269718*a/0.1973269718; // to make dN/d^2k_T fo k_T in GeV 
+		Ng = ((1.-frac)*n[ik]+frac*n[ik+1])*a/hbarc*a/hbarc; // to make dN/d^2k_T fo k_T in GeV 
 	      else 
 		Ng =0.;
 
@@ -2630,24 +2636,24 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	      else
 		{
 		  zintegrand[iz] =  1./(z*z) * Ng * 
-			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+ m_pion*m_pion/(mypt*mypt)))
+			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 	
 		  // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));	
+		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));	
 		  
 		  // Lzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  // Hzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  
 			}
@@ -2755,7 +2761,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
       foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp() << " " << param->getb() << " " << dEdeta << " " << param->getRandomSeed() 
 	     << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaCut << " " << dEdetaCut 
-	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
       foutNN.close();
     }
   
@@ -2891,39 +2897,39 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{	  
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -2998,20 +3004,20 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   								     );
   		  if(param->getRunWithkt()==1)
   		    {
-  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		      nkt *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
   		    }
   		}
 	      
 	      
   	      dNdeta += nkt;
-  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+  	      dEdeta += nkt*sqrt(omega2)*hbarc/a;
 	          
   	      for(int ik=0; ik<bins; ik++)
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
   		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
   		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
@@ -3054,39 +3060,39 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{	  
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -3127,19 +3133,19 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( g*g/((it-0.5)*dtau)*( ((((*E1[pos])*(*E1[npos])).trace()).real())));
 		  if(param->getRunWithkt()==1)
   		    {
-  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		      nkt *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
   		    }
   		}
 	      
   	      dNdeta += nkt;
-  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+  	      dEdeta += nkt*sqrt(omega2)*hbarc/a;
 	          
   	      for(int ik=0; ik<bins; ik++)
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
   		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
   		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
@@ -3181,39 +3187,39 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{	  
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -3255,20 +3261,20 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   		  nkt = 2./sqrt(omega2)/static_cast<double>(N*N) * ( ((it-0.5)*dtau) * ( (((*E1[pos])*(*E1[npos])).trace()).real() ) );
   		  if(param->getRunWithkt()==1)
   		    {
-  		      nkt *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+  		      nkt *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
   		    }
   		}
 	      
 	      
   	      dNdeta += nkt;
-  	      dEdeta += nkt*sqrt(omega2)*0.1973269718/a;
+  	      dEdeta += nkt*sqrt(omega2)*hbarc/a;
 	          
   	      for(int ik=0; ik<bins; ik++)
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
   		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*0.1973269718/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
   		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
@@ -3280,7 +3286,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
               Nkxky[pos] += nkt *N*N/Pi/Pi/2./2.;
             }
           if (param->getWriteOutputs()==2)
-	    foutNkxky << 2.*sin(kx/2.)/a*0.1973269718 << " " << 2.*sin(ky/2.)/a*0.1973269718 << " " << Nkxky[pos]*a/0.1973269718*a/0.1973269718 << "\n";
+	    foutNkxky << 2.*sin(kx/2.)/a*hbarc << " " << 2.*sin(ky/2.)/a*hbarc << " " << Nkxky[pos]*a/hbarc*a/hbarc << "\n";
         }
       if (param->getWriteOutputs()==2)
 	foutNkxky << endl;
@@ -3300,39 +3306,39 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	  E[ik] = E[ik]/static_cast<double>(counter[ik]);
 	  if(param->getUsePseudoRapidity()==0)
 	    {
-	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
-	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; //integrate, gives a ik*dkt*2pi*dkt
-	      if(ik*dkt/a*0.1973269718>3.) // 
+	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; //integrate, gives a ik*dkt*2pi*dkt
+	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; //integrate, gives a ik*dkt*2pi*dkt
+	      if(ik*dkt/a*hbarc>3.) // 
 		{
-		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
-		  dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
+		  dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
 		}
-	      if(ik*dkt/a*0.1973269718>6.) // large cut
+	      if(ik*dkt/a*hbarc>6.) // large cut
 		{
-		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
-		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI; 
+		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
+		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI; 
 		}
 	    }
 	  else
 	    {
-	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));  //integrate, gives a ik*dkt*2pi*dkt
-	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI*
-		cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));  //integrate, gives a ik*dkt*2pi*dkt
+	      dNdeta2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc))));  //integrate, gives a ik*dkt*2pi*dkt
+	      dEdeta2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI*
+		cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc))));  //integrate, gives a ik*dkt*2pi*dkt
 
-	      if(ik*dkt/a*0.1973269718>3.) //
+	      if(ik*dkt/a*hbarc>3.) //
 		{
-		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*PI 
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718))));     
-		    dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		  dNdetaCut += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI 
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc))));     
+		    dEdetaCut += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc)))); 
 		}
-	      if(ik*dkt/a*0.1973269718>6.) // large cut
+	      if(ik*dkt/a*hbarc>6.) // large cut
 		{
-		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
-		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*PI
-		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*0.1973269718)*((ik+0.5)*dkt/a*0.1973269718)))); 
+		  dNdetaCut2 += n[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc)))); 
+		  dEdetaCut2 += E[ik]*(ik+0.5)*dkt*dkt *2.*M_PI
+		    *cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m*m/(((ik+0.5)*dkt/a*hbarc)*((ik+0.5)*dkt/a*hbarc)))); 
 		}
 	  
 	    }
@@ -3342,9 +3348,9 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       // output dN/d^2k
       if(it > 0)
 	{
-	  foutMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " " 
-		   << n[ik]*a/0.1973269718*a/0.1973269718 << " " 
-		   << n2[ik]*a/0.1973269718*a/0.1973269718 << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
+	  foutMult << it*dtau*a << " " << ik*dkt/a*hbarc << " " 
+		   << n[ik]*a/hbarc*a/hbarc << " " 
+		   << n2[ik]*a/hbarc*a/hbarc << " " << param->getTpp() << " " << param->getb() << " " << param->getNpart() << endl;
 	}
     }
   
@@ -3383,12 +3389,12 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	      
 	      kt = mypt/z;
 
-	      ik = static_cast<int>(floor(kt*a/0.1973269718/dkt-0.5+0.00000001));
+	      ik = static_cast<int>(floor(kt*a/hbarc/dkt-0.5+0.00000001));
 	      
-	      frac = (kt - (ik+0.5)*dkt/a*0.1973269718)/(dkt/a*0.1973269718);
+	      frac = (kt - (ik+0.5)*dkt/a*hbarc)/(dkt/a*hbarc);
      
 	      if(ik+1<bins && ik >=0)
-		Ng = ((1.-frac)*n[ik]+frac*n[ik+1])*a/0.1973269718*a/0.1973269718; // to make dN/d^2k_T fo k_T in GeV 
+		Ng = ((1.-frac)*n[ik]+frac*n[ik+1])*a/hbarc*a/hbarc; // to make dN/d^2k_T fo k_T in GeV 
 	      else 
 		Ng =0.;
 
@@ -3403,24 +3409,24 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	      else
 		{
 		  zintegrand[iz] =  1./(z*z) * Ng * 
-			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+			2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+			      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+			      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 	
 		  // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));	
+		  // 	2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));	
 		  
 		  // Lzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+		  // 	2. * (frag->kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  // Hzintegrand[iz] =  1./(z*z) * Ng * 
-		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))));
+		  // 	2. * (frag->kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+		  // 	      +frag->kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+		  // 	      +frag->kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
 
 		  
 			}
@@ -3540,12 +3546,12 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       ofstream foutNN(NpartdNdy_name.c_str(),ios::app); 
       foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp() << " " << param->getb() << " " << dEdeta << " " << param->getRandomSeed() 
 	     << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaCut << " " << dEdetaCut 
-	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+	     << " " << dNdetaCut2 << " " << dEdetaCut2 << " " << g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
       foutNN.close();
 
       ofstream foutNNH(NpartdNdyH_name.c_str(),ios::app); 
       foutNNH << param->getNpart() << " " << dNdetaHadrons << " " << param->getTpp() << " " << param->getb() << " " << dEdetaHadrons << " " << param->getRandomSeed()   << " " <<  "N/A" << " " << "N/A" << " " << "N/A" << " " <<  dNdetaHadronsCut << " " << dEdetaHadronsCut 
-	      << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
+	      << " " << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " " << g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)))) << endl;
       foutNNH.close();
 
     }
@@ -3719,39 +3725,39 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	      if(param->getRunWithQs()==2)
 		{
 		  if(g2mu2A > g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==0)
 		{
 		  if(g2mu2A < g2mu2B)
-		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		  else
-		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		    Qs = sqrt(g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      else if(param->getRunWithQs()==1)
 		{
-		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*0.1973269718*0.1973269718*param->getg()*param->getg());
+		  Qs = sqrt((g2mu2A+g2mu2B)/2.*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg());
 		}
 	      
 	      if ( param->getRunWithLocalQs() == 1)
 		{
 		  // 3 flavors
-		  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
-		  gfactor = g*g/(4.*PI*alphas);
+		  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*Qs/0.2,2./c),c)));
+		  gfactor = g*g/(4.*M_PI*alphas);
 		  // run with the local (in transverse plane) coupling
 		}
 	      else
 		{
 		  if ( param->getRunWithQs() == 0 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 1 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2,2./c),c)));
 		  else if ( param->getRunWithQs() == 2 )
-		    alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
+		    alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2,2./c),c)));
 		  
-		  gfactor = g*g/(4.*PI*alphas);
+		  gfactor = g*g/(4.*M_PI*alphas);
 		}
 	    }
 	  else
@@ -3840,12 +3846,12 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 		  
 		  if(param->getRunWithkt()==1)
 		    {
-		      nkt1 *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
-		      nkt2 *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
-		      nkt3 *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
-		      nkt4 *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
-		      nkt5 *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
-		      nkt6 *= g*g/(4.*PI*4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*0.1973269718/a/0.2,2./c),c))));
+		      nkt1 *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
+		      nkt2 *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
+		      nkt3 *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
+		      nkt4 *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
+		      nkt5 *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
+		      nkt6 *= g*g/(4.*M_PI*4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*sqrt(kt2)*hbarc/a/0.2,2./c),c))));
 		    }
 		}
 	      else
@@ -3943,8 +3949,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
     {
       for(int iphi=0; iphi<phiBins; iphi++)
 	{
-	  foutPhiMult << it*dtau*a << " " << ik*dkt/a*0.1973269718 << " "  << iphi*deltaPhi << " " 
-		      << n[ik][iphi]*a/0.1973269718*a/0.1973269718 << endl; //<< " " << nNoMixedTerms[ik][iphi]*a/0.1973269718*a/0.1973269718 << endl;
+	  foutPhiMult << it*dtau*a << " " << ik*dkt/a*hbarc << " "  << iphi*deltaPhi << " " 
+		      << n[ik][iphi]*a/hbarc*a/hbarc << endl; //<< " " << nNoMixedTerms[ik][iphi]*a/hbarc*a/hbarc << endl;
 	}
     }
   foutPhiMult.close();
@@ -3971,7 +3977,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	{
 	  for(int ih=0; ih<=hbins; ih++)
 	    {
-	      mypt = ih * dkt/a*0.1973269718; //(10./static_cast<double>(hbins));  // the hadron's p_T
+	      mypt = ih * dkt/a*hbarc; //(10./static_cast<double>(hbins));  // the hadron's p_T
 	      
 	      for (int iz=0; iz<steps; iz++)
 		{
@@ -3979,13 +3985,13 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 		  
 		  kt = mypt/z; // the gluon's k_T
 		  
-		  ik = static_cast<int>(floor(kt*a/0.1973269718/dkt-0.5+0.00000001));
+		  ik = static_cast<int>(floor(kt*a/hbarc/dkt-0.5+0.00000001));
 		  
-		  frac = (kt - (ik+0.5)*dkt/a*0.1973269718)/(dkt/a*0.1973269718);
+		  frac = (kt - (ik+0.5)*dkt/a*hbarc)/(dkt/a*hbarc);
 		  
 		  if(ik+1<bins && ik >=0)
 		    {
-		      Ng = ((1.-frac)*n[ik][iphi]+frac*n[ik+1][iphi])*a/0.1973269718*a/0.1973269718; // to make dN/d^2k_T fo k_T in GeV 
+		      Ng = ((1.-frac)*n[ik][iphi]+frac*n[ik+1][iphi])*a/hbarc*a/hbarc; // to make dN/d^2k_T fo k_T in GeV 
 		      if(kt>2)
 		      	Ng*=exp(-(kt-2)*0.5);
 		    }
@@ -4008,17 +4014,17 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 		      if (z == 0.05 || z == 1.)
 			{
 			  Nh[ih][iphi] += 1./(z*z) * Ng * 
-			    2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-				  +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-				  +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))))
+			    2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+				  +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+				  +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))))
 			    *dz *0.5; 
 			}
 		      else 
 			{
 			  Nh[ih][iphi] += 1./(z*z) * Ng * 
-			    2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.13957*0.13957/(mypt*mypt)))
-				  +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.493667*0.493667/(mypt*mypt)))
-				  +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+0.938272*0.938272/(mypt*mypt))))
+			    2. * (frag->kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
+				  +frag->kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
+				  +frag->kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))))
 			    *dz;
 			}
 		    }
@@ -4035,7 +4041,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	{
 	  for(int iphi=0; iphi<phiBins; iphi++)
 	    {
-	      foutPhiMultHad << it*dtau*a << " " << ih * dkt/a*0.1973269718 << " "  << iphi*deltaPhi << " " 
+	      foutPhiMultHad << it*dtau*a << " " << ih * dkt/a*hbarc << " "  << iphi*deltaPhi << " " 
 			     << Nh[ih][iphi] << endl;
 	    }
 	}

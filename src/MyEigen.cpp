@@ -1,6 +1,8 @@
 // MyEigen.cpp is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 #include "MyEigen.h"
+#include "Phys_consts.h"
+using PhysConst::hbarc;
 
 //**************************************************************************
 // MyEigen class.
@@ -585,17 +587,17 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      if(param->getRunningCoupling())
 			{
 				  // run with average Q_s only ! local makes no sense here (stuff has moved in the mean time)
-			  alphas = 4.*PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));	  
-			  gfactor = g*g/(4.*PI*alphas);
+			  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));	  
+			  gfactor = g*g/(4.*M_PI*alphas);
 			}
 		      else
 			gfactor = 1.;
 		      
-                      Etot += abs(0.1973269718*resultE*gfactor) * ha * ha * it*dtau*a;
+                      Etot += abs(hbarc*resultE*gfactor) * ha * ha * it*dtau*a;
 		     	      
-		      if(abs(0.1973269718*resultE*gfactor) > 0.0000000001)
+		      if(abs(hbarc*resultE*gfactor) > 0.0000000001)
 			foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-				 << abs(0.1973269718*resultE*gfactor) 
+				 << abs(hbarc*resultE*gfactor) 
 				 << " " << resultutau << " " << resultux << " " << resultuy << " " << resultueta 
 				 << " " << resultpi00*gfactor << " " << resultpi0x*gfactor
 				 << " " << resultpi0y*gfactor << " " << resultpi0eta*gfactor 

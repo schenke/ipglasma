@@ -879,7 +879,7 @@ double Glauber::AnumHulthen(double R_WS)
  /* rho = (1/r^2) (exp(-a r) - exp(-b r))^2 */
  /* int d^3r rho is given by */
  
- f =  2.0*(a_WS - b_WS)*(a_WS - b_WS)*PI/a_WS/b_WS/(a_WS + b_WS);
+ f =  2.0*(a_WS - b_WS)*(a_WS - b_WS)*M_PI/a_WS/b_WS/(a_WS + b_WS);
  
  f *= rho;
 

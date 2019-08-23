@@ -2,7 +2,7 @@ mode 1
 readMultFromFile 0
 size 256
 L 16.
-Nc 3				      
+Nc 3
 m 0.2
 rmax 100.
 UVdamp 0.

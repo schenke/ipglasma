@@ -20,36 +20,31 @@
 #include "Group.h"
 #include "FFT.h"
 #include "Glauber.h"
-#include "Util.h"
 
 using namespace std;
 
 class GaugeFix {
-
  private:
-  //  FFT *fft;
-  Random *random;
-  
+    //FFT *fft;
+    Random *random;
+
  public:
-  
-  // Constructor.
-  GaugeFix(const int nn[]) 
-    {
-      //  fft = new FFT(nn);
-      random = new Random();
+    // Constructor.
+    GaugeFix(const int nn[]) {
+        //  fft = new FFT(nn);
+        random = new Random();
     };
 
-  
-  // Destructor.
-  ~GaugeFix() 
-    { 
-      //delete fft;
-      delete random;
+    // Destructor.
+    ~GaugeFix() {
+        //delete fft;
+        delete random;
     };
-  
-  void gaugeTransform(Lattice* lat, Group* group, Parameters *param, int i, int j);
-  void FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, int steps);
 
+    void gaugeTransform(Lattice* lat, Group* group, Parameters *param,
+                        int i, int j);
+    void FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param,
+                int steps);
 };
 
 #endif // GaugeFix_H

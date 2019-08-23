@@ -1,16 +1,15 @@
 #include "Glauber.h"
+#include "Util.h"
 
 using namespace std;
 
 Glauber::Glauber()
 {
-  util = new Util;
   setup = new Setup;
 }
 
 // destructor
 Glauber::~Glauber() {
-    delete util;
     delete setup;
     remove("tmp.dat");
 }
@@ -378,7 +377,7 @@ double *Glauber::MakeVx(double down, double up, int maxi_num)
  static double dx, *vx;
  int i;
 
- vx = util->vector_malloc(maxi_num + 1);
+ vx = Util::vector_malloc(maxi_num + 1);
  dx = (up - down)/maxi_num;
  for(i=0; i<=maxi_num; i++)
   {
@@ -398,7 +397,7 @@ double *Glauber::MakeVy(double *vx, int maxi_num)
  // if(maxi_num > 200) di = 100;
  // if(maxi_num <= 200) di = 20;
  
- vy = util->vector_malloc(maxi_num + 1);
+ vy = Util::vector_malloc(maxi_num + 1);
 
  // ofstream data_file(st.c_str());
  
@@ -427,10 +426,10 @@ double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet)
  FILE *input;
  static char *s, *sx;
  //int bytes_read;
- s = util->char_malloc(120);
- sx = util->char_malloc(120);
+ s = Util::char_malloc(120);
+ sx = Util::char_malloc(120);
  
- vx = util->vector_malloc(maxi_num + 1);
+ vx = Util::vector_malloc(maxi_num + 1);
 
  if(quiet == 1)
   {
@@ -453,51 +452,46 @@ double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet)
   }
  fclose(input);
 
- util->char_free(sx);
- util->char_free(s);
+ Util::char_free(sx);
+ Util::char_free(s);
  return vx;
 
 }/* ReadInVx */
 
 
-double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet)
-{
- static double y, *vy;
- int i;
- FILE *input;
- static char *s, *sy;
- // int bytes_read;
- s = util->char_malloc(120);
- sy = util->char_malloc(120);
- 
- vy = util->vector_malloc(maxi_num + 1);
+double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet) {
+    static double y, *vy;
+    int i;
+    FILE *input;
+    static char *s, *sy;
+    // int bytes_read;
+    s = Util::char_malloc(120);
+    sy = Util::char_malloc(120);
 
- if(quiet == 1)
- {
-  fprintf(stderr, "Reading in Vy from %s ...\n", file_name);
- }
- 
- input = fopen(file_name, "r");
- fscanf(input, "%s", s);
- while(strcmp(s, "EndOfData") != 0)
-  {
-   fscanf(input, "%s", sy);
-   fscanf(input, "%s", s);
-  }
+    vy = Util::vector_malloc(maxi_num + 1);
 
- for(i=0; i<=maxi_num; i++)
-  {
-   fscanf(input, "%lf", &y);
-   fscanf(input, "%lf", &y);
-   vy[i] = y;
-  }
- fclose(input);
- 
- util->char_free(s);
- util->char_free(sy);
- return vy;
+    if (quiet == 1) {
+        fprintf(stderr, "Reading in Vy from %s ...\n", file_name);
+    }
 
-}/* ReadInVy */
+    input = fopen(file_name, "r");
+    fscanf(input, "%s", s);
+    while (strcmp(s, "EndOfData") != 0) {
+        fscanf(input, "%s", sy);
+        fscanf(input, "%s", s);
+    }
+
+    for (i=0; i<=maxi_num; i++) {
+        fscanf(input, "%lf", &y);
+        fscanf(input, "%lf", &y);
+        vy[i] = y;
+    }
+    fclose(input);
+
+    Util::char_free(s);
+    Util::char_free(sy);
+    return vy;
+}  /* ReadInVy */
 
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%% */

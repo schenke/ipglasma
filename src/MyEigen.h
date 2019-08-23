@@ -19,7 +19,6 @@
 #include "Parameters.h"
 #include "Matrix.h"
 #include "Group.h"
-#include "Util.h"
 
 using namespace std;
 

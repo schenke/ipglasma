@@ -436,6 +436,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   evolveU(lat, bufferlat, group, param, dtau, 0.);
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
+  int it0 = static_cast<int>(floor(0.1/(a*dtau)+1e-10));
   int it1 = static_cast<int>(floor(0.2/(a*dtau)+1e-10));
   int it2 = static_cast<int>(floor(0.4/(a*dtau)+1e-10));
     
@@ -443,13 +444,12 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   cout << "itmax=" << itmax << endl;
 
   // do evolution
-  for (int it=1; it<=itmax; it++)
-    {
-      if(it == 1 || it==floor(it1) || it==floor(it2) || it==floor(itmax))
-	{	  
-	  Tmunu(lat,group,param,it);
+  for (int it=1; it<=itmax; it++) {
+      if (it == 1 || it == floor(it0) || it==floor(it1)
+          || it==floor(it2) || it==floor(itmax)) {
+          Tmunu(lat,group,param,it);
           u(lat,group,param,it); // computes flow velocity and correct energy density 
-	}
+      }
 
       if(it%10==0)
 	cout << endl << "Evolving to time " << it*a*dtau << " fm/c" << endl << endl;  
@@ -631,7 +631,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 	}
      
       int success=1;
-      if(it==3 || it==floor(it1) || it==floor(it2) || it==itmax)
+      if(it==3 || it==floor(it0) || it==floor(it1) || it==floor(it2) || it==itmax)
 	{	  
           success = multiplicity(lat,group,param,it);
         }

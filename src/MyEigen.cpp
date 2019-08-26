@@ -263,52 +263,72 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
   double Etot = 0.;
 
   // output for hydro
-  if(param->getWriteOutputs() > 0)
-    {
-      double alphas = param->getalphas();
-      double g = param->getg();
-      double gfactor;
-      int hx = param->getSizeOutput();
-      int hy = hx;
-      int heta = param->getEtaSizeOutput();
-      double hL = param->getLOutput();
-      double deta = param->getDetaOutput();
-      double c = param->getc();
-      double muZero = param->getMuZero();
-      //      double PI = param->getPi();
+  if(param->getWriteOutputs() <= 0) return;
 
-      if(hL>L)
-	cout << "WARNING: hydro grid length larger than the computed one." << endl;
-      
-      int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3;
-      double fracx, fracy, x1, x2;
-      double xlow, ylow;
-      int pos4;
-      double resultE, resultutau, resultux, resultuy, resultueta;
-      double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
-      double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy, resultpietaeta;
-      double g2mu2A, g2mu2B, QsAsqr, QsBsqr;
+    double alphas = param->getalphas();
+    double g = param->getg();
+    double gfactor;
+    int hx = param->getSizeOutput();
+    int hy = hx;
+    int heta = param->getEtaSizeOutput();
+    double hL = param->getLOutput();
+    double deta = param->getDetaOutput();
+    double c = param->getc();
+    double muZero = param->getMuZero();
 
-      double ha;
-      ha = hL/static_cast<double>(hx);
-      
-      stringstream streuH_name;
-      streuH_name << "epsilon-u-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-      string euH_name;
-      euH_name = streuH_name.str();
+    if (param->getRunningCoupling()) {
+        // run with average Q_s only ! local makes no sense here (stuff has moved in the mean time)
+        alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));
+        gfactor = g*g/(4.*M_PI*alphas);
+    } else {
+        gfactor = 1.;
+    }
+    //      double PI = param->getPi();
 
-      // stringstream strEtot_name;
-      // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
-      // string Etot_name;
-      // Etot_name = strEtot_name.str();
+    if (hL > L) {
+        cout << "WARNING: hydro grid length larger than the computed one."
+             << endl;
+    }
 
-      ofstream foutEps2(euH_name.c_str(),ios::out); 
-      //      ofstream foutEtot(Etot_name.c_str(),ios::out); 
+    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3;
+    double fracx, fracy, x1, x2;
+    double xlow, ylow;
+    int pos4;
+    double resultE, resultutau, resultux, resultuy, resultueta;
+    double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
+    double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy, resultpietaeta;
+    double g2mu2A, g2mu2B, QsAsqr, QsBsqr;
 
-      foutEps2 << "# dummy " << 1 << " etamax= " << heta
-	       << " xmax= " << hx << " ymax= " << hy << " deta= " << deta 
-	       << " dx= " << ha << " dy= " << ha << endl; 
-      
+    double tau0 = it*dtau*a;
+
+    double ha;
+    ha = hL/static_cast<double>(hx);
+
+    double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
+    double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
+    stringstream strTmunu_name;
+    strTmunu_name << "Tmunu-t" << it*dtau*a << "-"
+                  << param->getMPIRank() << ".dat";
+    ofstream foutEps1(strTmunu_name.str().c_str(),ios::out);
+    foutEps1 << "# dummy " << 1 << " etamax= " << heta
+             << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
+             << " dx= " << ha << " dy= " << ha << endl;
+
+    stringstream streuH_name;
+    streuH_name << "epsilon-u-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+
+    // stringstream strEtot_name;
+    // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+    // string Etot_name;
+    // Etot_name = strEtot_name.str();
+
+    ofstream foutEps2(streuH_name.str().c_str(),ios::out);
+    //      ofstream foutEtot(Etot_name.c_str(),ios::out);
+
+    foutEps2 << "# dummy " << 1 << " etamax= " << heta
+             << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
+             << " dx= " << ha << " dy= " << ha << endl;
+
        for(int ieta=0; ieta<heta; ieta++) // loop over all positions
 	{
 	  for(int ix=0; ix<hx; ix++) // loop over all positions
@@ -575,51 +595,198 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      
 		      resultpietaeta = (1.-fracy)*x1+fracy*x2;
 		      
-		      if(resultutau<1.)
-			{
-			  resultutau=1.;
-			  resultux=0.;
-			  resultuy=0;
-			  resultueta=0;
-			}
-		      
-		      
-		      if(param->getRunningCoupling())
-			{
-				  // run with average Q_s only ! local makes no sense here (stuff has moved in the mean time)
-			  alphas = 4.*M_PI/(9.* log(pow(pow(muZero/0.2,2./c) + pow(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2,2./c),c)));	  
-			  gfactor = g*g/(4.*M_PI*alphas);
-			}
-		      else
-			gfactor = 1.;
-		      
-                      Etot += abs(hbarc*resultE*gfactor) * ha * ha * it*dtau*a;
-		     	      
-		      if(abs(hbarc*resultE*gfactor) > 0.0000000001)
-			foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-				 << abs(hbarc*resultE*gfactor) 
-				 << " " << resultutau << " " << resultux << " " << resultuy << " " << resultueta 
-				 << " " << resultpi00*gfactor << " " << resultpi0x*gfactor
-				 << " " << resultpi0y*gfactor << " " << resultpi0eta*gfactor 
-				 << " " << resultpixx*gfactor << " " << resultpixy*gfactor 
-				 << " " << resultpixeta*gfactor << " " << resultpiyy*gfactor 
-				 << " " << resultpiyeta*gfactor << " " << resultpietaeta*gfactor 
-				 << endl; 
-		      else
-			foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-				 << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
-				 << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
-				 << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-                    }
-		  else
-		    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-			     << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0. 
-			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. 
-			     << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-      		}
-	    }
-	  foutEps2 << endl;
-	}
+                // ---------------------T^tautau----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTtautau())
+                          + fracx*(lat->cells[pos2]->getTtautau()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTtautau())
+                          + fracx*(lat->cells[pos4]->getTtautau()));
+                } else {
+                    x2 = 0.;
+                }
+                resultT00 = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^taux----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTtaux())
+                          + fracx*(lat->cells[pos2]->getTtaux()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTtaux())
+                          + fracx*(lat->cells[pos4]->getTtaux()));
+                } else {
+                    x2 = 0.;
+                }
+                resultT0x = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^tauy----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTtauy())
+                          + fracx*(lat->cells[pos2]->getTtauy()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTtauy())
+                          + fracx*(lat->cells[pos4]->getTtauy()));
+                } else {
+                    x2 = 0.;
+                }
+                resultT0y = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^taueta----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTtaueta())
+                          + fracx*(lat->cells[pos2]->getTtaueta()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTtaueta())
+                          + fracx*(lat->cells[pos4]->getTtaueta()));
+                } else {
+                    x2 = 0.;
+                }
+                resultT0eta = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^xx----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTxx())
+                          + fracx*(lat->cells[pos2]->getTxx()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTxx())
+                          + fracx*(lat->cells[pos4]->getTxx()));
+                } else {
+                    x2 = 0.;
+                }
+                resultTxx = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^xy----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTxy())
+                          + fracx*(lat->cells[pos2]->getTxy()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTxy())
+                          + fracx*(lat->cells[pos4]->getTxy()));
+                } else {
+                    x2 = 0.;
+                }
+                resultTxy = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^xeta----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTxeta())
+                          + fracx*(lat->cells[pos2]->getTxeta()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTxeta())
+                          + fracx*(lat->cells[pos4]->getTxeta()));
+                } else {
+                    x2 = 0.;
+                }
+                resultTxeta = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^yy----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTyy())
+                          + fracx*(lat->cells[pos2]->getTyy()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTyy())
+                          + fracx*(lat->cells[pos4]->getTyy()));
+                } else {
+                    x2 = 0.;
+                }
+                resultTyy = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^yeta----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTyeta())
+                          + fracx*(lat->cells[pos2]->getTyeta()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTyeta())
+                          + fracx*(lat->cells[pos4]->getTyeta()));
+                } else {
+                    x2 = 0.;
+                }
+                resultTyeta = (1. - fracy)*x1 + fracy*x2;
+
+                // ---------------------T^etaeta----------------------- //
+                if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
+                    x1 = ((1 - fracx)*(lat->cells[pos1]->getTetaeta())
+                          + fracx*(lat->cells[pos2]->getTetaeta()));
+                } else {
+                    x1 = 0.;
+                }
+                if (pos3 > 0 && pos3 < N*N && pos4 > 0 && pos4 < N*N) {
+                    x2 = ((1 - fracx)*(lat->cells[pos3]->getTetaeta())
+                          + fracx*(lat->cells[pos4]->getTetaeta()));
+                } else {
+                    x2 = 0.;
+                }
+                resultTetaeta = (1. - fracy)*x1 + fracy*x2;
+
+                resultutau = sqrt(1. + resultux*resultux + resultuy*resultuy
+                                  + tau0*tau0*resultueta*resultueta);
+                foutEps1 << ix << " " << iy << " "
+                         << resultT00*gfactor << " "
+                         << resultTxx*gfactor << " "
+                         << resultTyy*gfactor << " "
+                         << tau0*tau0*resultTetaeta*gfactor << " "
+                         << -resultT0x*gfactor << " "
+                         << -resultT0y*gfactor << " "
+                         << -tau0*resultT0eta*gfactor << " "
+                         << -resultTxy*gfactor << " "
+                         << -tau0*resultTyeta*gfactor << " "
+                         << -tau0*resultTxeta*gfactor << endl;
+
+                Etot += abs(hbarc*resultE*gfactor) * ha * ha * it*dtau*a;
+                if (abs(hbarc*resultE*gfactor) > 0.0000000001) {
+                    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                             << abs(hbarc*resultE*gfactor)
+                             << " " << resultutau << " " << resultux << " " << resultuy << " " << resultueta
+                             << " " << resultpi00*gfactor << " " << resultpi0x*gfactor
+                             << " " << resultpi0y*gfactor << " " << resultpi0eta*gfactor
+                             << " " << resultpixx*gfactor << " " << resultpixy*gfactor
+                             << " " << resultpixeta*gfactor << " " << resultpiyy*gfactor
+                             << " " << resultpiyeta*gfactor << " " << resultpietaeta*gfactor
+                             << endl;
+                } else {
+                    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " "
+                             << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
+                }
+            } else {
+                foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " "
+                         << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0.
+                         << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                         << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
+            }
+        }
+        }
+        foutEps2 << endl;
+    }
+       foutEps1.close();
        foutEps2.close();
        cout << "Etot = " << Etot << " GeV " << endl;
        //       foutEtot <<  Etot << endl;
@@ -827,7 +994,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
              }
          }
          }
-    }
   cout << "Wrote outputs" << endl;
   // done output for hydro
 }

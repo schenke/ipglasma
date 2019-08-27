@@ -616,10 +616,11 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
         }
         foutEps2 << endl;
     }
-       foutEps2.close();
-       cout << "Etot = " << Etot << " GeV " << endl;
-       //       foutEtot <<  Etot << endl;
-       //foutEtot.close();
+
+    foutEps2.close();
+    cout << "Etot = " << Etot << " GeV " << endl;
+    //       foutEtot <<  Etot << endl;
+    //foutEtot.close();
 
     double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
     double resultTxeta, resultTyy, resultTyeta, resultTetaeta;

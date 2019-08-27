@@ -1,7 +1,7 @@
 mode 1
 readMultFromFile 0
-size 256
-L 16.
+size 600
+L 30.
 Nc 3
 m 0.2
 rmax 100.
@@ -51,8 +51,8 @@ gaussianWounding 1
 inverseQsForMaxTime 0
 maxtime 0.6
 dtau 0.1
-LOutput 16
-sizeOutput 256
+LOutput 30
+sizeOutput 300
 etaSizeOutput 1
 detaOutput 0
 writeOutputs 2

@@ -747,17 +747,27 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 
                 resultutau = sqrt(1. + resultux*resultux + resultuy*resultuy
                                   + tau0*tau0*resultueta*resultueta);
-                foutEps1 << ix << " " << iy << " "
-                         << resultT00*gfactor << " "
-                         << resultTxx*gfactor << " "
-                         << resultTyy*gfactor << " "
-                         << tau0*tau0*resultTetaeta*gfactor << " "
-                         << -resultT0x*gfactor << " "
-                         << -resultT0y*gfactor << " "
-                         << -tau0*resultT0eta*gfactor << " "
-                         << -resultTxy*gfactor << " "
-                         << -tau0*resultTyeta*gfactor << " "
-                         << -tau0*resultTxeta*gfactor << endl;
+                if (resultT00*gfactor > 1e-15) {
+                    foutEps1 << ix << " " << iy << " "
+                             << resultT00*gfactor << " "
+                             << resultTxx*gfactor << " "
+                             << resultTyy*gfactor << " "
+                             << tau0*tau0*resultTetaeta*gfactor << " "
+                             << -resultT0x*gfactor << " "
+                             << -resultT0y*gfactor << " "
+                             << -tau0*resultT0eta*gfactor << " "
+                             << -resultTxy*gfactor << " "
+                             << -tau0*resultTyeta*gfactor << " "
+                             << -tau0*resultTxeta*gfactor << endl;
+                } else {
+                    foutEps1 << ix << " " << iy << " "
+                             << 1e-15 << " "
+                             << 1e-15/2. << " "
+                             << 1e-15/2. << " "
+                             << 0.0 << " "
+                             << 0.0 << " " << 0.0 << " " << 0.0 << " "
+                             << 0.0 << " " << 0.0 << " " << 0.0 << endl;
+                }
 
                 Etot += abs(hbarc*resultE*gfactor) * ha * ha * it*dtau*a;
                 if (abs(hbarc*resultE*gfactor) > 0.0000000001) {

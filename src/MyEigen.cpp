@@ -304,16 +304,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     double ha;
     ha = hL/static_cast<double>(hx);
 
-    double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
-    double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
-    stringstream strTmunu_name;
-    strTmunu_name << "Tmunu-t" << it*dtau*a << "-"
-                  << param->getMPIRank() << ".dat";
-    ofstream foutEps1(strTmunu_name.str().c_str(),ios::out);
-    foutEps1 << "# dummy " << 1 << " etamax= " << heta
-             << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
-             << " dx= " << ha << " dy= " << ha << endl;
-
     stringstream streuH_name;
     streuH_name << "epsilon-u-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
 
@@ -595,6 +585,82 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 		      
 		      resultpietaeta = (1.-fracy)*x1+fracy*x2;
 		      
+
+                resultutau = sqrt(1. + resultux*resultux + resultuy*resultuy
+                                  + tau0*tau0*resultueta*resultueta);
+
+                Etot += abs(hbarc*resultE*gfactor) * ha * ha * it*dtau*a;
+                if (abs(hbarc*resultE*gfactor) > 0.0000000001) {
+                    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
+                             << abs(hbarc*resultE*gfactor)
+                             << " " << resultutau << " " << resultux << " " << resultuy << " " << resultueta
+                             << " " << resultpi00*gfactor << " " << resultpi0x*gfactor
+                             << " " << resultpi0y*gfactor << " " << resultpi0eta*gfactor
+                             << " " << resultpixx*gfactor << " " << resultpixy*gfactor
+                             << " " << resultpixeta*gfactor << " " << resultpiyy*gfactor
+                             << " " << resultpiyeta*gfactor << " " << resultpietaeta*gfactor
+                             << endl;
+                } else {
+                    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " "
+                             << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
+                }
+            } else {
+                foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " "
+                         << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0.
+                         << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                         << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
+            }
+        }
+        }
+        foutEps2 << endl;
+    }
+       foutEps2.close();
+       cout << "Etot = " << Etot << " GeV " << endl;
+       //       foutEtot <<  Etot << endl;
+       //foutEtot.close();
+
+    double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
+    double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
+    stringstream strTmunu_name;
+    strTmunu_name << "Tmunu-t" << it*dtau*a << "-"
+                  << param->getMPIRank() << ".dat";
+    ofstream foutEps1(strTmunu_name.str().c_str(),ios::out);
+    foutEps1 << "# dummy " << 1 << " etamax= " << heta
+             << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
+             << " dx= " << ha << " dy= " << ha << endl;
+    // loop over all positions
+    for (int iy = 0; iy < hy; iy++) {
+        for (int ix = 0; ix < hx; ix++) {
+            x = -hL/2.+ha*ix;
+            y = -hL/2.+ha*iy;
+            if (abs(x) < L/2. && abs(y) < L/2.) {
+                xpos = static_cast<int>(floor((x+L/2.)/a+0.0000000001));
+                ypos = static_cast<int>(floor((y+L/2.)/a+0.0000000001));
+
+                if (xpos < N-1) {
+                    xposUp = xpos+1;
+                } else {
+                    xposUp = xpos;
+                }
+                if (ypos < N-1) {
+                    yposUp = ypos+1;
+                } else {
+                    yposUp = ypos;
+                }
+
+                xlow = -L/2.+a*xpos;
+                ylow = -L/2.+a*ypos;
+
+                pos1 = xpos*N+ypos;
+                pos2 = xposUp*N+ypos;
+                pos3 = xpos*N+yposUp;
+                pos4 = xposUp*N+yposUp;
+
+                fracx = (x-xlow)/ha;
+                fracy = (y-ylow)/ha;
+
                 // ---------------------T^tautau----------------------- //
                 if (pos1 > 0 && pos1 < N*N && pos2 > 0 && pos2 < N*N) {
                     x1 = ((1 - fracx)*(lat->cells[pos1]->getTtautau())
@@ -745,8 +811,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                 }
                 resultTetaeta = (1. - fracy)*x1 + fracy*x2;
 
-                resultutau = sqrt(1. + resultux*resultux + resultuy*resultuy
-                                  + tau0*tau0*resultueta*resultueta);
                 if (resultT00*gfactor > 1e-15) {
                     foutEps1 << ix << " " << iy << " "
                              << resultT00*gfactor << " "
@@ -768,40 +832,20 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                              << 0.0 << " " << 0.0 << " " << 0.0 << " "
                              << 0.0 << " " << 0.0 << " " << 0.0 << endl;
                 }
-
-                Etot += abs(hbarc*resultE*gfactor) * ha * ha * it*dtau*a;
-                if (abs(hbarc*resultE*gfactor) > 0.0000000001) {
-                    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
-                             << abs(hbarc*resultE*gfactor)
-                             << " " << resultutau << " " << resultux << " " << resultuy << " " << resultueta
-                             << " " << resultpi00*gfactor << " " << resultpi0x*gfactor
-                             << " " << resultpi0y*gfactor << " " << resultpi0eta*gfactor
-                             << " " << resultpixx*gfactor << " " << resultpixy*gfactor
-                             << " " << resultpixeta*gfactor << " " << resultpiyy*gfactor
-                             << " " << resultpiyeta*gfactor << " " << resultpietaeta*gfactor
-                             << endl;
-                } else {
-                    foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " "
-                             << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0.
-                             << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0.
-                             << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
-                }
             } else {
-                foutEps2 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " "
-                         << 0. << " " << 1. << " " << 0. << " " << 0. << " " << 0.
-                         << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0. << " " << 0.
-                         << " " << 0. << " " << 0. << " " << 0. << " " << 0. << endl;
+                foutEps1 << ix << " " << iy << " "
+                         << 1e-15 << " "
+                         << 1e-15/2. << " "
+                         << 1e-15/2. << " "
+                         << 0.0 << " "
+                         << 0.0 << " " << 0.0 << " " << 0.0 << " "
+                         << 0.0 << " " << 0.0 << " " << 0.0 << endl;
             }
         }
-        }
-        foutEps2 << endl;
+        foutEps1 << endl;
     }
-       foutEps1.close();
-       foutEps2.close();
-       cout << "Etot = " << Etot << " GeV " << endl;
-       //       foutEtot <<  Etot << endl;
-       //foutEtot.close();
-       
+    foutEps1.close();
+
        if(param->getWriteOutputs() > 2)
          {
        double Jaztot=0.;

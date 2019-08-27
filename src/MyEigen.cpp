@@ -2,7 +2,9 @@
 // Copyright (C) 2012 Bjoern Schenke.
 #include "MyEigen.h"
 #include "Phys_consts.h"
+
 using PhysConst::hbarc;
+using PhysConst::small_eps;
 
 //**************************************************************************
 // MyEigen class.
@@ -812,32 +814,32 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                 }
                 resultTetaeta = (1. - fracy)*x1 + fracy*x2;
 
-                if (resultT00*gfactor > 1e-15) {
+                if (resultT00*gfactor*hbarc > small_eps) {
                     foutEps1 << ix << " " << iy << " "
-                             << resultT00*gfactor << " "
-                             << resultTxx*gfactor << " "
-                             << resultTyy*gfactor << " "
-                             << tau0*tau0*resultTetaeta*gfactor << " "
-                             << -resultT0x*gfactor << " "
-                             << -resultT0y*gfactor << " "
-                             << -tau0*resultT0eta*gfactor << " "
-                             << -resultTxy*gfactor << " "
-                             << -tau0*resultTyeta*gfactor << " "
-                             << -tau0*resultTxeta*gfactor << endl;
+                             << resultT00*gfactor*hbarc << " "
+                             << resultTxx*gfactor*hbarc << " "
+                             << resultTyy*gfactor*hbarc << " "
+                             << tau0*tau0*resultTetaeta*gfactor*hbarc << " "
+                             << -resultT0x*gfactor*hbarc << " "
+                             << -resultT0y*gfactor*hbarc << " "
+                             << -tau0*resultT0eta*gfactor*hbarc << " "
+                             << -resultTxy*gfactor*hbarc << " "
+                             << -tau0*resultTyeta*gfactor*hbarc << " "
+                             << -tau0*resultTxeta*gfactor*hbarc << endl;
                 } else {
                     foutEps1 << ix << " " << iy << " "
-                             << 1e-15 << " "
-                             << 1e-15/2. << " "
-                             << 1e-15/2. << " "
+                             << small_eps << " "
+                             << small_eps/2. << " "
+                             << small_eps/2. << " "
                              << 0.0 << " "
                              << 0.0 << " " << 0.0 << " " << 0.0 << " "
                              << 0.0 << " " << 0.0 << " " << 0.0 << endl;
                 }
             } else {
                 foutEps1 << ix << " " << iy << " "
-                         << 1e-15 << " "
-                         << 1e-15/2. << " "
-                         << 1e-15/2. << " "
+                         << small_eps << " "
+                         << small_eps/2. << " "
+                         << small_eps/2. << " "
                          << 0.0 << " "
                          << 0.0 << " " << 0.0 << " " << 0.0 << " "
                          << 0.0 << " " << 0.0 << " " << 0.0 << endl;

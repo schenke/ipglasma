@@ -9,7 +9,9 @@ set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
+# Tell cmake where to find modules
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_HOME_DIRECTORY}")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_LIST_DIR}/CMakeModules")
 
 set(CMAKE_INSTALL_RPATH ${CMAKE_HOME_DIRECTORY})
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
@@ -65,6 +67,7 @@ message(STATUS "Install prefix: ${CMAKE_INSTALL_PREFIX}")
 
 option (KNL "Build executable on KNL" OFF)
 option (unittest "Build Unit tests" OFF)
+option (build_lib "Build library file" OFF)
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     if (KNL)

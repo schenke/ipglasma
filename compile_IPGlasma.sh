@@ -7,3 +7,4 @@ cmake ..
 make -j4
 make install
 cd ..
+rm -fr build

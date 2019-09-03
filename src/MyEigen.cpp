@@ -314,6 +314,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     // string Etot_name;
     // Etot_name = strEtot_name.str();
 
+  if (param->getWriteOutputs()%2 == 1) {
     ofstream foutEps2(streuH_name.str().c_str(),ios::out);
     //      ofstream foutEtot(Etot_name.c_str(),ios::out);
 
@@ -621,9 +622,11 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
 
     foutEps2.close();
     cout << "Etot = " << Etot << " GeV " << endl;
+  }
     //       foutEtot <<  Etot << endl;
     //foutEtot.close();
 
+  if (static_cast<int>(param->getWriteOutputs()/4) == 1) {
     double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
     double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
     stringstream strTmunu_name;
@@ -848,9 +851,9 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
         foutEps1 << endl;
     }
     foutEps1.close();
+  }
 
-       if(param->getWriteOutputs() > 2)
-         {
+  if (static_cast<int>(param->getWriteOutputs()/2) == 1) {
        double Jaztot=0.;
        //Jazma output:
        // compute sum first for normalization
@@ -1050,9 +1053,9 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                  }
              }
          }
-         }
-  cout << "Wrote outputs" << endl;
-  // done output for hydro
+  }
+    cout << "Wrote outputs" << endl;
+    // done output for hydro
 }
 
 

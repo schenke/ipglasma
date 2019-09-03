@@ -55,7 +55,7 @@ LOutput 30
 sizeOutput 300
 etaSizeOutput 1
 detaOutput 0
-writeOutputs 2
+writeOutputs 4
 writeEvolution 0
 writeInitialWilsonLines 0
 EndOfFile

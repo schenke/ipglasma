@@ -853,7 +853,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     foutEps1.close();
   }
 
-  if (static_cast<int>(param->getWriteOutputs()/2) == 1) {
+  if (static_cast<int>((param->getWriteOutputs()%4)/2) == 1) {
        double Jaztot=0.;
        //Jazma output:
        // compute sum first for normalization

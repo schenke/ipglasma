@@ -19,28 +19,18 @@
 #include "Parameters.h"
 #include "Matrix.h"
 #include "Group.h"
-#include "Util.h"
 
 using namespace std;
 
 class MyEigen {
-
  private:
  public:
-  
-  // Constructor.
-  MyEigen() 
-    {
-    };
-  
-  ~MyEigen() 
-    { 
-    };
-  
-  void test();
-  void flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int it);
+    // Constructor.
+    MyEigen() {};
 
-
+    ~MyEigen() {};
+    void test();
+    void flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int it);
 };
 
 #endif // MyEigen_H

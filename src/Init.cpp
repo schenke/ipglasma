@@ -3,6 +3,9 @@
 #include "Init.h"
 #include<algorithm>
 #include <utility>
+#include "Phys_consts.h"
+
+using PhysConst::hbarc;
 
 //**************************************************************************
 // Init class.
@@ -779,7 +782,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   double yIn = rapidity;//param->getRapidity();
   double a = L/N; // lattice spacing in fm
   double dx, dy, dij;
-  double d2 = param->getSigmaNN()/(PI*10.);          // in fm^2
+  double d2 = param->getSigmaNN()/(M_PI*10.);          // in fm^2
   double averageQs = 0.;
   double averageQs2 = 0.;
   double averageQs2Avg = 0.;
@@ -1116,7 +1119,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
                             bp2 = (xm+xq[i][iq]-x)*(xm+xq[i][iq]-x)+(ym+yq[i][iq]-y)*(ym+yq[i][iq]-y);
                             bp2 /= hbarc*hbarc;
                             
-                            T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
+                            T += exp(-bp2/(2.*BGq))/(2.*M_PI*BGq)/(double(param->getUseConstituentQuarkProton()))*gaussA[i][iq]; // I removed the 2/3 here to make it a bit bigger
                           }
                       }
                     else
@@ -1125,7 +1128,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
                         
                         bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
                         bp2 /= hbarc*hbarc;     	  
-                        T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
+                        T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*M_PI*BG)*gaussA[i][0]; // T_p in this cell for the current nucleon
                       }
                     lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA()+T/nucleiInAverage); // add up all T_p
                   }
@@ -1146,7 +1149,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
                             bp2 = (xm+xq2[i][iq]-x)*(xm+xq2[i][iq]-x)+(ym+yq2[i][iq]-y)*(ym+yq2[i][iq]-y);
                             bp2 /= hbarc*hbarc;
                             
-                            T += exp(-bp2/(2.*BGq))/(2.*PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
+                            T += exp(-bp2/(2.*BGq))/(2.*M_PI*BGq)/double(param->getUseConstituentQuarkProton())*gaussB[i][iq];
                           }
                       }
                     else
@@ -1156,7 +1159,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
                         bp2 = (xm-x)*(xm-x)+(ym-y)*(ym-y) + xi*pow((xm-x)*cos(phi) + (ym-y)*sin(phi),2.);
                         bp2 /= hbarc*hbarc;
                         
-                        T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
+                        T = sqrt(1+xi)*exp(-bp2/(2.*BG))/(2.*M_PI*BG)*gaussB[i][0]; // T_p in this cell for the current nucleon
                       }
                     
                     lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB()+T/nucleiInAverage); // add up all T_p	      
@@ -1468,7 +1471,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      ym = nucleusA.at(i).y;
 	      r = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym));
 	      
-	      if(r<sqrt(0.1*param->getSigmaNN()/PI) && nucleusA.at(i).collided==1)
+	      if(r<sqrt(0.1*param->getSigmaNN()/M_PI) && nucleusA.at(i).collided==1)
 		{
 		  check=1;
 		}
@@ -1480,7 +1483,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      ym = nucleusB.at(i).y;
 	      r = sqrt((x-xm)*(x-xm)+(y-ym)*(y-ym));
 	      
-	      if(r<sqrt(0.1*param->getSigmaNN()/PI) && nucleusB.at(i).collided==1 && check==1)
+	      if(r<sqrt(0.1*param->getSigmaNN()/M_PI) && nucleusB.at(i).collided==1 && check==1)
 		check=2;
 	    }
 	  
@@ -1544,19 +1547,19 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       if(param->getRunWithQs()==2)
 	{
 	  cout << "running with " << param->getRunWithThisFactorTimesQs() << " Q_s(max)" << endl;
-	  alphas = 12.*PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2)); // 3 flavors
+	  alphas = 12.*M_PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*param->getAverageQs()/0.2)); // 3 flavors
 	  cout << "alpha_s(" << param->getRunWithThisFactorTimesQs() << " Qs_max)=" << alphas << endl;
 	}
       else if(param->getRunWithQs()==0)
 	{
 	  cout << "running with " << param->getRunWithThisFactorTimesQs() << " Q_s(min)" << endl;
-	  alphas = 12.*PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2)); // 3 flavors
+	  alphas = 12.*M_PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*param->getAverageQsmin()/0.2)); // 3 flavors
 	  cout << "alpha_s(" << param->getRunWithThisFactorTimesQs() << " Qs_min)=" << alphas << endl;
 	}
       else if(param->getRunWithQs()==1)
 	{
 	  cout << "running with " << param->getRunWithThisFactorTimesQs() << " <Q_s>" << endl;
-	  alphas = 12.*PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2)); // 3 flavors
+	  alphas = 12.*M_PI/((27.)*2.*log(param->getRunWithThisFactorTimesQs()*param->getAverageQsAvg()/0.2)); // 3 flavors
 	  cout << "alpha_s(" << param->getRunWithThisFactorTimesQs() << " <Qs>)=" << alphas << endl;
 	}
     }
@@ -1567,7 +1570,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   else
     {
       cout << "Using fixed alpha_s" << endl;
-      alphas = param->getg()*param->getg()/4./PI;
+      alphas = param->getg()*param->getg()/4./M_PI;
     }
  
   if(param->getAverageQs() > 0 && param->getAverageQsAvg()>0 && averageQs2>0  && param->getAverageQsmin()>0 && averageQs2Avg>0 && alphas>0 && Npart>=2)

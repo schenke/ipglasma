@@ -445,7 +445,10 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 
   // do evolution
   for (int it=1; it<=itmax; it++) {
-      if (it == 1 || it == floor(it0) || it==floor(it1)
+      if (it == 1) {
+          Tmunu(lat,group,param,it);
+      }
+      if (it == floor(it0) || it==floor(it1)
           || it==floor(it2) || it==floor(itmax)) {
           Tmunu(lat,group,param,it);
           u(lat,group,param,it); // computes flow velocity and correct energy density 

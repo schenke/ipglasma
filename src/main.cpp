@@ -31,6 +31,11 @@ int main(int argc, char *argv[])
   int rank;
   int size;
 
+  int nev = 1;
+  if (argc == 2) {
+      nev = atoi(argv[2]);
+  }
+
   //initialize MPI
   MPI_Init(&argc, &argv);
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);/* get current process id */  
@@ -38,6 +43,7 @@ int main(int argc, char *argv[])
   //  rank = MPI::COMM_WORLD.Get_rank(); //number of current processor
   //size = MPI::COMM_WORLD.Get_size(); //total number of processors
 
+  for (int iev = 0; iev < nev; iev++) {
   // welcome
   if(rank==0)
     {
@@ -369,6 +375,7 @@ int main(int argc, char *argv[])
   delete param;
   delete setup;
   delete myeigen;
+  }
   //cout << "done." << endl;
   MPI_Finalize();
   return 1;

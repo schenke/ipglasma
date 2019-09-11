@@ -690,7 +690,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
               // if useConstituentQuarkProton=0
 	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
-		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13; // dividing by 1.13 restores the same mean Q_s 
+		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/std::exp(param->getSmearingWidth()*param->getSmearingWidth()/2.0); // dividing by 1.13 restores the same mean Q_s 
 		  //cout << i << " " << iq << " " << gaussA[i][iq] << endl; 
 		  //	  if (gaussA[i]<0)
 		  //  gaussA[i]=0.;
@@ -703,7 +703,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    {
 	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
-		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13;
+		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/std::exp(param->getSmearingWidth()*param->getSmearingWidth()/2.0);
 		  
 		  //	      cout << i << " " << iq << " " << gaussB[i][iq] << endl; 
 		  //if (gaussB[i]<0)

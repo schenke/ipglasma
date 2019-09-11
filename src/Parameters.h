@@ -103,6 +103,7 @@ class Parameters
   int gaussianWounding; // use hard sphere profile (0) or Gaussian cross section (1) to determine whether a nucleon is wounded
   int MPIrank; // MPI rank
   int MPIsize; // MPI number of cores
+  int event_id;
   int success; // no collision happened (0) or collision happened (1) - used to restart if there was no collision
   int readMultFromFile; // if set, the gluon distribution as a function of k_T is read from file and the integrated rate computed
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
@@ -252,6 +253,8 @@ class Parameters
   double getSmearingWidth() {return smearingWidth;}
   void setMPIRank(int x) {MPIrank=x;}
   int getMPIRank() {return MPIrank;}
+  void setEventId(int x) {event_id = x;}
+  int getEventId() {return event_id;}
   void setMPISize(int x) {MPIsize=x;}
   int getMPISize() {return MPIsize;}
   void setSuccess(int x) {success=x;}

@@ -1172,7 +1172,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   if(param->getUseSmoothNucleus()==0)
     {
       stringstream strNcoll_name;
-      strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
+      strNcoll_name << "NcollList" << param->getEventId() << ".dat";
       string Ncoll_name;  Ncoll_name = strNcoll_name.str();
       
       ofstream foutNcoll(Ncoll_name.c_str(),ios::out); 
@@ -1230,7 +1230,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       
       
       stringstream strNpart_name;
-      strNpart_name << "NpartList" << param->getMPIRank() << ".dat";
+      strNpart_name << "NpartList" << param->getEventId() << ".dat";
       string Npart_name;  Npart_name = strNpart_name.str();
       
       ofstream foutNpart(Npart_name.c_str(),ios::out); 
@@ -1580,7 +1580,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   param->setalphas(alphas);
   
   stringstream strup_name;
-  strup_name << "usedParameters" << param->getMPIRank() << ".dat";
+  strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
   up_name = strup_name.str();
 
@@ -1831,7 +1831,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   {
    stringstream strVOne_name;
    //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize() << ".txt";
+   strVOne_name << "V-" <<  param->getEventId() + 2*param->getSeed()*param->getMPISize() << ".txt";
    string VOne_name;
    VOne_name = strVOne_name.str();
 
@@ -1853,7 +1853,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   
    stringstream strVTwo_name;
    // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
+   strVTwo_name << "V-" <<  param->getEventId() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
    string VTwo_name;
    VTwo_name = strVTwo_name.str();
 
@@ -2791,7 +2791,7 @@ void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *r
 	}
     }
   stringstream strtE_name;
-  strtE_name << "totalEnergy" << param->getMPIRank() << ".dat";
+  strtE_name << "totalEnergy" << param->getEventId() << ".dat";
   string tE_name;
   tE_name = strtE_name.str();
 

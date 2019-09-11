@@ -79,6 +79,7 @@ int main(int argc, char *argv[])
 
   param->setMPIRank(rank);
   param->setMPISize(size);
+  param->setEventId(rank + iev*size);
   param->setSuccess(0);
 
   // read parameters from file
@@ -89,7 +90,7 @@ int main(int argc, char *argv[])
   nn[1]=param->getSize();
     
   stringstream strup_name;
-  strup_name << "usedParameters" << param->getMPIRank() << ".dat";
+  strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
   up_name = strup_name.str();
   
@@ -142,7 +143,7 @@ int main(int argc, char *argv[])
 
       
       // stringstream strNpartdEdy_name;
-      // strNpartdEdy_name << "NpartdEdy" << param->getMPIRank() << ".dat";
+      // strNpartdEdy_name << "NpartdEdy" << param->getEventId() << ".dat";
       // string NpartdEdy_name;
       // NpartdEdy_name = strNpartdEdy_name.str();
       
@@ -150,7 +151,7 @@ int main(int argc, char *argv[])
       // foutE.close();
       
       // stringstream strdNdy_name;
-      // strdNdy_name << "dNdy" << param->getMPIRank() << ".dat";
+      // strdNdy_name << "dNdy" << param->getEventId() << ".dat";
       // string dNdy_name;
       // dNdy_name = strdNdy_name.str();
 
@@ -158,7 +159,7 @@ int main(int argc, char *argv[])
       // foutN.close();
 
       // stringstream strCorr_name;
-      // strCorr_name << "Corr" << param->getMPIRank() << ".dat";
+      // strCorr_name << "Corr" << param->getEventId() << ".dat";
       // string Corr_name;
       // Corr_name = strCorr_name.str();
 
@@ -166,7 +167,7 @@ int main(int argc, char *argv[])
       // foutCorr.close();
 
       // stringstream strPhiMult_name;
-      // strPhiMult_name << "MultPhi" << param->getMPIRank() << ".dat";
+      // strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
       // string PhiMult_name;
       // PhiMult_name = strPhiMult_name.str();
 
@@ -174,7 +175,7 @@ int main(int argc, char *argv[])
       // foutPhiMult.close();
 
       // stringstream strPhi2ParticleMult_name;
-      // strPhi2ParticleMult_name << "MultPhi2Particle" << param->getMPIRank() << ".dat";
+      // strPhi2ParticleMult_name << "MultPhi2Particle" << param->getEventId() << ".dat";
       // string Phi2ParticleMult_name;
       // Phi2ParticleMult_name = strPhi2ParticleMult_name.str();
 
@@ -183,7 +184,7 @@ int main(int argc, char *argv[])
 
 
       // stringstream strPhiMultHad_name;
-      // strPhiMultHad_name << "MultPhiHadrons" << param->getMPIRank() << ".dat";
+      // strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() << ".dat";
       // string PhiMultHad_name;
       // PhiMultHad_name = strPhiMultHad_name.str();
 
@@ -191,7 +192,7 @@ int main(int argc, char *argv[])
       // foutPhiMultHad.close();
 
       // stringstream strPhi2ParticleMultHad_name;
-      // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" << param->getMPIRank() << ".dat";
+      // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" << param->getEventId() << ".dat";
       // string Phi2ParticleMultHad_name;
       // Phi2ParticleMultHad_name = strPhi2ParticleMultHad_name.str();
 
@@ -200,7 +201,7 @@ int main(int argc, char *argv[])
 
 
       // stringstream strame_name;
-      // strame_name << "AverageMaximalEpsilon" << param->getMPIRank() << ".dat";
+      // strame_name << "AverageMaximalEpsilon" << param->getEventId() << ".dat";
       // string ame_name;
       // ame_name = strame_name.str();
       
@@ -209,7 +210,7 @@ int main(int argc, char *argv[])
       
 
       // stringstream strepsx_name;
-      // strepsx_name << "eps-x" << param->getMPIRank() << ".dat";
+      // strepsx_name << "eps-x" << param->getEventId() << ".dat";
       // string epsx_name;
       // epsx_name = strepsx_name.str();
       
@@ -218,7 +219,7 @@ int main(int argc, char *argv[])
 
       
       // stringstream strdEdy_name;
-      // strdEdy_name << "dEdy" << param->getMPIRank() << ".dat";
+      // strdEdy_name << "dEdy" << param->getEventId() << ".dat";
       // string dEdy_name;
       // dEdy_name = strdEdy_name.str();
       
@@ -226,7 +227,7 @@ int main(int argc, char *argv[])
       // foutdE.close();
       
       // stringstream straniso_name;
-      // straniso_name << "anisotropy" << param->getMPIRank() << ".dat";
+      // straniso_name << "anisotropy" << param->getEventId() << ".dat";
       // string aniso_name;
       // aniso_name = straniso_name.str();
       
@@ -234,7 +235,7 @@ int main(int argc, char *argv[])
       // foutAni.close();
       
       stringstream strecc_name;
-      strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
+      strecc_name << "eccentricities" << param->getEventId() << ".dat";
       string ecc_name;
       ecc_name = strecc_name.str();
       
@@ -242,28 +243,28 @@ int main(int argc, char *argv[])
       foutEcc.close();
             
       // stringstream strmult_name;
-      // strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
+      // strmult_name << "multiplicity" << param->getEventId() << ".dat";
       // string mult_name;
       // mult_name = strmult_name.str();
       // ofstream foutmult(mult_name.c_str(),ios::out); 
       // foutmult.close();
 
       // stringstream strmult2_name;
-      // strmult2_name << "multiplicityCorr" << param->getMPIRank() << ".dat";
+      // strmult2_name << "multiplicityCorr" << param->getEventId() << ".dat";
       // string mult2_name;
       // mult2_name = strmult2_name.str();
       // ofstream foutmult2(mult2_name.c_str(),ios::out); 
       // foutmult2.close();
 
       // stringstream strmult3_name;
-      // strmult3_name << "multiplicityCorrFromPhi" << param->getMPIRank() << ".dat";
+      // strmult3_name << "multiplicityCorrFromPhi" << param->getEventId() << ".dat";
       // string mult3_name;
       // mult3_name = strmult3_name.str();
       // ofstream foutmult3(mult3_name.c_str(),ios::out); 
       // foutmult3.close();
 
       // stringstream strmult4_name;
-      // strmult4_name << "multiplicityCorrFromPhiHadrons" << param->getMPIRank() << ".dat";
+      // strmult4_name << "multiplicityCorrFromPhiHadrons" << param->getEventId() << ".dat";
       // string mult4_name;
       // mult4_name = strmult4_name.str();
       // ofstream foutmult4(mult4_name.c_str(),ios::out); 
@@ -474,7 +475,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
 // write the used parameters into file "usedParameters.dat" as a double check for later
   time_t rawtime = time(0);
   stringstream strup_name;
-  strup_name << "usedParameters" << param->getMPIRank() << ".dat";
+  strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
   up_name = strup_name.str();
   

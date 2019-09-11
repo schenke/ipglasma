@@ -44,6 +44,8 @@ int main(int argc, char *argv[])
   //size = MPI::COMM_WORLD.Get_size(); //total number of processors
 
   for (int iev = 0; iev < nev; iev++) {
+      cout << "generating event " << iev+1 << " out of " << nev << " ..."
+           << endl;
   // welcome
   if(rank==0)
     {

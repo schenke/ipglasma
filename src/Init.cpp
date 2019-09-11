@@ -252,12 +252,8 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
   else if (param->getNucleonPositionsFromFile()==1)
     {
       ifstream fin;
-      std::stringstream read1; read1 << "input_nuclei/nucleus_" <<  param->getMPIRank() + (0+2*param->getSeed())*param->getMPISize();
-     std::stringstream read2; read2 << "input_nuclei/nucleus_" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize();
-
-      //fin.open("nucleus1.dat"); 
-      fin.open(read1.str().c_str());
-      cout << "Reading nucleon positions from files " << read1.str() << " and " << read2.str() << " ... " << endl;
+      fin.open("nucleus1.dat"); 
+      cout << "Reading nucleon positions from files 'nucleus1.dat' and 'nucleus2.dat' ... " << endl;
       int A=0;
       int A2=0;
       if(fin)
@@ -265,9 +261,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	  while(!fin.eof())
 	    {  
 	      fin >> rv.x;
-          if (fin.eof()) continue;
 	      fin >> rv.y;
-		cout << "Read nuke " << rv.x << " " << rv.y << endl;
 	      rv.collided=0;
 	      nucleusA.push_back(rv);
 	      A++;
@@ -276,26 +270,22 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
     
       
       fin.close();
-//      fin.open("nucleus2.dat"); 
-	fin.open(read2.str().c_str());
+      fin.open("nucleus2.dat"); 
       
       if(fin)
 	{
 	  while(!fin.eof())
 	    {  
-
 	      fin >> rv.x;
-        if (fin.eof()) continue;
 	      fin >> rv.y;
-cout << "read nuke 2 " <<  rv.x << " " << rv.y << endl;
 	      rv.collided=0;
 	      nucleusB.push_back(rv);
 	      A2++;
 	    }
 	}
       
-//      A=A-1;
-//      A2=A2-1;
+      A=A-1;
+      A2=A2-1;
 
       cout << "A1 (from file) = " << A << endl;
       cout << "A2 (from file) = " << A2 << endl;
@@ -1096,7 +1086,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    }
 
 	  double exponent=5.6; // see 1212.2974 Eq. (17)
-	  if(check==2 or (A1==2 and A2==2))
+	  if(check==2)
 	    {
 	      if ( param->getUseFluctuatingx() == 1)
 		{
@@ -1370,9 +1360,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     }
  
   if(param->getAverageQs() > 0 && param->getAverageQsAvg()>0 && averageQs2>0  && param->getAverageQsmin()>0 && averageQs2Avg>0 && alphas>0 && Npart>=2)
-  {
     param->setSuccess(1);
-  }
  
 
   param->setalphas(alphas);
@@ -1972,9 +1960,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       if(param->getSuccess()==0)
 	{
 	  cout << "No collision happened on rank " << param->getMPIRank() << ". Restarting with new random number..." << endl;
-		cout <<"Eiku sittenkin hyvaksytaan!" << endl;
-	param->setSuccess(1);
-	  //return;
+	  return;
 	}
       // sample color charges and find Wilson lines V_A and V_B
       setV(lat, group, param, random, glauber);      
@@ -2011,7 +1997,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   // fout.close();      
 
   cout << "Finding fields in forward lightcone..." << endl;
- return;
 #pragma omp parallel
   {
     int ir;

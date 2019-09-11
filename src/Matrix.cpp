@@ -316,10 +316,10 @@ vector <complex<double> > Matrix::expmCoeff(double *Q, int Nc)
       result.push_back(ua[i]*0.5*f2);
        if (std::isnan((result[result.size()-1].real())))
        {
-
-               //cout << "expMcoeff color " << i << " was " << result[result.size()-1] << " with input ";
-              //for (int k=0; k < Nc*Nc-1; k++) cout << Q[k] << " ";
-               //cout << endl;
+			// This may happen at very small densities, due to the problems in floating point
+			// arithmetics above, e.g. when cos(w)=1 but w>0 but not exactly w=0
+			// This forces coefficient of the matrix to be 0 in that case -> unit matrix
+			// In practice, this may happen especially if you have a large lattice where densities become very small
                result[result.size()-1]=0.0;
        }
      

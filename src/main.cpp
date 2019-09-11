@@ -32,7 +32,7 @@ int main(int argc, char *argv[])
   int size;
 
   int nev = 1;
-  if (argc == 2) {
+  if (argc == 3) {
       nev = atoi(argv[2]);
   }
 

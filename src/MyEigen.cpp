@@ -285,7 +285,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     } else {
         gfactor = 1.;
     }
-    //      double PI = param->getPi();
 
     if (hL > L) {
         cout << "WARNING: hydro grid length larger than the computed one."

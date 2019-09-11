@@ -115,17 +115,9 @@ class Parameters
  public:
 
   // constructor:
-  Parameters() 
-    {
-      setPi(3.141592654);       //pi
-      sethbarc(0.1973269631);   //hbar c in GeV*fm
-    }
+  Parameters() {};
 
   // functions to access the private variables:
-  void setPi(double x){myPI=x;}
-  double getPi(){return myPI;}
-  void sethbarc(double x){myhbarc=x;}
-  double gethbarc(){return myhbarc;}
   void setSeed(unsigned long long int x) {seed=x;}
   unsigned long long int getSeed() {return seed;}
   void setA(int x) {A=x;}

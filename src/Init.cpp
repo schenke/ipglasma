@@ -1655,8 +1655,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
               {
                 double kt2, kx, ky;
                 int localpos = i*N+j; 
-                kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-                ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+                kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+                ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
                 kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
                 if(m==0)
                   {
@@ -1748,8 +1748,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
               {
                 double kt2, kx, ky;
                 int localpos = i*N+j; 
-                kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-                ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+                kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+                ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
                 kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
                 if(m==0)
                   {

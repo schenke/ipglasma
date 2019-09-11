@@ -102,8 +102,8 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
             {
               double kx, ky, kt2;
               int localpos = i*N+j;
-              kx = sin(param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
-              ky = sin(param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
+              kx = sin(M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
+              ky = sin(M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
               kt2 = 4.*(kx*kx+ky*ky); //lattice momentum squared
               *chi[localpos] = -1.5 * (1./(kt2+1e-9))*(*chi[localpos]); 
             }

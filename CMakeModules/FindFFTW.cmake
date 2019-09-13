@@ -41,6 +41,12 @@ if( NOT FFTW_ROOT AND DEFINED ENV{FFTWDIR} )
   set( FFTW_ROOT $ENV{FFTWDIR} )
 endif()
 
+if( NOT FFTW_ROOT AND DEFINED ENV{FFTW_DIR} )
+  set( FFTW_ROOT $ENV{FFTW_DIR} )
+  set( FFTW_ROOT_INC $ENV{FFTW_INC} )
+endif()
+
+
 # Check if we can use PkgConfig
 find_package(PkgConfig)
 
@@ -140,6 +146,15 @@ if( FFTW_ROOT )
     PATH_SUFFIXES "include"
     NO_DEFAULT_PATH
   )
+  
+  if (FFTW_ROOT_INC)
+      find_path(FFTW_INCLUDE_DIRS
+        NAMES "fftw3.h"
+        PATHS ${FFTW_ROOT_INC}
+        PATH_SUFFIXES "include"
+        NO_DEFAULT_PATH
+      )
+  endif()
 
 else()
 

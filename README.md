@@ -21,4 +21,6 @@ IP-Glasma code with improved matrix exponential - openmp development
  	- 6: output 2 & 4
  	- 7: output 1 & 2 & 4
  
-
+ - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
+ 	- 0: no
+ 	- 1: yes	

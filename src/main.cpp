@@ -7,6 +7,8 @@
 #include <complex>
 #include <fstream>
 #include <vector>
+#include <cstdlib>
+#include <sstream>
 
 #include "Setup.h"
 #include "Init.h"
@@ -372,13 +374,27 @@ int main(int argc, char *argv[])
     }
 
   MPI_Barrier(MPI_COMM_WORLD);
-       
+
+    stringstream h5output_filename;
+    h5output_filename << "RESULTS_rank" << rank;
+    stringstream collect_command;
+    collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                    << " --output_filename " << h5output_filename.str()
+                    << " --event_id " << param->getEventId();
+    system(collect_command.str().c_str());
   delete group;
   delete evolution;
   delete param;
   delete setup;
   delete myeigen;
   }
+    if (rank == 0) {
+        stringstream collect_command;
+        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                        << " --output_filename RESULTS"
+                        << " --combine_hdf5_files_only";
+        system(collect_command.str().c_str());
+    }
   //cout << "done." << endl;
   MPI_Finalize();
   return 1;

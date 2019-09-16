@@ -2761,11 +2761,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       lat->cells[pos]->setUx1(one); // reset the Ux1 to be used for other purposes later
     }
 
-  delete M;
-  delete F;
-  delete result;
-  delete alpha;
-  delete alphaSave;
+  delete[] M;
+  delete[] F;
+  delete[] result;
+  delete[] alpha;
+  delete[] alphaSave;
 
   }
 

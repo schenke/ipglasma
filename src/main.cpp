@@ -236,13 +236,13 @@ int main(int argc, char *argv[])
       // ofstream foutAni(aniso_name.c_str(),ios::out); 
       // foutAni.close();
       
-      stringstream strecc_name;
-      strecc_name << "eccentricities" << param->getEventId() << ".dat";
-      string ecc_name;
-      ecc_name = strecc_name.str();
+      //stringstream strecc_name;
+      //strecc_name << "eccentricities" << param->getEventId() << ".dat";
+      //string ecc_name;
+      //ecc_name = strecc_name.str();
       
-      ofstream foutEcc(ecc_name.c_str(),ios::out); 
-      foutEcc.close();
+      //ofstream foutEcc(ecc_name.c_str(),ios::out); 
+      //foutEcc.close();
             
       // stringstream strmult_name;
       // strmult_name << "multiplicity" << param->getEventId() << ".dat";

@@ -20,6 +20,7 @@
 #include "Evolution.h"
 #include "Spinor.h"
 #include "MyEigen.h"
+#include "pretty_ostream.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
@@ -46,9 +47,10 @@ int main(int argc, char *argv[])
   //size = MPI::COMM_WORLD.Get_size(); //total number of processors
 
   int h5Flag = 0;
+  pretty_ostream messager;
   for (int iev = 0; iev < nev; iev++) {
-      cout << "generating event " << iev+1 << " out of " << nev << " ..."
-           << endl;
+      messager << "generating event " << iev+1 << " out of " << nev << " ...";
+      messager.flush("info");
   // welcome
   if(rank==0)
     {
@@ -106,7 +108,9 @@ int main(int argc, char *argv[])
   group = new Group(param->getNc());
   
   // initialize Glauber class
-  cout << "Init Glauber on rank " << param->getMPIRank() << " ... ";
+  messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
+  messager.flush("info");
+
   Glauber *glauber;
   glauber = new Glauber;
   
@@ -296,15 +300,17 @@ int main(int argc, char *argv[])
 	  else
 	    {
 	      rnum = param->getSeed();
-	      cout << "Random seed = " << rnum+(rank*1000) << " - entered directly +rank*1000."  << endl;
+	      messager << "Random seed = " << rnum+(rank*1000) << " - entered directly +rank*1000.";
+          messager.flush("info");
 	    }
 	  
 	  param->setRandomSeed(rnum+rank*1000);
 	  if(param->getUseTimeForSeed()==1)
 	    {
-	      cout << "Random seed = " << param->getRandomSeed() << " made from time " 
+	      messager << "Random seed = " << param->getRandomSeed() << " made from time " 
 		   << rnum-param->getSeed()-(rank*1000) << " and argument (+1000*rank) " 
-		   << param->getSeed()+(rank*1000) << endl;
+		   << param->getSeed()+(rank*1000);
+          messager.flush("info");
 	    }
 	  
 	  random->init_genrand64(rnum+rank*1000);
@@ -339,7 +345,8 @@ int main(int argc, char *argv[])
 
 	  param->setRandomSeed(seedList[rank]);
 	  random->init_genrand64(seedList[rank]);
-	  cout << "Random seed on rank " << rank << " = " << seedList[rank] << " read from list."  << endl;
+        messager<< "Random seed on rank " << rank << " = " << seedList[rank] << " read from list.";
+        messager.flush("info");
 	}
       
 
@@ -355,7 +362,7 @@ int main(int argc, char *argv[])
       //      init->init(lat, group, param, random, glauber);
       int READFROMFILE = 0;
       init->init(lat, group, param, random, glauber, READFROMFILE);
-      cout << " done." << endl;
+      messager.info("initialization done.");
 
       if(param->getSuccess()==0)
 	{
@@ -385,8 +392,9 @@ int main(int argc, char *argv[])
                         << " --output_filename " << h5output_filename.str()
                         << " --event_id " << param->getEventId();
         status = system(collect_command.str().c_str());
-        cout << "finished system call to python script with status: "
-             << status << endl;
+        messager << "finished system call to python script with status: "
+                 << status;
+        messager.flush("info");
         h5Flag = 1;
     }
   delete group;
@@ -402,8 +410,9 @@ int main(int argc, char *argv[])
                         << " --output_filename RESULTS"
                         << " --combine_hdf5_files_only";
         status = system(collect_command.str().c_str());
-        cout << "finished system call to python script with status: "
-             << status << endl;
+        messager << "finished system call to python script with status: "
+                 << status;
+        messager.flush("info");
     }
   //cout << "done." << endl;
   MPI_Finalize();

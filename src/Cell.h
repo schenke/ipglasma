@@ -18,13 +18,13 @@ private:
   double epsilon;// energy density after collision
  
   // nucleus A
-  double *g2mu2A;  // color charge density of nucleus A
-  double *TpA;     // sum over the proton T(b) in this cell for nucleus A
+  double g2mu2A;  // color charge density of nucleus A
+  double TpA;     // sum over the proton T(b) in this cell for nucleus A
   Matrix* U;       // U is in the fundamental rep. (Nc*Nc matrix) // duobles as x component of electric field
 
   // nucleus B
-  double *g2mu2B;  // color charge density of nucleus B
-  double *TpB;     // sum over the proton T(b) in this cell for nucleus B
+  double g2mu2B;  // color charge density of nucleus B
+  double TpB;     // sum over the proton T(b) in this cell for nucleus B
   Matrix* U2;      // Ui is the initial U in the fundamental rep. (Nc*Nc matrix) // doubles as y component of electric field
 
   Matrix* Ux;    // U is in the fundamental rep. (Nc*Nc matrix)
@@ -74,17 +74,17 @@ public:
   //  void setParity(bool in) { parity = in; };
   //  bool getParity() { return parity; };
 
-  void setg2mu2A(double in) { *g2mu2A = in; };
-  void setg2mu2B(double in) { *g2mu2B = in; };
+  void setg2mu2A(double in) { g2mu2A = in; };
+  void setg2mu2B(double in) { g2mu2B = in; };
 
-  double getg2mu2A() { return *g2mu2A; };
-  double getg2mu2B() { return *g2mu2B; };
+  double getg2mu2A() { return g2mu2A; };
+  double getg2mu2B() { return g2mu2B; };
 
-  void setTpA(double in) { *TpA = in; };
-  void setTpB(double in) { *TpB = in; };
+  void setTpA(double in) { TpA = in; };
+  void setTpB(double in) { TpB = in; };
 
-  double getTpA() { return *TpA; };
-  double getTpB() { return *TpB; };
+  double getTpA() { return TpA; };
+  double getTpB() { return TpB; };
 
   void setU(const Matrix& x) { *U = x; };
   void setU2(const Matrix& x) { *U2 = x; };

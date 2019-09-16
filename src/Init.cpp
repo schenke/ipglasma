@@ -1,8 +1,7 @@
 // Init.cpp is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Init.h"
-#include <algorithm>
-#include <random>
+#include<algorithm>
 #include <utility>
 #include "Phys_consts.h"
 
@@ -227,7 +226,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
         }
       else
 	{
-          generate_nucleus_configuration(param, random, A1, Z1,
+          generate_nucleus_configuration(random, A1, Z1,
                                          glauber->GlauberData.Projectile.a_WS,
                                          glauber->GlauberData.Projectile.R_WS,
                                          glauber->GlauberData.Projectile.beta2,
@@ -319,7 +318,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else
 	{
-          generate_nucleus_configuration(param, random, A2, Z2,
+          generate_nucleus_configuration(random, A2, Z2,
                                          glauber->GlauberData.Target.a_WS,
                                          glauber->GlauberData.Target.R_WS,
                                          glauber->GlauberData.Target.beta2,
@@ -2801,20 +2800,20 @@ void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *r
 }
 
 void Init::generate_nucleus_configuration(
-                Parameters *param, Random *random,
+                Random *random,
                 int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
                 std::vector<ReturnValue> *nucleus) {
     if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15) {
         generate_nucleus_configuration_with_woods_saxon(
-                    param, random, A, Z, a_WS, R_WS, nucleus);
+                                                        random, A, Z, a_WS, R_WS, nucleus);
     } else {
         generate_nucleus_configuration_with_deformed_woods_saxon(
-                    param, random, A, Z, a_WS, R_WS, beta2, beta4, nucleus);
+                                                                 random, A, Z, a_WS, R_WS, beta2, beta4, nucleus);
     }
 }
 
 void Init::generate_nucleus_configuration_with_woods_saxon(
-                                        Parameters *param, Random *random,
+                                        Random *random,
                                         int A, int Z, double a_WS, double R_WS,
                                         std::vector<ReturnValue> *nucleus) {
     std::vector<double> r_array(A, 0.);
@@ -2870,9 +2869,7 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
         nucleus->push_back(rv);
     }
 
-    //std::random_shuffle ( nucleus->begin(), nucleus->end() );
-    std::shuffle(nucleus->begin(), nucleus->end(),
-                 std::default_random_engine(param->getSeed()));
+    std::random_shuffle ( nucleus->begin(), nucleus->end() );
     
     for (unsigned int i = 0; i < r_array.size(); i++) 
       {
@@ -2902,7 +2899,7 @@ double Init::fermi_distribution(double r, double R_WS, double a_WS) const {
 
 
 void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
-                Parameters *param, Random *random,
+                Random *random,
                 int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
                 std::vector<ReturnValue> *nucleus) {
     std::vector<double> r_array(A, 0.);
@@ -2967,9 +2964,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
         nucleus->push_back(rv);
     }
 
-    //std::random_shuffle ( nucleus->begin(), nucleus->end() );
-    std::shuffle(nucleus->begin(), nucleus->end(),
-                 std::default_random_engine(param->getSeed()));
+    std::random_shuffle ( nucleus->begin(), nucleus->end() );
     
     for (unsigned int i = 0; i < r_array.size(); i++) 
       {

@@ -80,17 +80,16 @@ class Init {
   void multiplicity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber);
 
     void generate_nucleus_configuration(
-            Parameters *param, Random *random,
-            int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
-            std::vector<ReturnValue> *nucleus);
+                Random *random,
+                int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
+                std::vector<ReturnValue> *nucleus);
     void generate_nucleus_configuration_with_woods_saxon(
-            Parameters *param, Random *random,
-            int A, int Z, double a_WS, double R_WS,
-            std::vector<ReturnValue> *nucleus);
+                            Random *random, int A, int Z, double a_WS, double R_WS,
+                            std::vector<ReturnValue> *nucleus);
     void generate_nucleus_configuration_with_deformed_woods_saxon(
-           Parameters *param, Random *random,
-           int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
-           std::vector<ReturnValue> *nucleus);
+                Random *random,
+                int A, int Z, double a_WS, double R_WS, double beta2, double beta4,
+                std::vector<ReturnValue> *nucleus);
     double sample_r_from_woods_saxon(Random *random, double a_WS, double R_WS) const;
     void sample_r_and_costheta_from_deformed_woods_saxon(
             Random *random, double a_WS, double R_WS, double beta2, double beta4,

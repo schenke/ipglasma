@@ -93,6 +93,7 @@ public:
       fftw_destroy_plan(p);
       fftw_destroy_plan(pback);
       fftw_free(input); fftw_free(output);
+      fftw_free(inputMany); fftw_free(outputMany);
       //fftw_cleanup_threads();
     };
   void fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int ndim, const int isign);

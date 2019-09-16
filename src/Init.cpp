@@ -2136,26 +2136,21 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     int countMe;
     int checkConvergence;
     int alphaCheck;
-    
+
     double Fold;
     double Fnew;
-    Fnew = 0.;  
+    Fnew = 0.;
     double lambda;
-    
-    complex<double>* M;
-    complex<double>* F;
-    complex<double>* result;
-    complex<double>* alpha;
-    complex<double>* alphaSave;
+
+    complex<double>* M         = new complex<double>[Nc2m1*Nc2m1];
+    complex<double>* F         = new complex<double>[Nc2m1];
+    complex<double>* result    = new complex<double>[Nc2m1];
+    complex<double>* alpha     = new complex<double>[Nc2m1];
+    complex<double>* alphaSave = new complex<double>[Nc2m1];
+
     vector <complex<double> > Dalpha;
     Dalpha.reserve(Nc2m1);
-    
-    M = new complex<double>[Nc2m1*Nc2m1];
-    F = new complex<double>[Nc2m1];
-    result = new complex<double>[Nc2m1];
-    alpha = new complex<double>[Nc2m1];
-    alphaSave = new complex<double>[Nc2m1];
-    
+
     Matrix temp(Nc,1.);
     Matrix tempNew(Nc,1.);
     double in[8];
@@ -2761,11 +2756,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       lat->cells[pos]->setUx1(one); // reset the Ux1 to be used for other purposes later
     }
 
-  delete M;
-  delete F;
-  delete result;
-  delete alpha;
-  delete alphaSave;
+  delete[] M;
+  delete[] F;
+  delete[] result;
+  delete[] alpha;
+  delete[] alphaSave;
 
   }
 

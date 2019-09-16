@@ -2002,7 +2002,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   const Matrix one(Nc,1.);
   const Matrix zero(Nc,0.);
 
-  cout << "Initializing fields ... " << endl;
+  messager.info("Initializing fields ... ");
   param->setRnp(0.);
   
   double b; 
@@ -2012,24 +2012,26 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     {
       param->setSuccess(1);
       b=0.;
-      cout << "Setting b=0 for constant color charge density case." << endl;
+      messager << "Setting b=0 for constant color charge density case.";
+        messager.flush("info");
     }
   else 
     {
       if(param->getLinearb()==1) // use a linear probability distribution for b if we are doing nuclei
 	{
-	  cout << "Sampling linearly distributed b between " << bmin << " and " << bmax << "fm. Found ";
+	  messager << "Sampling linearly distributed b between " << bmin << " and " << bmax << "fm. Found ";
 	  b = sqrt((bmax*bmax-bmin*bmin)*xb+bmin*bmin);
 	}
       else // use a uniform distribution instead
 	{
-	  cout << "Sampling uniformly distributed b between " << bmin << " and " << bmax << "fm. Found ";
+	  messager << "Sampling uniformly distributed b between " << bmin << " and " << bmax << "fm. Found ";
 	  b = (bmax-bmin)*xb+bmin;
 	}
     }
 
   param->setb(b);
-  cout << "b=" << b << " fm." << endl;
+  messager << "b=" << b << " fm.";
+  messager.flush("info");
 
  
   // read Q_s^2 from file
@@ -2129,7 +2131,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
   // fout.close();      
 
-  cout << "Finding fields in forward lightcone..." << endl;
+  messager.info("Finding fields in forward lightcone...");
 
 #pragma omp parallel
   {

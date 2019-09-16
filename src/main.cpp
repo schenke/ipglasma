@@ -49,7 +49,7 @@ int main(int argc, char *argv[])
   int h5Flag = 0;
   pretty_ostream messager;
   for (int iev = 0; iev < nev; iev++) {
-      messager << "generating event " << iev+1 << " out of " << nev << " ...";
+      messager << "Generating event " << iev+1 << " out of " << nev << " ...";
       messager.flush("info");
   // welcome
   if(rank==0)
@@ -287,6 +287,7 @@ int main(int argc, char *argv[])
       lat = new Lattice(param, param->getNc(), param->getSize());
       BufferLattice *bufferlat;
       bufferlat = new BufferLattice(param, param->getNc(), param->getSize());
+      messager.info("Lattice generated.");
 
       //initialize random generator using time and seed from input file
       unsigned long long int rnum;
@@ -375,6 +376,7 @@ int main(int argc, char *argv[])
       delete random;
       delete glauber;
 
+      messager.info("Start evolution");
       // do the CYM evolution of the initialized fields using parmeters in param
       evolution->run(lat, bufferlat,  group, param);
       delete bufferlat;
@@ -383,6 +385,7 @@ int main(int argc, char *argv[])
 
   MPI_Barrier(MPI_COMM_WORLD);
 
+    messager.info("One event finished");
     if (param->getWriteOutputsToHDF5() == 1) {
         int status = 0;
         stringstream h5output_filename;

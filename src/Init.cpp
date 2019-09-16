@@ -1522,8 +1522,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   
   param->setTpp(Tpp);
 
-  cout << "N_part=" << Npart << endl;
-  cout << "N_coll=" << Ncoll << endl;
+  messager << "N_part=" << Npart; messager.flush("info");
+  messager << "N_coll=" << Ncoll; messager.flush("info");
   cout << "T_pp(" << param->getb() << " fm) = " << Tpp << " 1/fm^2" << endl;
   cout << "Q_s^2(max) S_T = " << averageQs2*a*a/hbarc/hbarc*static_cast<double>(count) << endl;
   cout << "Q_s^2(avg) S_T = " << averageQs2Avg*a*a/hbarc/hbarc*static_cast<double>(count) << endl;
@@ -1540,7 +1540,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   cout << "resulting Y(Qs(avg)*" << param->getxFromThisFactorTimesQs() << ") = "  << log(0.01/(param->getAverageQsAvg()*param->getxFromThisFactorTimesQs()/param->getRoots())) << endl;
   cout << "resulting Y(Qs(min)*" << param->getxFromThisFactorTimesQs() << ") =  " << log(0.01/(param->getAverageQsmin()*param->getxFromThisFactorTimesQs()/param->getRoots())) << endl;
    
-  cout << "Color charge densities for nucleus A and B set. " << endl;
+  messager.info("Color charge densities for nucleus A and B set. ");
   
   if(param->getRunningCoupling() && param->getRunWithkt()==0)
     {
@@ -1610,7 +1610,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber)
 {
-  cout << "Setting Wilson lines ..." << endl;
+  messager.info("Setting Wilson lines ...");
   const int N = param->getSize();
   const int Ny=param->getNy();
   const int Nc = param->getNc();
@@ -1875,7 +1875,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   // --------
 
 
-  cout << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". " << endl; 
+  messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". ";
+  messager.flush("info");
 }
 
 
@@ -1982,7 +1983,8 @@ void Init::readV(Lattice *lat, Group* group, Parameters *param)
   
   finV2.close();
 
-  cout << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". " << endl; 
+  messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". ";
+  messager.flush("info");
 
 }
 

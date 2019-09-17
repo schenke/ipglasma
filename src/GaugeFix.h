@@ -26,19 +26,19 @@ using namespace std;
 class GaugeFix {
  private:
     //FFT *fft;
-    Random *random;
+    //Random *random;
 
  public:
     // Constructor.
     GaugeFix(const int nn[]) {
         //  fft = new FFT(nn);
-        random = new Random();
+        //random = new Random();
     };
 
     // Destructor.
     ~GaugeFix() {
         //delete fft;
-        delete random;
+        //delete random;
     };
 
     void gaugeTransform(Lattice* lat, Group* group, Parameters *param,

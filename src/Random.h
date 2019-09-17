@@ -37,7 +37,9 @@ private:
       gslRandom = gsl_rng_alloc(gsl_rng_taus);
     };//constructor
 
-  ~Random(){};//destructor
+  ~Random(){
+      gsl_rng_free(gslRandom);
+  };//destructor
   void init_genrand64(unsigned long long seed);
   void init_by_array64(unsigned long long init_key[],
 		       unsigned long long key_length);

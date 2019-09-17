@@ -3,10 +3,6 @@
 Cell::Cell(int N)
 {
   Nc = N;
-  g2mu2A = new double;
-  g2mu2B = new double;
-  TpA = new double;
-  TpB = new double;
   U = new Matrix(Nc,1.);
   U2 = new Matrix(Nc,1.);
   Ux = new Matrix(Nc,1.);
@@ -19,10 +15,6 @@ Cell::Cell(int N)
 
 Cell::~Cell()
 {
-  delete g2mu2A;
-  delete g2mu2B;
-  delete TpA;
-  delete TpB;
   delete U;
   delete U2;
   delete Ux;

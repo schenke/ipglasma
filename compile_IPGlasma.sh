@@ -1,9 +1,16 @@
 #/usr/bin/env bash
 
+flag=$1
+
 mkdir -p build
 cd build
 rm -fr *
-cmake ..
+if [ "$flag" == "KNL" ]; then
+    CXX=mpiicpc cmake .. -DKNL=ON
+else
+    cmake ..
+fi
+
 make -j4
 make install
 cd ..

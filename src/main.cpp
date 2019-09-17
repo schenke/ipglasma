@@ -45,6 +45,7 @@ int main(int argc, char *argv[])
   //  rank = MPI::COMM_WORLD.Get_rank(); //number of current processor
   //size = MPI::COMM_WORLD.Get_size(); //total number of processors
 
+  int h5Flag = 0;
   for (int iev = 0; iev < nev; iev++) {
       cout << "generating event " << iev+1 << " out of " << nev << " ..."
            << endl;
@@ -59,10 +60,10 @@ int main(int argc, char *argv[])
       cout << "| B. Schenke, P. Tribedy, R. Venugopalan                                    |" << endl;
       cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 (2012)     |" << endl;
       cout << "-----------------------------------------------------------------------------" << endl;
-      
+
       cout << "This version uses Qs as obtained from IP-Sat using the sum over proton T_p(b)" << endl;
       cout << "This is a simple MPI version that runs many events in one job. No communication." << endl;
-      
+
       cout << "Run using large lattices to improve convergence of the root finder in initial condition. Recommended: 600x600 using L=30fm" << endl;
       cout << endl;
     }
@@ -86,11 +87,11 @@ int main(int argc, char *argv[])
 
   // read parameters from file
   readInput(setup, param, argc, argv, rank);
-  
+
   int nn[2];
   nn[0]=param->getSize();
   nn[1]=param->getSize();
-    
+
   stringstream strup_name;
   strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
@@ -375,25 +376,34 @@ int main(int argc, char *argv[])
 
   MPI_Barrier(MPI_COMM_WORLD);
 
-    stringstream h5output_filename;
-    h5output_filename << "RESULTS_rank" << rank;
-    stringstream collect_command;
-    collect_command << "python3 utilities/combine_events_into_hdf5.py ."
-                    << " --output_filename " << h5output_filename.str()
-                    << " --event_id " << param->getEventId();
-    system(collect_command.str().c_str());
+    if (param->getWriteOutputsToHDF5() == 1) {
+        int status = 0;
+        stringstream h5output_filename;
+        h5output_filename << "RESULTS_rank" << rank;
+        stringstream collect_command;
+        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                        << " --output_filename " << h5output_filename.str()
+                        << " --event_id " << param->getEventId();
+        status = system(collect_command.str().c_str());
+        cout << "finished system call to python script with status: "
+             << status << endl;
+        h5Flag = 1;
+    }
   delete group;
   delete evolution;
   delete param;
   delete setup;
   delete myeigen;
   }
-    if (rank == 0) {
+    if (h5Flag == 1 && rank == 0) {
+        int status = 0;
         stringstream collect_command;
         collect_command << "python3 utilities/combine_events_into_hdf5.py ."
                         << " --output_filename RESULTS"
                         << " --combine_hdf5_files_only";
-        system(collect_command.str().c_str());
+        status = system(collect_command.str().c_str());
+        cout << "finished system call to python script with status: "
+             << status << endl;
     }
   //cout << "done." << endl;
   MPI_Finalize();
@@ -472,6 +482,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setxFromThisFactorTimesQs(setup->DFind(file_name,"xFromThisFactorTimesQs"));
   param->setLinearb(setup->IFind(file_name,"samplebFromLinearDistribution"));
   param->setWriteOutputs(setup->IFind(file_name,"writeOutputs"));
+  param->setWriteOutputsToHDF5(setup->IFind(file_name,"writeOutputsToHDF5"));
   param->setWriteEvolution(setup->IFind(file_name,"writeEvolution"));
   param->setWriteInitialWilsonLines(setup->IFind(file_name, "writeInitialWilsonLines"));
   param->setAverageOverNuclei(setup->IFind(file_name,"averageOverThisManyNuclei"));

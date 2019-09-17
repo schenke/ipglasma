@@ -58,6 +58,7 @@ class Parameters
   double alphas; // the alpha_s computed at the scale given by the average Q_s
   double xExponent; // - exponent with which Q_s grows with x (usually 0.31 in IP-Sat for nuclei)
   int writeOutputs; // decide whether to write (1) or not write (0) large output files (like hydro input data)
+  int writeOutputsToHDF5; // decide whether to write (1) or not write (0) output files to one hdf5 file
   int writeEvolution; // decide whether to write (1) or not write (0) time dependent quantities like the anisotropy 
   int writeInitialWilsonLines; // decide whether to write (1) or not write (0) generated Wilson lines (before any evolution)
   unsigned long long int randomSeed; // stores the random seed used (so the event can be reproduced)
@@ -280,6 +281,8 @@ class Parameters
   int getLinearb() {return linearb;}
   void setWriteOutputs(int x) {writeOutputs=x;};
   int getWriteOutputs() {return writeOutputs;}
+  void setWriteOutputsToHDF5(int x) {writeOutputsToHDF5=x;};
+  int getWriteOutputsToHDF5() {return writeOutputsToHDF5;}
   void setWriteEvolution(int x) {writeEvolution=x;};
   int getWriteEvolution() {return writeEvolution;}
   void setWriteInitialWilsonLines(int x) {writeInitialWilsonLines=x;}

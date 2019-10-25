@@ -209,9 +209,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, int rank)
       nucleus->A = 129;
       nucleus->Z = 54;
       densityFunction = "3Fermi";
-      nucleus->R_WS = 5.36;
+      nucleus->R_WS = 5.42; // 5.36       // new values from arXiv:1508.06294
       nucleus->w_WS = 0;
-      nucleus->a_WS = 0.590;
+      nucleus->a_WS = 0.57; // 0.590;     // new values from arXiv:1508.06294
       nucleus->beta2 = 0.162;             // from arXiv:1508.06294
       nucleus->beta4 = -0.003;            // from arXiv:1508.06294
     }

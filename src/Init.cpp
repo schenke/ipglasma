@@ -1172,7 +1172,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   if(param->getUseSmoothNucleus()==0)
     {
       stringstream strNcoll_name;
-      strNcoll_name << "NcollList" << param->getMPIRank() << ".dat";
+      strNcoll_name << "NcollList" << param->getEventId() << ".dat";
       string Ncoll_name;  Ncoll_name = strNcoll_name.str();
       
       ofstream foutNcoll(Ncoll_name.c_str(),ios::out); 
@@ -1230,7 +1230,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       
       
       stringstream strNpart_name;
-      strNpart_name << "NpartList" << param->getMPIRank() << ".dat";
+      strNpart_name << "NpartList" << param->getEventId() << ".dat";
       string Npart_name;  Npart_name = strNpart_name.str();
       
       ofstream foutNpart(Npart_name.c_str(),ios::out); 
@@ -1522,8 +1522,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   
   param->setTpp(Tpp);
 
-  cout << "N_part=" << Npart << endl;
-  cout << "N_coll=" << Ncoll << endl;
+  messager << "N_part=" << Npart; messager.flush("info");
+  messager << "N_coll=" << Ncoll; messager.flush("info");
   cout << "T_pp(" << param->getb() << " fm) = " << Tpp << " 1/fm^2" << endl;
   cout << "Q_s^2(max) S_T = " << averageQs2*a*a/hbarc/hbarc*static_cast<double>(count) << endl;
   cout << "Q_s^2(avg) S_T = " << averageQs2Avg*a*a/hbarc/hbarc*static_cast<double>(count) << endl;
@@ -1540,7 +1540,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   cout << "resulting Y(Qs(avg)*" << param->getxFromThisFactorTimesQs() << ") = "  << log(0.01/(param->getAverageQsAvg()*param->getxFromThisFactorTimesQs()/param->getRoots())) << endl;
   cout << "resulting Y(Qs(min)*" << param->getxFromThisFactorTimesQs() << ") =  " << log(0.01/(param->getAverageQsmin()*param->getxFromThisFactorTimesQs()/param->getRoots())) << endl;
    
-  cout << "Color charge densities for nucleus A and B set. " << endl;
+  messager.info("Color charge densities for nucleus A and B set. ");
   
   if(param->getRunningCoupling() && param->getRunWithkt()==0)
     {
@@ -1580,7 +1580,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
   param->setalphas(alphas);
   
   stringstream strup_name;
-  strup_name << "usedParameters" << param->getMPIRank() << ".dat";
+  strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
   up_name = strup_name.str();
 
@@ -1610,7 +1610,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber)
 {
-  cout << "Setting Wilson lines ..." << endl;
+  messager.info("Setting Wilson lines ...");
   const int N = param->getSize();
   const int Ny=param->getNy();
   const int Nc = param->getNc();
@@ -1655,8 +1655,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
               {
                 double kt2, kx, ky;
                 int localpos = i*N+j; 
-                kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-                ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+                kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+                ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
                 kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
                 if(m==0)
                   {
@@ -1748,8 +1748,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
               {
                 double kt2, kx, ky;
                 int localpos = i*N+j; 
-                kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-                ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+                kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+                ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
                 kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice momentum
                 if(m==0)
                   {
@@ -1831,7 +1831,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   {
    stringstream strVOne_name;
    //strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-   strVOne_name << "V-" <<  param->getMPIRank() + 2*param->getSeed()*param->getMPISize() << ".txt";
+   strVOne_name << "V-" <<  param->getEventId() + 2*param->getSeed()*param->getMPISize() << ".txt";
    string VOne_name;
    VOne_name = strVOne_name.str();
 
@@ -1853,7 +1853,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   
    stringstream strVTwo_name;
    // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
-   strVTwo_name << "V-" <<  param->getMPIRank() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
+   strVTwo_name << "V-" <<  param->getEventId() + (1+2*param->getSeed())*param->getMPISize() << ".txt";
    string VTwo_name;
    VTwo_name = strVTwo_name.str();
 
@@ -1875,7 +1875,8 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
   // --------
 
 
-  cout << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". " << endl; 
+  messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". ";
+  messager.flush("info");
 }
 
 
@@ -1982,7 +1983,8 @@ void Init::readV(Lattice *lat, Group* group, Parameters *param)
   
   finV2.close();
 
-  cout << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". " << endl; 
+  messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank() << ". ";
+  messager.flush("info");
 
 }
 
@@ -2002,7 +2004,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   const Matrix one(Nc,1.);
   const Matrix zero(Nc,0.);
 
-  cout << "Initializing fields ... " << endl;
+  messager.info("Initializing fields ... ");
   param->setRnp(0.);
   
   double b; 
@@ -2012,24 +2014,26 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
     {
       param->setSuccess(1);
       b=0.;
-      cout << "Setting b=0 for constant color charge density case." << endl;
+      messager << "Setting b=0 for constant color charge density case.";
+        messager.flush("info");
     }
   else 
     {
       if(param->getLinearb()==1) // use a linear probability distribution for b if we are doing nuclei
 	{
-	  cout << "Sampling linearly distributed b between " << bmin << " and " << bmax << "fm. Found ";
+	  messager << "Sampling linearly distributed b between " << bmin << " and " << bmax << "fm. Found ";
 	  b = sqrt((bmax*bmax-bmin*bmin)*xb+bmin*bmin);
 	}
       else // use a uniform distribution instead
 	{
-	  cout << "Sampling uniformly distributed b between " << bmin << " and " << bmax << "fm. Found ";
+	  messager << "Sampling uniformly distributed b between " << bmin << " and " << bmax << "fm. Found ";
 	  b = (bmax-bmin)*xb+bmin;
 	}
     }
 
   param->setb(b);
-  cout << "b=" << b << " fm." << endl;
+  messager << "b=" << b << " fm.";
+  messager.flush("info");
 
  
   // read Q_s^2 from file
@@ -2129,33 +2133,28 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 
   // fout.close();      
 
-  cout << "Finding fields in forward lightcone..." << endl;
+  messager.info("Finding fields in forward lightcone...");
 
 #pragma omp parallel
   {
     int countMe;
     int checkConvergence;
     int alphaCheck;
-    
+
     double Fold;
     double Fnew;
-    Fnew = 0.;  
+    Fnew = 0.;
     double lambda;
-    
-    complex<double>* M;
-    complex<double>* F;
-    complex<double>* result;
-    complex<double>* alpha;
-    complex<double>* alphaSave;
+
+    complex<double>* M         = new complex<double>[Nc2m1*Nc2m1];
+    complex<double>* F         = new complex<double>[Nc2m1];
+    complex<double>* result    = new complex<double>[Nc2m1];
+    complex<double>* alpha     = new complex<double>[Nc2m1];
+    complex<double>* alphaSave = new complex<double>[Nc2m1];
+
     vector <complex<double> > Dalpha;
     Dalpha.reserve(Nc2m1);
-    
-    M = new complex<double>[Nc2m1*Nc2m1];
-    F = new complex<double>[Nc2m1];
-    result = new complex<double>[Nc2m1];
-    alpha = new complex<double>[Nc2m1];
-    alphaSave = new complex<double>[Nc2m1];
-    
+
     Matrix temp(Nc,1.);
     Matrix tempNew(Nc,1.);
     double in[8];
@@ -2761,11 +2760,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
       lat->cells[pos]->setUx1(one); // reset the Ux1 to be used for other purposes later
     }
 
-  delete M;
-  delete F;
-  delete result;
-  delete alpha;
-  delete alphaSave;
+  delete[] M;
+  delete[] F;
+  delete[] result;
+  delete[] alpha;
+  delete[] alphaSave;
 
   }
 
@@ -2791,7 +2790,7 @@ void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *r
 	}
     }
   stringstream strtE_name;
-  strtE_name << "totalEnergy" << param->getMPIRank() << ".dat";
+  strtE_name << "totalEnergy" << param->getEventId() << ".dat";
   string tE_name;
   tE_name = strtE_name.str();
 

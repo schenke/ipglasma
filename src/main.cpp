@@ -7,6 +7,8 @@
 #include <complex>
 #include <fstream>
 #include <vector>
+#include <cstdlib>
+#include <sstream>
 
 #include "Setup.h"
 #include "Init.h"
@@ -18,6 +20,7 @@
 #include "Evolution.h"
 #include "Spinor.h"
 #include "MyEigen.h"
+#include "pretty_ostream.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
@@ -31,6 +34,11 @@ int main(int argc, char *argv[])
   int rank;
   int size;
 
+  int nev = 1;
+  if (argc == 3) {
+      nev = atoi(argv[2]);
+  }
+
   //initialize MPI
   MPI_Init(&argc, &argv);
   MPI_Comm_rank (MPI_COMM_WORLD, &rank);/* get current process id */  
@@ -38,6 +46,11 @@ int main(int argc, char *argv[])
   //  rank = MPI::COMM_WORLD.Get_rank(); //number of current processor
   //size = MPI::COMM_WORLD.Get_size(); //total number of processors
 
+  int h5Flag = 0;
+  pretty_ostream messager;
+  for (int iev = 0; iev < nev; iev++) {
+      messager << "Generating event " << iev+1 << " out of " << nev << " ...";
+      messager.flush("info");
   // welcome
   if(rank==0)
     {
@@ -49,10 +62,10 @@ int main(int argc, char *argv[])
       cout << "| B. Schenke, P. Tribedy, R. Venugopalan                                    |" << endl;
       cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 (2012)     |" << endl;
       cout << "-----------------------------------------------------------------------------" << endl;
-      
+
       cout << "This version uses Qs as obtained from IP-Sat using the sum over proton T_p(b)" << endl;
       cout << "This is a simple MPI version that runs many events in one job. No communication." << endl;
-      
+
       cout << "Run using large lattices to improve convergence of the root finder in initial condition. Recommended: 600x600 using L=30fm" << endl;
       cout << endl;
     }
@@ -71,17 +84,18 @@ int main(int argc, char *argv[])
 
   param->setMPIRank(rank);
   param->setMPISize(size);
+  param->setEventId(rank + iev*size);
   param->setSuccess(0);
 
   // read parameters from file
   readInput(setup, param, argc, argv, rank);
-  
+
   int nn[2];
   nn[0]=param->getSize();
   nn[1]=param->getSize();
-    
+
   stringstream strup_name;
-  strup_name << "usedParameters" << param->getMPIRank() << ".dat";
+  strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
   up_name = strup_name.str();
   
@@ -94,7 +108,9 @@ int main(int argc, char *argv[])
   group = new Group(param->getNc());
   
   // initialize Glauber class
-  cout << "Init Glauber on rank " << param->getMPIRank() << " ... ";
+  messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
+  messager.flush("info");
+
   Glauber *glauber;
   glauber = new Glauber;
   
@@ -134,7 +150,7 @@ int main(int argc, char *argv[])
 
       
       // stringstream strNpartdEdy_name;
-      // strNpartdEdy_name << "NpartdEdy" << param->getMPIRank() << ".dat";
+      // strNpartdEdy_name << "NpartdEdy" << param->getEventId() << ".dat";
       // string NpartdEdy_name;
       // NpartdEdy_name = strNpartdEdy_name.str();
       
@@ -142,7 +158,7 @@ int main(int argc, char *argv[])
       // foutE.close();
       
       // stringstream strdNdy_name;
-      // strdNdy_name << "dNdy" << param->getMPIRank() << ".dat";
+      // strdNdy_name << "dNdy" << param->getEventId() << ".dat";
       // string dNdy_name;
       // dNdy_name = strdNdy_name.str();
 
@@ -150,7 +166,7 @@ int main(int argc, char *argv[])
       // foutN.close();
 
       // stringstream strCorr_name;
-      // strCorr_name << "Corr" << param->getMPIRank() << ".dat";
+      // strCorr_name << "Corr" << param->getEventId() << ".dat";
       // string Corr_name;
       // Corr_name = strCorr_name.str();
 
@@ -158,7 +174,7 @@ int main(int argc, char *argv[])
       // foutCorr.close();
 
       // stringstream strPhiMult_name;
-      // strPhiMult_name << "MultPhi" << param->getMPIRank() << ".dat";
+      // strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
       // string PhiMult_name;
       // PhiMult_name = strPhiMult_name.str();
 
@@ -166,7 +182,7 @@ int main(int argc, char *argv[])
       // foutPhiMult.close();
 
       // stringstream strPhi2ParticleMult_name;
-      // strPhi2ParticleMult_name << "MultPhi2Particle" << param->getMPIRank() << ".dat";
+      // strPhi2ParticleMult_name << "MultPhi2Particle" << param->getEventId() << ".dat";
       // string Phi2ParticleMult_name;
       // Phi2ParticleMult_name = strPhi2ParticleMult_name.str();
 
@@ -175,7 +191,7 @@ int main(int argc, char *argv[])
 
 
       // stringstream strPhiMultHad_name;
-      // strPhiMultHad_name << "MultPhiHadrons" << param->getMPIRank() << ".dat";
+      // strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() << ".dat";
       // string PhiMultHad_name;
       // PhiMultHad_name = strPhiMultHad_name.str();
 
@@ -183,7 +199,7 @@ int main(int argc, char *argv[])
       // foutPhiMultHad.close();
 
       // stringstream strPhi2ParticleMultHad_name;
-      // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" << param->getMPIRank() << ".dat";
+      // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" << param->getEventId() << ".dat";
       // string Phi2ParticleMultHad_name;
       // Phi2ParticleMultHad_name = strPhi2ParticleMultHad_name.str();
 
@@ -192,7 +208,7 @@ int main(int argc, char *argv[])
 
 
       // stringstream strame_name;
-      // strame_name << "AverageMaximalEpsilon" << param->getMPIRank() << ".dat";
+      // strame_name << "AverageMaximalEpsilon" << param->getEventId() << ".dat";
       // string ame_name;
       // ame_name = strame_name.str();
       
@@ -201,7 +217,7 @@ int main(int argc, char *argv[])
       
 
       // stringstream strepsx_name;
-      // strepsx_name << "eps-x" << param->getMPIRank() << ".dat";
+      // strepsx_name << "eps-x" << param->getEventId() << ".dat";
       // string epsx_name;
       // epsx_name = strepsx_name.str();
       
@@ -210,7 +226,7 @@ int main(int argc, char *argv[])
 
       
       // stringstream strdEdy_name;
-      // strdEdy_name << "dEdy" << param->getMPIRank() << ".dat";
+      // strdEdy_name << "dEdy" << param->getEventId() << ".dat";
       // string dEdy_name;
       // dEdy_name = strdEdy_name.str();
       
@@ -218,44 +234,44 @@ int main(int argc, char *argv[])
       // foutdE.close();
       
       // stringstream straniso_name;
-      // straniso_name << "anisotropy" << param->getMPIRank() << ".dat";
+      // straniso_name << "anisotropy" << param->getEventId() << ".dat";
       // string aniso_name;
       // aniso_name = straniso_name.str();
       
       // ofstream foutAni(aniso_name.c_str(),ios::out); 
       // foutAni.close();
       
-      stringstream strecc_name;
-      strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
-      string ecc_name;
-      ecc_name = strecc_name.str();
+      //stringstream strecc_name;
+      //strecc_name << "eccentricities" << param->getEventId() << ".dat";
+      //string ecc_name;
+      //ecc_name = strecc_name.str();
       
-      ofstream foutEcc(ecc_name.c_str(),ios::out); 
-      foutEcc.close();
+      //ofstream foutEcc(ecc_name.c_str(),ios::out); 
+      //foutEcc.close();
             
       // stringstream strmult_name;
-      // strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
+      // strmult_name << "multiplicity" << param->getEventId() << ".dat";
       // string mult_name;
       // mult_name = strmult_name.str();
       // ofstream foutmult(mult_name.c_str(),ios::out); 
       // foutmult.close();
 
       // stringstream strmult2_name;
-      // strmult2_name << "multiplicityCorr" << param->getMPIRank() << ".dat";
+      // strmult2_name << "multiplicityCorr" << param->getEventId() << ".dat";
       // string mult2_name;
       // mult2_name = strmult2_name.str();
       // ofstream foutmult2(mult2_name.c_str(),ios::out); 
       // foutmult2.close();
 
       // stringstream strmult3_name;
-      // strmult3_name << "multiplicityCorrFromPhi" << param->getMPIRank() << ".dat";
+      // strmult3_name << "multiplicityCorrFromPhi" << param->getEventId() << ".dat";
       // string mult3_name;
       // mult3_name = strmult3_name.str();
       // ofstream foutmult3(mult3_name.c_str(),ios::out); 
       // foutmult3.close();
 
       // stringstream strmult4_name;
-      // strmult4_name << "multiplicityCorrFromPhiHadrons" << param->getMPIRank() << ".dat";
+      // strmult4_name << "multiplicityCorrFromPhiHadrons" << param->getEventId() << ".dat";
       // string mult4_name;
       // mult4_name = strmult4_name.str();
       // ofstream foutmult4(mult4_name.c_str(),ios::out); 
@@ -271,6 +287,7 @@ int main(int argc, char *argv[])
       lat = new Lattice(param, param->getNc(), param->getSize());
       BufferLattice *bufferlat;
       bufferlat = new BufferLattice(param, param->getNc(), param->getSize());
+      messager.info("Lattice generated.");
 
       //initialize random generator using time and seed from input file
       unsigned long long int rnum;
@@ -284,15 +301,17 @@ int main(int argc, char *argv[])
 	  else
 	    {
 	      rnum = param->getSeed();
-	      cout << "Random seed = " << rnum+(rank*1000) << " - entered directly +rank*1000."  << endl;
+	      messager << "Random seed = " << rnum+(rank*1000) << " - entered directly +rank*1000.";
+          messager.flush("info");
 	    }
 	  
 	  param->setRandomSeed(rnum+rank*1000);
 	  if(param->getUseTimeForSeed()==1)
 	    {
-	      cout << "Random seed = " << param->getRandomSeed() << " made from time " 
+	      messager << "Random seed = " << param->getRandomSeed() << " made from time " 
 		   << rnum-param->getSeed()-(rank*1000) << " and argument (+1000*rank) " 
-		   << param->getSeed()+(rank*1000) << endl;
+		   << param->getSeed()+(rank*1000);
+          messager.flush("info");
 	    }
 	  
 	  random->init_genrand64(rnum+rank*1000);
@@ -327,7 +346,8 @@ int main(int argc, char *argv[])
 
 	  param->setRandomSeed(seedList[rank]);
 	  random->init_genrand64(seedList[rank]);
-	  cout << "Random seed on rank " << rank << " = " << seedList[rank] << " read from list."  << endl;
+        messager<< "Random seed on rank " << rank << " = " << seedList[rank] << " read from list.";
+        messager.flush("info");
 	}
       
 
@@ -343,7 +363,7 @@ int main(int argc, char *argv[])
       //      init->init(lat, group, param, random, glauber);
       int READFROMFILE = 0;
       init->init(lat, group, param, random, glauber, READFROMFILE);
-      cout << " done." << endl;
+      messager.info("initialization done.");
 
       if(param->getSuccess()==0)
 	{
@@ -356,6 +376,7 @@ int main(int argc, char *argv[])
       delete random;
       delete glauber;
 
+      messager.info("Start evolution");
       // do the CYM evolution of the initialized fields using parmeters in param
       evolution->run(lat, bufferlat,  group, param);
       delete bufferlat;
@@ -363,12 +384,39 @@ int main(int argc, char *argv[])
     }
 
   MPI_Barrier(MPI_COMM_WORLD);
-       
+
+    messager.info("One event finished");
+    if (param->getWriteOutputsToHDF5() == 1) {
+        int status = 0;
+        stringstream h5output_filename;
+        h5output_filename << "RESULTS_rank" << rank;
+        stringstream collect_command;
+        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                        << " --output_filename " << h5output_filename.str()
+                        << " --event_id " << param->getEventId();
+        status = system(collect_command.str().c_str());
+        messager << "finished system call to python script with status: "
+                 << status;
+        messager.flush("info");
+        h5Flag = 1;
+    }
   delete group;
   delete evolution;
   delete param;
   delete setup;
   delete myeigen;
+  }
+    if (h5Flag == 1 && rank == 0) {
+        int status = 0;
+        stringstream collect_command;
+        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                        << " --output_filename RESULTS"
+                        << " --combine_hdf5_files_only";
+        status = system(collect_command.str().c_str());
+        messager << "finished system call to python script with status: "
+                 << status;
+        messager.flush("info");
+    }
   //cout << "done." << endl;
   MPI_Finalize();
   return 1;
@@ -446,6 +494,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setxFromThisFactorTimesQs(setup->DFind(file_name,"xFromThisFactorTimesQs"));
   param->setLinearb(setup->IFind(file_name,"samplebFromLinearDistribution"));
   param->setWriteOutputs(setup->IFind(file_name,"writeOutputs"));
+  param->setWriteOutputsToHDF5(setup->IFind(file_name,"writeOutputsToHDF5"));
   param->setWriteEvolution(setup->IFind(file_name,"writeEvolution"));
   param->setWriteInitialWilsonLines(setup->IFind(file_name, "writeInitialWilsonLines"));
   param->setAverageOverNuclei(setup->IFind(file_name,"averageOverThisManyNuclei"));
@@ -465,7 +514,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
 // write the used parameters into file "usedParameters.dat" as a double check for later
   time_t rawtime = time(0);
   stringstream strup_name;
-  strup_name << "usedParameters" << param->getMPIRank() << ".dat";
+  strup_name << "usedParameters" << param->getEventId() << ".dat";
   string up_name;
   up_name = strup_name.str();
   

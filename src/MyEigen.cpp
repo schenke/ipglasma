@@ -285,7 +285,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     } else {
         gfactor = 1.;
     }
-    //      double PI = param->getPi();
 
     if (hL > L) {
         cout << "WARNING: hydro grid length larger than the computed one."
@@ -307,10 +306,10 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     ha = hL/static_cast<double>(hx);
 
     stringstream streuH_name;
-    streuH_name << "epsilon-u-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+    streuH_name << "epsilon-u-Hydro-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
 
     // stringstream strEtot_name;
-    // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+    // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
     // string Etot_name;
     // Etot_name = strEtot_name.str();
 
@@ -631,7 +630,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
     stringstream strTmunu_name;
     strTmunu_name << "Tmunu-t" << it*dtau*a << "-"
-                  << param->getMPIRank() << ".dat";
+                  << param->getEventId() << ".dat";
     ofstream foutEps1(strTmunu_name.str().c_str(),ios::out);
     foutEps1 << "# dummy " << 1 << " etamax= " << heta
              << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
@@ -928,12 +927,12 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
          }
        
        stringstream strJaz_name;
-       strJaz_name << "Jazma-Hydro-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+       strJaz_name << "Jazma-Hydro-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
        string Jaz_name;
        Jaz_name = strJaz_name.str();
 
        // stringstream strtwo_name;
-       // strtwo_name << "twopointfct-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+       // strtwo_name << "twopointfct-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
        // string two_name;
        // two_name = strtwo_name.str();
        

@@ -445,7 +445,10 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 
   // do evolution
   for (int it=1; it<=itmax; it++) {
-      if (it == 1 || it == floor(it0) || it==floor(it1)
+      if (it == 1) {
+          Tmunu(lat,group,param,it);
+      }
+      if (it == floor(it0) || it==floor(it1)
           || it==floor(it2) || it==floor(itmax)) {
           Tmunu(lat,group,param,it);
           u(lat,group,param,it); // computes flow velocity and correct energy density 
@@ -472,7 +475,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       if(it==1 && param->getWriteOutputs() == 3)
 	{	  
 	  stringstream streI_name;
-	  streI_name << "epsilonInitialPlot" << param->getMPIRank() << ".dat";
+	  streI_name << "epsilonInitialPlot" << param->getEventId() << ".dat";
 	  string eI_name;
 	  eI_name = streI_name.str();
 
@@ -540,7 +543,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       if(it==itmax/2 && param->getWriteOutputs() == 3)
 	{	  
 	  stringstream streInt_name;
-	  streInt_name << "epsilonIntermediatePlot" << param->getMPIRank() << ".dat";
+	  streInt_name << "epsilonIntermediatePlot" << param->getEventId() << ".dat";
 	  string eInt_name;
 	  eInt_name = streInt_name.str();
 
@@ -1211,7 +1214,7 @@ void Evolution::u(Lattice *lat, Group *group, Parameters *param, int it)
 void Evolution::anisotropy(Lattice *lat, Group *group, Parameters *param, int it)
 {
   stringstream straniso_name;
-  straniso_name << "anisotropy" << param->getMPIRank() << ".dat";
+  straniso_name << "anisotropy" << param->getEventId() << ".dat";
   string aniso_name;
   aniso_name = straniso_name.str();
 
@@ -1245,7 +1248,7 @@ void Evolution::anisotropy(Lattice *lat, Group *group, Parameters *param, int it
 void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int it, double cutoff, int doAniso)
 {
   stringstream strecc_name;
-  strecc_name << "eccentricities" << param->getMPIRank() << ".dat";
+  strecc_name << "eccentricities" << param->getEventId() << ".dat";
   string ecc_name;
   ecc_name = strecc_name.str();
  
@@ -1258,8 +1261,6 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
   double eccentricity1, eccentricity2, eccentricity3, eccentricity4, eccentricity5, eccentricity6;
   double avcos, avsin, avcos1, avsin1, avcos3, avsin3, avrSq, avxSq, avySq, avr1, avr3, avcos4, avsin4, avr4, avcos5, avsin5, avr5, avcos6, avsin6, avr6;
   double Rbar;
-  double Pi;
-  Pi = param->getPi();
   double Psi1, Psi2, Psi3, Psi4, Psi5, Psi6;
   double maxEps = 0;
   double g = param->getg();
@@ -1672,7 +1673,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
       if(doAniso==1)
 	{
 	  stringstream straniso_name;
-	  straniso_name << "anisotropy" << param->getMPIRank() << ".dat";
+	  straniso_name << "anisotropy" << param->getEventId() << ".dat";
 	  string aniso_name;
 	  aniso_name = straniso_name.str();
 	  
@@ -1727,7 +1728,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+Pi/8.;
+	  Psi = PsiU + M_PI/8.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1752,7 +1753,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+Pi/4.;
+	  Psi = PsiU+M_PI/4.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1777,7 +1778,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+3.*Pi/8.;
+	  Psi = PsiU+3.*M_PI/8.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1802,7 +1803,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+Pi/2.;
+	  Psi = PsiU+M_PI/2.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1827,7 +1828,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 	  
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+5.*Pi/8.;
+	  Psi = PsiU+5.*M_PI/8.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1852,7 +1853,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+3.*Pi/4.;
+	  Psi = PsiU+3.*M_PI/4.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1877,7 +1878,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+7.*Pi/8.;
+	  Psi = PsiU+7.*M_PI/8.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1902,7 +1903,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+Pi;
+	  Psi = PsiU+M_PI;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1927,7 +1928,7 @@ void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int 
 	  
 	  num=0.; den=0.;
 	  num2=0.; den2=0.;
-	  Psi = PsiU+9.*Pi/8.;
+	  Psi = PsiU+9.*M_PI/8.;
 
 	  for(int ix=0; ix<N; ix++) 
 	    {
@@ -1967,7 +1968,7 @@ void Evolution::readNkt(Parameters *param)
 
   ifstream fin;
   stringstream strmult_name;
-  strmult_name << "multiplicity" << param->getMPIRank() << ".dat";
+  strmult_name << "multiplicity" << param->getEventId() << ".dat";
   string mult_name;
   mult_name = strmult_name.str();
   fin.open(mult_name.c_str()); 
@@ -1977,7 +1978,7 @@ void Evolution::readNkt(Parameters *param)
 
   ifstream fin2;
   stringstream strmult_name2;
-  strmult_name2 << "NpartdNdy" << param->getMPIRank() << ".dat";
+  strmult_name2 << "NpartdNdy" << param->getEventId() << ".dat";
   string mult_name2;
   mult_name2 = strmult_name2.str();
   fin2.open(mult_name2.c_str()); 
@@ -2072,9 +2073,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
-  double Pi, kx, ky, kt2, omega2;
+  double kx, ky, kt2, omega2;
   double g = param->getg();
-  Pi = param->getPi();
   int nn[2];
   nn[0] = N;
   nn[1] = N;
@@ -2097,7 +2097,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   
  
   stringstream strNpartdNdy_name;
-  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string NpartdNdy_name;
   NpartdNdy_name = strNpartdNdy_name.str();
   cout << "Measuring multiplicity ... " << endl;
@@ -2242,8 +2242,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
-  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+  	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
   	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
   	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
   	  if(i!=0 && j!=0)
@@ -2267,9 +2267,9 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
-  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      n[ik]+=nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      n2[ik]+=nkt/dkt/2/M_PI/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
   		      counter[ik]+=1; // number of entries in n[ik]
@@ -2369,8 +2369,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
-  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+  	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
   	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
   	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
 
@@ -2394,9 +2394,9 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
-  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      n[ik]+=nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      n2[ik]+=nkt/dkt/2/M_PI/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
   		    }
@@ -2494,8 +2494,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
-  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+  	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
   	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
   	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
 
@@ -2520,9 +2520,9 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
-  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      n[ik]+=nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      n2[ik]+=nkt/dkt/2/M_PI/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
   		    }
@@ -2680,7 +2680,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       gsl_interp_accel_free(zacc);
           
       stringstream strmultHad_name;
-      strmultHad_name << "multiplicityHadrons" << param->getMPIRank() << ".dat";
+      strmultHad_name << "multiplicityHadrons" << param->getEventId() << ".dat";
       string multHad_name;
       multHad_name = strmultHad_name.str();
       
@@ -2709,14 +2709,14 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       gsl_interp_accel *ptacc = gsl_interp_accel_alloc ();
       gsl_spline *ptspline = gsl_spline_alloc (gsl_interp_cspline, hbins+1);
       gsl_spline_init (ptspline, pt, integrand, hbins+1);
-      //   dNdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-      //dNdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-      //dNdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+      //   dNdetaHadrons = 2*M_PI*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      //dNdetaHadronsCut = 2*M_PI*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      //dNdetaHadronsCut2 = 2*M_PI*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
 
       gsl_spline_init (ptspline, pt, Eintegrand, hbins+1);
-      //dEdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-      //dEdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-      //dEdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+      //dEdetaHadrons = 2*M_PI*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      //dEdetaHadronsCut = 2*M_PI*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      //dEdetaHadronsCut2 = 2*M_PI*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
 
       gsl_spline_free(ptspline);
       gsl_interp_accel_free(ptacc);
@@ -2789,9 +2789,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
-  double Pi, kx, ky, kt2, omega2;
+  double kx, ky, kt2, omega2;
   double g = param->getg();
-  Pi = param->getPi();
   int nn[2];
   nn[0] = N;
   nn[1] = N;
@@ -2814,27 +2813,27 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   double Nkxky[N*N];
   
   stringstream strnkxky_name;
-  strnkxky_name << "nkxky-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  strnkxky_name << "nkxky-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string nkxky_name;
   nkxky_name = strnkxky_name.str();
  
   stringstream strNpartdNdy_name;
-  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string NpartdNdy_name;
   NpartdNdy_name = strNpartdNdy_name.str();
 
   stringstream strNpartdNdyH_name;
-  strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  strNpartdNdyH_name << "NpartdNdyHadrons-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string NpartdNdyH_name;
   NpartdNdyH_name = strNpartdNdyH_name.str();
 
   stringstream strmult_name;
-  strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  strmult_name << "multiplicity-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string mult_name;
   mult_name = strmult_name.str();
 
   stringstream strdNdy_name;
-  strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getMPIRank() << ".dat";
+  strdNdy_name << "dNdy-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string dNdy_name;
   dNdy_name = strdNdy_name.str();
 
@@ -2990,8 +2989,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
-  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+  	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
   	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
   	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
 
@@ -3018,9 +3017,9 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
-  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      n[ik]+=nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      n2[ik]+=nkt/dkt/2/M_PI/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
   		      counter[ik]+=1; // number of entries in n[ik]
@@ -3029,7 +3028,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   	    }
 	  if(i!=0 && j!=0)
   	    {
-              Nkxky[pos] = nkt*N*N/Pi/Pi/2./2.;
+              Nkxky[pos] = nkt*N*N/M_PI/M_PI/2./2.;
             }  
 	}
     }
@@ -3121,8 +3120,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
-  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+  	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
   	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
   	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
 
@@ -3146,9 +3145,9 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
-  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      n[ik]+=nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      n2[ik]+=nkt/dkt/2/M_PI/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
   		    }
@@ -3156,7 +3155,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   	    }
 	  if(i!=0 && j!=0)
   	    {
-                Nkxky[pos] += nkt*N*N/Pi/Pi/2./2.;
+                Nkxky[pos] += nkt*N*N/M_PI/M_PI/2./2.;
             }
   	}
     }
@@ -3249,8 +3248,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   	  pos = i*N+j;
   	  npos = (N-i)*N+(N-j);
 	  
-  	  kx = 2.*param->getPi()*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-  	  ky = 2.*param->getPi()*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+  	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+  	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
   	  kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
   	  omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
 
@@ -3275,9 +3274,9 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   		{
   		  if (abs(sqrt(kt2))>ik*dkt && abs(sqrt(kt2))<=(ik+1)*dkt)
   		    {
-  		      n[ik]+=nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/Pi/sqrt(kt2) * 2*Pi*sqrt(kt2)*dkt *N*N/Pi/Pi/2./2.;
-  		      n2[ik]+=nkt/dkt/2/Pi/sqrt(kt2);
+  		      n[ik]+=nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      E[ik]+=sqrt(omega2)*hbarc/a *nkt/dkt/2/M_PI/sqrt(kt2) * 2*M_PI*sqrt(kt2)*dkt *N*N/M_PI/M_PI/2./2.;
+  		      n2[ik]+=nkt/dkt/2/M_PI/sqrt(kt2);
   		      // dividing by bin size; bin is dkt times Jacobian k(=ik*dkt) times 2Pi in phi 
   		      // times the correct number of counts for an infinite lattice: area in bin divided by total area
   		    }
@@ -3285,7 +3284,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   	    }
 	  if(i!=0 && j!=0)
   	    {
-              Nkxky[pos] += nkt *N*N/Pi/Pi/2./2.;
+              Nkxky[pos] += nkt *N*N/M_PI/M_PI/2./2.;
             }
           if (param->getWriteOutputs()==2)
 	    foutNkxky << 2.*sin(kx/2.)/a*hbarc << " " << 2.*sin(ky/2.)/a*hbarc << " " << Nkxky[pos]*a/hbarc*a/hbarc << "\n";
@@ -3453,7 +3452,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       gsl_interp_accel_free(zacc);
           
       stringstream strmultHad_name;
-      strmultHad_name << "multiplicityHadrons" << param->getMPIRank() << ".dat";
+      strmultHad_name << "multiplicityHadrons" << param->getEventId() << ".dat";
       string multHad_name;
       multHad_name = strmultHad_name.str();
       
@@ -3482,14 +3481,14 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       gsl_interp_accel *ptacc = gsl_interp_accel_alloc ();
       gsl_spline *ptspline = gsl_spline_alloc (gsl_interp_cspline, hbins+1);
       gsl_spline_init (ptspline, pt, integrand, hbins+1);
-      dNdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-      dNdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-      dNdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+      dNdetaHadrons = 2*M_PI*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      dNdetaHadronsCut = 2*M_PI*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      dNdetaHadronsCut2 = 2*M_PI*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
 
       gsl_spline_init (ptspline, pt, Eintegrand, hbins+1);
-      dEdetaHadrons = 2*Pi*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-      dEdetaHadronsCut = 2*Pi*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-      dEdetaHadronsCut2 = 2*Pi*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
+      dEdetaHadrons = 2*M_PI*gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
+      dEdetaHadronsCut = 2*M_PI*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
+      dEdetaHadronsCut2 = 2*M_PI*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
 
       gsl_spline_free(ptspline);
       gsl_interp_accel_free(ptacc);
@@ -3537,7 +3536,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       cout << "Hadrons: dN/dy(p_T>250 MeV)=" << dNdetaHadrons << ", dE/dy(p_T>250 MeV)=" << dEdetaHadrons << endl;
       
       stringstream strmeanpt_name;
-      strmeanpt_name << "meanpt" << param->getMPIRank() << ".dat";
+      strmeanpt_name << "meanpt" << param->getEventId() << ".dat";
       string meanpt_name;
       meanpt_name = strmeanpt_name.str();
 
@@ -3580,9 +3579,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
-  double Pi, kx, ky, kt2, omega2;
+  double kx, ky, kt2, omega2;
   double g = param->getg();
-  Pi = param->getPi();
   int nn[2];
   nn[0] = N;
   nn[1] = N;
@@ -3609,20 +3607,20 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   double dNdeta6 =0.;
   double anglePhi;
   double k;  
-  double deltaPhi = 2.*Pi/static_cast<double>(phiBins);
+  double deltaPhi = 2.*M_PI/static_cast<double>(phiBins);
 
   stringstream strCorr_name;
-  strCorr_name << "Corr" << param->getMPIRank() << ".dat";
+  strCorr_name << "Corr" << param->getEventId() << ".dat";
   string Corr_name;
   Corr_name = strCorr_name.str();
 
   stringstream strPhiMult_name;
-  strPhiMult_name << "MultPhi" << param->getMPIRank() << ".dat";
+  strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
   string PhiMult_name;
   PhiMult_name = strPhiMult_name.str();
 
   stringstream strPhiMultHad_name;
-  strPhiMultHad_name << "MultPhiHadrons" << param->getMPIRank() << ".dat";
+  strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() << ".dat";
   string PhiMultHad_name;
   PhiMultHad_name = strPhiMultHad_name.str();
 
@@ -3816,8 +3814,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	  pos = i*N+j;
 	  npos = (N-i)*N+(N-j);
 	  
-	  kx = 2.*Pi*(-0.5+static_cast<double>(i)/static_cast<double>(N));
-	  ky = 2.*Pi*(-0.5+static_cast<double>(j)/static_cast<double>(N));
+	  kx = 2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N));
+	  ky = 2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N));
           kt2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.));//
           omega2 = 4.*(sin(kx/2.)*sin(kx/2.)+sin(ky/2.)*sin(ky/2.)); //lattice dispersion relation (this is omega squared)
 	  
@@ -3895,20 +3893,20 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	  kx = k * cos(anglePhi);
 	  ky = k * sin(anglePhi);
 
-	  i = floor(((kx)/2/Pi+0.5)*N+1e-10);
-	  j = floor(((ky)/2/Pi+0.5)*N+1e-10);
+	  i = floor(((kx)/2/M_PI+0.5)*N+1e-10);
+	  j = floor(((ky)/2/M_PI+0.5)*N+1e-10);
 
-	  latkx = (2.*Pi*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
-	  latky = (2.*Pi*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
+	  latkx = (2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
+	  latky = (2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
 
-	  fracX = (kx - latkx)/(2*Pi/static_cast<double>(N));
-	  fracY = (ky - latky)/(2*Pi/static_cast<double>(N));
+	  fracX = (kx - latkx)/(2*M_PI/static_cast<double>(N));
+	  fracY = (ky - latky)/(2*M_PI/static_cast<double>(N));
 	  
 	  if(i+1<N && j+1 < N)
 	    n[ik][iphi] = ((1.-fracX)*(1.-fracY)*nkxky[i][j]
 			   + (fracX)*(1.-fracY)*nkxky[i+1][j]
 			   + (1.-fracX)*(fracY)*nkxky[i][j+1]
-			   + (fracX)*(fracY)*nkxky[i+1][j+1]) /2./Pi/2./Pi*N*N;//dkt/2/Pi/sqrt(kx*kx+ky*ky);
+			   + (fracX)*(fracY)*nkxky[i+1][j+1]) /2./M_PI/2./M_PI*N*N;//dkt/2/Pi/sqrt(kx*kx+ky*ky);
 	  else
 	    n[ik][iphi] = 0.;
 
@@ -3936,7 +3934,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
           result += n[ik][iphi] *deltaPhi;
 	}
       fullResult += result * (ik)*dkt*dkt;
-      fullResult2 += nk[ik] * 2.*Pi *(ik+0.5)*dkt*dkt;
+      fullResult2 += nk[ik] * 2.*M_PI *(ik+0.5)*dkt*dkt;
 }
   cout << "N=" << dNdeta << ", k integrated N=" << fullResult2 << endl;
   cout << "N=" << dNdeta << ", k and phi integrated N=" << fullResult << endl;

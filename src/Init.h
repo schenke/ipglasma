@@ -24,6 +24,7 @@
 #include "Glauber.h"
 #include "GaugeFix.h"
 #include "gsl/gsl_linalg.h"
+#include "pretty_ostream.h"
 
 using namespace std;
 
@@ -46,6 +47,8 @@ class Init {
   
   vector<ReturnValue> nucleusA;  // list of x and y coordinates of nucleons in nucleus A      
   vector<ReturnValue> nucleusB;  // list of x and y coordinates of nucleons in nucleus B 
+
+    pretty_ostream messager;
 
  public:
   

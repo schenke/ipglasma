@@ -58,6 +58,7 @@ class Parameters
   double alphas; // the alpha_s computed at the scale given by the average Q_s
   double xExponent; // - exponent with which Q_s grows with x (usually 0.31 in IP-Sat for nuclei)
   int writeOutputs; // decide whether to write (1) or not write (0) large output files (like hydro input data)
+  int writeOutputsToHDF5; // decide whether to write (1) or not write (0) output files to one hdf5 file
   int writeEvolution; // decide whether to write (1) or not write (0) time dependent quantities like the anisotropy 
   int writeInitialWilsonLines; // decide whether to write (1) or not write (0) generated Wilson lines (before any evolution)
   unsigned long long int randomSeed; // stores the random seed used (so the event can be reproduced)
@@ -103,6 +104,7 @@ class Parameters
   int gaussianWounding; // use hard sphere profile (0) or Gaussian cross section (1) to determine whether a nucleon is wounded
   int MPIrank; // MPI rank
   int MPIsize; // MPI number of cores
+  int event_id;
   int success; // no collision happened (0) or collision happened (1) - used to restart if there was no collision
   int readMultFromFile; // if set, the gluon distribution as a function of k_T is read from file and the integrated rate computed
   double rmax; // radius at which we cut distribution for each nucleon (in fm)
@@ -115,17 +117,9 @@ class Parameters
  public:
 
   // constructor:
-  Parameters() 
-    {
-      setPi(3.141592654);       //pi
-      sethbarc(0.1973269631);   //hbar c in GeV*fm
-    }
+  Parameters() {};
 
   // functions to access the private variables:
-  void setPi(double x){myPI=x;}
-  double getPi(){return myPI;}
-  void sethbarc(double x){myhbarc=x;}
-  double gethbarc(){return myhbarc;}
   void setSeed(unsigned long long int x) {seed=x;}
   unsigned long long int getSeed() {return seed;}
   void setA(int x) {A=x;}
@@ -260,6 +254,8 @@ class Parameters
   double getSmearingWidth() {return smearingWidth;}
   void setMPIRank(int x) {MPIrank=x;}
   int getMPIRank() {return MPIrank;}
+  void setEventId(int x) {event_id = x;}
+  int getEventId() {return event_id;}
   void setMPISize(int x) {MPIsize=x;}
   int getMPISize() {return MPIsize;}
   void setSuccess(int x) {success=x;}
@@ -285,6 +281,8 @@ class Parameters
   int getLinearb() {return linearb;}
   void setWriteOutputs(int x) {writeOutputs=x;};
   int getWriteOutputs() {return writeOutputs;}
+  void setWriteOutputsToHDF5(int x) {writeOutputsToHDF5=x;};
+  int getWriteOutputsToHDF5() {return writeOutputsToHDF5;}
   void setWriteEvolution(int x) {writeEvolution=x;};
   int getWriteEvolution() {return writeEvolution;}
   void setWriteInitialWilsonLines(int x) {writeInitialWilsonLines=x;}

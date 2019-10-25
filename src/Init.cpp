@@ -863,15 +863,34 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
   if(param->getUseNucleus() == 0)
     {
-      for(int ix=0; ix<N; ix++) // loop over all positions
-	{
-	  for(int iy=0; iy<N; iy++)
-	    {
-              int localpos = ix*N+iy;
-	      lat->cells[localpos]->setg2mu2A(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
-	      lat->cells[localpos]->setg2mu2B(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
-	    }
-	}
+      if (param->getUseGaussian() == 1)
+        {
+          double sigma = 1.;
+          for(int ix=0; ix<N; ix++) // loop over all positions
+            {
+              double x = ix*L/double(N)-L/2.;
+              for(int iy=0; iy<N; iy++)
+                {                               
+                  double y = iy*L/double(N)-L/2.;
+                  int localpos = ix*N+iy;
+                  double envelope =  exp(-(x*x/(2.*sigma*sigma) + y*y/(2.*sigma*sigma)))/(2.*M_PI*sigma*sigma);
+                  lat->cells[localpos]->setg2mu2A(envelope*param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                  lat->cells[localpos]->setg2mu2B(envelope*param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                }
+            }
+        }
+      else
+        {
+          for(int ix=0; ix<N; ix++) // loop over all positions
+            {
+              for(int iy=0; iy<N; iy++)
+                {
+                  int localpos = ix*N+iy;
+                  lat->cells[localpos]->setg2mu2A(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                  lat->cells[localpos]->setg2mu2B(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                }
+            }
+        }
       param->setSuccess(1);
       cout << "constant color charge density set" << endl;
       return;

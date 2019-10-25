@@ -90,6 +90,7 @@ class Parameters
   double L;         // lattice size in fm
   double LOutput;   // lattice size for the output in fm
   int useNucleus;   // use nuclei (1) or a constant g^2mu distribution over the lattice 
+  int useGaussian;  // use a Gaussian profile on top of the constant background
   double dtau;      // time step in lattice units
   double maxtime;   // maximal evolution time in fm/c
   int Npart;        // Number of participants
@@ -271,6 +272,8 @@ class Parameters
   int getInitMethod() {return initMethod;}
   void setUseNucleus(int x) {useNucleus=x;};
   int getUseNucleus() {return useNucleus;}
+  void setUseGaussian(int x) {useGaussian=x;};
+  int getUseGaussian() {return useGaussian;}
   void setRunWithQs(int x) {runWithQs=x;};
   int getRunWithQs() {return runWithQs;}
   void setRunWithkt(int x) {runWithkt=x;};

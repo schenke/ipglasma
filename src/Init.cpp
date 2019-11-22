@@ -865,7 +865,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
     {
       if (param->getUseGaussian() == 1)
         {
-          double sigma = 1.;
+          double sigmax = 0.35;
+          double sigmay = 0.5;
           for(int ix=0; ix<N; ix++) // loop over all positions
             {
               double x = ix*L/double(N)-L/2.;
@@ -873,7 +874,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
                 {                               
                   double y = iy*L/double(N)-L/2.;
                   int localpos = ix*N+iy;
-                  double envelope =  exp(-(x*x/(2.*sigma*sigma) + y*y/(2.*sigma*sigma)))/(2.*M_PI*sigma*sigma);
+                  double envelope =  exp(-(x*x/(2.*sigmax*sigmax) + y*y/(2.*sigmay*sigmay)))/(2.*M_PI*sigmax*sigmay);
                   lat->cells[localpos]->setg2mu2A(envelope*param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
                   lat->cells[localpos]->setg2mu2B(envelope*param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
                 }

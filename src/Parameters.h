@@ -90,6 +90,7 @@ class Parameters
   double L;         // lattice size in fm
   double LOutput;   // lattice size for the output in fm
   int useNucleus;   // use nuclei (1) or a constant g^2mu distribution over the lattice 
+  int lightNucleusOption; // for light nuclei (carbon, oxygen): 1: Woods-Saxon; 2: variational MC; 3: alpha clusters
   int useGaussian;  // use a Gaussian profile on top of the constant background
   double dtau;      // time step in lattice units
   double maxtime;   // maximal evolution time in fm/c
@@ -274,6 +275,8 @@ class Parameters
   int getUseNucleus() {return useNucleus;}
   void setUseGaussian(int x) {useGaussian=x;};
   int getUseGaussian() {return useGaussian;}
+  void setlightNucleusOption(int x) {lightNucleusOption=x;};
+  int getlightNucleusOption() {return lightNucleusOption;}
   void setRunWithQs(int x) {runWithQs=x;};
   int getRunWithQs() {return runWithQs;}
   void setRunWithkt(int x) {runWithkt=x;};

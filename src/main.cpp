@@ -484,6 +484,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
   param->setRapidity(setup->DFind(file_name,"Rapidity"));
   param->setUseNucleus(setup->IFind(file_name,"useNucleus"));
   param->setUseGaussian(setup->IFind(file_name,"useGaussian"));
+  param->setlightNucleusOption(setup->IFind(file_name,"lightNucleusOption"));
   param->setg2mu(setup->DFind(file_name,"g2mu"));
   param->setMaxtime(setup->DFind(file_name,"maxtime"));
   param->setdtau(setup->DFind(file_name,"dtau"));

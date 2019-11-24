@@ -234,103 +234,64 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "carbon_alpha_3.in";
               int rank = param->getMPIRank();
               int size;
-              MPI_Comm_size (MPI_COMM_WORLD, &size);
-              double package[24]; 
               
-              if (rank==0)
+              //sample the position in the file
+              ifstream fin;
+              fin.open(fileName); 
+              
+              double dummy;
+              
+              double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
+              int nucleusNumber = static_cast<int>(ran2*6000);
+              if (param->getlightNucleusOption() == 3)
+                nucleusNumber = static_cast<int>(ran2*13668);
+              
+              cout << "using nucleus Number = " << nucleusNumber << endl;
+              
+              // go to the correct line in the file
+              if(fin)
                 {
-                  //sample the position in the file
-                  ifstream fin;
-                  fin.open(fileName); 
-                  
-                  double dummy;
-                  
-                  for (int event=0;event<size;event++)
+                  fin.seekg(std::ios::beg);
+                  for(int i=0; i < nucleusNumber; ++i)
                     {
-                      double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
-                      int nucleusNumber = static_cast<int>(ran2*6000);
-                      if (param->getlightNucleusOption() == 3)
-                        nucleusNumber = static_cast<int>(ran2*13668);
-                        
-                      cout << "using nucleus Number = " << nucleusNumber << endl;
-                      
-                      // go to the correct line in the file
-                      if(fin)
-                        {
-                          fin.seekg(std::ios::beg);
-                          for(int i=0; i < nucleusNumber; ++i)
-                            {
-                              fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-                            }
-                          // am now at the correct line in the file
-                          
-                          // start reading one nucleus (3 positions)
-                          int A=0;
-                          
-                          fin >> dummy; // first two entries per nucleus are not coordinates
-                          fin >> dummy;
-                          
-                          while(A<glauber->nucleusA1())
-                            {
-                              if(!fin.eof())
-                                {  
-                                  fin >> rv.x;
-                                  fin >> rv.y;
-                                  fin >> dummy; // don't care about z direction
-                                  rv.collided=0;
-                                  if (A%2==0) 
-                                    rv.proton=0;
-                                  else 
-                                    rv.proton=1;
-                                  if (event==0)
-                                    nucleusA.push_back(rv);
-                                  else 
-                                    {
-                                      package[2*A] = rv.x;
-                                      package[2*A+1] = rv.y;
-                                    }
-                                  if (event==0)
-                                    cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
-                                  A++;
-                                }
-                            }
-                          if(event>0)
-                            MPI_Send(package,24,MPI_DOUBLE, event, 1, MPI_COMM_WORLD);
-                          
-                          param->setA1FromFile(A);
-                        }
-                      else
-                        {
-                          if (param->getlightNucleusOption() == 2) 
-                            cerr << " file carbon_plaintext.in not found. exiting." << endl;
-                          else if (param->getlightNucleusOption() == 3)
-                            cerr << " file carbon_alpha_3.in not found. exiting." << endl;
-                          exit(1);
+                      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                    }
+                  // am now at the correct line in the file
+                  
+                  // start reading one nucleus (3 positions)
+                  int A=0;
+                  
+                  fin >> dummy; // first two entries per nucleus are not coordinates
+                  fin >> dummy;
+                  
+                  while(A<glauber->nucleusA1())
+                    {
+                      if(!fin.eof())
+                        {  
+                          fin >> rv.x;
+                          fin >> rv.y;
+                          fin >> dummy; // don't care about z direction
+                          rv.collided=0;
+                          if (A%2==0) 
+                            rv.proton=0;
+                          else 
+                            rv.proton=1;
+                          nucleusA.push_back(rv);
+                          A++;
                         }
                     }
-                  fin.close();
+                  
+                  param->setA1FromFile(A);
                 }
               else
                 {
-                  MPI_Recv(package,24,MPI_DOUBLE,0,1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  
-                  //make a loop over A:
-                  int A=0;
-                  //////////...
-                  while(A<glauber->nucleusA1())
-                    {
-                      rv.x = package[2*A];
-                      rv.y = package[2*A+1];
-                      if (A%2==0) 
-                        rv.proton=0;
-                      else 
-                        rv.proton=1;
-                      nucleusA.push_back(rv);
-                      //cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
-                      A++;
-                    } 
-                  param->setA1FromFile(12);  
+                  if (param->getlightNucleusOption() == 2) 
+                    cerr << " file carbon_plaintext.in not found. exiting." << endl;
+                  else if (param->getlightNucleusOption() == 3)
+                    cerr << " file carbon_alpha_3.in not found. exiting." << endl;
+                  exit(1);
                 }
+              fin.close();
             }
           else // standard sampling for carbon
             {
@@ -499,7 +460,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                         rv.proton=1;
                       nucleusB.push_back(rv);
                       A++;
-                      cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
                     }
                 }
               
@@ -525,102 +485,61 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "carbon_alpha_3.in";
               int rank = param->getMPIRank();
               int size;
-              MPI_Comm_size (MPI_COMM_WORLD, &size);
-              double package[24]; 
+
+              //sample the position in the file
+              ifstream fin;
+              fin.open(fileName); 
               
-              if (rank==0)
+              double dummy;
+              
+              double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
+              int nucleusNumber = static_cast<int>(ran2*6000);
+              
+              cout << "using nucleus Number = " << nucleusNumber << endl;
+              
+              // go to the correct line in the file
+              if(fin)
                 {
-                  //sample the position in the file
-                  ifstream fin;
-                  fin.open(fileName); 
-                  
-                  double dummy;
-                  
-                  for (int event=0;event<size;event++)
+                  fin.seekg(std::ios::beg);
+                  for(int i=0; i < nucleusNumber; ++i)
                     {
-                      double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
-                      int nucleusNumber = static_cast<int>(ran2*6000);
-                      
-                      cout << "using nucleus Number = " << nucleusNumber << endl;
-                      
-                      // go to the correct line in the file
-                      if(fin)
-                        {
-                          fin.seekg(std::ios::beg);
-                          for(int i=0; i < nucleusNumber; ++i)
-                            {
-                              fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-                            }
-                          // am now at the correct line in the file
-                          
-                          // start reading one nucleus (3 positions)
-                          int A=0;
-                          
-                          fin >> dummy; // first two entries per nucleus are not coordinates
-                          fin >> dummy;
-                          
-                          while(A<glauber->nucleusA2())
-                            {
-                              if(!fin.eof())
-                                {  
-                                  fin >> rv.x;
-                                  fin >> rv.y;
-                                  fin >> dummy; // don't care about z direction
-                                  rv.collided=0;
-                                  if (A%2==0) 
-                                    rv.proton=0;
-                                  else 
-                                    rv.proton=1;
-                                  if (event==0)
-                                    nucleusB.push_back(rv);
-                                  else 
-                                    {
-                                      package[2*A] = rv.x;
-                                      package[2*A+1] = rv.y;
-                                    }
-                                  if(event==0)
-                                    cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
-                                  A++;
-                                }
-                            }
-                          if(event>0)
-                            MPI_Send(package,24,MPI_DOUBLE, event, 1, MPI_COMM_WORLD);
-                          
-                          param->setA2FromFile(A);
-                        }
-                      else
-                        {
-                          if (param->getlightNucleusOption() == 2) 
-                            cerr << " file carbon_plaintext.in not found. exiting." << endl;
-                          else if (param->getlightNucleusOption() == 3)
-                            cerr << " file carbon_alpha_3.in not found. exiting." << endl;
-                          exit(1);
+                      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                    }
+                  // am now at the correct line in the file
+                  
+                  // start reading one nucleus (3 positions)
+                  int A=0;
+                  
+                  fin >> dummy; // first two entries per nucleus are not coordinates
+                  fin >> dummy;
+                  
+                  while(A<glauber->nucleusA2())
+                    {
+                      if(!fin.eof())
+                        {  
+                          fin >> rv.x;
+                          fin >> rv.y;
+                          fin >> dummy; // don't care about z direction
+                          rv.collided=0;
+                          if (A%2==0) 
+                            rv.proton=0;
+                          else 
+                            rv.proton=1;
+                          nucleusB.push_back(rv);
+                          A++;
                         }
                     }
-                  fin.close();
-                  
+                  param->setA2FromFile(A);
                 }
               else
                 {
-                  MPI_Recv(package,24,MPI_DOUBLE,0,1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-                  
-                  //make a loop over A:
-                  int A=0;
-                  //////////...
-                  while(A<glauber->nucleusA2())
-                    {
-                      rv.x = package[2*A];
-                      rv.y = package[2*A+1];
-                      if (A%2==0) 
-                        rv.proton=0;
-                      else 
-                        rv.proton=1;
-                      nucleusB.push_back(rv);
-                      //cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
-                      A++;
-                    } 
-                  param->setA1FromFile(12);  
+                  if (param->getlightNucleusOption() == 2) 
+                    cerr << " file carbon_plaintext.in not found. exiting." << endl;
+                  else if (param->getlightNucleusOption() == 3)
+                    cerr << " file carbon_alpha_3.in not found. exiting." << endl;
+                  exit(1);
                 }
+              fin.close();
             }
           else // standard sampling for carbon
             {
@@ -686,7 +605,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                           else 
                             rv.proton=1;
                           nucleusB.push_back(rv);
-                          cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
                           A++;
                         }
                     }

@@ -41,8 +41,8 @@ Ny 50
 useSeedList 0
 seed 3
 useTimeForSeed 1
-Projectile O
-Target O
+Projectile C
+Target C
 lightNucleusOption 3
 bmin 4
 bmax 8

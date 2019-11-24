@@ -41,11 +41,11 @@ Ny 50
 useSeedList 0
 seed 3
 useTimeForSeed 1
-Projectile C
+Projectile O
 Target O
 lightNucleusOption 3
-bmin 0
-bmax 0
+bmin 4
+bmax 8
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 42.

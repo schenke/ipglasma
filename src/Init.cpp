@@ -548,7 +548,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                                              glauber->GlauberData.Target.R_WS,
                                              glauber->GlauberData.Target.beta2,
                                              glauber->GlauberData.Target.beta4,
-                                             &nucleusA);
+                                             &nucleusB);
             }
         }
       else if(A2==16) // 16O
@@ -627,7 +627,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                                              glauber->GlauberData.Target.R_WS,
                                              glauber->GlauberData.Target.beta2,
                                              glauber->GlauberData.Target.beta4,
-                                             &nucleusA);
+                                             &nucleusB);
             }
         }
       else

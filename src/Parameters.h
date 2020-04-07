@@ -33,7 +33,7 @@ class Parameters
   unsigned long long int seed;    // random seed that's added to the current time to generate the full seed (or the full seed, depending on the value of getUseTimeforSeed())
   double ds;   // 'time' step
   int Ny;      // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
-  double g2mu; // g^2 mu
+  double g2mu; // g^2 mu [in lattice units]
   double Qs;   // Q_s, to be dynamically determined
   int steps;   // number of rapidity steps
   int measureSteps; // number of steps in interval between measurements

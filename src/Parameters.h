@@ -60,7 +60,7 @@ class Parameters
   int writeOutputs; // decide whether to write (1) or not write (0) large output files (like hydro input data)
   int writeOutputsToHDF5; // decide whether to write (1) or not write (0) output files to one hdf5 file
   int writeEvolution; // decide whether to write (1) or not write (0) time dependent quantities like the anisotropy 
-  int writeInitialWilsonLines; // decide whether to write (1) or not write (0) generated Wilson lines (before any evolution)
+  int writeInitialWilsonLines; // decide whether to write (1) in text or (2) in binary format or not write (0) generated Wilson lines (before any evolution)
   unsigned long long int randomSeed; // stores the random seed used (so the event can be reproduced)
   string NucleusQsTableFileName; // the file name for the table containing Qs^2 as a function of Y and Qs^2(Y=0)
   double BG; // the width of the Gaussian describing the shape of the proton in GeV^(-2)

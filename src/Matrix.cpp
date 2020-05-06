@@ -316,6 +316,17 @@ vector <complex<double> > Matrix::expmCoeff(double *Q, int Nc)
       result.push_back(ua[i]*0.5*f2);
     }
 
+
+  // Check potential NaNs
+  for (int i=0; i < 9; i++)
+  {
+    if (std::isnan(result[i].real()) or std::isnan(result[i].imag()))
+    {
+      // Sometimes in the very low density region we may encounter (numerically) 0/0 situations
+      // In that case, set coefficient to 0, so this contributes only a unit matrix (=vacuum contribution)
+      result[i]=0;
+    }
+  }
   return result;
 
 }

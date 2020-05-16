@@ -33,7 +33,7 @@ class Parameters
   unsigned long long int seed;    // random seed that's added to the current time to generate the full seed (or the full seed, depending on the value of getUseTimeforSeed())
   double ds;   // 'time' step
   int Ny;      // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
-  double g2mu; // g^2 mu
+  double g2mu; // g^2 mu [in lattice units]
   double Qs;   // Q_s, to be dynamically determined
   int steps;   // number of rapidity steps
   int measureSteps; // number of steps in interval between measurements
@@ -90,6 +90,8 @@ class Parameters
   double L;         // lattice size in fm
   double LOutput;   // lattice size for the output in fm
   int useNucleus;   // use nuclei (1) or a constant g^2mu distribution over the lattice 
+  int lightNucleusOption; // for light nuclei (carbon, oxygen): 1: Woods-Saxon; 2: variational MC; 3: alpha clusters
+  int useGaussian;  // use a Gaussian profile on top of the constant background
   double dtau;      // time step in lattice units
   double maxtime;   // maximal evolution time in fm/c
   int Npart;        // Number of participants
@@ -271,6 +273,10 @@ class Parameters
   int getInitMethod() {return initMethod;}
   void setUseNucleus(int x) {useNucleus=x;};
   int getUseNucleus() {return useNucleus;}
+  void setUseGaussian(int x) {useGaussian=x;};
+  int getUseGaussian() {return useGaussian;}
+  void setlightNucleusOption(int x) {lightNucleusOption=x;};
+  int getlightNucleusOption() {return lightNucleusOption;}
   void setRunWithQs(int x) {runWithQs=x;};
   int getRunWithQs() {return runWithQs;}
   void setRunWithkt(int x) {runWithkt=x;};

@@ -112,128 +112,227 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	}   
       else if(A1==3) // He3
 	{
-          int rank = param->getMPIRank();
-          int size;
-          MPI_Comm_size (MPI_COMM_WORLD, &size);
-          double package[6]; 
- 
-          if (rank==0)
+	  //sample the position in the file
+	  ifstream fin;
+	  fin.open("he3_plaintext.in"); 
+	     
+	  double dummy;
+	  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (13699 events in file)
+	  int nucleusNumber = static_cast<int>(ran2*13699);
+
+	  cout << "using nucleus Number = " << nucleusNumber << endl;
+	  
+	  // go to the correct line in the file
+         if(fin)
             {
+              fin.seekg(std::ios::beg);
+              for(int i=0; i < nucleusNumber; ++i)
+                {
+                  fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                }
+              // am now at the correct line in the file
+              
+              // start reading one nucleus (3 positions)
+              int A=0;
+              
+              while(A<glauber->nucleusA1())
+                {
+                  if(!fin.eof())
+                    {  
+                      fin >> rv.x;
+                      fin >> rv.y;
+                      fin >> dummy; // don't care about z direction
+                      rv.collided=0;
+                      if (A==2) 
+                        rv.proton=0;
+                      else 
+                        rv.proton=1;
+                      nucleusA.push_back(rv);
+                      A++;
+                    }
+                }
+              
+	  	  
+              fin.close();
+            
+              param->setA1FromFile(A);
+            }
+         else
+           {
+             cerr << " file he3_plaintext.in not found. exiting." << endl;
+             exit(1);
+           }
+	}   
+      else if(A1==12) // 12C
+	{
+          string fileName;
+          if(param->getlightNucleusOption() != 1)
+            {
+              if (param->getlightNucleusOption() == 2) //use VMC simula-tions, which use the Argonne v18 two-nucleon and Urbana X three-nucleon potentials, as provided in http://www.phy.anl.gov/theory/research/density like in He3 (arXiv:1309.3794 [nucl-th]; arXiv:1705.04337 [nucl-th])
+                fileName = "carbon_plaintext.in";
+              else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
+                fileName = "carbon_alpha_3.in";
+              int rank = param->getMPIRank();
+              int size;
+              
               //sample the position in the file
               ifstream fin;
-              
-              // stringstream strhe3_name;
-              // strhe3_name << "he3_plaintext-" << param->getMPIRank()%10 << ".dat";
-              // string he3_name;
-              // he3_name = strhe3_name.str();
-              // cout << "reading from file " << he3_name << "." << endl;
-              // fin.open(he3_name); 
-              
-              fin.open("he3_plaintext.dat"); 
+              fin.open(fileName); 
               
               double dummy;
               
-              for (int event=0;event<size;event++)
+              double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
+              int nucleusNumber = static_cast<int>(ran2*6000);
+              if (param->getlightNucleusOption() == 3)
+                nucleusNumber = static_cast<int>(ran2*13668);
+              
+              cout << "using nucleus Number = " << nucleusNumber << endl;
+              
+              // go to the correct line in the file
+              if(fin)
                 {
-                  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (13699 events in file)
-                  int nucleusNumber = static_cast<int>(ran2*13699);
-                  
-                  cout << "using nucleus Number = " << nucleusNumber << endl;
-                  
-                  // go to the correct line in the file
-                  if(fin)
+                  fin.seekg(std::ios::beg);
+                  for(int i=0; i < nucleusNumber; ++i)
                     {
-                      fin.seekg(std::ios::beg);
-                      for(int i=0; i < nucleusNumber; ++i)
-                        {
-                          fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
-                        }
-                      // am now at the correct line in the file
-                      
-                      // start reading one nucleus (3 positions)
-                      int A=0;
-                      
-                      while(A<glauber->nucleusA1())
-                        {
-                          if(!fin.eof())
-                            {  
-                              fin >> rv.x;
-                              fin >> rv.y;
-                              fin >> dummy; // don't care about z direction
-                              rv.collided=0;
-                              if (A==2) 
-                                rv.proton=0;
-                              else 
-                                rv.proton=1;
-                              if (event==0)
-                                nucleusA.push_back(rv);
-                              else 
-                                {
-                                  if(A==0)
-                                    {
-                                      package[0] = rv.x;
-                                      package[1] = rv.y;
-                                    }
-                                  else if (A==1)
-                                    {
-                                      package[2] = rv.x;
-                                      package[3] = rv.y;
-                                    }
-                                  else if (A==2)
-                                    {
-                                      package[4] = rv.x;
-                                      package[5] = rv.y;
-                                    }
-                                }
-                              A++;
-                              cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
-                            }
-                        }
-                      if(event>0)
-                        MPI_Send(package,6,MPI_DOUBLE, event, 1, MPI_COMM_WORLD);
-                      
-                      param->setA1FromFile(A);
+                      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
                     }
-                  else
+                  // am now at the correct line in the file
+                  
+                  // start reading one nucleus (3 positions)
+                  int A=0;
+                  
+                  fin >> dummy; // first two entries per nucleus are not coordinates
+                  fin >> dummy;
+                  
+                  while(A<glauber->nucleusA1())
                     {
-                      cerr << " file he3_plaintext.dat not found. exiting." << endl;
-                      exit(1);
+                      if(!fin.eof())
+                        {  
+                          fin >> rv.x;
+                          fin >> rv.y;
+                          fin >> dummy; // don't care about z direction
+                          rv.collided=0;
+                          if (A%2==0) 
+                            rv.proton=0;
+                          else 
+                            rv.proton=1;
+                          nucleusA.push_back(rv);
+                          A++;
+                        }
                     }
+                  
+                  param->setA1FromFile(A);
+                }
+              else
+                {
+                  if (param->getlightNucleusOption() == 2) 
+                    cerr << " file carbon_plaintext.in not found. exiting." << endl;
+                  else if (param->getlightNucleusOption() == 3)
+                    cerr << " file carbon_alpha_3.in not found. exiting." << endl;
+                  exit(1);
                 }
               fin.close();
-                     
             }
-          else
+          else // standard sampling for carbon
             {
-              MPI_Recv(package,6,MPI_DOUBLE,0,1, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-              rv.x = package[0];
-              rv.y = package[1];
-              rv.proton = 1;
-              nucleusA.push_back(rv);
-              cout << "A=1, x=" << rv.x << ", y=" << rv.y << endl;
-              rv.x = package[2];
-              rv.y = package[3];
-              rv.proton = 0;
-              nucleusA.push_back(rv);
-              cout << "A=2, x=" << rv.x << ", y=" << rv.y << endl;
-              rv.x = package[4];
-              rv.y = package[5];
-              rv.proton = 0;
-              nucleusA.push_back(rv);
-              cout << "A=3, x=" << rv.x << ", y=" << rv.y << endl;
-              param->setA1FromFile(3);
+              generate_nucleus_configuration(random, A1, Z1,
+                                             glauber->GlauberData.Projectile.a_WS,
+                                             glauber->GlauberData.Projectile.R_WS,
+                                             glauber->GlauberData.Projectile.beta2,
+                                             glauber->GlauberData.Projectile.beta4,
+                                             &nucleusA);
+            }
+        }
+      else if(A1==16) // 16O
+	{
+          string fileName;
+          if(param->getlightNucleusOption() != 1)
+            {
+              if (param->getlightNucleusOption() == 2) //use VMC simula-tions, which use the Argonne v18 two-nucleon and Urbana X three-nucleon potentials, as provided in http://www.phy.anl.gov/theory/research/density like in He3 (arXiv:1309.3794 [nucl-th]; arXiv:1705.04337 [nucl-th])
+                fileName = "oxygen_plaintext.in";
+              else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
+                fileName = "oxygen_alpha_3.in";
+              int rank = param->getMPIRank();
+              int size;
+
+              //sample the position in the file
+              ifstream fin;
+              fin.open(fileName); 
+                  
+              double dummy;
+              
+              double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
+              int nucleusNumber = static_cast<int>(ran2*6000);
+              if (param->getlightNucleusOption() == 3)
+                nucleusNumber = static_cast<int>(ran2*12691);
+              
+              cout << "using nucleus Number = " << nucleusNumber << endl;
+              
+              // go to the correct line in the file
+              if(fin)
+                {
+                  fin.seekg(std::ios::beg);
+                  for(int i=0; i < nucleusNumber; ++i)
+                    {
+                      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                    }
+                  // am now at the correct line in the file
+                  
+                  // start reading one nucleus (3 positions)
+                  int A=0;
+                  
+                  fin >> dummy; // first two entries per nucleus are not coordinates
+                  fin >> dummy;
+                  
+                  while(A<glauber->nucleusA1())
+                    {
+                      if(!fin.eof())
+                        {  
+                          fin >> rv.x;
+                          fin >> rv.y;
+                          fin >> dummy; // don't care about z direction
+                          rv.collided=0;
+                          if (A%2==0) 
+                            rv.proton=0;
+                          else 
+                            rv.proton=1;
+                          nucleusA.push_back(rv);
+                          cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
+                          A++;
+                        }
+                    }
+                  param->setA1FromFile(A);
+                }
+              else
+                {
+                  if (param->getlightNucleusOption() == 2) 
+                    cerr << " file oxygen_plaintext.in not found. exiting." << endl;
+                  else if (param->getlightNucleusOption() == 3)
+                    cerr << " file oxygen_alpha_3.in not found. exiting." << endl;
+                  exit(1);
+                }
+              fin.close();                  
+            }
+          else // standard sampling for oxygen
+            {
+              generate_nucleus_configuration(random, A1, Z1,
+                                             glauber->GlauberData.Projectile.a_WS,
+                                             glauber->GlauberData.Projectile.R_WS,
+                                             glauber->GlauberData.Projectile.beta2,
+                                             glauber->GlauberData.Projectile.beta4,
+                                             &nucleusA);
             }
         }
       else
-	{
+        {
           generate_nucleus_configuration(random, A1, Z1,
                                          glauber->GlauberData.Projectile.a_WS,
                                          glauber->GlauberData.Projectile.R_WS,
                                          glauber->GlauberData.Projectile.beta2,
                                          glauber->GlauberData.Projectile.beta4,
                                          &nucleusA);
-	}
-    
+        }
+      
       if(A2==1)
 	{
 	  rv2.x=0.;
@@ -266,7 +365,7 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
 	{
 	  //sample the position in the file
 	  ifstream fin;
-	  fin.open("he3_plaintext.dat"); 
+	  fin.open("he3_plaintext.in"); 
 	     
 	  double dummy;
 	  double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (13699 events in file)
@@ -301,7 +400,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                         rv.proton=1;
                       nucleusB.push_back(rv);
                       A++;
-                      cout << "A=" << A << ", x=" << rv.x << ", y=" << rv.y << endl;
                     }
                 }
               
@@ -312,10 +410,166 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
             }
          else
            {
-             cerr << " file he3_plaintext.dat not found. exiting." << endl;
+             cerr << " file he3_plaintext.in not found. exiting." << endl;
              exit(1);
            }
 	}   
+      else if(A2==12) // 12C
+	{
+          string fileName;
+          if(param->getlightNucleusOption() != 1)
+            {
+              if (param->getlightNucleusOption() == 2) //use VMC simula-tions, which use the Argonne v18 two-nucleon and Urbana X three-nucleon potentials, as provided in http://www.phy.anl.gov/theory/research/density like in He3 (arXiv:1309.3794 [nucl-th]; arXiv:1705.04337 [nucl-th])
+                fileName = "carbon_plaintext.in";
+              else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
+                fileName = "carbon_alpha_3.in";
+              int rank = param->getMPIRank();
+              int size;
+
+              //sample the position in the file
+              ifstream fin;
+              fin.open(fileName); 
+              
+              double dummy;
+              
+              double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
+              int nucleusNumber = static_cast<int>(ran2*6000);
+              
+              cout << "using nucleus Number = " << nucleusNumber << endl;
+              
+              // go to the correct line in the file
+              if(fin)
+                {
+                  fin.seekg(std::ios::beg);
+                  for(int i=0; i < nucleusNumber; ++i)
+                    {
+                      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                    }
+                  // am now at the correct line in the file
+                  
+                  // start reading one nucleus (3 positions)
+                  int A=0;
+                  
+                  fin >> dummy; // first two entries per nucleus are not coordinates
+                  fin >> dummy;
+                  
+                  while(A<glauber->nucleusA2())
+                    {
+                      if(!fin.eof())
+                        {  
+                          fin >> rv.x;
+                          fin >> rv.y;
+                          fin >> dummy; // don't care about z direction
+                          rv.collided=0;
+                          if (A%2==0) 
+                            rv.proton=0;
+                          else 
+                            rv.proton=1;
+                          nucleusB.push_back(rv);
+                          A++;
+                        }
+                    }
+                  param->setA2FromFile(A);
+                }
+              else
+                {
+                  if (param->getlightNucleusOption() == 2) 
+                    cerr << " file carbon_plaintext.in not found. exiting." << endl;
+                  else if (param->getlightNucleusOption() == 3)
+                    cerr << " file carbon_alpha_3.in not found. exiting." << endl;
+                  exit(1);
+                }
+              fin.close();
+            }
+          else // standard sampling for carbon
+            {
+              generate_nucleus_configuration(random, A2, Z2,
+                                             glauber->GlauberData.Target.a_WS,
+                                             glauber->GlauberData.Target.R_WS,
+                                             glauber->GlauberData.Target.beta2,
+                                             glauber->GlauberData.Target.beta4,
+                                             &nucleusB);
+            }
+        }
+      else if(A2==16) // 16O
+	{
+          string fileName;
+          if(param->getlightNucleusOption() != 1)
+            {
+              if (param->getlightNucleusOption() == 2) //use VMC simula-tions, which use the Argonne v18 two-nucleon and Urbana X three-nucleon potentials, as provided in http://www.phy.anl.gov/theory/research/density like in He3 (arXiv:1309.3794 [nucl-th]; arXiv:1705.04337 [nucl-th])
+                fileName = "oxygen_plaintext.in";
+              else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
+                fileName = "oxygen_alpha_3.in";
+              int rank = param->getMPIRank();
+              int size;
+
+              //sample the position in the file
+              ifstream fin;
+              fin.open(fileName); 
+              
+              double dummy;
+              
+              double ran2 = random->genrand64_real3();   // sample the position in the file uniformly (6000 configurations in file)
+              int nucleusNumber = static_cast<int>(ran2*6000);
+              if (param->getlightNucleusOption() == 3)
+                nucleusNumber = static_cast<int>(ran2*12691);
+              
+              cout << "using nucleus Number = " << nucleusNumber << endl;
+              
+              // go to the correct line in the file
+              if(fin)
+                {
+                  fin.seekg(std::ios::beg);
+                  for(int i=0; i < nucleusNumber; ++i)
+                    {
+                      fin.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+                    }
+                  // am now at the correct line in the file
+                  
+                  // start reading one nucleus (3 positions)
+                  int A=0;
+                  
+                  fin >> dummy; // first two entries per nucleus are not coordinates
+                  fin >> dummy;
+                  
+                  while(A<glauber->nucleusA2())
+                    {
+                      if(!fin.eof())
+                        {  
+                          fin >> rv.x;
+                          fin >> rv.y;
+                          fin >> dummy; // don't care about z direction
+                          rv.collided=0;
+                          if (A%2==0) 
+                            rv.proton=0;
+                          else 
+                            rv.proton=1;
+                          nucleusB.push_back(rv);
+                          A++;
+                        }
+                    }
+                  param->setA2FromFile(A);
+                }
+              else
+                {
+                  if (param->getlightNucleusOption() == 2) 
+                    cerr << " file oxygen_plaintext.in not found. exiting." << endl;
+                  else if (param->getlightNucleusOption() == 3)
+                    cerr << " file oxygen_alpha_3.in not found. exiting." << endl;
+                  exit(1);
+                }
+              fin.close();
+            }
+          else // standard sampling for oxygen
+            {
+              generate_nucleus_configuration(random, A2, Z2,
+                                             glauber->GlauberData.Target.a_WS,
+                                             glauber->GlauberData.Target.R_WS,
+                                             glauber->GlauberData.Target.beta2,
+                                             glauber->GlauberData.Target.beta4,
+                                             &nucleusB);
+            }
+        }
       else
 	{
           generate_nucleus_configuration(random, A2, Z2,
@@ -836,7 +1090,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
               // if useConstituentQuarkProton=0
 	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
-		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13; // dividing by 1.13 restores the same mean Q_s 
+		  gaussA[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/std::exp(param->getSmearingWidth()*param->getSmearingWidth()/2.0); // dividing by exp(0.5 sigma^2) restores the same mean Q_s 
 		  //cout << i << " " << iq << " " << gaussA[i][iq] << endl; 
 		  //	  if (gaussA[i]<0)
 		  //  gaussA[i]=0.;
@@ -849,7 +1103,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	    {
 	      for (int iq = 0; iq<len_quark_array; iq++) 
 		{
-		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/1.13;
+		  gaussB[i][iq] = (exp(random->Gauss(0,param->getSmearingWidth())))/std::exp(param->getSmearingWidth()*param->getSmearingWidth()/2.0);
 		  
 		  //	      cout << i << " " << iq << " " << gaussB[i][iq] << endl; 
 		  //if (gaussB[i]<0)
@@ -863,15 +1117,35 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
   if(param->getUseNucleus() == 0)
     {
-      for(int ix=0; ix<N; ix++) // loop over all positions
-	{
-	  for(int iy=0; iy<N; iy++)
-	    {
-              int localpos = ix*N+iy;
-	      lat->cells[localpos]->setg2mu2A(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
-	      lat->cells[localpos]->setg2mu2B(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
-	    }
-	}
+      if (param->getUseGaussian() == 1)
+        {
+          double sigmax = 0.35;
+          double sigmay = 0.5;
+          for(int ix=0; ix<N; ix++) // loop over all positions
+            {
+              double x = ix*L/double(N)-L/2.;
+              for(int iy=0; iy<N; iy++)
+                {                               
+                  double y = iy*L/double(N)-L/2.;
+                  int localpos = ix*N+iy;
+                  double envelope =  exp(-(x*x/(2.*sigmax*sigmax) + y*y/(2.*sigmay*sigmay)))/(2.*M_PI*sigmax*sigmay);
+                  lat->cells[localpos]->setg2mu2A(envelope*param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                  lat->cells[localpos]->setg2mu2B(envelope*param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                }
+            }
+        }
+      else
+        {
+          for(int ix=0; ix<N; ix++) // loop over all positions
+            {
+              for(int iy=0; iy<N; iy++)
+                {
+                  int localpos = ix*N+iy;
+                  lat->cells[localpos]->setg2mu2A(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                  lat->cells[localpos]->setg2mu2B(param->getg2mu()*param->getg2mu()/param->getg()/param->getg());
+                }
+            }
+        }
       param->setSuccess(1);
       cout << "constant color charge density set" << endl;
       return;

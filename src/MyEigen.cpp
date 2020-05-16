@@ -298,7 +298,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
     double resultE, resultutau, resultux, resultuy, resultueta;
     double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
     double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy, resultpietaeta;
-    double g2mu2A, g2mu2B, QsAsqr, QsBsqr;
+    double g2mu2A, g2mu2B;
 
     double tau0 = it*dtau*a;
 
@@ -1013,8 +1013,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int 
                       g2mu2B = (1.-fracy)*x1+fracy*x2;
 
                       
-                      QsAsqr= g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
-                      QsBsqr= g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
+                      //QsAsqr= g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
+                      //QsBsqr= g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
                       
                       foutEps3 << -(heta-1)/2.*deta+deta*ieta << " " << x << " " << y << " " 
                                << g2mu2A*g2mu2B/Jaztot*Etot << " " << 1. << " " << 0. << " " << 0. << " " << 0. 

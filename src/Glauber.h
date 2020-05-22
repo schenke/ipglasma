@@ -5,7 +5,6 @@
 #include <iostream>
 #include <stdlib.h>
 #include <math.h>
-#include "Setup.h"
 #include "Random.h"
 #include <sstream>
 #include <fstream>
@@ -24,6 +23,7 @@ struct ReturnValue {
     //int acceptances;
 };
 
+
 typedef struct nucleus {
     string name;
     double A;
@@ -39,6 +39,7 @@ typedef struct nucleus {
     double beta4;
 } Nucleus;
 
+
 typedef struct data {
     double SigmaNN; 
     Nucleus Target;
@@ -48,9 +49,9 @@ typedef struct data {
     /* trap door */
 } Data;
 
-class Glauber{
+
+class Glauber {
  private:
-    Setup *setup;
 
  public:
     typedef double (*ptr_func)(double);
@@ -66,8 +67,11 @@ class Glauber{
     double currentZ1;
     double currentZ2;
 
-    Glauber();
-    ~Glauber();
+    Glauber() {};
+    ~Glauber() {
+        remove("tmp.dat");
+    }
+
     double nucleusA1() const {return currentA1;}
     double nucleusA2() const {return currentA2;}
     double nucleusZ1() const {return currentZ1;}

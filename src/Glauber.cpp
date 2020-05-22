@@ -1,21 +1,10 @@
 #include "Glauber.h"
 #include "Util.h"
+#include <cstring>
 
 using namespace std;
 
-Glauber::Glauber()
-{
-  setup = new Setup;
-}
-
-// destructor
-Glauber::~Glauber() {
-    delete setup;
-    remove("tmp.dat");
-}
-
-void Glauber::FindNucleusData2(Nucleus *nucleus, string name)
-{
+void Glauber::FindNucleusData2(Nucleus *nucleus, string name) {
   string densityFunction;
   if(name.compare("Au") == 0)
     {

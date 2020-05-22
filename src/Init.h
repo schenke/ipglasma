@@ -34,40 +34,29 @@ class Init {
   int const static iymaxNuc = 44; // for the Tp-y table
 
   int const static iTpmax = 200; // updated in March 2019 to a larger T_A range
- 
+
   double const deltaYNuc = 0.25; // for the new table
-  
-  FFT *fft;
+
+  FFT fft;
   //  Matrix** A;
   //  Glauber *glauber;
   double Qs2Nuclear[iTpmax][iymaxNuc];
   double Tlist[iTpmax];
-  
+
   double As[1];
-  
+
   vector<ReturnValue> nucleusA;  // list of x and y coordinates of nucleons in nucleus A      
   vector<ReturnValue> nucleusB;  // list of x and y coordinates of nucleons in nucleus B 
 
     pretty_ostream messager;
 
  public:
-  
-  // Constructor.
+    // Constructor.
+    Init(const int nn[]) : fft(nn) {
+    };
 
-  Init(const int nn[]) 
-    {
-      //  random = new Random;
-      fft = new FFT(nn);
-      //      glauber = new Glauber;
-    };
-  
-  ~Init() 
-    { 
-      delete fft; 
-      //delete glauber;
-      //delete random;
-    };
-  
+    ~Init() {};
+
   void init(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber* glauber, int READFROMFILE);
   void sampleTA(Parameters *param, Random *random, Glauber* glauber);
   void readNuclearQs(Parameters *param);

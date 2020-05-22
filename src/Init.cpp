@@ -1910,7 +1910,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
           }
         
         // compute A^+
@@ -1954,7 +1954,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         // Fourier transform back A^+
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
           }
         // compute U
   
@@ -2003,7 +2003,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
           }
         
         // compute A^+
@@ -2047,7 +2047,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         // Fourier transform back A^+
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
           }
         // compute U
   

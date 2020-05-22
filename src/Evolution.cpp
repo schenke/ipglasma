@@ -2088,8 +2088,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaCut2 =0.;
   double dEdeta =0.;
   double dEdeta2 =0.;
-  
- 
+
+
   stringstream strNpartdNdy_name;
   strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string NpartdNdy_name;
@@ -2097,8 +2097,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   cout << "Measuring multiplicity ... " << endl;
 
   // fix transverse Coulomb gauge
-  GaugeFix *gaugefix = new GaugeFix();
-  
+  GaugeFix gaugefix;
+
   double maxtime;
   if ( param->getInverseQsForMaxTime() == 1 )
     {
@@ -2111,14 +2111,13 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  
-  gaugefix->FFTChi(fft,lat,group,param,4000);
+
+  gaugefix.FFTChi(fft, lat, group, param, 4000);
   // gauge is fixed
-  delete gaugefix;
 
   Matrix **E1;
   E1 = new Matrix*[N*N];
-  
+
   for(int i=0; i<N*N; i++)
     {
       E1[i] = new Matrix(Nc,0.);
@@ -2833,8 +2832,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   cout << "Measuring multiplicity ... " << endl;
 
   // fix transverse Coulomb gauge
-  GaugeFix *gaugefix = new GaugeFix();
-  
+  GaugeFix gaugefix;
+
   double maxtime;
   if ( param->getInverseQsForMaxTime() == 1 )
     {
@@ -2847,14 +2846,13 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  
-  gaugefix->FFTChi(fft,lat,group,param,4000);
+
+  gaugefix.FFTChi(fft, lat, group, param, 4000);
   // gauge is fixed
-  delete gaugefix;
 
   Matrix **E1;
   E1 = new Matrix*[N*N];
-  
+
   for(int i=0; i<N*N; i++)
     {
       E1[i] = new Matrix(Nc,0.);
@@ -3619,8 +3617,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   cout << "Measuring multiplicity version 2... " << endl;
 
   // fix transverse Coulomb gauge
-  GaugeFix *gaugefix = new GaugeFix();
-  
+  GaugeFix gaugefix;
+
   double maxtime;
   if ( param->getInverseQsForMaxTime() == 1 )
     {
@@ -3633,30 +3631,28 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  gaugefix->FFTChi(fft,lat,group,param,4000);
- 
+  gaugefix.FFTChi(fft,lat,group,param,4000);
   // gauge is fixed
+
   Matrix U1(Nc,1.);
   Matrix U2(Nc,1.);
   Matrix U1dag(Nc,1.);
   Matrix U2dag(Nc,1.);
 
-
- 
   Matrix **A1;
   A1 = new Matrix*[N*N];
   Matrix **A2;
   A2 = new Matrix*[N*N];
   Matrix **phi;
   phi = new Matrix*[N*N];
-  
+
   Matrix **E1;
   Matrix **E2;
   Matrix **pi;
   E1 = new Matrix*[N*N];
   E2 = new Matrix*[N*N];
   pi = new Matrix*[N*N];
-  
+
   for(int i=0; i<N*N; i++)
     {
       A1[i] = new Matrix(Nc,0.);
@@ -4061,7 +4057,6 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   delete[] A2;
   delete[] phi;
 
-  delete gaugefix;
   cout << " done." << endl;
   param->setSuccess(1);
   return 1;

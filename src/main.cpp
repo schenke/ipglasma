@@ -19,7 +19,6 @@
 #include "Lattice.h"
 #include "Evolution.h"
 #include "Spinor.h"
-#include "MyEigen.h"
 #include "pretty_ostream.h"
 
 #define _SECURE_SCL 0
@@ -51,11 +50,10 @@ int main (int argc, char *argv[]) {
     Parameters *param = new Parameters();
     param->setMPIRank(rank);
     param->setMPISize(size);
+    Setup setup;
 
-    Setup *setup;
-    setup = new Setup();
     // read parameters from file
-    readInput(setup, param, argc, argv, rank);
+    readInput(&setup, param, argc, argv, rank);
 
     // initialize random generator using time and seed from input file
     Random *random = new Random();
@@ -115,7 +113,6 @@ int main (int argc, char *argv[]) {
             display_logo();
 
         // initialize helper class objects
-        MyEigen *myeigen = new MyEigen();
 
         param->setEventId(rank + iev*size);
         param->setSuccess(0);
@@ -134,27 +131,27 @@ int main (int argc, char *argv[]) {
         fout1.close();
 
         // initialize init object
-        Init *init = new Init(nn);
+        Init init(nn);
 
         // initialize group
-        Group *group = new Group(param->getNc());
+        Group group(param->getNc());
 
         // initialize Glauber class
         messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
         messager.flush("info");
-        Glauber *glauber = new Glauber;
-        glauber->initGlauber(param->getSigmaNN(), param->getTarget(),
-                             param->getProjectile(), param->getb(), 100);
+        Glauber glauber;
+        glauber.initGlauber(param->getSigmaNN(), param->getTarget(),
+                            param->getProjectile(), param->getb(), 100);
 
         // measure and output eccentricity, triangularity
-        // init->eccentricity(lat, group, param, random, glauber);
+        // init.eccentricity(lat, &group, param, random, glauber);
 
         // initialize evolution object
-        Evolution *evolution = new Evolution(nn);
+        Evolution evolution(nn);
 
         // either read k_T spectrum from file or do a fresh start
         if (param->getReadMultFromFile() == 1) {
-            evolution->readNkt(param);
+            evolution.readNkt(param);
         } else {
             // clean files
             // stringstream strNpartdNdy_name;
@@ -305,35 +302,24 @@ int main (int argc, char *argv[]) {
         while (param->getSuccess() == 0) {
             param->setSuccess(0);
             // allocate lattice
-            Lattice *lat;
-            lat = new Lattice(param, param->getNc(), param->getSize());
-            BufferLattice *bufferlat;
-            bufferlat = new BufferLattice(param->getNc(), param->getSize());
+            Lattice lat(param, param->getNc(), param->getSize());
+            BufferLattice bufferlat(param->getNc(), param->getSize());
             messager.info("Lattice generated.");
 
             // initialize gsl random number generator (used for non-Gaussian distributions)
             //random->gslRandomInit(rnum);
 
             // initialize U-fields on the lattice
-            // init->init(lat, group, param, random, glauber);
             int READFROMFILE = 0;
-            init->init(lat, group, param, random, glauber, READFROMFILE);
+            init.init(&lat, &group, param, random, &glauber, READFROMFILE);
             messager.info("initialization done.");
 
-            if (param->getSuccess()==0) {
-                delete lat;
-                delete bufferlat;
+            if (param->getSuccess()==0)
                 continue;
-            }
-
-            delete init;
-            delete glauber;
 
             messager.info("Start evolution");
             // do the CYM evolution of the initialized fields using parmeters in param
-            evolution->run(lat, bufferlat,  group, param);
-            delete bufferlat;
-            delete lat;
+            evolution.run(&lat, &bufferlat, &group, param);
         }
 
         MPI_Barrier(MPI_COMM_WORLD);
@@ -354,13 +340,9 @@ int main (int argc, char *argv[]) {
             messager.flush("info");
             h5Flag = 1;
         }
-        delete group;
-        delete evolution;
-        delete myeigen;
     }
 
     delete random;
-    delete setup;
     delete param;
 
     if (h5Flag == 1 && rank == 0) {

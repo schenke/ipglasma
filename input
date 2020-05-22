@@ -40,12 +40,12 @@ runWithkt 0
 Ny 50
 useSeedList 0
 seed 3
-useTimeForSeed 1
+useTimeForSeed 0
 Projectile Pb
 Target Pb
 lightNucleusOption 3
-bmin 0
-bmax 40
+bmin 20
+bmax 25
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 64.

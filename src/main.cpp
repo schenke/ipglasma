@@ -312,7 +312,6 @@ int main (int argc, char *argv[]) {
                                           param->getSize());
             messager.info("Lattice generated.");
 
-
             // initialize gsl random number generator (used for non-Gaussian distributions)
             //random->gslRandomInit(rnum);
 

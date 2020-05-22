@@ -30,7 +30,7 @@ class GaugeFix {
 
  public:
     // Constructor.
-    GaugeFix(const int nn[]) {
+    GaugeFix() {
         //  fft = new FFT(nn);
         //random = new Random();
     };
@@ -41,8 +41,7 @@ class GaugeFix {
         //delete random;
     };
 
-    void gaugeTransform(Lattice* lat, Group* group, Parameters *param,
-                        int i, int j);
+    void gaugeTransform(Lattice* lat, Parameters *param, int i, int j);
     void FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param,
                 int steps);
 };

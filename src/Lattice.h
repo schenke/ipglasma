@@ -54,7 +54,7 @@ private:
  
 public:
   //constructor
-  BufferLattice(Parameters *param,int N, int length);
+  BufferLattice(int N, int length);
   //destructor
   ~BufferLattice();
 

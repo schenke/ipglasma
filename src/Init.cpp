@@ -172,8 +172,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "carbon_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "carbon_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
               
               //sample the position in the file
               ifstream fin;
@@ -252,8 +250,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "oxygen_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "oxygen_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
 
               //sample the position in the file
               ifstream fin;
@@ -423,8 +419,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "carbon_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "carbon_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
 
               //sample the position in the file
               ifstream fin;
@@ -500,8 +494,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "oxygen_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "oxygen_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
 
               //sample the position in the file
               ifstream fin;
@@ -933,7 +925,7 @@ void Init::readNuclearQs(Parameters *param)
 // }
 
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2 and up)
-double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y)
+double Init::getNuclearQs2(double T, double y)
   {
   double value, fracy, fracT, QsYdown, QsYup;
   int posy, check=0;
@@ -1612,7 +1604,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		    {
 		      if(localrapidity>=0)
                         {
-                          QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), abs(localrapidity)));
+                          QsA = sqrt(getNuclearQs2(lat->cells[localpos]->getTpA(), abs(localrapidity)));
                         }
 		      else 
 			{
@@ -1620,7 +1612,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 			  if(xVal==0)
 			    QsA=0.;
 			  else
-			    QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), 0.))*
+			    QsA = sqrt(getNuclearQs2(lat->cells[localpos]->getTpA(), 0.))*
 			      sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
 			}
 		      if(QsA == 0)
@@ -1649,14 +1641,14 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  while (abs(Ydeviation) > 0.001) 
 		    {
 		      if(localrapidity>=0)
-			QsB = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), abs(localrapidity)));
+			QsB = sqrt(getNuclearQs2(lat->cells[localpos]->getTpB(), abs(localrapidity)));
 		      else
 			{
 			  xVal = QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn);
 			  if(xVal==0)
 			    QsB=0.;
 			  else
-			    QsB = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), 0.))*
+			    QsB = sqrt(getNuclearQs2(lat->cells[localpos]->getTpB(), 0.))*
 			    sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
 			}
 		      if(QsB == 0)
@@ -1683,11 +1675,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      else
 		{
 		  // nucleus A 
-		  lat->cells[localpos]->setg2mu2A(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
+		  lat->cells[localpos]->setg2mu2A(getNuclearQs2(lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
 		  
 		  // nucleus B 
-		  lat->cells[localpos]->setg2mu2B(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
+		  lat->cells[localpos]->setg2mu2B(getNuclearQs2(lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); 
 		 
 		}
@@ -1882,7 +1874,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 
 
-void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber)
+void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
 {
   messager.info("Setting Wilson lines ...");
   const int N = param->getSize();
@@ -2154,7 +2146,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
 }
 
 
-void Init::readV(Lattice *lat, Group* group, Parameters *param)
+void Init::readV(Lattice *lat, Parameters *param)
 {
   int pos;
   int N = param->getSize();
@@ -2323,7 +2315,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   // to read Wilson lines from file (e.g. after JIMWLK evolution for the 3DGlasma)
   if(READFROMFILE)
     {
-      readV(lat, group, param);
+      readV(lat, param);
       param->setSuccess(1);
     }
   // to generate your own Wilson lines
@@ -2374,7 +2366,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  return;
 	}
       // sample color charges and find Wilson lines V_A and V_B
-      setV(lat, group, param, random, glauber);      
+      setV(lat, group, param, random);
     }
   // output Wilson lines
 
@@ -3047,7 +3039,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   // -----------------------------------------------------------------------------
 }
 
-void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber)
+void Init::multiplicity(Lattice *lat, Parameters *param)
 {
   int N = param->getSize();
   int pos;

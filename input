@@ -44,8 +44,8 @@ useTimeForSeed 0
 Projectile Pb
 Target Pb
 lightNucleusOption 3
-bmin 20
-bmax 25
+bmin 0..
+bmax 20.
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 64.

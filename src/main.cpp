@@ -144,7 +144,7 @@ int main (int argc, char *argv[]) {
         messager.flush("info");
         Glauber *glauber = new Glauber;
         glauber->initGlauber(param->getSigmaNN(), param->getTarget(),
-                             param->getProjectile(), param->getb(), 100, rank);
+                             param->getProjectile(), param->getb(), 100);
 
         // measure and output eccentricity, triangularity
         // init->eccentricity(lat, group, param, random, glauber);
@@ -308,8 +308,7 @@ int main (int argc, char *argv[]) {
             Lattice *lat;
             lat = new Lattice(param, param->getNc(), param->getSize());
             BufferLattice *bufferlat;
-            bufferlat = new BufferLattice(param, param->getNc(),
-                                          param->getSize());
+            bufferlat = new BufferLattice(param->getNc(), param->getSize());
             messager.info("Lattice generated.");
 
             // initialize gsl random number generator (used for non-Gaussian distributions)

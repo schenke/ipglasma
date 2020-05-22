@@ -74,13 +74,13 @@ class Glauber{
     double nucleusZ2() const {return currentZ2;}
     int IsFile(char *file_name);
     void FindNucleusData(Nucleus *nucleus, string target, string file_name, int rank);
-    void FindNucleusData2(Nucleus *nucleus, string name, int rank);
+    void FindNucleusData2(Nucleus *nucleus, string name);
     void PrintGlauberData();
     void PrintNucleusData(Nucleus *nucleus);
     int LinearFindXorg(double x, double *Vx, int ymax);
-    double FourPtInterpolate(double x, double *Vx, double *Vy, double h, int x_org, int ymax);
-    void MakeCoeff(double *a, double *b, double *c, double *d, 
-                   double *Vy, double *Vx, double h, int x_org);
+    double FourPtInterpolate(double x, double *Vx, double *Vy, double h, int x_org);
+    void MakeCoeff(double *a, double *b, double *c, double *d,
+                   double *Vy, double h, int x_org);
     double VInterpolate(double x, double *Vx, double *Vy, int ymax);
     int FindXorg(double x, double *Vx, int ymax);
     double *MakeVx(double down, double up, int maxi_num);
@@ -99,11 +99,11 @@ class Glauber{
     double Anum3Gauss(double R_WS);
     double Anum3GaussInt(double xi);
     double NuInt3Gauss(double xi);
-    double Anum2HO(double R_WS);
+    double Anum2HO();
     double Anum2HOInt(double xi);
     double NuInt2HO(double xi);
-    double AnumHulthen(double R_WS);
-    double AnumHulthenInt(double xi);
+    double AnumHulthen();
+    double AnumHulthenInt();
     double NuIntHulthen(double xi);
 
     double integral (int id, double down, double up, double tol, int *count);
@@ -112,7 +112,8 @@ class Glauber{
     double OLSIntegrand(double s);
     double TAB();
     double PAB(double x, double y);
-    void initGlauber(double SigmaNN, string Target, string Projectile, double b, int imax, int rank);
+    void initGlauber(double SigmaNN, string Target, string Projectile,
+                     double b, int imax);
     double areaTA(double x, double A);
     ReturnValue SampleTARejection(Random *random, int PorT);
 };

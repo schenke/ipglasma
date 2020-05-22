@@ -14,7 +14,7 @@ Glauber::~Glauber() {
     remove("tmp.dat");
 }
 
-void Glauber::FindNucleusData2(Nucleus *nucleus, string name, int rank)
+void Glauber::FindNucleusData2(Nucleus *nucleus, string name)
 {
   string densityFunction;
   if(name.compare("Au") == 0)
@@ -238,9 +238,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, int rank)
     }
   else if(densityFunction.compare("Hulthen")==0) 
     {
-      nucleus->AnumFunc = 8;//AnumHulthen;
-      nucleus->AnumFuncIntegrand = 8; //AnumHulthenInt;
-      nucleus->DensityFunc = 8; //NuIntHulthen;  
+      nucleus->AnumFunc = 8;  //AnumHulthen;
+      nucleus->AnumFuncIntegrand = 8;  //AnumHulthenInt;
+      nucleus->DensityFunc = 8;  //NuIntHulthen;  
     }
   else if(densityFunction.compare("readFromFile")==0) 
     {
@@ -291,43 +291,41 @@ int Glauber::LinearFindXorg(double x, double *Vx, int ymax)
 }/* Linear Find Xorg */
 
 
-double Glauber::FourPtInterpolate(double x, double *Vx, double *Vy, double h, int x_org, int ymax)
-{
- /* interpolating points are x_org, x_org+1, x_org+2, x_org+3 */
- /* cubic polynomial approximation */
+double Glauber::FourPtInterpolate(double x, double *Vx, double *Vy, double h,
+                                  int x_org) {
+    /* interpolating points are x_org, x_org+1, x_org+2, x_org+3 */
+    /* cubic polynomial approximation */
 
- double a, b, c, d, f;
+    double a, b, c, d, f;
 
- MakeCoeff(&a, &b, &c, &d,  Vy, Vx, h, x_org);
- 
- f = a*pow(x - Vx[x_org], 3.);
- f += b*pow(x - Vx[x_org], 2.);
- f += c*(x - Vx[x_org]);
- f += d;
- 
- return f;
-}/* FourPtInterpolate */
+    MakeCoeff(&a, &b, &c, &d,  Vy, h, x_org);
+
+    f = a*pow(x - Vx[x_org], 3.);
+    f += b*pow(x - Vx[x_org], 2.);
+    f += c*(x - Vx[x_org]);
+    f += d;
+
+    return f;
+}
 
 
-void Glauber::MakeCoeff(double *a, double *b, double *c, double *d, 
-			double *Vy, double *Vx, double h, int x_org)
-{
- double f0, f1, f2, f3;
+void Glauber::MakeCoeff(double *a, double *b, double *c, double *d,
+                        double *Vy, double h, int x_org) {
+    double f0, f1, f2, f3;
 
- f0 = Vy[x_org];
- f1 = Vy[x_org+1];
- f2 = Vy[x_org+2];
- f3 = Vy[x_org+3];
+    f0 = Vy[x_org];
+    f1 = Vy[x_org+1];
+    f2 = Vy[x_org+2];
+    f3 = Vy[x_org+3];
 
- *a =  (-f0 + 3.0*f1 - 3.0*f2 + f3)/(6.0*h*h*h);
- 
- *b =  (2.0*f0 - 5.0*f1 + 4.0*f2 - f3)/(2.0*h*h);
+    *a =  (-f0 + 3.0*f1 - 3.0*f2 + f3)/(6.0*h*h*h);
 
- *c =  (-11.0*f0 + 18.0*f1 - 9.0*f2 + 2.0*f3)/(6.0*h);
+    *b =  (2.0*f0 - 5.0*f1 + 4.0*f2 - f3)/(2.0*h*h);
 
- *d = f0;
+    *c =  (-11.0*f0 + 18.0*f1 - 9.0*f2 + 2.0*f3)/(6.0*h);
 
-}/* MakeCoeff */
+    *d = f0;
+}
 
 int Glauber::FindXorg(double x, double *Vx, int ymax)
 {
@@ -367,7 +365,7 @@ double Glauber::VInterpolate(double x, double *Vx, double *Vy, int ymax)
 
  h = (Vx[ymax] - Vx[0])/ymax;
 
- return FourPtInterpolate(x, Vx, Vy, h, x_org, ymax);
+ return FourPtInterpolate(x, Vx, Vy, h, x_org);
 
 }/* VInterpolate */
 
@@ -572,13 +570,13 @@ void Glauber::CalcRho(Nucleus *nucleus)
  R_WS = nucleus->R_WS;   
  
  if (nucleus->AnumFunc==1)
-   f = Anum2HO(R_WS)/(nucleus->rho_WS);
+   f = Anum2HO()/(nucleus->rho_WS);
  else if (nucleus->AnumFunc==2)
    f = Anum3Gauss(R_WS)/(nucleus->rho_WS);
  else if (nucleus->AnumFunc==3)
    f = Anum3Fermi(R_WS)/(nucleus->rho_WS);
  else if (nucleus->AnumFunc==8)
-   f = AnumHulthen(R_WS)/(nucleus->rho_WS);
+   f = AnumHulthen()/(nucleus->rho_WS);
  else
    f = Anum3Fermi(R_WS)/(nucleus->rho_WS);
  
@@ -776,24 +774,21 @@ double Glauber::NuInt3Gauss(double xi)
 
 
 /* %%%%%%% 2 Parameter HO %%%%%%%%%%%% */
+double Glauber::Anum2HO() {
+    int count=0;
+    double up, down, a_WS, rho, f;
 
+    a_WS = Nuc_WS->a_WS;
+    // w_WS = Nuc_WS->w_WS; /* take this to be alpha */
+    rho = Nuc_WS->rho_WS;
 
-double Glauber::Anum2HO(double R_WS)
-{
- int count=0;
- double up, down, a_WS, rho, f;
+    down = 0.0;
+    up = 1.0;
 
- a_WS = Nuc_WS->a_WS;
- // w_WS = Nuc_WS->w_WS; /* take this to be alpha */
- rho = Nuc_WS->rho_WS;
+    f = integral(6, down, up, TOL, &count);
+    f *= 4.0*M_PI*rho*pow(a_WS, 3.);
 
- down = 0.0;
- up = 1.0;
- 
- f = integral(6, down, up, TOL, &count);
- f *= 4.0*M_PI*rho*pow(a_WS, 3.);
-
- return f;
+    return f;
 }/* Anum2HO */
 
 
@@ -859,35 +854,28 @@ double Glauber::NuInt2HO(double xi)
 /* %%%%%%% Hulthen %%%%%%%%%%%% */
 
 
-double Glauber::AnumHulthen(double R_WS)
-{
- double a_WS, b_WS, rho, f;
+double Glauber::AnumHulthen() {
+    double a_WS, b_WS, rho, f;
 
- /* R_WS is dummy */
+    a_WS = Nuc_WS->a_WS;
+    b_WS = Nuc_WS->w_WS; /* take this to be b */
+    rho = Nuc_WS->rho_WS;
 
- a_WS = Nuc_WS->a_WS;
- b_WS = Nuc_WS->w_WS; /* take this to be b */
- rho = Nuc_WS->rho_WS;
+    /* density function has the form */
+    /* rho = (1/r^2) (exp(-a r) - exp(-b r))^2 */
+    /* int d^3r rho is given by */
 
- /* density function has the form */
- /* rho = (1/r^2) (exp(-a r) - exp(-b r))^2 */
- /* int d^3r rho is given by */
- 
- f =  2.0*(a_WS - b_WS)*(a_WS - b_WS)*M_PI/a_WS/b_WS/(a_WS + b_WS);
- 
- f *= rho;
+    f =  2.0*(a_WS - b_WS)*(a_WS - b_WS)*M_PI/a_WS/b_WS/(a_WS + b_WS);
 
- /* so we return f*rho  CalcRho will do f/rho and rho = A/f */
- return f;
+    f *= rho;
 
+    /* so we return f*rho  CalcRho will do f/rho and rho = A/f */
+    return f;
 }/* AnumHulthen */
 
-double Glauber::AnumHulthenInt(double xi)
-{
- /* this is dummy */
- 
- return 0.0;
-
+double Glauber::AnumHulthenInt() {
+    /* this is dummy */
+    return 0.0;
 }/* AnumHulthenInt */
 
 double Glauber::NuIntHulthen(double xi)
@@ -1186,14 +1174,14 @@ double Glauber::PAB(double x, double y)
 }/* PAB */
 
 
-void Glauber::initGlauber(double SigmaNN, string Target, string Projectile, double inb, int imax, int rank)
-{
+void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
+                          double inb, int imax) {
   string Target_Name;
   Target_Name = Target;
 
   string Projectile_Name;
   Projectile_Name = Projectile;
- 
+
   string p_name;
   stringstream sp_name;
 
@@ -1214,19 +1202,19 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile, doub
   string paf;
   paf = p_name;
 
-  FindNucleusData2(&(GlauberData.Target), Target_Name, rank);
-  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name, rank);
- 
-  GlauberData.SigmaNN = 0.1*SigmaNN; // sigma in fm^2 
+  FindNucleusData2(&(GlauberData.Target), Target_Name);
+  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name);
+
+  GlauberData.SigmaNN = 0.1*SigmaNN; // sigma in fm^2
   currentA1 = GlauberData.Projectile.A;
   currentA2 = GlauberData.Target.A;
   currentZ1 = GlauberData.Projectile.Z;
-  currentZ2 = GlauberData.Target.Z;  
-  
+  currentZ2 = GlauberData.Target.Z;
+
   GlauberData.InterMax = imax;
   GlauberData.SCutOff = 12.;
-  
-  b=inb; 
+
+  b=inb;
 }/* init */
 
 double Glauber::areaTA(double x, double A)

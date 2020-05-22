@@ -72,12 +72,12 @@ class Init {
   void sampleTA(Parameters *param, Random *random, Glauber* glauber);
   void readNuclearQs(Parameters *param);
   vector <complex<double> > solveAxb(Parameters *param, complex<double>* A, complex<double>* b);
-  double getNuclearQs2(Parameters *param, Random *random, double Qs2atZeroY, double y);
+  double getNuclearQs2(double Qs2atZeroY, double y);
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
-  void setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber);
-  void readV(Lattice *lat, Group* group, Parameters *param);
+  void setV(Lattice *lat, Group* group, Parameters *param, Random* random);
+  void readV(Lattice *lat, Parameters *param);
   // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber);
-  void multiplicity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber);
+  void multiplicity(Lattice *lat, Parameters *param);
 
     void generate_nucleus_configuration(
                 Random *random,

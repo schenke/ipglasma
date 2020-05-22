@@ -18,7 +18,6 @@
 #include "Lattice.h"
 #include "Parameters.h"
 #include "Matrix.h"
-#include "Group.h"
 
 using namespace std;
 
@@ -30,7 +29,7 @@ class MyEigen {
 
     ~MyEigen() {};
     void test();
-    void flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int it);
+    void flowVelocity4D(Lattice *lat, Parameters *param, int it);
 };
 
 #endif // MyEigen_H

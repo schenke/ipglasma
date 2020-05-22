@@ -26,7 +26,9 @@
 #define _HAS_ITERATOR_DEBUGGING 0
 using namespace std;
 
-int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank);
+int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
+              int rank);
+void display_logo();
 
 // main program 1
 int main (int argc, char *argv[]) {
@@ -109,22 +111,8 @@ int main (int argc, char *argv[]) {
                  << nev << " ...";
         messager.flush("info");
         // welcome
-        if (rank == 0) {
-            cout << endl;
-            cout << "-----------------------------------------------------------------------------" << endl;
-            cout << "| Classical Yang-Mills evolution with IP-Glasma initial configurations v1.4 |" << endl;
-            cout << "-----------------------------------------------------------------------------" << endl;
-            cout << "| References:                                                               |" << endl;
-            cout << "| B. Schenke, P. Tribedy, R. Venugopalan                                    |" << endl;
-            cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 (2012)     |" << endl;
-            cout << "-----------------------------------------------------------------------------" << endl;
-
-            cout << "This version uses Qs as obtained from IP-Sat using the sum over proton T_p(b)" << endl;
-            cout << "This is a simple MPI version that runs many events in one job. No communication." << endl;
-
-            cout << "Run using large lattices to improve convergence of the root finder in initial condition. Recommended: 600x600 using L=30fm" << endl;
-            cout << endl;
-        }
+        if (rank == 0)
+            display_logo();
 
         // initialize helper class objects
         MyEigen *myeigen = new MyEigen();
@@ -393,6 +381,24 @@ int main (int argc, char *argv[]) {
     return 1;
 }
 
+
+void display_logo() {
+    cout << endl;
+    cout << "-----------------------------------------------------------------------------" << endl;
+    cout << "| Classical Yang-Mills evolution with IP-Glasma initial configurations v1.4 |" << endl;
+    cout << "-----------------------------------------------------------------------------" << endl;
+    cout << "| References:                                                               |" << endl;
+    cout << "| B. Schenke, P. Tribedy, R. Venugopalan                                    |" << endl;
+    cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 (2012)     |" << endl;
+    cout << "-----------------------------------------------------------------------------" << endl;
+
+    cout << "This version uses Qs as obtained from IP-Sat using the sum over proton T_p(b)" << endl;
+    cout << "This is a simple MPI version that runs many events in one job. No communication." << endl;
+
+    cout << "Run using large lattices to improve convergence of the root finder in initial condition. "
+         << "Recommended: 600x600 using L=30fm" << endl;
+    cout << endl;
+}
 
 int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
 {

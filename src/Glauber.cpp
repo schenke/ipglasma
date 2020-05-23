@@ -285,12 +285,12 @@ double Glauber::FourPtInterpolate(double x, double *Vx, double *Vy, double h,
     /* interpolating points are x_org, x_org+1, x_org+2, x_org+3 */
     /* cubic polynomial approximation */
 
-    double a, b, c, d, f;
+    double a, bb, c, d, f;
 
-    MakeCoeff(&a, &b, &c, &d,  Vy, h, x_org);
+    MakeCoeff(&a, &bb, &c, &d,  Vy, h, x_org);
 
     f = a*pow(x - Vx[x_org], 3.);
-    f += b*pow(x - Vx[x_org], 2.);
+    f += bb*pow(x - Vx[x_org], 2.);
     f += c*(x - Vx[x_org]);
     f += d;
 
@@ -298,7 +298,7 @@ double Glauber::FourPtInterpolate(double x, double *Vx, double *Vy, double h,
 }
 
 
-void Glauber::MakeCoeff(double *a, double *b, double *c, double *d,
+void Glauber::MakeCoeff(double *a, double *bb, double *c, double *d,
                         double *Vy, double h, int x_org) {
     double f0, f1, f2, f3;
 
@@ -309,7 +309,7 @@ void Glauber::MakeCoeff(double *a, double *b, double *c, double *d,
 
     *a =  (-f0 + 3.0*f1 - 3.0*f2 + f3)/(6.0*h*h*h);
 
-    *b =  (2.0*f0 - 5.0*f1 + 4.0*f2 - f3)/(2.0*h*h);
+    *bb =  (2.0*f0 - 5.0*f1 + 4.0*f2 - f3)/(2.0*h*h);
 
     *c =  (-11.0*f0 + 18.0*f1 - 9.0*f2 + 2.0*f3)/(6.0*h);
 

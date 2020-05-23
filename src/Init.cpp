@@ -12,8 +12,8 @@ using PhysConst::hbarc;
 
 vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, complex<double>* b_in)
 {
-  int Nc = param->getNc();
-  int Nc2m1 = Nc*Nc-1;
+  const int Nc = param->getNc();
+  const int Nc2m1 = Nc*Nc-1;
 
   vector <complex<double> > xvec;
   xvec.reserve(Nc2m1); 
@@ -1294,11 +1294,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       double localpos;
       double normA = 0.;
       double normB = 0.;
-      double b = param->getb();
+      double bb = param->getb();
       for(int ix=0; ix<N; ix++) // loop over all positions
         {
-          xA = -L/2.+a*ix-b/2.;
-          xB = -L/2.+a*ix+b/2.;
+          xA = -L/2.+a*ix-bb/2.;
+          xB = -L/2.+a*ix+bb/2.;
           for(int iy=0; iy<N; iy++)
             {
               y = -L/2.+a*iy;
@@ -1910,7 +1910,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         
         for(int n=0; n<Nc2m1; n++)
           {
-            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,1);
           }
         
         // compute A^+
@@ -1954,7 +1954,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         // Fourier transform back A^+
         for(int n=0; n<Nc2m1; n++)
           {
-            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,-1);
           }
         // compute U
   
@@ -1969,9 +1969,9 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
           #pragma omp for
              for (int pos=0; pos<N*N; pos++)
                {
-                 for (int a=0; a<Nc2m1; a++)
+                 for (int aa=0; aa<Nc2m1; aa++)
                    {
-                     in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                     in[aa] = -(rhoACoeff[aa][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
                    }
                  
                  U = temp2.expmCoeff(in, Nc);
@@ -2003,7 +2003,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         
         for(int n=0; n<Nc2m1; n++)
           {
-            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,1);
           }
         
         // compute A^+
@@ -2047,7 +2047,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
         // Fourier transform back A^+
         for(int n=0; n<Nc2m1; n++)
           {
-            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,-1);
           }
         // compute U
   
@@ -2063,9 +2063,9 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
              for (int pos=0; pos<N*N; pos++)
                {
       
-                 for (int a=0; a<Nc2m1; a++)
+                 for (int aa=0; aa<Nc2m1; aa++)
                    {
-                     in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                     in[aa] = -(rhoACoeff[aa][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
                    }
                  
                  U = temp2.expmCoeff(in, Nc);

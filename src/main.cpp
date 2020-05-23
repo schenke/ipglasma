@@ -77,10 +77,11 @@ int main (int argc, char *argv[]) {
             messager.flush("info");
         }
         random->init_genrand64(rnum+rank*1000);
+        random->gslRandomInit(rnum+rank*1000);
     } else {
         ifstream fin;
         fin.open("seedList");
-        unsigned long long int seedList[size];
+        std::vector<unsigned long long int> seedList(size, 0);
         if (fin) {
             for (int i = 0; i < size; i++) {
                 if (!fin.eof()) {
@@ -98,6 +99,7 @@ int main (int argc, char *argv[]) {
         fin.close();
         param->setRandomSeed(seedList[rank]);
         random->init_genrand64(seedList[rank]);
+        random->gslRandomInit(seedList[rank]);
         messager << "Random seed on rank " << rank << " = "
                  << seedList[rank] << " read from list.";
         messager.flush("info");

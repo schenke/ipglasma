@@ -12,6 +12,6 @@ namespace Util{
     std::string stringFind(std::string file_name, std::string st);
     double DFind(std::string file_name, std::string st);
     int IFind(std::string file_name, std::string st);
-};
+}
 
 #endif

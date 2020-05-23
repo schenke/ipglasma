@@ -2074,7 +2074,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   nn[1] = N;
   double dtau = param->getdtau();
   double nkt;
-  int bins = 100;
+  const int bins = 100;
   double n[bins]; //k_T array
   double E[bins]; //k_T array
   double n2[bins]; //k_T array
@@ -2203,7 +2203,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
  
   for(int ik=0; ik<bins; ik++)
     {
@@ -2213,7 +2213,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       counter[ik]=0;
     }
   
-  int hbins = 2000;
+  const int hbins = 2000;
   // double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
   double Nhgsl[hbins+1];
   double Ng;
@@ -2351,7 +2351,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	}
     }
 
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
   
   for(int i=0; i<N; i++)
     {
@@ -2476,7 +2476,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
 
   for(int i=0; i<N; i++)
     {
@@ -2588,7 +2588,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       double z,frac;
       double mypt, kt;
       int ik;
-      int steps=6000;
+      const int steps=6000;
       double dz = 0.95/static_cast<double>(steps);
       double zValues[steps+1];
       double zintegrand[steps+1];
@@ -2776,8 +2776,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   
 int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, int it)
 {
-  int N = param->getSize();
-  int Nc = param->getNc();
+  const int N = param->getSize();
+  const int Nc = param->getNc();
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
@@ -2788,7 +2788,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   nn[1] = N;
   double dtau = param->getdtau();
   double nkt;
-  int bins = 100;
+  const int bins = 100;
   double n[bins]; //k_T array
   double E[bins]; //k_T array
   double n2[bins]; //k_T array
@@ -2802,7 +2802,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   double dEdetaCut2 =0.;
   double dEdeta =0.;
   double dEdeta2 =0.;
-  double Nkxky[N*N];
+  vector<double> Nkxky(N*N, 0);
   
   stringstream strnkxky_name;
   strnkxky_name << "nkxky-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
@@ -2938,7 +2938,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
  
   for(int ik=0; ik<bins; ik++)
     {
@@ -2948,7 +2948,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       counter[ik]=0;
     }
   
-  int hbins = 2000;
+  const int hbins = 2000;
 
   //  double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
   double  Nhgsl[hbins+1], Ng;
@@ -3100,7 +3100,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	}
     }
 
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
   
   for(int i=0; i<N; i++)
     {
@@ -3228,7 +3228,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
 
   for(int i=0; i<N; i++)
     {
@@ -3358,7 +3358,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       double z,frac;
       double mypt, kt;
       int ik;
-      int steps=6000;
+      const int steps=6000;
       double dz = 0.95/static_cast<double>(steps);
       double zValues[steps+1];
       double zintegrand[steps+1];
@@ -3564,8 +3564,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 
 int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int it)
 {
-  int N = param->getSize();
-  int Nc = param->getNc();
+  const int N = param->getSize();
+  const int Nc = param->getNc();
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
@@ -3576,8 +3576,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   nn[1] = N;
   double dtau = param->getdtau();
   double nkt, nkt1, nkt2, nkt3, nkt4, nkt5, nkt6;
-  int bins = 40;
-  int phiBins = 16;
+  const int bins = 40;
+  const int phiBins = 16;
   double n[bins][phiBins]; // |k_T|, phi array
   //  double n2[bins][phiBins]; // |k_T|, phi array
   double nkxky[N][N]; // kx, ky array
@@ -3596,7 +3596,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   double dNdeta5 =0.;
   double dNdeta6 =0.;
   double anglePhi;
-  double k;  
+  double k;
   double deltaPhi = 2.*M_PI/static_cast<double>(phiBins);
 
   stringstream strCorr_name;
@@ -3771,13 +3771,13 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
   // do Fourier transforms
 
-  fft->fftn(A1,A1,nn,2,1);
-  fft->fftn(A2,A2,nn,2,1);
-  fft->fftn(phi,phi,nn,2,1);
+  fft->fftn(A1,A1,nn,1);
+  fft->fftn(A2,A2,nn,1);
+  fft->fftn(phi,phi,nn,1);
 
-  fft->fftn(E1,E1,nn,2,1);
-  fft->fftn(E2,E2,nn,2,1);
-  fft->fftn(pi,pi,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
+  fft->fftn(E2,E2,nn,1);
+  fft->fftn(pi,pi,nn,1);
 
   for(int ik=0; ik<bins; ik++)
     {
@@ -3867,7 +3867,6 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	}
     }
   
-  int i, j;
   double latkx, latky;
   double fracX, fracY;
   for(int ik=0; ik<bins; ik++)
@@ -3880,8 +3879,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	  kx = k * cos(anglePhi);
 	  ky = k * sin(anglePhi);
 
-	  i = floor(((kx)/2/M_PI+0.5)*N+1e-10);
-	  j = floor(((ky)/2/M_PI+0.5)*N+1e-10);
+        int i = floor(((kx)/2/M_PI+0.5)*N+1e-10);
+        int j = floor(((ky)/2/M_PI+0.5)*N+1e-10);
 
 	  latkx = (2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
 	  latky = (2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
@@ -3944,7 +3943,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
    // compute hadrons using fragmentation function 
 
-  int hbins = 40;
+  const int hbins = 40;
   double Nh[hbins+1][phiBins], Ng;
       
       for (int ih=0; ih<=hbins; ih++)

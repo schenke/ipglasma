@@ -8,7 +8,7 @@
 
 //**************************************************************************
 
-void FFT::fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int ndim, const int isign)
+void FFT::fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int isign)
 {
     unsigned ntot = nn[0]*nn[1];
     int pos, newpos;
@@ -141,7 +141,7 @@ void FFT::fftnVector(vector<complex<double> > **data, vector<complex<double> > *
       }
 }
 
-void FFT::fftnArray(complex<double> **data, complex<double>  **outdata, const int nn[], const int ndim, const int isign, const int mDim)
+void FFT::fftnArray(complex<double> **data, complex<double>  **outdata, const int nn[], const int isign, const int mDim)
 {
     unsigned ntot = nn[0]*nn[1];
     int pos, newpos;
@@ -274,7 +274,7 @@ void FFT::fftnArray(complex<double> **data, complex<double>  **outdata, const in
 // Performs Fast Fourier Transform of any object of class "T" (matrix or something else) using a wrapper for FFTW
 // This routine takes data as a function of -x_max/2 to x_max/2 and returns it ordered similarly - no need to resort before or after!
 template <class T>
-void FFT::fftn(T **data, T **outdata, const int nn[], const int ndim, const int isign)
+void FFT::fftn(T **data, T **outdata, const int nn[], const int isign)
 {
     unsigned ntot = nn[0]*nn[1];
     int mDim, pos, newpos; // matrix dimension
@@ -408,7 +408,7 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int ndim, const int 
 
 
 template <class T>
-void FFT::fftnMany(T **data, T **outdata, const int nn[], const int ndim, const int isign)
+void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign)
 {
     unsigned ntot = nn[0]*nn[1];
     int mDim, pos, newpos; // matrix dimension
@@ -549,7 +549,7 @@ void FFT::fftnMany(T **data, T **outdata, const int nn[], const int ndim, const 
 }
 
 
-void FFT::fftnComplex(complex<double> *data, complex<double> *outdata, const int nn[], const int ndim, const int isign)
+void FFT::fftnComplex(complex<double> *data, complex<double> *outdata, const int nn[], const int isign)
 {
     unsigned ntot = nn[0]*nn[1];
     int mDim, pos, newpos; // matrix dimension
@@ -684,5 +684,5 @@ void FFT::fftnComplex(complex<double> *data, complex<double> *outdata, const int
 
 
 // Define specializations of the template:
-template void FFT::fftn(Matrix **data,Matrix **outdata, const int nn[], const int ndim, const int isign);
-template void FFT::fftnMany(Matrix **data,Matrix **outdata, const int nn[], const int ndim, const int isign);
+template void FFT::fftn(Matrix **data,Matrix **outdata, const int nn[], const int isign);
+template void FFT::fftnMany(Matrix **data,Matrix **outdata, const int nn[], const int isign);

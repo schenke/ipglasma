@@ -93,7 +93,7 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
 	  break;
 	}    
 
-      fft->fftn(chi,chi,nn,2,1);
+      fft->fftn(chi,chi,nn,1);
    
 #pragma omp parallel for
         for (int i=0; i<N; i++)
@@ -109,7 +109,7 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
             }
         }        
         
-        fft->fftn(chi,chi,nn,2,-1);
+        fft->fftn(chi,chi,nn,-1);
    
 #pragma omp parallel 
         {

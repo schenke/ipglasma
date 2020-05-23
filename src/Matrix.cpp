@@ -1,4 +1,5 @@
 #include "Matrix.h"
+#include <vector>
 
 
 //constructor if just dimension is given
@@ -6,7 +7,8 @@ Matrix::Matrix(int n)
 {
   ndim = n;
   nn = ndim*ndim;
-  e = new complex<double> [nn];
+  //e = new complex<double> [nn];
+  e.resize(nn);
   for(int i=0; i<nn; i++) e[i] = complex<double>(0.0,0.0);
 }
 
@@ -15,12 +17,13 @@ Matrix::Matrix(int n, double a)
 {
   ndim = n;
   nn = ndim*ndim;
-  e = new complex<double> [nn];
-  if(e==0) 
-    {
-      cout << "Matrix: cannot allocate memory (matrix:) e= " << e << endl;
-      abort();
-    }
+  //e = new complex<double> [nn];
+  e.resize(nn);
+  //if(e==0) 
+  //  {
+  //    cout << "Matrix: cannot allocate memory (matrix:) e= " << e << endl;
+  //    abort();
+  //  }
   
   for(int i=0; i<nn; i++) e[i] = complex<double>(0.0,0.0);
   for(int i=0; i<ndim; i++) e[i*ndim+i] = complex<double>(a,0.0);
@@ -336,7 +339,7 @@ Matrix& Matrix::expm(double t, const int p)
        exit(0);
      }
    // hard coded values for speed
-   double c[p+1];
+   std::vector<double> c(p+1, 0);
    c[0] = 1.;
    c[1] = 0.5;
    c[2] = 0.1136363636;

@@ -86,6 +86,6 @@ if (unittest)
     set(CMAKE_CXX_FLAGS "-g ${OpenMP_CXX_FLAGS} -std=c++11 -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN")
 endif()
 
-string(APPEND CMAKE_CXX_FLAGS " -Wall")
+string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Wnoexcept -Woverloaded-virtual -Wredundant-decls -Wshadow -Wundef -Wno-unused")
 
 add_subdirectory (src)

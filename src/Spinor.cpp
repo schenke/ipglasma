@@ -5,7 +5,8 @@ Spinor::Spinor(int n)
 {
   ndim = n;
   nn = ndim;
-  e = new complex<double> [nn];
+  //e = new complex<double> [nn];
+  e.resize(nn);
   for(int i=0; i<nn; i++) e[i] = complex<double>(0.0,0.0);
 }
 
@@ -18,7 +19,8 @@ Spinor::Spinor(int n, complex<double> a, complex<double> b, complex<double> c)
     }
   ndim = n;
   nn = ndim;
-  e = new complex<double> [nn];
+  //e = new complex<double> [nn];
+  e.resize(nn);
   e[0] = a;
   e[1] = b;
   e[2] = c;
@@ -33,7 +35,8 @@ Spinor::Spinor(int n, complex<double> a, complex<double> b)
     }
   ndim = n;
   nn = ndim;
-  e = new complex<double> [nn];
+  //e = new complex<double> [nn];
+  e.resize(nn);
   e[0] = a;
   e[1] = b;
 }

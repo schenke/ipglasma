@@ -29,7 +29,7 @@ std::vector<T> operator+(const std::vector<T>& a, const std::vector<T>& b)
     std::vector<T> result;
     result.reserve(a.size());
 
-    std::transform(a.begin(), a.end(), b.begin(), 
+    std::transform(a.begin(), a.end(), b.begin(),
                    std::back_inserter(result), std::plus<T>());
     return result;
 }
@@ -71,7 +71,7 @@ class FFT
 public:
 
   // Constructor.
-  FFT(const int nn[]) 
+  FFT(const int nn[])
     {
       //      if(fftw_init_threads()==0)
       //  cerr << "Error initializing multi-threaded fftw." << endl;
@@ -85,8 +85,8 @@ public:
       pmany = fftw_plan_many_dft(2, nn, 9, input, nn, 1, nn[0]*nn[1], output, nn, 1, nn[0]*nn[1], FFTW_FORWARD, FFTW_MEASURE);
       pmanyback = fftw_plan_many_dft(2, nn, 9, input, nn, 1, nn[0]*nn[1], output, nn, 1, nn[0]*nn[1], FFTW_BACKWARD, FFTW_MEASURE);
     };
-  // Destructor.
-  ~FFT() 
+  // Destructor
+  ~FFT()
     {
       fftw_destroy_plan(pmany);
       fftw_destroy_plan(pmanyback);
@@ -97,15 +97,15 @@ public:
       fftw_free(outputMany);
       //fftw_cleanup_threads();
     };
-  void fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int ndim, const int isign);
-  void fftnArray(complex<double> **data, complex<double> **outdata, const int nn[], const int ndim, const int isign, const int mDim);
+  void fftnVector(vector<complex<double> > **data, vector<complex<double> > **outdata, const int nn[], const int isign);
+  void fftnArray(complex<double> **data, complex<double> **outdata, const int nn[], const int isign, const int mDim);
 
   template<class T>
-    void fftn(T **data, T **outdata, const int nn[], const int ndim, const int isign);
+    void fftn(T **data, T **outdata, const int nn[], const int isign);
   template <class T>
-    void fftnMany(T **data, T **outdata, const int nn[], const int ndim, const int isign);
-  
-  void fftnComplex(complex<double> *data, complex<double> *outdata, const int nn[], const int ndim, const int isign);
+    void fftnMany(T **data, T **outdata, const int nn[], const int isign);
+
+  void fftnComplex(complex<double> *data, complex<double> *outdata, const int nn[], const int isign);
  
 };
 

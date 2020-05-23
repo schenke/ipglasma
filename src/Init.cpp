@@ -12,8 +12,8 @@ using PhysConst::hbarc;
 
 vector <complex<double> > Init::solveAxb(Parameters *param, complex<double>* A, complex<double>* b_in)
 {
-  int Nc = param->getNc();
-  int Nc2m1 = Nc*Nc-1;
+  const int Nc = param->getNc();
+  const int Nc2m1 = Nc*Nc-1;
 
   vector <complex<double> > xvec;
   xvec.reserve(Nc2m1); 
@@ -172,8 +172,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "carbon_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "carbon_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
               
               //sample the position in the file
               ifstream fin;
@@ -252,8 +250,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "oxygen_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "oxygen_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
 
               //sample the position in the file
               ifstream fin;
@@ -423,8 +419,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "carbon_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "carbon_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
 
               //sample the position in the file
               ifstream fin;
@@ -500,8 +494,6 @@ void Init::sampleTA(Parameters *param, Random* random, Glauber* glauber)
                 fileName = "oxygen_plaintext.in";
               else if (param->getlightNucleusOption() == 3) // use alpha clustered nucleus as described in Phys.Rev. C97 (2018) 034912/arXiv:1711.00438
                 fileName = "oxygen_alpha_3.in";
-              int rank = param->getMPIRank();
-              int size;
 
               //sample the position in the file
               ifstream fin;
@@ -933,7 +925,7 @@ void Init::readNuclearQs(Parameters *param)
 // }
 
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2 and up)
-double Init::getNuclearQs2(Parameters *param, Random* random, double T, double y)
+double Init::getNuclearQs2(double T, double y)
   {
   double value, fracy, fracT, QsYdown, QsYup;
   int posy, check=0;
@@ -1302,11 +1294,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
       double localpos;
       double normA = 0.;
       double normB = 0.;
-      double b = param->getb();
+      double bb = param->getb();
       for(int ix=0; ix<N; ix++) // loop over all positions
         {
-          xA = -L/2.+a*ix-b/2.;
-          xB = -L/2.+a*ix+b/2.;
+          xA = -L/2.+a*ix-bb/2.;
+          xB = -L/2.+a*ix+bb/2.;
           for(int iy=0; iy<N; iy++)
             {
               y = -L/2.+a*iy;
@@ -1612,7 +1604,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		    {
 		      if(localrapidity>=0)
                         {
-                          QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), abs(localrapidity)));
+                          QsA = sqrt(getNuclearQs2(lat->cells[localpos]->getTpA(), abs(localrapidity)));
                         }
 		      else 
 			{
@@ -1620,7 +1612,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 			  if(xVal==0)
 			    QsA=0.;
 			  else
-			    QsA = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), 0.))*
+			    QsA = sqrt(getNuclearQs2(lat->cells[localpos]->getTpA(), 0.))*
 			      sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
 			}
 		      if(QsA == 0)
@@ -1649,14 +1641,14 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 		  while (abs(Ydeviation) > 0.001) 
 		    {
 		      if(localrapidity>=0)
-			QsB = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), abs(localrapidity)));
+			QsB = sqrt(getNuclearQs2(lat->cells[localpos]->getTpB(), abs(localrapidity)));
 		      else
 			{
 			  xVal = QsB*param->getxFromThisFactorTimesQs()/param->getRoots()*exp(-yIn);
 			  if(xVal==0)
 			    QsB=0.;
 			  else
-			    QsB = sqrt(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), 0.))*
+			    QsB = sqrt(getNuclearQs2(lat->cells[localpos]->getTpB(), 0.))*
 			    sqrt(pow((1-xVal)/(1-0.01),exponent)*pow((0.01/xVal),0.2));
 			}
 		      if(QsB == 0)
@@ -1683,11 +1675,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 	      else
 		{
 		  // nucleus A 
-		  lat->cells[localpos]->setg2mu2A(getNuclearQs2(param, random, lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
+		  lat->cells[localpos]->setg2mu2A(getNuclearQs2(lat->cells[localpos]->getTpA(), localrapidity)/param->getQsmuRatio()/param->getQsmuRatio()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); // lattice units? check
 		  
 		  // nucleus B 
-		  lat->cells[localpos]->setg2mu2B(getNuclearQs2(param, random, lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
+		  lat->cells[localpos]->setg2mu2B(getNuclearQs2(lat->cells[localpos]->getTpB(), localrapidity)/param->getQsmuRatioB()/param->getQsmuRatioB()
 					     *a*a/hbarc/hbarc/param->getg()/param->getg()); 
 		 
 		}
@@ -1882,7 +1874,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param, Random *random
 
 
 
-void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, Glauber *glauber)
+void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random)
 {
   messager.info("Setting Wilson lines ...");
   const int N = param->getSize();
@@ -1918,7 +1910,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,1);
           }
         
         // compute A^+
@@ -1962,7 +1954,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         // Fourier transform back A^+
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,-1);
           }
         // compute U
   
@@ -1977,9 +1969,9 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
           #pragma omp for
              for (int pos=0; pos<N*N; pos++)
                {
-                 for (int a=0; a<Nc2m1; a++)
+                 for (int aa=0; aa<Nc2m1; aa++)
                    {
-                     in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                     in[aa] = -(rhoACoeff[aa][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
                    }
                  
                  U = temp2.expmCoeff(in, Nc);
@@ -2011,7 +2003,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,1);
           }
         
         // compute A^+
@@ -2055,7 +2047,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
         // Fourier transform back A^+
         for(int n=0; n<Nc2m1; n++)
           {
-            fft->fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,2,-1);
+            fft.fftnComplex(rhoACoeff[n],rhoACoeff[n],nn,-1);
           }
         // compute U
   
@@ -2071,9 +2063,9 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
              for (int pos=0; pos<N*N; pos++)
                {
       
-                 for (int a=0; a<Nc2m1; a++)
+                 for (int aa=0; aa<Nc2m1; aa++)
                    {
-                     in[a] = -(rhoACoeff[a][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
+                     in[aa] = -(rhoACoeff[aa][pos]).real(); // expmCoeff wil calculate exp(i in[a]t[a]), so just multiply by -1 (not -i)
                    }
                  
                  U = temp2.expmCoeff(in, Nc);
@@ -2225,7 +2217,7 @@ void Init::setV(Lattice *lat, Group* group, Parameters *param, Random* random, G
 }
 
 
-void Init::readV(Lattice *lat, Group* group, Parameters *param)
+void Init::readV(Lattice *lat, Parameters *param)
 {
   int pos;
   int N = param->getSize();
@@ -2394,7 +2386,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   // to read Wilson lines from file (e.g. after JIMWLK evolution for the 3DGlasma)
   if(READFROMFILE)
     {
-      readV(lat, group, param);
+      readV(lat, param);
       param->setSuccess(1);
     }
   // to generate your own Wilson lines
@@ -2445,7 +2437,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
 	  return;
 	}
       // sample color charges and find Wilson lines V_A and V_B
-      setV(lat, group, param, random, glauber);      
+      setV(lat, group, param, random);
     }
   // output Wilson lines
 
@@ -3118,7 +3110,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random, G
   // -----------------------------------------------------------------------------
 }
 
-void Init::multiplicity(Lattice *lat, Group *group, Parameters *param, Random *random, Glauber *glauber)
+void Init::multiplicity(Lattice *lat, Parameters *param)
 {
   int N = param->getSize();
   int pos;

@@ -9,7 +9,7 @@ using PhysConst::small_eps;
 //**************************************************************************
 // MyEigen class.
 
-void MyEigen::flowVelocity4D(Lattice *lat, Group *group, Parameters *param, int it)
+void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it)
 {
   int N = param->getSize();
   int pos;

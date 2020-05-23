@@ -18,18 +18,20 @@ class Matrix
 private:
     int ndim;
     int nn;
-    complex<double>* e;
+    //complex<double>* e;
+    std::vector<complex<double>> e;
 
 public:
     
     //constructor(s)
+    Matrix() = default;
     Matrix(int n);
     Matrix(int n, double a);
 
     //destructor
     ~Matrix()
       {
-	delete[] e;
+	//delete[] e;
       }
 
     Matrix& inv();
@@ -117,18 +119,15 @@ public:
     //std::complex<double> operator () (const int i, const int j) { return e[j+ndim*i]; }
 
     //=
-    const Matrix& operator = (const Matrix& p) 
-      {
-	nn = p.getNN();
-	if(&p != this ) 
-	  {
-	    for(int i=0; i<nn; i++) 
-	      {
-		e[i] = p.e[i];
-	      }
-	  }
-	return *this;
-      }
+    //const Matrix& operator = (const Matrix& p)  {
+    //    nn = p.getNN();
+    //    if (&p != this ) {
+    //        for (int i=0; i<nn; i++) {
+    //            e[i] = p.e[i];
+    //        }
+    //    }
+    //    return *this;
+    //}
 
     //==
     bool operator == (const Matrix& p) const 

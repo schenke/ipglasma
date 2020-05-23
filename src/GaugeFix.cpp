@@ -93,7 +93,7 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
 	  break;
 	}    
 
-      fft->fftn(chi,chi,nn,2,1);
+      fft->fftn(chi,chi,nn,1);
    
 #pragma omp parallel for
         for (int i=0; i<N; i++)
@@ -109,7 +109,7 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
             }
         }        
         
-        fft->fftn(chi,chi,nn,2,-1);
+        fft->fftn(chi,chi,nn,-1);
    
 #pragma omp parallel 
         {
@@ -142,56 +142,53 @@ void GaugeFix::FFTChi(FFT* fft, Lattice* lat, Group* group, Parameters *param, i
 	{
 	  for (int j=0; j<N; j++)
 	    {
-              gaugeTransform(lat, group, param, i, j);
+              gaugeTransform(lat, param, i, j);
             }
-        }  
-    } // gfiter loop
-  
-  
-  for(int i=0; i<N*N; i++)
-    {
-      delete chi[i];
+        }
+    }  // gfiter loop
+
+
+    for (int i=0; i<N*N; i++) {
+        delete chi[i];
     }
-  
-  delete [] chi;
+    delete [] chi;
 }
 
-	
 
+void GaugeFix::gaugeTransform(Lattice* lat, Parameters *param, int i, int j) {
+    int N = param->getSize();
+    int pos, posmX, posmY;
+    int Nc = param->getNc();
+    Matrix g(Nc), gdag(Nc), temp(Nc);
 
-void GaugeFix::gaugeTransform(Lattice* lat, Group* group, Parameters *param, int i, int j)
-{
-  int N = param->getSize();
-  int pos, posmX, posmY;
-  int Nc = param->getNc();
-  Matrix g(Nc), gdag(Nc), temp(Nc);
+    pos = i*N+j;
+    if (i > 0) {
+        posmX = (i-1)*N+j;
+    } else {
+        posmX = (N-1)*N+j;
+    }
 
-  pos = i*N+j;
-  if(i>0)
-    posmX = (i-1)*N+j;
-  else
-    posmX = (N-1)*N+j;
+    if (j > 0) {
+        posmY = i*N+(j-1);
+    } else {
+      posmY = i*N+N-1;
+    }
 
-  if(j>0)
-    posmY = i*N+(j-1);
-  else 
-    posmY = i*N+N-1;
+    g = gdag = lat->cells[pos]->getg();
+    gdag.conjg();
 
-  g = gdag = lat->cells[pos]->getg();
-  gdag.conjg();
+    // gauge transform Ux and Uy
+    lat->cells[pos]->setUx( g * lat->cells[pos]->getUx() );
+    lat->cells[pos]->setUy( g * lat->cells[pos]->getUy() );
 
-  // gauge transform Ux and Uy
-  lat->cells[pos]->setUx( g * lat->cells[pos]->getUx() );
-  lat->cells[pos]->setUy( g * lat->cells[pos]->getUy() );
-  
-  lat->cells[posmX]->setUx( lat->cells[posmX]->getUx() * gdag );
-  lat->cells[posmY]->setUy( lat->cells[posmY]->getUy() * gdag );
-  
-  // gauge transform Ex and Ey
-  lat->cells[pos]->setE1( g * lat->cells[pos]->getE1() * gdag );
-  lat->cells[pos]->setE2( g * lat->cells[pos]->getE2() * gdag );
-  
-  // gauge transform phi and pi
-  lat->cells[pos]->setphi( g * lat->cells[pos]->getphi() * gdag  );
-  lat->cells[pos]->setpi( g * lat->cells[pos]->getpi() * gdag );
+    lat->cells[posmX]->setUx( lat->cells[posmX]->getUx() * gdag );
+    lat->cells[posmY]->setUy( lat->cells[posmY]->getUy() * gdag );
+
+    // gauge transform Ex and Ey
+    lat->cells[pos]->setE1( g * lat->cells[pos]->getE1() * gdag );
+    lat->cells[pos]->setE2( g * lat->cells[pos]->getE2() * gdag );
+
+    // gauge transform phi and pi
+    lat->cells[pos]->setphi( g * lat->cells[pos]->getphi() * gdag  );
+    lat->cells[pos]->setpi( g * lat->cells[pos]->getpi() * gdag );
 }

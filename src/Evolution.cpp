@@ -13,7 +13,7 @@ using Fragmentation::kkp;
 //**************************************************************************
 // Evolution class.
 
-void Evolution::evolveU(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolveU(Lattice* lat, BufferLattice *bufferlat, Parameters *param, double dtau, double tau)
 {
   // tau is the current time. The time argument of E^i is tau+dtau/2
   // we evolve to tau+dtau
@@ -74,7 +74,7 @@ void Evolution::evolveU(Lattice* lat, BufferLattice *bufferlat, Group* group, Pa
 }
   
 
-void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Parameters *param, double dtau, double tau)
 {
   // tau is the current time. The time argument of pi is tau+dtau/2
   // we evolve to tau+dtau
@@ -108,7 +108,7 @@ void Evolution::evolvePhi(Lattice* lat, BufferLattice *bufferlat, Group* group, 
   }
 }
 
-void Evolution::evolvePi(Lattice* lat, BufferLattice * bufferlat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolvePi(Lattice* lat, BufferLattice * bufferlat, Parameters *param, double dtau, double tau)
 {
   const int Nc = param->getNc();
   const int N = param->getSize();
@@ -170,7 +170,7 @@ void Evolution::evolvePi(Lattice* lat, BufferLattice * bufferlat, Group* group, 
   }
 }
 
-void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Parameters *param, double dtau, double tau)
 {
   const int Nc = param->getNc();
   const int N = param->getSize();
@@ -282,7 +282,7 @@ void Evolution::evolveE(Lattice* lat, BufferLattice *bufferlat, Group* group, Pa
   }
 }
 
-void Evolution::checkGaussLaw(Lattice* lat, Group* group, Parameters *param, double dtau, double tau)
+void Evolution::checkGaussLaw(Lattice* lat, Parameters *param)
 {
   const int Nc = param->getNc();
   const int N = param->getSize();
@@ -432,8 +432,8 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 
   // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
   // now evolve phi and U to time tau=dtau.
-  evolvePhi(lat, bufferlat, group, param, dtau, 0.);
-  evolveU(lat, bufferlat, group, param, dtau, 0.);
+  evolvePhi(lat, bufferlat, param, dtau, 0.);
+  evolveU(lat, bufferlat, param, dtau, 0.);
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
   int it0 = static_cast<int>(floor(0.1/(a*dtau)+1e-10));
@@ -447,12 +447,13 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
   // do evolution
   for (int it=1; it<=itmax; it++) {
       if (it == 1) {
-          Tmunu(lat,group,param,it);
+          Tmunu(lat, param, it);
       }
       if (it == floor(it0) || it==floor(it1)
           || it==floor(it2) || it==floor(it3) || it==floor(itmax)) {
-          Tmunu(lat,group,param,it);
-          u(lat,group,param,it); // computes flow velocity and correct energy density 
+          Tmunu(lat, param, it);
+          // computes flow velocity and correct energy density 
+          u(lat, param, it);
       }
 
       if(it%10==0)
@@ -460,17 +461,17 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
       // evolve from time tau-dtau/2 to tau+dtau/2 
       if (it<itmax)
 	{
-	  evolvePi(lat, bufferlat, group, param, dtau, (it)*dtau); // the last argument is the current time tau. 
-	  evolveE(lat, bufferlat, group, param, dtau, (it)*dtau);
+	  evolvePi(lat, bufferlat, param, dtau, (it)*dtau); // the last argument is the current time tau. 
+	  evolveE(lat, bufferlat, param, dtau, (it)*dtau);
 	  
 	  // evolve from time tau to tau+dtau
-	  evolvePhi(lat, bufferlat, group, param, dtau, (it)*dtau);
-	  evolveU(lat, bufferlat, group, param, dtau, (it)*dtau);
+	  evolvePhi(lat, bufferlat, param, dtau, (it)*dtau);
+	  evolveU(lat, bufferlat, param, dtau, (it)*dtau);
 	}
       else if(it==itmax)
 	{
-	  evolvePi(lat, bufferlat, group, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
-	  evolveE(lat, bufferlat, group, param, dtau/2., (it)*dtau);
+	  evolvePi(lat, bufferlat, param, dtau/2., (it)*dtau); // the last argument is the current time tau. 
+	  evolveE(lat, bufferlat, param, dtau/2., (it)*dtau);
   	}
 
       if(it==1 && param->getWriteOutputs() == 3)
@@ -624,14 +625,14 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 
       // if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
       // 	{	  
-      // 	  eccentricity(lat,group,param,it,0.1,0);
-      // 	  eccentricity(lat,group,param,it,1.,0);
-      // 	  eccentricity(lat,group,param,it,10.,0);
+      // 	  eccentricity(lat, param, it, 0.1, 0);
+      // 	  eccentricity(lat, param, it, 1., 0);
+      // 	  eccentricity(lat, param, it, 10., 0);
       // 	}
 
       if(it==itmax)
 	{	  
-	  checkGaussLaw(lat, group, param, dtau, (it)*dtau);
+	  checkGaussLaw(lat, param);
 	}
      
       int success=1;
@@ -646,7 +647,7 @@ void Evolution::run(Lattice* lat, BufferLattice* bufferlat, Group* group, Parame
 }
 
 
-void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
+void Evolution::Tmunu(Lattice *lat, Parameters *param, int it)
 {
   double averageTtautau=0.;
   double averageTtaueta=0.;
@@ -1203,50 +1204,42 @@ void Evolution::Tmunu(Lattice *lat, Group *group, Parameters *param, int it)
   averageTxx /= double(N);
 }
 
-void Evolution::u(Lattice *lat, Group *group, Parameters *param, int it)
-{
-  MyEigen *myeigen;
-  myeigen = new MyEigen();
-  myeigen->flowVelocity4D(lat,group,param,it);
-  delete myeigen;
+
+void Evolution::u(Lattice *lat, Parameters *param, int it) {
+    MyEigen myeigen;
+    myeigen.flowVelocity4D(lat, param, it);
 }
 
 
-void Evolution::anisotropy(Lattice *lat, Group *group, Parameters *param, int it)
-{
-  stringstream straniso_name;
-  straniso_name << "anisotropy" << param->getEventId() << ".dat";
-  string aniso_name;
-  aniso_name = straniso_name.str();
+void Evolution::anisotropy(Lattice *lat, Parameters *param, int it) {
+    stringstream straniso_name;
+    straniso_name << "anisotropy" << param->getEventId() << ".dat";
+    string aniso_name;
+    aniso_name = straniso_name.str();
 
-  ofstream foutAniso(aniso_name.c_str(),ios::app); 
-  int N = param->getSize();
-  double L = param->getL();
-  double a = L/N; // lattice spacing in fm
+    ofstream foutAniso(aniso_name.c_str(),ios::app); 
+    int N = param->getSize();
+    double L = param->getL();
+    double a = L/N;   // lattice spacing in fm
 
-  double num=0., den=0.;
-  int pos;
-  for(int ix=0; ix<N; ix++) 
-    {
-      for(int iy=0; iy<N; iy++)
-	{
-	  pos = ix*N+iy;
-	  if (lat->cells[pos]->getTtautau() > 10.
-	      )
-	    {
-	      num += lat->cells[pos]->getTxx()-lat->cells[pos]->getTyy();
-	      den += lat->cells[pos]->getTxx()+lat->cells[pos]->getTyy();
-	    }
-	}
+    double num=0., den=0.;
+    int pos;
+    for (int ix=0; ix<N; ix++)  {
+        for (int iy=0; iy<N; iy++) {
+            pos = ix*N+iy;
+            if (lat->cells[pos]->getTtautau() > 10.) {
+                num += lat->cells[pos]->getTxx()-lat->cells[pos]->getTyy();
+                den += lat->cells[pos]->getTxx()+lat->cells[pos]->getTyy();
+            }
+        }
     }
-  
-  foutAniso << it*a*param->getdtau() << " " << num/den << endl; 
 
-  foutAniso.close();
+    foutAniso << it*a*param->getdtau() << " " << num/den << endl; 
+    foutAniso.close();
 }
 
 
-void Evolution::eccentricity(Lattice *lat, Group *group, Parameters *param, int it, double cutoff, int doAniso)
+void Evolution::eccentricity(Lattice *lat, Parameters *param, int it, double cutoff, int doAniso)
 {
   stringstream strecc_name;
   strecc_name << "eccentricities" << param->getEventId() << ".dat";
@@ -2081,7 +2074,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   nn[1] = N;
   double dtau = param->getdtau();
   double nkt;
-  int bins = 100;
+  const int bins = 100;
   double n[bins]; //k_T array
   double E[bins]; //k_T array
   double n2[bins]; //k_T array
@@ -2095,8 +2088,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   double dEdetaCut2 =0.;
   double dEdeta =0.;
   double dEdeta2 =0.;
-  
- 
+
+
   stringstream strNpartdNdy_name;
   strNpartdNdy_name << "NpartdNdy-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
   string NpartdNdy_name;
@@ -2104,9 +2097,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   cout << "Measuring multiplicity ... " << endl;
 
   // fix transverse Coulomb gauge
-  GaugeFix *gaugefix;
-  gaugefix = new GaugeFix(nn);
-  
+  GaugeFix gaugefix;
+
   double maxtime;
   if ( param->getInverseQsForMaxTime() == 1 )
     {
@@ -2119,14 +2111,13 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  
-  gaugefix->FFTChi(fft,lat,group,param,4000);
+
+  gaugefix.FFTChi(fft, lat, group, param, 4000);
   // gauge is fixed
-  delete gaugefix;
 
   Matrix **E1;
   E1 = new Matrix*[N*N];
-  
+
   for(int i=0; i<N*N; i++)
     {
       E1[i] = new Matrix(Nc,0.);
@@ -2212,7 +2203,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
  
   for(int ik=0; ik<bins; ik++)
     {
@@ -2222,7 +2213,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       counter[ik]=0;
     }
   
-  int hbins = 2000;
+  const int hbins = 2000;
   // double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
   double Nhgsl[hbins+1];
   double Ng;
@@ -2360,7 +2351,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
 	}
     }
 
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
   
   for(int i=0; i<N; i++)
     {
@@ -2485,7 +2476,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
 
   for(int i=0; i<N; i++)
     {
@@ -2597,7 +2588,7 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
       double z,frac;
       double mypt, kt;
       int ik;
-      int steps=6000;
+      const int steps=6000;
       double dz = 0.95/static_cast<double>(steps);
       double zValues[steps+1];
       double zintegrand[steps+1];
@@ -2785,8 +2776,8 @@ int Evolution::multiplicity(Lattice *lat, Group *group, Parameters *param, int i
   
 int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, int it)
 {
-  int N = param->getSize();
-  int Nc = param->getNc();
+  const int N = param->getSize();
+  const int Nc = param->getNc();
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
@@ -2797,7 +2788,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   nn[1] = N;
   double dtau = param->getdtau();
   double nkt;
-  int bins = 100;
+  const int bins = 100;
   double n[bins]; //k_T array
   double E[bins]; //k_T array
   double n2[bins]; //k_T array
@@ -2811,7 +2802,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   double dEdetaCut2 =0.;
   double dEdeta =0.;
   double dEdeta2 =0.;
-  double Nkxky[N*N];
+  vector<double> Nkxky(N*N, 0);
   
   stringstream strnkxky_name;
   strnkxky_name << "nkxky-t" << it*dtau*a << "-" << param->getEventId() << ".dat";
@@ -2841,9 +2832,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
   cout << "Measuring multiplicity ... " << endl;
 
   // fix transverse Coulomb gauge
-  GaugeFix *gaugefix;
-  gaugefix = new GaugeFix(nn);
-  
+  GaugeFix gaugefix;
+
   double maxtime;
   if ( param->getInverseQsForMaxTime() == 1 )
     {
@@ -2856,14 +2846,13 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
 
   int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  
-  gaugefix->FFTChi(fft,lat,group,param,4000);
+
+  gaugefix.FFTChi(fft, lat, group, param, 4000);
   // gauge is fixed
-  delete gaugefix;
 
   Matrix **E1;
   E1 = new Matrix*[N*N];
-  
+
   for(int i=0; i<N*N; i++)
     {
       E1[i] = new Matrix(Nc,0.);
@@ -2949,7 +2938,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
  
   for(int ik=0; ik<bins; ik++)
     {
@@ -2959,7 +2948,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       counter[ik]=0;
     }
   
-  int hbins = 2000;
+  const int hbins = 2000;
 
   //  double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1], NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
   double  Nhgsl[hbins+1], Ng;
@@ -3111,7 +3100,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 	}
     }
 
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
   
   for(int i=0; i<N; i++)
     {
@@ -3239,7 +3228,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
     }
 
   // do Fourier transforms
-  fft->fftn(E1,E1,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
 
   for(int i=0; i<N; i++)
     {
@@ -3369,7 +3358,7 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
       double z,frac;
       double mypt, kt;
       int ik;
-      int steps=6000;
+      const int steps=6000;
       double dz = 0.95/static_cast<double>(steps);
       double zValues[steps+1];
       double zintegrand[steps+1];
@@ -3575,8 +3564,8 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, 
 
 int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int it)
 {
-  int N = param->getSize();
-  int Nc = param->getNc();
+  const int N = param->getSize();
+  const int Nc = param->getNc();
   int npos, pos;
   double L = param->getL();
   double a = L/N; // lattice spacing in fm
@@ -3587,8 +3576,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   nn[1] = N;
   double dtau = param->getdtau();
   double nkt, nkt1, nkt2, nkt3, nkt4, nkt5, nkt6;
-  int bins = 40;
-  int phiBins = 16;
+  const int bins = 40;
+  const int phiBins = 16;
   double n[bins][phiBins]; // |k_T|, phi array
   //  double n2[bins][phiBins]; // |k_T|, phi array
   double nkxky[N][N]; // kx, ky array
@@ -3607,7 +3596,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   double dNdeta5 =0.;
   double dNdeta6 =0.;
   double anglePhi;
-  double k;  
+  double k;
   double deltaPhi = 2.*M_PI/static_cast<double>(phiBins);
 
   stringstream strCorr_name;
@@ -3628,9 +3617,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   cout << "Measuring multiplicity version 2... " << endl;
 
   // fix transverse Coulomb gauge
-  GaugeFix *gaugefix;
-  gaugefix = new GaugeFix(nn);
-  
+  GaugeFix gaugefix;
+
   double maxtime;
   if ( param->getInverseQsForMaxTime() == 1 )
     {
@@ -3643,30 +3631,28 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
     }
 
   //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-  gaugefix->FFTChi(fft,lat,group,param,4000);
- 
+  gaugefix.FFTChi(fft,lat,group,param,4000);
   // gauge is fixed
+
   Matrix U1(Nc,1.);
   Matrix U2(Nc,1.);
   Matrix U1dag(Nc,1.);
   Matrix U2dag(Nc,1.);
 
-
- 
   Matrix **A1;
   A1 = new Matrix*[N*N];
   Matrix **A2;
   A2 = new Matrix*[N*N];
   Matrix **phi;
   phi = new Matrix*[N*N];
-  
+
   Matrix **E1;
   Matrix **E2;
   Matrix **pi;
   E1 = new Matrix*[N*N];
   E2 = new Matrix*[N*N];
   pi = new Matrix*[N*N];
-  
+
   for(int i=0; i<N*N; i++)
     {
       A1[i] = new Matrix(Nc,0.);
@@ -3785,13 +3771,13 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
   // do Fourier transforms
 
-  fft->fftn(A1,A1,nn,2,1);
-  fft->fftn(A2,A2,nn,2,1);
-  fft->fftn(phi,phi,nn,2,1);
+  fft->fftn(A1,A1,nn,1);
+  fft->fftn(A2,A2,nn,1);
+  fft->fftn(phi,phi,nn,1);
 
-  fft->fftn(E1,E1,nn,2,1);
-  fft->fftn(E2,E2,nn,2,1);
-  fft->fftn(pi,pi,nn,2,1);
+  fft->fftn(E1,E1,nn,1);
+  fft->fftn(E2,E2,nn,1);
+  fft->fftn(pi,pi,nn,1);
 
   for(int ik=0; ik<bins; ik++)
     {
@@ -3881,7 +3867,6 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	}
     }
   
-  int i, j;
   double latkx, latky;
   double fracX, fracY;
   for(int ik=0; ik<bins; ik++)
@@ -3894,8 +3879,8 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 	  kx = k * cos(anglePhi);
 	  ky = k * sin(anglePhi);
 
-	  i = floor(((kx)/2/M_PI+0.5)*N+1e-10);
-	  j = floor(((ky)/2/M_PI+0.5)*N+1e-10);
+        int i = floor(((kx)/2/M_PI+0.5)*N+1e-10);
+        int j = floor(((ky)/2/M_PI+0.5)*N+1e-10);
 
 	  latkx = (2.*M_PI*(-0.5+static_cast<double>(i)/static_cast<double>(N)));
 	  latky = (2.*M_PI*(-0.5+static_cast<double>(j)/static_cast<double>(N)));
@@ -3958,7 +3943,7 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
 
    // compute hadrons using fragmentation function 
 
-  int hbins = 40;
+  const int hbins = 40;
   double Nh[hbins+1][phiBins], Ng;
       
       for (int ih=0; ih<=hbins; ih++)
@@ -4071,7 +4056,6 @@ int Evolution::correlations(Lattice *lat, Group *group, Parameters *param, int i
   delete[] A2;
   delete[] phi;
 
-  delete gaugefix;
   cout << " done." << endl;
   param->setSuccess(1);
   return 1;

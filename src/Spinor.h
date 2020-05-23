@@ -4,6 +4,7 @@
 #include <complex>
 #include <iostream>
 #include <cstdlib>
+#include <vector>
 
 using namespace std;
 
@@ -12,11 +13,13 @@ class Spinor
 private:
     int ndim;
     int nn;
-    complex<double>* e;
+    //complex<double>* e;
+    std::vector<complex<double>> e;
 
 public:
     
     //constructor(s)
+    Spinor() = default;
     Spinor(int n);
     Spinor(int n, complex<double> a, complex<double> b); // for SU(2)
     Spinor(int n, complex<double> a, complex<double> b, complex<double> c); // for SU(3)
@@ -24,7 +27,7 @@ public:
     //destructor
     ~Spinor()
       {
-	delete[] e;
+	//delete[] e;
       }
 
     void setRe(int i, double a) {e[i]=complex<double>(a,e[i].imag());};
@@ -61,18 +64,15 @@ public:
 
 
     //=
-    const Spinor& operator = (const Spinor& p) 
-      {
-	nn = p.getNN();
-	if(&p != this ) 
-	  {
-	    for(int i=0; i<nn; i++) 
-	      {
-		e[i] = p.e[i];
-	      }
-	  }
-	return *this;
-      }
+    //const Spinor& operator = (const Spinor& p) {
+    //    nn = p.getNN();
+    //    if (&p != this ) {
+    //        for (int i=0; i<nn; i++) {
+    //            e[i] = p.e[i];
+    //        }
+    //    }
+    //    return *this;
+    //}
 
     //==
     bool operator == (const Spinor& p) const 

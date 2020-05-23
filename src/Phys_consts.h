@@ -7,6 +7,6 @@ namespace PhysConst {
     const double m_pion = 0.13957;
     const double m_kaon = 0.493667;
     const double m_proton = 0.938272;
-};
+}
 
 #endif

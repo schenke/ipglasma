@@ -19,393 +19,334 @@
 #include "Lattice.h"
 #include "Evolution.h"
 #include "Spinor.h"
-#include "MyEigen.h"
 #include "pretty_ostream.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
 using namespace std;
 
-int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank);
+int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
+              int rank);
+void display_logo();
 
 // main program 1
-int main(int argc, char *argv[])
-{
-  int rank;
-  int size;
+int main (int argc, char *argv[]) {
+    int rank;
+    int size;
 
-  int nev = 1;
-  if (argc == 3) {
-      nev = atoi(argv[2]);
-  }
-
-  //initialize MPI
-  MPI_Init(&argc, &argv);
-  MPI_Comm_rank (MPI_COMM_WORLD, &rank);/* get current process id */  
-  MPI_Comm_size (MPI_COMM_WORLD, &size);/* get number of processes */
-  //  rank = MPI::COMM_WORLD.Get_rank(); //number of current processor
-  //size = MPI::COMM_WORLD.Get_size(); //total number of processors
-
-  int h5Flag = 0;
-  pretty_ostream messager;
-  for (int iev = 0; iev < nev; iev++) {
-      messager << "Generating event " << iev+1 << " out of " << nev << " ...";
-      messager.flush("info");
-  // welcome
-  if(rank==0)
-    {
-      cout << endl;
-      cout << "-----------------------------------------------------------------------------" << endl;
-      cout << "| Classical Yang-Mills evolution with IP-Glasma initial configurations v1.4 |" << endl;
-      cout << "-----------------------------------------------------------------------------" << endl;
-      cout << "| References:                                                               |" << endl;
-      cout << "| B. Schenke, P. Tribedy, R. Venugopalan                                    |" << endl;
-      cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 (2012)     |" << endl;
-      cout << "-----------------------------------------------------------------------------" << endl;
-
-      cout << "This version uses Qs as obtained from IP-Sat using the sum over proton T_p(b)" << endl;
-      cout << "This is a simple MPI version that runs many events in one job. No communication." << endl;
-
-      cout << "Run using large lattices to improve convergence of the root finder in initial condition. Recommended: 600x600 using L=30fm" << endl;
-      cout << endl;
+    int nev = 1;
+    if (argc == 3) {
+        nev = atoi(argv[2]);
     }
 
-  // initialize helper class objects
-  MyEigen *myeigen;
-  myeigen = new MyEigen();
-  //myeigen->test();
+    //initialize MPI
+    MPI_Init(&argc, &argv);
+    MPI_Comm_rank (MPI_COMM_WORLD, &rank);  // get current process id
+    MPI_Comm_size (MPI_COMM_WORLD, &size);  // get number of processes
 
-  Setup *setup;
-  setup = new Setup();
-  Random *random;
-  random = new Random();
-  Parameters *param;
-  param = new Parameters();
+    int h5Flag = 0;
+    pretty_ostream messager;
 
-  param->setMPIRank(rank);
-  param->setMPISize(size);
-  param->setEventId(rank + iev*size);
-  param->setSuccess(0);
+    Parameters *param = new Parameters();
+    param->setMPIRank(rank);
+    param->setMPISize(size);
+    Setup setup;
 
-  // read parameters from file
-  readInput(setup, param, argc, argv, rank);
+    // read parameters from file
+    readInput(&setup, param, argc, argv, rank);
 
-  int nn[2];
-  nn[0]=param->getSize();
-  nn[1]=param->getSize();
-
-  stringstream strup_name;
-  strup_name << "usedParameters" << param->getEventId() << ".dat";
-  string up_name;
-  up_name = strup_name.str();
-  
-  //initialize init object
-  Init *init;
-  init = new Init(nn);
-  
-  // initialize group
-  Group *group;
-  group = new Group(param->getNc());
-  
-  // initialize Glauber class
-  messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
-  messager.flush("info");
-
-  Glauber *glauber;
-  glauber = new Glauber;
-  
-  // measure and output eccentricity, triangularity
-  // init->eccentricity(lat, group, param, random, glauber);
-  
-  // initialize evolution object
-  Evolution *evolution;
-  evolution = new Evolution(nn);
-
-  // initialize Glauber
-  glauber->initGlauber(param->getSigmaNN(), param->getTarget(), param->getProjectile(), param->getb(), 100, rank);
-  //cout << "done." << endl;
-
-
-  // either read k_T spectrum from file or do a fresh start
-  if (param->getReadMultFromFile()==1)
-    evolution->readNkt(param);
-  else
-    {
-      // clean files
-      // stringstream strNpartdNdy_name;
-      // strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
-      // string NpartdNdy_name;
-      // NpartdNdy_name = strNpartdNdy_name.str();
-
-      // ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
-      // foutNN.close();
-
-      // stringstream strNpartdNdyH_name;
-      // strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
-      // string NpartdNdyH_name;
-      // NpartdNdyH_name = strNpartdNdyH_name.str();
-      
-      // ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
-      // foutNNH.close();
-
-      
-      // stringstream strNpartdEdy_name;
-      // strNpartdEdy_name << "NpartdEdy" << param->getEventId() << ".dat";
-      // string NpartdEdy_name;
-      // NpartdEdy_name = strNpartdEdy_name.str();
-      
-      // ofstream foutE(NpartdEdy_name.c_str(),ios::out); 
-      // foutE.close();
-      
-      // stringstream strdNdy_name;
-      // strdNdy_name << "dNdy" << param->getEventId() << ".dat";
-      // string dNdy_name;
-      // dNdy_name = strdNdy_name.str();
-
-      // ofstream foutN(dNdy_name.c_str(),ios::out); 
-      // foutN.close();
-
-      // stringstream strCorr_name;
-      // strCorr_name << "Corr" << param->getEventId() << ".dat";
-      // string Corr_name;
-      // Corr_name = strCorr_name.str();
-
-      // ofstream foutCorr(Corr_name.c_str(),ios::out); 
-      // foutCorr.close();
-
-      // stringstream strPhiMult_name;
-      // strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
-      // string PhiMult_name;
-      // PhiMult_name = strPhiMult_name.str();
-
-      // ofstream foutPhiMult(PhiMult_name.c_str(),ios::out); 
-      // foutPhiMult.close();
-
-      // stringstream strPhi2ParticleMult_name;
-      // strPhi2ParticleMult_name << "MultPhi2Particle" << param->getEventId() << ".dat";
-      // string Phi2ParticleMult_name;
-      // Phi2ParticleMult_name = strPhi2ParticleMult_name.str();
-
-      // ofstream foutPhi2ParticleMult(Phi2ParticleMult_name.c_str(),ios::out); 
-      // foutPhi2ParticleMult.close();
-
-
-      // stringstream strPhiMultHad_name;
-      // strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() << ".dat";
-      // string PhiMultHad_name;
-      // PhiMultHad_name = strPhiMultHad_name.str();
-
-      // ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out); 
-      // foutPhiMultHad.close();
-
-      // stringstream strPhi2ParticleMultHad_name;
-      // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" << param->getEventId() << ".dat";
-      // string Phi2ParticleMultHad_name;
-      // Phi2ParticleMultHad_name = strPhi2ParticleMultHad_name.str();
-
-      // ofstream foutPhi2ParticleMultHad(Phi2ParticleMultHad_name.c_str(),ios::out); 
-      // foutPhi2ParticleMultHad.close();
-
-
-      // stringstream strame_name;
-      // strame_name << "AverageMaximalEpsilon" << param->getEventId() << ".dat";
-      // string ame_name;
-      // ame_name = strame_name.str();
-      
-      // ofstream foutEpsA(ame_name.c_str(),ios::out); 
-      // foutEpsA.close();
-      
-
-      // stringstream strepsx_name;
-      // strepsx_name << "eps-x" << param->getEventId() << ".dat";
-      // string epsx_name;
-      // epsx_name = strepsx_name.str();
-      
-      // ofstream foutEpsX(epsx_name.c_str(),ios::out); 
-      // foutEpsX.close();
-
-      
-      // stringstream strdEdy_name;
-      // strdEdy_name << "dEdy" << param->getEventId() << ".dat";
-      // string dEdy_name;
-      // dEdy_name = strdEdy_name.str();
-      
-      // ofstream foutdE(dEdy_name.c_str(),ios::out); 
-      // foutdE.close();
-      
-      // stringstream straniso_name;
-      // straniso_name << "anisotropy" << param->getEventId() << ".dat";
-      // string aniso_name;
-      // aniso_name = straniso_name.str();
-      
-      // ofstream foutAni(aniso_name.c_str(),ios::out); 
-      // foutAni.close();
-      
-      //stringstream strecc_name;
-      //strecc_name << "eccentricities" << param->getEventId() << ".dat";
-      //string ecc_name;
-      //ecc_name = strecc_name.str();
-      
-      //ofstream foutEcc(ecc_name.c_str(),ios::out); 
-      //foutEcc.close();
-            
-      // stringstream strmult_name;
-      // strmult_name << "multiplicity" << param->getEventId() << ".dat";
-      // string mult_name;
-      // mult_name = strmult_name.str();
-      // ofstream foutmult(mult_name.c_str(),ios::out); 
-      // foutmult.close();
-
-      // stringstream strmult2_name;
-      // strmult2_name << "multiplicityCorr" << param->getEventId() << ".dat";
-      // string mult2_name;
-      // mult2_name = strmult2_name.str();
-      // ofstream foutmult2(mult2_name.c_str(),ios::out); 
-      // foutmult2.close();
-
-      // stringstream strmult3_name;
-      // strmult3_name << "multiplicityCorrFromPhi" << param->getEventId() << ".dat";
-      // string mult3_name;
-      // mult3_name = strmult3_name.str();
-      // ofstream foutmult3(mult3_name.c_str(),ios::out); 
-      // foutmult3.close();
-
-      // stringstream strmult4_name;
-      // strmult4_name << "multiplicityCorrFromPhiHadrons" << param->getEventId() << ".dat";
-      // string mult4_name;
-      // mult4_name = strmult4_name.str();
-      // ofstream foutmult4(mult4_name.c_str(),ios::out); 
-      // foutmult4.close();
-
-    }
-  
-  while(param->getSuccess()==0)
-    {
-      param->setSuccess(0);
-      // allocate lattice
-      Lattice *lat;
-      lat = new Lattice(param, param->getNc(), param->getSize());
-      BufferLattice *bufferlat;
-      bufferlat = new BufferLattice(param, param->getNc(), param->getSize());
-      messager.info("Lattice generated.");
-
-      //initialize random generator using time and seed from input file
-      unsigned long long int rnum;
-      
-      if(param->getUseSeedList()==0)
-	{
-	  if(param->getUseTimeForSeed()==1)
-	    {
-	      rnum=time(0)+param->getSeed()*10000;
-	    }
-	  else
-	    {
-	      rnum = param->getSeed();
-	      messager << "Random seed = " << rnum+(rank*1000) << " - entered directly +rank*1000.";
-          messager.flush("info");
-	    }
-	  
-	  param->setRandomSeed(rnum+rank*1000);
-	  if(param->getUseTimeForSeed()==1)
-	    {
-	      messager << "Random seed = " << param->getRandomSeed() << " made from time " 
-		   << rnum-param->getSeed()-(rank*1000) << " and argument (+1000*rank) " 
-		   << param->getSeed()+(rank*1000);
-          messager.flush("info");
-	    }
-	  
-	  random->init_genrand64(rnum+rank*1000);
-	}
-      else
-	{
-	  ifstream fin;
-	  fin.open("seedList"); 
-	  unsigned long long int seedList[size];
-	  if(fin)
-	    {	 
-	      for (int i=0; i<size; i++)
-		{
-		  if (!fin.eof())
-		    {  
-		      fin >> seedList[i];
-		    }
-		  else
-		    {
-		      cerr << "Error: Not enough random seeds for the number of processors selected. Exiting." << endl;
-		      exit(1);
-		    }
-		}
-	    }
-	  else
-	    {
-	      cerr << "Random seed file 'seedList' not found. Exiting." << endl;
-	      exit(1);
-	    }
-	  fin.close();
-	  //cout << size << " seeds read from file." << endl;
-
-	  param->setRandomSeed(seedList[rank]);
-	  random->init_genrand64(seedList[rank]);
-        messager<< "Random seed on rank " << rank << " = " << seedList[rank] << " read from list.";
+    // initialize random generator using time and seed from input file
+    Random *random = new Random();
+    unsigned long long int rnum;
+    if (param->getUseSeedList() == 0) {
+        if (param->getUseTimeForSeed() == 1) {
+            rnum = time(0) + param->getSeed()*10000;
+        } else {
+            rnum = param->getSeed();
+            messager << "Random seed = " << rnum+(rank*1000)
+                     << " - entered directly +rank*1000.";
+            messager.flush("info");
+        }
+        param->setRandomSeed(rnum + rank*1000);
+        if (param->getUseTimeForSeed() == 1) {
+            messager << "Random seed = " << param->getRandomSeed()
+                     << " made from time "
+                     << rnum-param->getSeed()-(rank*1000)
+                     << " and argument (+1000*rank) "
+                     << param->getSeed()+(rank*1000);
+            messager.flush("info");
+        }
+        random->init_genrand64(rnum+rank*1000);
+        random->gslRandomInit(rnum+rank*1000);
+    } else {
+        ifstream fin;
+        fin.open("seedList");
+        std::vector<unsigned long long int> seedList(size, 0);
+        if (fin) {
+            for (int i = 0; i < size; i++) {
+                if (!fin.eof()) {
+                    fin >> seedList[i];
+                } else {
+                    cerr << "Error: Not enough random seeds for the number of "
+                         << "processors selected. Exiting." << endl;
+                    exit(1);
+                }
+            }
+        } else {
+            cerr << "Random seed file 'seedList' not found. Exiting." << endl;
+            exit(1);
+        }
+        fin.close();
+        param->setRandomSeed(seedList[rank]);
+        random->init_genrand64(seedList[rank]);
+        random->gslRandomInit(seedList[rank]);
+        messager << "Random seed on rank " << rank << " = "
+                 << seedList[rank] << " read from list.";
         messager.flush("info");
-	}
-      
-
-      
-      ofstream fout1(up_name.c_str(),ios::app); 
-      fout1 << "Random seed used on rank " << rank << ": " << param->getRandomSeed() << endl;
-      fout1.close();
-      
-      // initialize gsl random number generator (used for non-Gaussian distributions)
-      //random->gslRandomInit(rnum);
-      
-      // initialize U-fields on the lattice
-      //      init->init(lat, group, param, random, glauber);
-      int READFROMFILE = 0;
-      init->init(lat, group, param, random, glauber, READFROMFILE);
-      messager.info("initialization done.");
-
-      if(param->getSuccess()==0)
-	{
-	  delete lat;
-          delete bufferlat;
-	  continue;
-	}
-
-      delete init;
-      delete random;
-      delete glauber;
-
-      messager.info("Start evolution");
-      // do the CYM evolution of the initialized fields using parmeters in param
-      evolution->run(lat, bufferlat,  group, param);
-      delete bufferlat;
-      delete lat;
     }
 
-  MPI_Barrier(MPI_COMM_WORLD);
-
-    messager.info("One event finished");
-    if (param->getWriteOutputsToHDF5() == 1) {
-        int status = 0;
-        stringstream h5output_filename;
-        h5output_filename << "RESULTS_rank" << rank;
-        stringstream collect_command;
-        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
-                        << " --output_filename " << h5output_filename.str()
-                        << " --event_id " << param->getEventId();
-        status = system(collect_command.str().c_str());
-        messager << "finished system call to python script with status: "
-                 << status;
+    // event loop starts ...
+    for (int iev = 0; iev < nev; iev++) {
+        messager << "Generating event " << iev+1 << " out of "
+                 << nev << " ...";
         messager.flush("info");
-        h5Flag = 1;
+        // welcome
+        if (rank == 0)
+            display_logo();
+
+        // initialize helper class objects
+
+        param->setEventId(rank + iev*size);
+        param->setSuccess(0);
+
+        int nn[2];
+        nn[0]=param->getSize();
+        nn[1]=param->getSize();
+
+        stringstream strup_name;
+        strup_name << "usedParameters" << param->getEventId() << ".dat";
+        string up_name;
+        up_name = strup_name.str();
+        ofstream fout1(up_name.c_str(),ios::app); 
+        fout1 << "Random seed used on rank " << rank << ": "
+              << param->getRandomSeed() << endl;
+        fout1.close();
+
+        // initialize init object
+        Init init(nn);
+
+        // initialize group
+        Group group(param->getNc());
+
+        // initialize Glauber class
+        messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
+        messager.flush("info");
+        Glauber glauber;
+        glauber.initGlauber(param->getSigmaNN(), param->getTarget(),
+                            param->getProjectile(), param->getb(), 100);
+
+        // measure and output eccentricity, triangularity
+        // init.eccentricity(lat, &group, param, random, glauber);
+
+        // initialize evolution object
+        Evolution evolution(nn);
+
+        // either read k_T spectrum from file or do a fresh start
+        if (param->getReadMultFromFile() == 1) {
+            evolution.readNkt(param);
+        } else {
+            // clean files
+            // stringstream strNpartdNdy_name;
+            // strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
+            // string NpartdNdy_name;
+            // NpartdNdy_name = strNpartdNdy_name.str();
+
+            // ofstream foutNN(NpartdNdy_name.c_str(),ios::out); 
+            // foutNN.close();
+
+            // stringstream strNpartdNdyH_name;
+            // strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
+            // string NpartdNdyH_name;
+            // NpartdNdyH_name = strNpartdNdyH_name.str();
+
+            // ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out); 
+            // foutNNH.close();
+
+            // stringstream strNpartdEdy_name;
+            // strNpartdEdy_name << "NpartdEdy" << param->getEventId() << ".dat";
+            // string NpartdEdy_name;
+            // NpartdEdy_name = strNpartdEdy_name.str();
+
+            // ofstream foutE(NpartdEdy_name.c_str(),ios::out); 
+            // foutE.close();
+
+            // stringstream strdNdy_name;
+            // strdNdy_name << "dNdy" << param->getEventId() << ".dat";
+            // string dNdy_name;
+            // dNdy_name = strdNdy_name.str();
+
+            // ofstream foutN(dNdy_name.c_str(),ios::out); 
+            // foutN.close();
+
+            // stringstream strCorr_name;
+            // strCorr_name << "Corr" << param->getEventId() << ".dat";
+            // string Corr_name;
+            // Corr_name = strCorr_name.str();
+
+            // ofstream foutCorr(Corr_name.c_str(),ios::out); 
+            // foutCorr.close();
+
+            // stringstream strPhiMult_name;
+            // strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
+            // string PhiMult_name;
+            // PhiMult_name = strPhiMult_name.str();
+
+            // ofstream foutPhiMult(PhiMult_name.c_str(),ios::out); 
+            // foutPhiMult.close();
+
+            // stringstream strPhi2ParticleMult_name;
+            // strPhi2ParticleMult_name << "MultPhi2Particle" << param->getEventId() << ".dat";
+            // string Phi2ParticleMult_name;
+            // Phi2ParticleMult_name = strPhi2ParticleMult_name.str();
+
+            // ofstream foutPhi2ParticleMult(Phi2ParticleMult_name.c_str(),ios::out); 
+            // foutPhi2ParticleMult.close();
+
+
+            // stringstream strPhiMultHad_name;
+            // strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() << ".dat";
+            // string PhiMultHad_name;
+            // PhiMultHad_name = strPhiMultHad_name.str();
+
+            // ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out); 
+            // foutPhiMultHad.close();
+
+            // stringstream strPhi2ParticleMultHad_name;
+            // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" << param->getEventId() << ".dat";
+            // string Phi2ParticleMultHad_name;
+            // Phi2ParticleMultHad_name = strPhi2ParticleMultHad_name.str();
+
+            // ofstream foutPhi2ParticleMultHad(Phi2ParticleMultHad_name.c_str(),ios::out); 
+            // foutPhi2ParticleMultHad.close();
+
+
+            // stringstream strame_name;
+            // strame_name << "AverageMaximalEpsilon" << param->getEventId() << ".dat";
+            // string ame_name;
+            // ame_name = strame_name.str();
+
+            // ofstream foutEpsA(ame_name.c_str(),ios::out); 
+            // foutEpsA.close();
+
+
+            // stringstream strepsx_name;
+            // strepsx_name << "eps-x" << param->getEventId() << ".dat";
+            // string epsx_name;
+            // epsx_name = strepsx_name.str();
+
+            // ofstream foutEpsX(epsx_name.c_str(),ios::out); 
+            // foutEpsX.close();
+
+
+            // stringstream strdEdy_name;
+            // strdEdy_name << "dEdy" << param->getEventId() << ".dat";
+            // string dEdy_name;
+            // dEdy_name = strdEdy_name.str();
+
+            // ofstream foutdE(dEdy_name.c_str(),ios::out); 
+            // foutdE.close();
+
+            // stringstream straniso_name;
+            // straniso_name << "anisotropy" << param->getEventId() << ".dat";
+            // string aniso_name;
+            // aniso_name = straniso_name.str();
+
+            // ofstream foutAni(aniso_name.c_str(),ios::out); 
+            // foutAni.close();
+
+            //stringstream strecc_name;
+            //strecc_name << "eccentricities" << param->getEventId() << ".dat";
+            //string ecc_name;
+            //ecc_name = strecc_name.str();
+
+            //ofstream foutEcc(ecc_name.c_str(),ios::out); 
+            //foutEcc.close();
+
+            // stringstream strmult_name;
+            // strmult_name << "multiplicity" << param->getEventId() << ".dat";
+            // string mult_name;
+            // mult_name = strmult_name.str();
+            // ofstream foutmult(mult_name.c_str(),ios::out); 
+            // foutmult.close();
+
+            // stringstream strmult2_name;
+            // strmult2_name << "multiplicityCorr" << param->getEventId() << ".dat";
+            // string mult2_name;
+            // mult2_name = strmult2_name.str();
+            // ofstream foutmult2(mult2_name.c_str(),ios::out); 
+            // foutmult2.close();
+
+            // stringstream strmult3_name;
+            // strmult3_name << "multiplicityCorrFromPhi" << param->getEventId() << ".dat";
+            // string mult3_name;
+            // mult3_name = strmult3_name.str();
+            // ofstream foutmult3(mult3_name.c_str(),ios::out); 
+            // foutmult3.close();
+
+            // stringstream strmult4_name;
+            // strmult4_name << "multiplicityCorrFromPhiHadrons" << param->getEventId() << ".dat";
+            // string mult4_name;
+            // mult4_name = strmult4_name.str();
+            // ofstream foutmult4(mult4_name.c_str(),ios::out); 
+            // foutmult4.close();
+        }
+
+        while (param->getSuccess() == 0) {
+            param->setSuccess(0);
+            // allocate lattice
+            Lattice lat(param, param->getNc(), param->getSize());
+            BufferLattice bufferlat(param->getNc(), param->getSize());
+            messager.info("Lattice generated.");
+
+            // initialize gsl random number generator (used for non-Gaussian distributions)
+            //random->gslRandomInit(rnum);
+
+            // initialize U-fields on the lattice
+            int READFROMFILE = 0;
+            init.init(&lat, &group, param, random, &glauber, READFROMFILE);
+            messager.info("initialization done.");
+
+            if (param->getSuccess()==0)
+                continue;
+
+            messager.info("Start evolution");
+            // do the CYM evolution of the initialized fields using parmeters in param
+            evolution.run(&lat, &bufferlat, &group, param);
+        }
+
+        MPI_Barrier(MPI_COMM_WORLD);
+
+        messager.info("One event finished");
+        if (param->getWriteOutputsToHDF5() == 1) {
+            int status = 0;
+            stringstream h5output_filename;
+            h5output_filename << "RESULTS_rank" << rank;
+            stringstream collect_command;
+            collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+                            << " --output_filename "
+                            << h5output_filename.str()
+                            << " --event_id " << param->getEventId();
+            status = system(collect_command.str().c_str());
+            messager << "finished system call to python script with status: "
+                     << status;
+            messager.flush("info");
+            h5Flag = 1;
+        }
     }
-  delete group;
-  delete evolution;
-  delete param;
-  delete setup;
-  delete myeigen;
-  }
+
+    delete random;
+    delete param;
+
     if (h5Flag == 1 && rank == 0) {
         int status = 0;
         stringstream collect_command;
@@ -417,11 +358,29 @@ int main(int argc, char *argv[])
                  << status;
         messager.flush("info");
     }
-  //cout << "done." << endl;
-  MPI_Finalize();
-  return 1;
-}/* main */
 
+    MPI_Finalize();
+    return 1;
+}
+
+
+void display_logo() {
+    cout << endl;
+    cout << "-----------------------------------------------------------------------------" << endl;
+    cout << "| Classical Yang-Mills evolution with IP-Glasma initial configurations v1.4 |" << endl;
+    cout << "-----------------------------------------------------------------------------" << endl;
+    cout << "| References:                                                               |" << endl;
+    cout << "| B. Schenke, P. Tribedy, R. Venugopalan                                    |" << endl;
+    cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 (2012)     |" << endl;
+    cout << "-----------------------------------------------------------------------------" << endl;
+
+    cout << "This version uses Qs as obtained from IP-Sat using the sum over proton T_p(b)" << endl;
+    cout << "This is a simple MPI version that runs many events in one job. No communication." << endl;
+
+    cout << "Run using large lattices to improve convergence of the root finder in initial condition. "
+         << "Recommended: 600x600 using L=30fm" << endl;
+    cout << endl;
+}
 
 int readInput(Setup *setup, Parameters *param, int argc, char *argv[], int rank)
 {

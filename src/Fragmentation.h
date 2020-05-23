@@ -6,6 +6,6 @@
 
 namespace Fragmentation {
     double kkp(int ih, int iset, double x, double qs);
-};
+}
 
 #endif // Fragmentation_H

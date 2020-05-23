@@ -57,7 +57,7 @@ Lattice::~Lattice()
 }
 
 //constructor
-BufferLattice::BufferLattice(Parameters *param, int N, int length)
+BufferLattice::BufferLattice(int N, int length)
 {
   Nc = N;
   size = length*length;

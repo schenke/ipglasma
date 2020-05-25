@@ -1,7 +1,7 @@
 mode 1
 readMultFromFile 0
-size 300
-L 30.
+size 200
+L 10.
 Nc 3
 m 0.2
 rmax 100.
@@ -45,7 +45,7 @@ Projectile Pb
 Target Pb
 lightNucleusOption 3
 bmin 0.
-bmax 20.
+bmax 50.
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 64.

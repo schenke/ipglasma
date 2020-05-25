@@ -4,19 +4,18 @@
 #ifndef Setup_H
 #define Setup_H
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <iostream>
-#include <sstream>
-#include <fstream>
 
 using namespace std;
 
 class Setup {
 
 public:
-
   // Constructor.
   Setup() {}
 
@@ -25,7 +24,6 @@ public:
   unsigned long long int ULLIFind(string file_name, string st);
   double DFind(string file_name, string st);
   int IsFile(string file_name);
- 
 };
 
 #endif // Setup_H

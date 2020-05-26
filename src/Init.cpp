@@ -1738,6 +1738,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   cout << "Q_s^2(avg) S_T = "
        << averageQs2Avg * a * a / hbarc / hbarc * static_cast<double>(count)
        << endl;
+  cout << "Q_s^2(min) S_T = " << averageQs2min * a * a / hbarc / hbarc * static_cast<double>(count) << endl;
   cout << "Q_s^2(min) S_T = " << averageQs2min2 * a * a / hbarc / hbarc << endl;
 
   cout << "Area = " << a * a * count << " fm^2" << endl;
@@ -1829,6 +1830,19 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   } else
     fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
   fout1.close();
+
+  stringstream strNEst_name;
+  strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";
+  string NEst_name;
+  NEst_name = strNEst_name.str();
+  
+  ofstream foutNEst(NEst_name.c_str(), ios::out);
+  
+  foutNEst << "Q_s^2(min) S_T  " <<  "Q_s^2(avg) S_T  " << "Q_s^2(max) S_T " << " Q_s^2(min) S_T Log^2( Q_s^2(max) / Q_s^2(min))  " << endl;
+  foutNEst << averageQs2min2 * a * a / hbarc / hbarc  <<  "         " << averageQs2Avg * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2 * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2min2 * a * a / hbarc / hbarc * pow(log(averageQs2* static_cast<double>(count)/averageQs2min2),2.) << endl;
+  
+  foutNEst.close();
+
 }
 
 void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
@@ -2103,13 +2117,13 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
 
       for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
-          for (int a = 0; a < 3; a++) {
+          for (int a1 = 0; a1 < 3; a1++) {
             for (int b = 0; b < 3; b++) {
               int indx = N * iy + ix;
-              val1[0] = (lat->cells[indx]->getU()).getRe(a * Nc + b);
-              val1[1] = (lat->cells[indx]->getU()).getIm(a * Nc + b);
-              val2[0] = (lat->cells[indx]->getU2()).getRe(a * Nc + b);
-              val2[1] = (lat->cells[indx]->getU2()).getIm(a * Nc + b);
+              val1[0] = (lat->cells[indx]->getU()).getRe(a1 * Nc + b);
+              val1[1] = (lat->cells[indx]->getU()).getIm(a1 * Nc + b);
+              val2[0] = (lat->cells[indx]->getU2()).getRe(a1 * Nc + b);
+              val2[1] = (lat->cells[indx]->getU2()).getIm(a1 * Nc + b);
 
               Outfile1.write((char *)val1, 2 * sizeof(double));
               Outfile2.write((char *)val2, 2 * sizeof(double));

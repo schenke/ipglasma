@@ -28,6 +28,7 @@ using namespace std;
 int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
               int rank);
 void display_logo();
+void writeparams(Parameters *param);
 
 // main program 1
 int main(int argc, char *argv[]) {
@@ -116,6 +117,8 @@ int main(int argc, char *argv[]) {
 
     param->setEventId(rank + iev * size);
     param->setSuccess(0);
+
+    writeparams(param);
 
     int nn[2];
     nn[0] = param->getSize();
@@ -486,6 +489,11 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   if (rank == 0)
     cout << "done." << endl;
 
+  return 0;
+}
+
+void writeparams(Parameters *param)
+{
   // write the used parameters into file "usedParameters.dat" as a double check
   // for later
   time_t rawtime = time(0);
@@ -536,6 +544,4 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   }
   fout1 << "Using fat tailed distribution " << param->getUseFatTails() << endl;
   fout1.close();
-
-  return 0;
 }

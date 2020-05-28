@@ -486,6 +486,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setUseSmoothNucleus(setup->IFind(file_name, "useSmoothNucleus"));
   param->setShiftConstituentQuarkProtonOrigin(
       setup->DFind(file_name, "shiftConstituentQuarkProtonOrigin"));
+  param->setMinimumQs2ST(setup->IFind(file_name, "minimumQs2ST"));
   if (rank == 0)
     cout << "done." << endl;
 

@@ -176,6 +176,8 @@ private:
   int shiftConstituentQuarkProtonOrigin; // if 1, move constituent quark center
                                          // of mass to origin
   double UVdamp;                         // UV damping parameter
+  int minimumQs2ST;        // if >0 this will excludes events with Qs_min^2 S_T < minimumQs2ST. Can be used to trigger on high multiplicity events.
+  
 
 public:
   // constructor:
@@ -376,5 +378,7 @@ public:
   int getShiftConstituentQuarkProtonOrigin() {
     return shiftConstituentQuarkProtonOrigin;
   }
+  void setMinimumQs2ST(int x) { minimumQs2ST = x; }
+  int getMinimumQs2ST() { return minimumQs2ST; }
 };
 #endif // Parameters_H

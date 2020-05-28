@@ -1801,35 +1801,39 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
   if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0 &&
       averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0 &&
-      alphas > 0 && Npart >= 2)
-    param->setSuccess(1);
+      alphas > 0 && Npart >= 2 && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST())
+    {
+      param->setSuccess(1);
+      stringstream strup_name;
+      strup_name << "usedParameters" << param->getEventId() << ".dat";
+      string up_name;
+      up_name = strup_name.str();
+      
+      ofstream fout1(up_name.c_str(), ios::app);
+      fout1 << " " << endl;
+      fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
+      fout1 << " " << endl;
+      fout1 << "b = " << b << " fm" << endl;
+      fout1 << "Npart = " << Npart << endl;
+      fout1 << "Ncoll = " << Ncoll << endl;
+      if (param->getRunningCoupling()) {
+        if (param->getRunWithQs() == 2)
+          fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
+        else if (param->getRunWithQs() == 1)
+          fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
+        else if (param->getRunWithQs() == 0)
+          fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
+        fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+              << " <Q_s>) = " << param->getalphas() << endl;
+      } else
+        fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
+      fout1.close();
+    }
+  if ( averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) 
+    cout << " **** Rejected event - Qsmin^2 S_T=" << averageQs2min2 * a * a / hbarc / hbarc << " too small ( < " << param->getMinimumQs2ST() << ")." << endl;
+   
 
   param->setalphas(alphas);
-
-  stringstream strup_name;
-  strup_name << "usedParameters" << param->getEventId() << ".dat";
-  string up_name;
-  up_name = strup_name.str();
-
-  ofstream fout1(up_name.c_str(), ios::app);
-  fout1 << " " << endl;
-  fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
-  fout1 << " " << endl;
-  fout1 << "b = " << b << " fm" << endl;
-  fout1 << "Npart = " << Npart << endl;
-  fout1 << "Ncoll = " << Ncoll << endl;
-  if (param->getRunningCoupling()) {
-    if (param->getRunWithQs() == 2)
-      fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
-    else if (param->getRunWithQs() == 1)
-      fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
-    else if (param->getRunWithQs() == 0)
-      fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
-    fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
-          << " <Q_s>) = " << param->getalphas() << endl;
-  } else
-    fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
-  fout1.close();
 
   stringstream strNEst_name;
   strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";

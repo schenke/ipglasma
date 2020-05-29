@@ -295,12 +295,13 @@ int main(int argc, char *argv[]) {
       // foutmult4.close();
     }
 
-    while (param->getSuccess() == 0) {
-      param->setSuccess(0);
       // allocate lattice
       Lattice lat(param, param->getNc(), param->getSize());
       BufferLattice bufferlat(param->getNc(), param->getSize());
       messager.info("Lattice generated.");
+
+    while (param->getSuccess() == 0) {
+      param->setSuccess(0);
 
       // initialize gsl random number generator (used for non-Gaussian
       // distributions)
@@ -311,12 +312,16 @@ int main(int argc, char *argv[]) {
       init.init(&lat, &group, param, random, &glauber, READFROMFILE);
       messager.info("initialization done.");
 
+
       if (param->getSuccess() == 0)
-        continue;
+        {
+          continue;
+        }
 
       messager.info("Start evolution");
       // do the CYM evolution of the initialized fields using parmeters in param
       evolution.run(&lat, &bufferlat, &group, param);
+
     }
 
     MPI_Barrier(MPI_COMM_WORLD);

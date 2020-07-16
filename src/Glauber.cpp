@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void Glauber::FindNucleusData2(Nucleus *nucleus, string name) {
+void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
   string densityFunction;
   if (name.compare("Au") == 0) {
     nucleus->A = 197;
@@ -139,7 +139,7 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name) {
     nucleus->R_WS = 6.81;
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.55;
-    nucleus->beta2 = 0.28;
+    nucleus->beta2 = beta2; //0.28
     nucleus->beta4 = 0.093;
   } else if (name.compare("Ru") == 0) {
     nucleus->A = 96;
@@ -1054,7 +1054,7 @@ double Glauber::PAB(double x, double y) {
 } /* PAB */
 
 void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
-                          double inb, int imax) {
+                          double inb, double beta2, int imax) {
   string Target_Name;
   Target_Name = Target;
 
@@ -1078,8 +1078,8 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
   string paf;
   paf = p_name;
 
-  FindNucleusData2(&(GlauberData.Target), Target_Name);
-  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name);
+  FindNucleusData2(&(GlauberData.Target), Target_Name, beta2);
+  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name, beta2);
 
   GlauberData.SigmaNN = 0.1 * SigmaNN; // sigma in fm^2
   currentA1 = GlauberData.Projectile.A;

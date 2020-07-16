@@ -144,7 +144,7 @@ int main(int argc, char *argv[]) {
     messager.flush("info");
     Glauber glauber;
     glauber.initGlauber(param->getSigmaNN(), param->getTarget(),
-                        param->getProjectile(), param->getb(), 100);
+                        param->getProjectile(), param->getb(), param->getbeta2(), 100);
 
     // measure and output eccentricity, triangularity
     // init.eccentricity(lat, &group, param, random, glauber);
@@ -451,6 +451,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setSigmaNN(setup->DFind(file_name, "SigmaNN"));
   param->setRmax(setup->DFind(file_name, "rmax"));
   param->setUVdamp(setup->DFind(file_name, "UVdamp"));
+  param->setbeta2(setup->DFind(file_name, "beta2"));
   param->setbmin(setup->DFind(file_name, "bmin"));
   param->setbmax(setup->DFind(file_name, "bmax"));
   param->setQsmuRatio(setup->DFind(file_name, "QsmuRatio"));
@@ -545,6 +546,7 @@ void writeparams(Parameters *param)
   fout1 << "m " << param->getm() << endl;
   fout1 << "rmax " << param->getRmax() << endl;
   fout1 << "UVdamp " << param->getUVdamp() << endl;
+  fout1 << "beta2 " << param->getbeta2() << endl;
   if (param->getSmearQs() == 1) {
     fout1 << "smearing width " << param->getSmearingWidth() << endl;
   }

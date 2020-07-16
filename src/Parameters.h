@@ -177,7 +177,7 @@ private:
                                          // of mass to origin
   double UVdamp;                         // UV damping parameter
   int minimumQs2ST;        // if >0 this will excludes events with Qs_min^2 S_T < minimumQs2ST. Can be used to trigger on high multiplicity events.
-  
+  double beta2;        // value of deformation parameter beta2 to test sensitivity in Uranium
 
 public:
   // constructor:
@@ -328,6 +328,8 @@ public:
   double getRmax() { return rmax; }
   void setUVdamp(double x) { UVdamp = x; }
   double getUVdamp() { return UVdamp; }
+  void setbeta2(double x) { beta2 = x; }
+  double getbeta2() { return beta2; }
 
   // switches:
   void setInitMethod(int x) { initMethod = x; }

@@ -72,7 +72,7 @@ public:
   int IsFile(char *file_name);
   void FindNucleusData(Nucleus *nucleus, string target, string file_name,
                        int rank);
-  void FindNucleusData2(Nucleus *nucleus, string name);
+  void FindNucleusData2(Nucleus *nucleus, string name, double beta2);
   void PrintGlauberData();
   void PrintNucleusData(Nucleus *nucleus);
   int LinearFindXorg(double x, double *Vx, int ymax);
@@ -112,7 +112,7 @@ public:
   double TAB();
   double PAB(double x, double y);
   void initGlauber(double SigmaNN, string Target, string Projectile, double b,
-                   int imax);
+                   double beta2, int imax);
   double areaTA(double x, double A);
   ReturnValue SampleTARejection(Random *random, int PorT);
 };

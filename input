@@ -1,7 +1,7 @@
 mode 1
-minimumQs2ST 200
+minimumQs2ST 0
 readMultFromFile 0
-size 400
+size 700
 L 24
 Nc 3
 m 0.2
@@ -44,9 +44,10 @@ seed 1
 useTimeForSeed 1
 Projectile Au
 Target Au
-bmin 0
+bmin 15
 bmax 18
 lightNucleusOption 2
+beta2 0.28
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 42.

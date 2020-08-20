@@ -1,6 +1,6 @@
 FROM centos:7
 
-MAINTAINER Chun Shen <chunshen@wayne.edu>
+MAINTAINER Bjoern Schenke <bschenke@bnl.gov>
 
 RUN yum -y upgrade
 

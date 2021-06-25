@@ -2369,23 +2369,28 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     // sample color charges and find Wilson lines V_A and V_B
     setV(lat, group, param, random);
   }
-  // output Wilson lines
 
-  // ofstream fout("V.dat",ios::out);
-  // fout << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3
-  // matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner
-  // loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1})
-  // Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
+  // // output Wilson lines (used also for the proton plots)
+  // double L = param->getL();
+  // double a = L / N; // lattice spacing in fm
+  // int pos, pos0;
+  // double x,y;
 
-  // for (int i=0; i<nn[0]; i++)      //loops over all cells
+  // ofstream foutWL("V-1.dat",ios::out);
+  // foutWL << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
+
+  // ofstream foutWL2("V-2.dat",ios::out);
+  // foutWL2 << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
+
+  // for (int i=0; i<N; i++)      //loops over all cells
   //   {
-  //     for (int j=0; j<nn[1]; j++)      //loops over all cells
+  //     for (int j=0; j<N; j++)      //loops over all cells
   // 	{
   // 	  pos = i*N+j;
   // 	  x = -L/2.+a*i;
   // 	  y = -L/2.+a*j;
 
-  // 	  fout << x << " " << y << " "
+  // 	  foutWL << x << " " << y << " "
   // 	       << lat->cells[pos]->getU().getRe(0) << " " <<
   // lat->cells[pos]->getU().getIm(0) << " "
   // 	       << lat->cells[pos]->getU().getRe(1) << " " <<
@@ -2406,10 +2411,35 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   // lat->cells[pos]->getU().getIm(8)
   // 	       << endl;
 
+  // 	  foutWL2 << x << " " << y << " "
+  // 	       << lat->cells[pos]->getU2().getRe(0) << " " <<
+  // lat->cells[pos]->getU2().getIm(0) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(1) << " " <<
+  // lat->cells[pos]->getU2().getIm(1) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(2) << " " <<
+  // lat->cells[pos]->getU2().getIm(2) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(3) << " " <<
+  // lat->cells[pos]->getU2().getIm(3) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(4) << " " <<
+  // lat->cells[pos]->getU2().getIm(4) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(5) << " " <<
+  // lat->cells[pos]->getU2().getIm(5) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(6) << " " <<
+  // lat->cells[pos]->getU2().getIm(6) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(7) << " " <<
+  // lat->cells[pos]->getU2().getIm(7) << " "
+  // 	       << lat->cells[pos]->getU2().getRe(8) << " " <<
+  // lat->cells[pos]->getU2().getIm(8)
+  // 	       << endl;
+
   // 	}
+  //     foutWL << endl;
+  //     foutWL2 << endl;
   //   }
 
-  // fout.close();
+  // foutWL.close();
+  // foutWL2.close();
+
 
   messager.info("Finding fields in forward lightcone...");
 

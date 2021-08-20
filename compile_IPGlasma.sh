@@ -1,12 +1,14 @@
 #/usr/bin/env bash
 
-flag=$1
+Flag=$1
 
 mkdir -p build
 cd build
 rm -fr *
-if [ "$flag" == "KNL" ]; then
+if [ "$Flag" == "KNL" ]; then
     CXX=mpiicpc cmake .. -DKNL=ON
+elif [ "$Flag" == "noMPI" ]; then
+    cmake .. -DdisableMPI=ON
 else
     cmake ..
 fi

@@ -40,7 +40,7 @@ int main(int argc, char *argv[]) {
     nev = atoi(argv[2]);
   }
 
-#ifndef _DISABLEMPI
+#ifndef DISABLEMPI
   // initialize MPI
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); // get current process id
@@ -329,7 +329,7 @@ int main(int argc, char *argv[]) {
 
     }
 
-#ifndef _DISABLEMPI
+#ifndef DISABLEMPI
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 
@@ -364,7 +364,7 @@ int main(int argc, char *argv[]) {
     messager.flush("info");
   }
 
-#ifndef _DISABLEMPI
+#ifndef DISABLEMPI
   MPI_Finalize();
 #endif
 

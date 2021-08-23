@@ -23,7 +23,6 @@
 #include "Parameters.h"
 #include "Random.h"
 #include "gsl/gsl_linalg.h"
-#include "mpi.h"
 #include "pretty_ostream.h"
 
 using namespace std;

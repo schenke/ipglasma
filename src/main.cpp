@@ -1,4 +1,4 @@
-#include "mpi.h"
+
 #include <cmath>
 #include <complex>
 #include <cstdlib>
@@ -9,6 +9,10 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+
+#ifndef DISABLEMPI
+#include "mpi.h"
+#endif
 
 #include "Evolution.h"
 #include "FFT.h"

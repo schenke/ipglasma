@@ -11,7 +11,7 @@ Jacobianm 0.35
 g 1.
 BG 3.
 BGq 0.3
-dqMin 0.0
+dqMin 0.5
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
 useConstituentQuarkProton 3
@@ -54,7 +54,7 @@ averageOverThisManyNuclei 1
 SigmaNN 42.
 gaussianWounding 1
 inverseQsForMaxTime 0
-maxtime 0.0
+maxtime 0.6
 dtau 0.1
 LOutput 30
 sizeOutput 1024

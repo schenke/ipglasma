@@ -2,7 +2,7 @@ mode 1
 minimumQs2ST 0
 readMultFromFile 0
 size 1024
-L 5
+L 30
 Nc 3
 m 0.4
 rmax 1000.
@@ -43,8 +43,8 @@ Ny 50
 useSeedList 0
 seed 1
 useTimeForSeed 1
-Projectile p
-Target p
+Projectile Pb
+Target Pb
 bmin 0
 bmax 0
 lightNucleusOption 2
@@ -54,9 +54,9 @@ averageOverThisManyNuclei 1
 SigmaNN 42.
 gaussianWounding 1
 inverseQsForMaxTime 0
-maxtime 0.6
+maxtime 0.0
 dtau 0.1
-LOutput 5.
+LOutput 30
 sizeOutput 1024
 etaSizeOutput 1
 detaOutput 0

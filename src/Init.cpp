@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <utility>
 
+using namespace std;
 using PhysConst::hbarc;
 
 //**************************************************************************
@@ -954,6 +955,7 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
             x_array[iq] -= avgxq;
             y_array[iq] -= avgyq;
             z_array[iq] -= avgzq;
+            cout << "x = " << x_array[iq] << ", y = " << y_array[iq] << endl;
         }
     }
 }

@@ -25,8 +25,6 @@
 #include "gsl/gsl_linalg.h"
 #include "pretty_ostream.h"
 
-using namespace std;
-
 class Init {
 
 private:
@@ -44,9 +42,9 @@ private:
 
   double As[1];
 
-  vector<ReturnValue>
+  std::vector<ReturnValue>
       nucleusA; // list of x and y coordinates of nucleons in nucleus A
-  vector<ReturnValue>
+  std::vector<ReturnValue>
       nucleusB; // list of x and y coordinates of nucleons in nucleus B
 
   pretty_ostream messager;
@@ -61,8 +59,8 @@ public:
             Glauber *glauber, int READFROMFILE);
   void sampleTA(Parameters *param, Random *random, Glauber *glauber);
   void readNuclearQs(Parameters *param);
-  vector<complex<double>> solveAxb(Parameters *param, complex<double> *A,
-                                   complex<double> *b);
+  std::vector<complex<double>> solveAxb(Parameters *param, complex<double> *A,
+                                        complex<double> *b);
   double getNuclearQs2(double Qs2atZeroY, double y);
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random,
                              Glauber *glauber);
@@ -101,4 +99,4 @@ public:
                              std::vector<double> &z_array);
 };
 
-#endif // Init_H
+#endif  // Init_H

@@ -955,7 +955,6 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
             x_array[iq] -= avgxq;
             y_array[iq] -= avgyq;
             z_array[iq] -= avgzq;
-            cout << "x = " << x_array[iq] << ", y = " << y_array[iq] << endl;
         }
     }
 }
@@ -1256,8 +1255,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     for (int i = 0; i < A2; i++) {
       samplePartonPositions(param, random, x_array, y_array, z_array);
       for (int iq = 0; iq < Nq; iq++) {
-        xq[i][iq] = x_array[iq];
-        yq[i][iq] = y_array[iq];
+        xq2[i][iq] = x_array[iq];
+        yq2[i][iq] = y_array[iq];
       }
     }
   }

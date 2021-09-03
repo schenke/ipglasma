@@ -11,7 +11,7 @@ Jacobianm 0.35
 g 1.
 BG 3.
 BGq 0.3
-dqMin 0.2
+dqMin 0.0
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
 useConstituentQuarkProton 3

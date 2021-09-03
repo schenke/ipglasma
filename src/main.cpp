@@ -444,6 +444,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setLOutput(setup->DFind(file_name, "LOutput"));
   param->setBG(setup->DFind(file_name, "BG"));
   param->setBGq(setup->DFind(file_name, "BGq"));
+  param->setDqmin(setup->DFind(file_name, "dqMin"));
   param->setMuZero(setup->DFind(file_name, "muZero"));
   param->setc(setup->DFind(file_name, "c"));
   param->setSize(setup->IFind(file_name, "size"));

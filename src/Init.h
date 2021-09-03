@@ -94,6 +94,11 @@ public:
                         std::vector<double> &z);
   void rotate_nucleus(double phi, double theta, std::vector<double> &x,
                       std::vector<double> &y, std::vector<double> &z);
+
+  void samplePartonPositions(Parameters *param, Random *random,
+                             std::vector<double> &x_array,
+                             std::vector<double> &y_array,
+                             std::vector<double> &z_array);
 };
 
 #endif // Init_H

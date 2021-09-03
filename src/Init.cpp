@@ -888,6 +888,77 @@ void Init::readNuclearQs(Parameters *param) {
 //     }
 // }
 
+
+void Init::samplePartonPositions(Parameters *param, Random *random,
+                                 vector<double> &x_array,
+                                 vector<double> &y_array,
+                                 vector<double> &z_array) {
+    const double BG = param->getBG()*hbarc*hbarc;  // fm^2
+    const int Nq = param->getUseConstituentQuarkProton();
+    const double dq_min = param->getDqmin();       // fm
+    const double dq_min_sq = dq_min*dq_min;
+
+    vector<double> r_array(Nq, 0.);
+    for (int iq = 0; iq < Nq; iq++) {
+        double xq = BG*random->Gauss();
+        double yq = BG*random->Gauss();
+        double zq = BG*random->Gauss();
+        r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
+    }
+    std::sort(r_array.begin(), r_array.end());
+
+    x_array.resize(Nq, 0.);
+    y_array.resize(Nq, 0.);
+    z_array.resize(Nq, 0.);
+    for (unsigned int i = 0; i < r_array.size(); i++) {
+        double r_i = r_array[i];
+        int reject_flag = 0;
+        int iter = 0;
+        double x_i, y_i, z_i;
+        do {
+            iter++;
+            reject_flag  = 0;
+            double phi   = 2.*M_PI*random->genrand64_real2();
+            double theta = acos(1. - 2.*random->genrand64_real2());
+            x_i = r_i*sin(theta)*cos(phi);
+            y_i = r_i*sin(theta)*sin(phi);
+            z_i = r_i*cos(theta);
+            for (int j = i - 1; j >= 0; j--) {
+                if ((r_i - r_array[j])*(r_i - r_array[j]) > dq_min_sq) break;
+                double dsq = (  (x_i - x_array[j])*(x_i - x_array[j])
+                              + (y_i - y_array[j])*(y_i - y_array[j])
+                              + (z_i - z_array[j])*(z_i - z_array[j]));
+                if (dsq < dq_min_sq) {
+                    reject_flag = 1;
+                    break;
+                }
+            }
+        } while (reject_flag == 1 && iter < 100);
+        x_array[i] = x_i;
+        y_array[i] = y_i;
+        z_array[i] = z_i;
+    }
+    double avgxq = 0.;
+    double avgyq = 0.;
+    double avgzq = 0.;
+    if (param->getShiftConstituentQuarkProtonOrigin()) {
+        for (int iq = 0; iq < Nq; iq++) {
+            avgxq += x_array[iq];
+            avgyq += y_array[iq];
+            avgzq += z_array[iq];
+        }
+        avgxq /= static_cast<double>(Nq);
+        avgyq /= static_cast<double>(Nq);
+        avgzq /= static_cast<double>(Nq);
+        for (int iq = 0; iq < Nq; iq++) {
+            x_array[iq] -= avgxq;
+            y_array[iq] -= avgyq;
+            z_array[iq] -= avgzq;
+        }
+    }
+}
+
+
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2
 // and up)
 double Init::getNuclearQs2(double T, double y) {
@@ -1005,9 +1076,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
   // Arrays to store Q_s fluctuations
   // Make sure that array size is always at least 1
-  int len_quark_array = param->getUseConstituentQuarkProton();
-  if (len_quark_array == 0)
-    len_quark_array = 1;
+  const int len_quark_array = std::max(1,
+                                       param->getUseConstituentQuarkProton());
   double gaussA[A1][len_quark_array];
   double gaussB[A2][len_quark_array];
 
@@ -1139,8 +1209,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   }
 
-  double BG;
-  BG = param->getBG();
+  double BG = param->getBG();
   double BGq = param->getBGq(); // quark size in GeV^-2
   double xi = param->getProtonAnisotropy();
 
@@ -1164,54 +1233,29 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
   //  cout << "BG=" << BG << endl;
 
+  const int Nq = param->getUseConstituentQuarkProton();
   double xq[A1][len_quark_array], xq2[A2][len_quark_array];
   double yq[A1][len_quark_array], yq2[A2][len_quark_array];
-  double avgxq = 0.;
-  double avgyq = 0.;
+  vector<double> x_array, y_array, z_array;
 
-  if (param->getUseConstituentQuarkProton() > 0) {
+  if (Nq > 0) {
     for (int i = 0; i < A1; i++) {
-      avgxq = 0.;
-      avgyq = 0.;
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        xq[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-        yq[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-      }
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        avgxq += xq[i][iq];
-        avgyq += yq[i][iq];
-      }
+      samplePartonPositions(param, random, x_array, y_array, z_array);
+      // if (param->getShiftConstituentQuarkProtonOrigin())
       // Move center of mass to the origin
       // Note that 1607.01711 this is not done, so parameters quoted in
       // that paper can't be used if this is done
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        if (param->getShiftConstituentQuarkProtonOrigin()) {
-          xq[i][iq] -= avgxq / double(param->getUseConstituentQuarkProton());
-          yq[i][iq] -= avgyq / double(param->getUseConstituentQuarkProton());
-        }
+      for (int iq = 0; iq < Nq; iq++) {
+        xq[i][iq] = x_array[iq];
+        yq[i][iq] = y_array[iq];
       }
     }
-  }
 
-  if (param->getUseConstituentQuarkProton() > 0) {
     for (int i = 0; i < A2; i++) {
-      avgxq = 0.;
-      avgyq = 0.;
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        xq2[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-        yq2[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-      }
-
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        avgxq += xq2[i][iq];
-        avgyq += yq2[i][iq];
-      }
-      // Move center of mass to the origin, see comment above
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        if (param->getShiftConstituentQuarkProtonOrigin()) {
-          xq2[i][iq] -= avgxq / double(param->getUseConstituentQuarkProton());
-          yq2[i][iq] -= avgyq / double(param->getUseConstituentQuarkProton());
-        }
+      samplePartonPositions(param, random, x_array, y_array, z_array);
+      for (int iq = 0; iq < Nq; iq++) {
+        xq[i][iq] = x_array[iq];
+        yq[i][iq] = y_array[iq];
       }
     }
   }
@@ -3100,6 +3144,7 @@ void Init::generate_nucleus_configuration(Random *random, int A, int Z,
   }
 }
 
+
 void Init::generate_nucleus_configuration_with_woods_saxon(
     Random *random, int A, int Z, double a_WS, double R_WS,
     std::vector<ReturnValue> *nucleus) {
@@ -3137,10 +3182,6 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
         }
       }
     } while (reject_flag == 1 && iter < 100);
-    // if (iter == 100) {
-    //    cout << "[Warning] can not find configuration : "
-    //         << "r[i] = " << r_i << ", r[i-1] = " << r_array[i-1] << endl;
-    //}
     x_array[i] = x_i;
     y_array[i] = y_i;
     z_array[i] = z_i;

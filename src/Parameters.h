@@ -97,8 +97,9 @@ private:
               // GeV^(-2)
   double BGq; // the width of the Gaussian describing the shape of a constituent
               // quark in GeV^(-2)
-  double muZero; // mu_0 in the running coupling (makes it infrared finite)
-  double c;      // determines how smooth the cutoff in the running coupling is
+  double dq_min_;  // the minimum distance between valence quarks [fm]
+  double muZero;   // mu_0 in the running coupling (makes it infrared finite)
+  double c;        // determines how smooth the cutoff in the running coupling is
   double
       roots; // square root of s: center of mass energy of the collision in GeV
   int useFluctuatingx; // switch to determine if the rapidity value in the input
@@ -288,6 +289,8 @@ public:
   double getBG() { return BG; }
   void setBGq(double x) { BGq = x; }
   double getBGq() { return BGq; }
+  void setDqmin(double dq_min) { dq_min_ = dq_min; }
+  double getDqmin() { return dq_min_; }
   void setMuZero(double x) { muZero = x; }
   double getMuZero() { return muZero; }
   void setc(double x) { c = x; }

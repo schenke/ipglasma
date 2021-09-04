@@ -894,16 +894,16 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
                                  vector<double> &x_array,
                                  vector<double> &y_array,
                                  vector<double> &z_array) {
-    const double BG = param->getBG()*hbarc*hbarc;  // fm^2
+    const double sqrtBG = sqrt(param->getBG())*hbarc;    // fm
     const int Nq = param->getUseConstituentQuarkProton();
-    const double dq_min = param->getDqmin();       // fm
+    const double dq_min = param->getDqmin();             // fm
     const double dq_min_sq = dq_min*dq_min;
 
     vector<double> r_array(Nq, 0.);
     for (int iq = 0; iq < Nq; iq++) {
-        double xq = BG*random->Gauss();
-        double yq = BG*random->Gauss();
-        double zq = BG*random->Gauss();
+        double xq = sqrtBG*random->Gauss();
+        double yq = sqrtBG*random->Gauss();
+        double zq = sqrtBG*random->Gauss();
         r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
     }
     std::sort(r_array.begin(), r_array.end());

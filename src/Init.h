@@ -97,6 +97,9 @@ public:
                              std::vector<double> &x_array,
                              std::vector<double> &y_array,
                              std::vector<double> &z_array);
+
+  double sampleLogNormalDistribution(Random *random, const double mean,
+                                     const double variance);
 };
 
 #endif  // Init_H

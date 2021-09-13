@@ -95,8 +95,10 @@ private:
                                  // as a function of Y and Qs^2(Y=0)
   double BG;  // the width of the Gaussian describing the shape of the proton in
               // GeV^(-2)
-  double BGq; // the width of the Gaussian describing the shape of a constituent
-              // quark in GeV^(-2)
+  double BGq_; // the mean width of the Gaussian describing the shape of
+               // a constituent quark in GeV^(-2)
+  double BGqVar_;  // the variance of the Gaussian width describing the shape
+                   // of a constituent quark in GeV^(-4)
   double dq_min_;  // the minimum distance between valence quarks [fm]
   double muZero;   // mu_0 in the running coupling (makes it infrared finite)
   double c;        // determines how smooth the cutoff in the running coupling is
@@ -287,8 +289,10 @@ public:
   int getA2FromFile() { return A2FromFile; }
   void setBG(double x) { BG = x; }
   double getBG() { return BG; }
-  void setBGq(double x) { BGq = x; }
-  double getBGq() { return BGq; }
+  void setBGq(double x) { BGq_ = x; }
+  double getBGq() { return BGq_; }
+  void setBGqVar(double BGqVar) { BGqVar_ = BGqVar; }
+  double getBGqVar() { return BGqVar_; }
   void setDqmin(double dq_min) { dq_min_ = dq_min; }
   double getDqmin() { return dq_min_; }
   void setMuZero(double x) { muZero = x; }

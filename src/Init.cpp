@@ -1235,8 +1235,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   //  cout << "BG=" << BG << endl;
 
   const int Nq = param->getUseConstituentQuarkProton();
-  double xq[A1][len_quark_array], xq2[A2][len_quark_array];
-  double yq[A1][len_quark_array], yq2[A2][len_quark_array];
+  vector< vector<double> > xq, xq2, yq, yq2;
   vector<double> x_array, y_array, z_array;
 
   if (Nq > 0) {
@@ -1246,18 +1245,14 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       // Move center of mass to the origin
       // Note that 1607.01711 this is not done, so parameters quoted in
       // that paper can't be used if this is done
-      for (int iq = 0; iq < Nq; iq++) {
-        xq[i][iq] = x_array[iq];
-        yq[i][iq] = y_array[iq];
-      }
+      xq.push_back(x_array);
+      yq.push_back(y_array);
     }
 
     for (int i = 0; i < A2; i++) {
       samplePartonPositions(param, random, x_array, y_array, z_array);
-      for (int iq = 0; iq < Nq; iq++) {
-        xq2[i][iq] = x_array[iq];
-        yq2[i][iq] = y_array[iq];
-      }
+      xq2.push_back(x_array);
+      yq2.push_back(y_array);
     }
   }
 
@@ -1353,8 +1348,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
             if (param->getUseConstituentQuarkProton() > 0) {
               T = 0.;
-              for (int iq = 0; iq < param->getUseConstituentQuarkProton();
-                   iq++) {
+              for (unsigned int iq = 0; iq < xq[i].size(); iq++) {
                 bp2 = (xm + xq[i][iq] - x) * (xm + xq[i][iq] - x) +
                       (ym + yq[i][iq] - y) * (ym + yq[i][iq] - y);
                 bp2 /= hbarc * hbarc;
@@ -1385,8 +1379,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
             if (param->getUseConstituentQuarkProton() > 0) {
               T = 0.;
-              for (int iq = 0; iq < param->getUseConstituentQuarkProton();
-                   iq++) {
+              for (unsigned int iq = 0; iq < xq2[i].size(); iq++) {
                 bp2 = (xm + xq2[i][iq] - x) * (xm + xq2[i][iq] - x) +
                       (ym + yq2[i][iq] - y) * (ym + yq2[i][iq] - y);
                 bp2 /= hbarc * hbarc;
@@ -1413,6 +1406,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       }
     }
   }
+
 
   if (param->getUseSmoothNucleus() == 0) {
     stringstream strNcoll_name;
@@ -3364,4 +3358,15 @@ void Init::rotate_nucleus(double phi, double theta, std::vector<double> &x,
     y[i] = y_new;
     z[i] = z_new;
   }
+}
+
+
+double Init::sampleLogNormalDistribution(Random *random,
+                                         const double mean,
+                                         const double variance) {
+    const double meansq = mean*mean;
+    const double mu = log(meansq/(variance + meansq));
+    const double sigma = sqrt(log(variance/meansq + 1.));
+    double sampleX = exp(mu + sigma*random->Gauss());
+    return(sampleX);
 }

@@ -97,7 +97,8 @@ public:
                              std::vector<double> &x_array,
                              std::vector<double> &y_array,
                              std::vector<double> &z_array,
-                             std::vector<double> &BGq_array);
+                             std::vector<double> &BGq_array,
+                             std::vector<double> &gauss_array);
 
   double sampleLogNormalDistribution(Random *random, const double mean,
                                      const double variance);

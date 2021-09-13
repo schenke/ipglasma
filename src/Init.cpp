@@ -894,22 +894,33 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
                                  vector<double> &x_array,
                                  vector<double> &y_array,
                                  vector<double> &z_array,
-                                 vector<double> &BGq_array) {
+                                 vector<double> &BGq_array,
+                                 vector<double> &gauss_array) {
     const double sqrtBG = sqrt(param->getBG())*hbarc;    // fm
     const double BGqMean = param->getBGq();
     const double BGqVar = param->getBGqVar();
+    const double QsSmearWidth = param->getSmearingWidth();
     const int Nq = param->getUseConstituentQuarkProton();
     const double dq_min = param->getDqmin();             // fm
     const double dq_min_sq = dq_min*dq_min;
 
     vector<double> r_array(Nq, 0.);
     BGq_array.resize(Nq, 0.);
+    gauss_array.resize(Nq, 1.);
     for (int iq = 0; iq < Nq; iq++) {
         double xq = sqrtBG*random->Gauss();
         double yq = sqrtBG*random->Gauss();
         double zq = sqrtBG*random->Gauss();
         r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
         BGq_array[iq] = sampleLogNormalDistribution(random, BGqMean, BGqVar);
+
+        if (param->getSmearQs() == 1) {
+            // dividing by exp(0.5 sigma^2) to ensure the mean is 1
+            // the varirance in this case is exp(sigma) - 1 for the log-normal
+            // distribution
+            gauss_array[iq] = (exp(random->Gauss(0, QsSmearWidth))/
+                               exp(QsSmearWidth*QsSmearWidth/2.));
+        }
     }
     std::sort(r_array.begin(), r_array.end());
 
@@ -1240,13 +1251,13 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   //  cout << "BG=" << BG << endl;
 
   const int Nq = param->getUseConstituentQuarkProton();
-  vector< vector<double> > xq1, xq2, yq1, yq2, BGq1, BGq2;
-  vector<double> x_array, y_array, z_array, BGq_array;
+  vector< vector<double> > xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
+  vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
 
   if (Nq > 0) {
     for (int i = 0; i < A1; i++) {
       samplePartonPositions(param, random, x_array, y_array, z_array,
-                            BGq_array);
+                            BGq_array, gauss_array);
       // if (param->getShiftConstituentQuarkProtonOrigin())
       // Move center of mass to the origin
       // Note that 1607.01711 this is not done, so parameters quoted in
@@ -1254,14 +1265,16 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       xq1.push_back(x_array);
       yq1.push_back(y_array);
       BGq1.push_back(BGq_array);
+      gauss1.push_back(gauss_array);
     }
 
     for (int i = 0; i < A2; i++) {
       samplePartonPositions(param, random, x_array, y_array, z_array,
-                            BGq_array);
+                            BGq_array, gauss_array);
       xq2.push_back(x_array);
       yq2.push_back(y_array);
       BGq2.push_back(BGq_array);
+      gauss2.push_back(gauss_array);
     }
   }
 
@@ -1364,7 +1377,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
                 T += exp(-bp2 / (2. * BGq1[i][iq])) / (2. * M_PI * BGq1[i][iq]) /
                      (double(param->getUseConstituentQuarkProton())) *
-                     gaussA[i][iq]; // I removed the 2/3 here to make it a bit
+                     gauss1[i][iq]; // I removed the 2/3 here to make it a bit
                                     // bigger
               }
             } else {
@@ -1395,7 +1408,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
                 T += exp(-bp2 / (2. * BGq2[i][iq])) / (2. * M_PI * BGq2[i][iq]) /
                      double(param->getUseConstituentQuarkProton()) *
-                     gaussB[i][iq];
+                     gauss2[i][iq];
               }
             } else {
               phi = nucleusB.at(i).phi;

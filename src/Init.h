@@ -96,7 +96,8 @@ public:
   void samplePartonPositions(Parameters *param, Random *random,
                              std::vector<double> &x_array,
                              std::vector<double> &y_array,
-                             std::vector<double> &z_array);
+                             std::vector<double> &z_array,
+                             std::vector<double> &BGq_array);
 
   double sampleLogNormalDistribution(Random *random, const double mean,
                                      const double variance);

@@ -105,6 +105,7 @@ public:
   void sampleQsNormalization(Random *random, Parameters *param,
                              const int Nq,
                              std::vector<double> &gauss_array);
+  int sampleNumberOfPartons(Random *random, Parameters *param);
 };
 
 #endif  // Init_H

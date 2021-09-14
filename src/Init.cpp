@@ -899,7 +899,7 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
     const double BGqMean = param->getBGq();
     const double BGqVar = param->getBGqVar();
     const double QsSmearWidth = param->getSmearingWidth();
-    const int Nq = param->getUseConstituentQuarkProton();
+    const int Nq = sampleNumberOfPartons(random, param);
     const double dq_min = param->getDqmin();             // fm
     const double dq_min_sq = dq_min*dq_min;
 
@@ -1177,13 +1177,13 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   }
 
-  const int Nq = param->getUseConstituentQuarkProton();
+  const int NqFlag = param->getUseConstituentQuarkProton();
   vector< vector<double> > xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
   vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
 
   for (int i = 0; i < A1; i++) {
     x_array.clear();
-    if (Nq > 0) {
+    if (NqFlag > 0) {
       samplePartonPositions(param, random, x_array, y_array, z_array,
                             BGq_array);
       // if (param->getShiftConstituentQuarkProtonOrigin())
@@ -1201,7 +1201,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
   for (int i = 0; i < A2; i++) {
     x_array.clear();
-    if (Nq > 0) {
+    if (NqFlag > 0) {
       samplePartonPositions(param, random, x_array, y_array, z_array,
                             BGq_array);
       xq2.push_back(x_array);
@@ -3348,4 +3348,13 @@ void Init::sampleQsNormalization(Random *random,
                                exp(QsSmearWidth*QsSmearWidth/2.));
         }
     }
+}
+
+
+int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
+    double NqBase = param->getNqBase();
+    int NqBaseInt = static_cast<int>(NqBase);
+    double NqFluc = param->getNqFluc() + NqBase - NqBaseInt;
+    int Nq = NqBaseInt + random->Poisson(NqFluc);
+    return(std::max(1, Nq));
 }

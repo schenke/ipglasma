@@ -15,7 +15,9 @@ BGqVar 0.1
 dqMin 0.2
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
-useConstituentQuarkProton 7
+useConstituentQuarkProton 1
+NqBase 3
+NqFluc 3.4
 runningCoupling 0
 muZero 0.3
 c 0.2

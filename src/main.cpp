@@ -505,6 +505,8 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setProtonAnisotropy(setup->DFind(file_name, "protonAnisotropy"));
   param->setUseConstituentQuarkProton(
       setup->DFind(file_name, "useConstituentQuarkProton"));
+  param->setNqBase(setup->DFind(file_name, "NqBase"));
+  param->setNqFluc(setup->DFind(file_name, "NqFluc"));
   param->setUseSmoothNucleus(setup->IFind(file_name, "useSmoothNucleus"));
   param->setShiftConstituentQuarkProtonOrigin(
       setup->DFind(file_name, "shiftConstituentQuarkProtonOrigin"));

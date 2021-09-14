@@ -174,6 +174,8 @@ private:
   int useConstituentQuarkProton; // if >0, use proton made up of
                                  // useConstituentQuarkProton constituent
                                  // quarks.
+  double NqBase_;
+  double NqFluc_;
   int useSmoothNucleus; // if 1, use a smooth Woods-Saxon distribution for a
                         // heavy nucleus
   int shiftConstituentQuarkProtonOrigin; // if 1, move constituent quark center
@@ -379,6 +381,10 @@ public:
   int getUsePseudoRapidity() { return usePseudoRapidity; }
   void setUseConstituentQuarkProton(int x) { useConstituentQuarkProton = x; }
   int getUseConstituentQuarkProton() { return useConstituentQuarkProton; }
+  void setNqBase(double NqBase) { NqBase_ = NqBase; }
+  double getNqBase() { return NqBase_; }
+  void setNqFluc(double NqFluc) { NqFluc_ = NqFluc; }
+  double getNqFluc() { return NqFluc_; }
   void setUseSmoothNucleus(int x) { useSmoothNucleus = x; }
   int getUseSmoothNucleus() { return useSmoothNucleus; }
   void setShiftConstituentQuarkProtonOrigin(int x) {

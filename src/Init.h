@@ -97,11 +97,14 @@ public:
                              std::vector<double> &x_array,
                              std::vector<double> &y_array,
                              std::vector<double> &z_array,
-                             std::vector<double> &BGq_array,
-                             std::vector<double> &gauss_array);
+                             std::vector<double> &BGq_array);
 
   double sampleLogNormalDistribution(Random *random, const double mean,
                                      const double variance);
+
+  void sampleQsNormalization(Random *random, Parameters *param,
+                             const int Nq,
+                             std::vector<double> &gauss_array);
 };
 
 #endif  // Init_H

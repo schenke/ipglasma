@@ -894,8 +894,7 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
                                  vector<double> &x_array,
                                  vector<double> &y_array,
                                  vector<double> &z_array,
-                                 vector<double> &BGq_array,
-                                 vector<double> &gauss_array) {
+                                 vector<double> &BGq_array) {
     const double sqrtBG = sqrt(param->getBG())*hbarc;    // fm
     const double BGqMean = param->getBGq();
     const double BGqVar = param->getBGqVar();
@@ -906,21 +905,12 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
 
     vector<double> r_array(Nq, 0.);
     BGq_array.resize(Nq, 0.);
-    gauss_array.resize(Nq, 1.);
     for (int iq = 0; iq < Nq; iq++) {
         double xq = sqrtBG*random->Gauss();
         double yq = sqrtBG*random->Gauss();
         double zq = sqrtBG*random->Gauss();
         r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
         BGq_array[iq] = sampleLogNormalDistribution(random, BGqMean, BGqVar);
-
-        if (param->getSmearQs() == 1) {
-            // dividing by exp(0.5 sigma^2) to ensure the mean is 1
-            // the varirance in this case is exp(sigma) - 1 for the log-normal
-            // distribution
-            gauss_array[iq] = (exp(random->Gauss(0, QsSmearWidth))/
-                               exp(QsSmearWidth*QsSmearWidth/2.));
-        }
     }
     std::sort(r_array.begin(), r_array.end());
 
@@ -1091,65 +1081,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
 
-  // Arrays to store Q_s fluctuations
-  // Make sure that array size is always at least 1
-  const int len_quark_array = std::max(1,
-                                       param->getUseConstituentQuarkProton());
-  double gaussA[A1][len_quark_array];
-  double gaussB[A2][len_quark_array];
-
-  for (int i = 0; i < A1; i++) {
-    if (param->getUseConstituentQuarkProton() > 0) {
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        gaussA[i][iq] = 1.;
-      }
-    } else
-      gaussA[i][0] = 1.;
-  }
-  for (int i = 0; i < A2; i++) {
-    if (param->getUseConstituentQuarkProton() > 0) {
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        gaussB[i][iq] = 1.;
-      }
-    } else
-      gaussB[i][0] = 1.;
-  }
-
-  // let the log fluctuate
-  if (param->getSmearQs() == 1) {
-    if (A1 > 0) {
-      for (int i = 0; i < A1; i++) {
-        // Note: len_quark_array is the number of constituent quarks if
-        // useConstituentQuarkProton>0, and 1, if fluctuations are not included.
-        // This way Q_s fluctuations can be implemented for each nucleon even if
-        // useConstituentQuarkProton=0
-        for (int iq = 0; iq < len_quark_array; iq++) {
-          gaussA[i][iq] =
-              (exp(random->Gauss(0, param->getSmearingWidth()))) /
-              std::exp(param->getSmearingWidth() * param->getSmearingWidth() /
-                       2.0); // dividing by exp(0.5 sigma^2) restores the same
-                             // mean Q_s
-          // cout << i << " " << iq << " " << gaussA[i][iq] << endl;
-          //	  if (gaussA[i]<0)
-          //  gaussA[i]=0.;
-        }
-      }
-    }
-    if (A2 > 0) {
-      for (int i = 0; i < A2; i++) {
-        for (int iq = 0; iq < len_quark_array; iq++) {
-          gaussB[i][iq] = (exp(random->Gauss(0, param->getSmearingWidth()))) /
-                          std::exp(param->getSmearingWidth() *
-                                   param->getSmearingWidth() / 2.0);
-
-          //	      cout << i << " " << iq << " " << gaussB[i][iq] << endl;
-          // if (gaussB[i]<0)
-          //  gaussB[i]=0.;
-        }
-      }
-    }
-  }
-
   param->setQsmuRatioB(param->getQsmuRatio());
 
   if (param->getUseNucleus() == 0) {
@@ -1254,10 +1185,11 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   vector< vector<double> > xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
   vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
 
-  if (Nq > 0) {
-    for (int i = 0; i < A1; i++) {
+  for (int i = 0; i < A1; i++) {
+    x_array.clear();
+    if (Nq > 0) {
       samplePartonPositions(param, random, x_array, y_array, z_array,
-                            BGq_array, gauss_array);
+                            BGq_array);
       // if (param->getShiftConstituentQuarkProtonOrigin())
       // Move center of mass to the origin
       // Note that 1607.01711 this is not done, so parameters quoted in
@@ -1265,17 +1197,24 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       xq1.push_back(x_array);
       yq1.push_back(y_array);
       BGq1.push_back(BGq_array);
-      gauss1.push_back(gauss_array);
     }
+    int Npartons = std::max(1, static_cast<int>(x_array.size()));
+    sampleQsNormalization(random, param, Npartons, gauss_array);
+    gauss1.push_back(gauss_array);
+  }
 
-    for (int i = 0; i < A2; i++) {
+  for (int i = 0; i < A2; i++) {
+    x_array.clear();
+    if (Nq > 0) {
       samplePartonPositions(param, random, x_array, y_array, z_array,
-                            BGq_array, gauss_array);
+                            BGq_array);
       xq2.push_back(x_array);
       yq2.push_back(y_array);
       BGq2.push_back(BGq_array);
-      gauss2.push_back(gauss_array);
     }
+    int Npartons = std::max(1, static_cast<int>(x_array.size()));
+    sampleQsNormalization(random, param, Npartons, gauss_array);
+    gauss2.push_back(gauss_array);
   }
 
   // test what a smmoth Woods-Saxon would give
@@ -1376,7 +1315,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                 bp2 /= hbarc * hbarc;
 
                 T += exp(-bp2 / (2. * BGq1[i][iq])) / (2. * M_PI * BGq1[i][iq]) /
-                     (double(param->getUseConstituentQuarkProton())) *
+                     (static_cast<double>(xq1[i].size())) *
                      gauss1[i][iq]; // I removed the 2/3 here to make it a bit
                                     // bigger
               }
@@ -1387,7 +1326,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                     xi * pow((xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
               bp2 /= hbarc * hbarc;
               T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG) *
-                  gaussA[i][0]; // T_p in this cell for the current nucleon
+                  gauss1[i][0]; // T_p in this cell for the current nucleon
             }
             lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA() +
                                          T / nucleiInAverage); // add up all T_p
@@ -1407,7 +1346,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                 bp2 /= hbarc * hbarc;
 
                 T += exp(-bp2 / (2. * BGq2[i][iq])) / (2. * M_PI * BGq2[i][iq]) /
-                     double(param->getUseConstituentQuarkProton()) *
+                     (static_cast<double>(xq1[i].size())) *
                      gauss2[i][iq];
               }
             } else {
@@ -1418,7 +1357,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
               bp2 /= hbarc * hbarc;
 
               T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG) *
-                  gaussB[i][0]; // T_p in this cell for the current nucleon
+                  gauss2[i][0]; // T_p in this cell for the current nucleon
             }
 
             lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB() +
@@ -3391,4 +3330,23 @@ double Init::sampleLogNormalDistribution(Random *random,
     const double sigma = sqrt(log(variance/meansq + 1.));
     double sampleX = exp(mu + sigma*random->Gauss());
     return(sampleX);
+}
+
+
+void Init::sampleQsNormalization(Random *random,
+                                 Parameters *param,
+                                 const int Nq,
+                                 vector<double> &gauss_array) {
+    const double QsSmearWidth = param->getSmearingWidth();
+    gauss_array.resize(Nq, 1.);    // default norm = 1
+    if (param->getSmearQs() == 1) {
+        // introduce a log-normal distribution for Qs normalization
+        // dividing by exp(0.5 sigma^2) to ensure the mean is 1
+        // the varirance in this case is exp(sigma) - 1 for the log-normal
+        // distribution
+        for (int iq = 0; iq < Nq; iq++) {
+            gauss_array[iq] = (exp(random->Gauss(0, QsSmearWidth))/
+                               exp(QsSmearWidth*QsSmearWidth/2.));
+        }
+    }
 }

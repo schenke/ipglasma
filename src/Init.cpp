@@ -1157,8 +1157,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   }
 
-  double BG = param->getBG();
-  double BGq = param->getBGq(); // quark size in GeV^-2
   double xi = param->getProtonAnisotropy();
 
   if (xi != 0.) {
@@ -1178,8 +1176,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       nucleusB.at(i).phi = 0.;
     }
   }
-
-  //  cout << "BG=" << BG << endl;
 
   const int Nq = param->getUseConstituentQuarkProton();
   vector< vector<double> > xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
@@ -1320,6 +1316,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                                     // bigger
               }
             } else {
+              const double BG = param->getBG();
               phi = nucleusA.at(i).phi;
 
               bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y) +
@@ -1350,6 +1347,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                      gauss2[i][iq];
               }
             } else {
+              const double BG = param->getBG();
               phi = nucleusB.at(i).phi;
 
               bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y) +
@@ -1492,6 +1490,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
         if (param->getUseSmoothNucleus() == 1)
           check = 2;
         else {
+          const double BG = param->getBG();
 
           //	  cut proton at a radius of rmax [fm] (about twice the gluonic
           //radius to be generous)

@@ -198,9 +198,11 @@ double Random::Gauss(double mean, double width) {
   }
 }
 
+
 void Random::gslRandomInit(unsigned long long seed) {
   gsl_rng_set(gslRandom, seed);
 }
+
 
 double Random::NBD(double nbar, double k) {
 
@@ -209,6 +211,12 @@ double Random::NBD(double nbar, double k) {
 
   return gsl_ran_negative_binomial(gslRandom, p, n);
 }
+
+
+int Random::Poisson(const double mean) {
+    return(gsl_ran_poisson(gslRandom, mean));
+}
+
 
 double Random::tdist(double nu) {
   // produces random numbers with distribution

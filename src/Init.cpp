@@ -910,7 +910,7 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
         double yq = sqrtBG*random->Gauss();
         double zq = sqrtBG*random->Gauss();
         r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
-        BGq_array[iq] = sampleLogNormalDistribution(random, BGqMean, BGqVar);
+        BGq_array[iq] = 0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar);
     }
     std::sort(r_array.begin(), r_array.end());
 
@@ -3325,7 +3325,7 @@ double Init::sampleLogNormalDistribution(Random *random,
                                          const double mean,
                                          const double variance) {
     const double meansq = mean*mean;
-    const double mu = log(meansq/(variance + meansq));
+    const double mu = log(meansq/sqrt(variance + meansq));
     const double sigma = sqrt(log(variance/meansq + 1.));
     double sampleX = exp(mu + sigma*random->Gauss());
     return(sampleX);

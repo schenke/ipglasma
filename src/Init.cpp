@@ -898,19 +898,20 @@ void Init::samplePartonPositions(Parameters *param, Random *random,
     const double sqrtBG = sqrt(param->getBG())*hbarc;    // fm
     const double BGqMean = param->getBGq();
     const double BGqVar = param->getBGqVar();
+    const double BGq = (
+        0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar));
     const double QsSmearWidth = param->getSmearingWidth();
     const int Nq = sampleNumberOfPartons(random, param);
     const double dq_min = param->getDqmin();             // fm
     const double dq_min_sq = dq_min*dq_min;
 
     vector<double> r_array(Nq, 0.);
-    BGq_array.resize(Nq, 0.);
+    BGq_array.resize(Nq, BGq);
     for (int iq = 0; iq < Nq; iq++) {
         double xq = sqrtBG*random->Gauss();
         double yq = sqrtBG*random->Gauss();
         double zq = sqrtBG*random->Gauss();
         r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
-        BGq_array[iq] = 0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar);
     }
     std::sort(r_array.begin(), r_array.end());
 
@@ -3354,7 +3355,11 @@ void Init::sampleQsNormalization(Random *random,
 int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
     double NqBase = param->getNqBase();
     int NqBaseInt = static_cast<int>(NqBase);
-    double NqFluc = param->getNqFluc() + NqBase - NqBaseInt;
-    int Nq = NqBaseInt + random->Poisson(NqFluc);
+    double ran = random->genrand64_real2();
+    int Nq = NqBaseInt;
+    if (ran < NqBase - NqBaseInt) {
+        Nq += 1;
+    }
+    Nq += random->Poisson(param->getNqFluc());
     return(std::max(1, Nq));
 }

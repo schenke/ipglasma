@@ -1497,26 +1497,36 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
           //radius to be generous)
 
           if (log(2 * M_PI * BG * lat->cells[localpos]->getTpA()) < 0.)
-            distanceA =
-                sqrt(-2. * BG *
-                     log(2 * M_PI * BG * lat->cells[localpos]->getTpA())) *
-                hbarc;
+            {
+              if (isinf(log(2 * M_PI * BG * lat->cells[localpos]->getTpA()))==1)
+                distanceA= param->getRmax()+1;
+              else 
+                distanceA =
+                  sqrt(-2. * BG *
+                       log(2 * M_PI * BG * lat->cells[localpos]->getTpA())) *
+                  hbarc;
+                //cout << log(2 * M_PI * BG * lat->cells[localpos]->getTpA()) << endl;
+            }
           else
             distanceA = 0.;
 
-          if (log(2 * M_PI * BG * lat->cells[localpos]->getTpB()) < 0.)
-            distanceB =
-                sqrt(-2. * BG *
-                     log(2 * M_PI * BG * lat->cells[localpos]->getTpB())) *
-                hbarc;
+          if (log(2 * M_PI * BG * lat->cells[localpos]->getTpB()) < 0.){
+            if (isinf(log(2 * M_PI * BG * lat->cells[localpos]->getTpB()))==1)
+              distanceB= param->getRmax()+1.;
+              else 
+                distanceB =
+                  sqrt(-2. * BG *
+                       log(2 * M_PI * BG * lat->cells[localpos]->getTpB())) *
+                  hbarc;
+          }
           else
             distanceB = 0.;
 
           if (distanceA < param->getRmax()) {
             check = 1;
           }
-          else
-            cout << "large: " << distanceA << " " << ix << " " << iy << endl;
+          // else
+          //   cout << "large: " << distanceA << " " << ix << " " << iy << endl;
 
           if (distanceB < param->getRmax() && check == 1) {
             check = 2;

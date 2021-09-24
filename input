@@ -5,7 +5,7 @@ size 300
 L 10
 Nc 3
 m 0.2
-rmax 10.
+rmax 1000.
 UVdamp 0.
 Jacobianm 0.35
 g 1.

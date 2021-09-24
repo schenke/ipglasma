@@ -1515,6 +1515,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
           if (distanceA < param->getRmax()) {
             check = 1;
           }
+          else
+            cout << "large: " << distanceA << " " << ix << " " << iy << endl;
 
           if (distanceB < param->getRmax() && check == 1) {
             check = 2;
@@ -2003,7 +2005,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     }
     // compute U
 
-#pragma omp parallel
+    //#pragma omp parallel
     {
       double in[8];
       vector<complex<double>> U;
@@ -2016,7 +2018,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
 
         for (int aa = 0; aa < Nc2m1; aa++) {
           in[aa] = -(rhoACoeff[aa][pos])
-                        .real(); // expmCoeff wil calculate exp(i in[a]t[a]), so
+                        .real(); // expmCoeff will calculate exp(i in[a]t[a]), so
                                  // just multiply by -1 (not -i)
         }
 
@@ -2370,75 +2372,75 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     setV(lat, group, param, random);
   }
 
-  // // output Wilson lines (used also for the proton plots)
-  // double L = param->getL();
-  // double a = L / N; // lattice spacing in fm
-  // int pos, pos0;
-  // double x,y;
+  // output Wilson lines (used also for the proton plots)
+  double L = param->getL();
+  double a = L / N; // lattice spacing in fm
+  int pos, pos0;
+  double x,y;
 
-  // ofstream foutWL("V-1.dat",ios::out);
-  // foutWL << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
+  ofstream foutWL("V-1.dat",ios::out);
+  foutWL << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
 
-  // ofstream foutWL2("V-2.dat",ios::out);
-  // foutWL2 << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
+  ofstream foutWL2("V-2.dat",ios::out);
+  foutWL2 << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
 
-  // for (int i=0; i<N; i++)      //loops over all cells
-  //   {
-  //     for (int j=0; j<N; j++)      //loops over all cells
-  // 	{
-  // 	  pos = i*N+j;
-  // 	  x = -L/2.+a*i;
-  // 	  y = -L/2.+a*j;
+  for (int i=0; i<N; i++)      //loops over all cells
+    {
+      for (int j=0; j<N; j++)      //loops over all cells
+  	{
+  	  pos = i*N+j;
+  	  x = -L/2.+a*i;
+  	  y = -L/2.+a*j;
 
-  // 	  foutWL << x << " " << y << " "
-  // 	       << lat->cells[pos]->getU().getRe(0) << " " <<
-  // lat->cells[pos]->getU().getIm(0) << " "
-  // 	       << lat->cells[pos]->getU().getRe(1) << " " <<
-  // lat->cells[pos]->getU().getIm(1) << " "
-  // 	       << lat->cells[pos]->getU().getRe(2) << " " <<
-  // lat->cells[pos]->getU().getIm(2) << " "
-  // 	       << lat->cells[pos]->getU().getRe(3) << " " <<
-  // lat->cells[pos]->getU().getIm(3) << " "
-  // 	       << lat->cells[pos]->getU().getRe(4) << " " <<
-  // lat->cells[pos]->getU().getIm(4) << " "
-  // 	       << lat->cells[pos]->getU().getRe(5) << " " <<
-  // lat->cells[pos]->getU().getIm(5) << " "
-  // 	       << lat->cells[pos]->getU().getRe(6) << " " <<
-  // lat->cells[pos]->getU().getIm(6) << " "
-  // 	       << lat->cells[pos]->getU().getRe(7) << " " <<
-  // lat->cells[pos]->getU().getIm(7) << " "
-  // 	       << lat->cells[pos]->getU().getRe(8) << " " <<
-  // lat->cells[pos]->getU().getIm(8)
-  // 	       << endl;
+  	  foutWL << x << " " << y << " "
+  	       << lat->cells[pos]->getU().getRe(0) << " " <<
+  lat->cells[pos]->getU().getIm(0) << " "
+  	       << lat->cells[pos]->getU().getRe(1) << " " <<
+  lat->cells[pos]->getU().getIm(1) << " "
+  	       << lat->cells[pos]->getU().getRe(2) << " " <<
+  lat->cells[pos]->getU().getIm(2) << " "
+  	       << lat->cells[pos]->getU().getRe(3) << " " <<
+  lat->cells[pos]->getU().getIm(3) << " "
+  	       << lat->cells[pos]->getU().getRe(4) << " " <<
+  lat->cells[pos]->getU().getIm(4) << " "
+  	       << lat->cells[pos]->getU().getRe(5) << " " <<
+  lat->cells[pos]->getU().getIm(5) << " "
+  	       << lat->cells[pos]->getU().getRe(6) << " " <<
+  lat->cells[pos]->getU().getIm(6) << " "
+  	       << lat->cells[pos]->getU().getRe(7) << " " <<
+  lat->cells[pos]->getU().getIm(7) << " "
+  	       << lat->cells[pos]->getU().getRe(8) << " " <<
+  lat->cells[pos]->getU().getIm(8)
+  	       << endl;
 
-  // 	  foutWL2 << x << " " << y << " "
-  // 	       << lat->cells[pos]->getU2().getRe(0) << " " <<
-  // lat->cells[pos]->getU2().getIm(0) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(1) << " " <<
-  // lat->cells[pos]->getU2().getIm(1) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(2) << " " <<
-  // lat->cells[pos]->getU2().getIm(2) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(3) << " " <<
-  // lat->cells[pos]->getU2().getIm(3) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(4) << " " <<
-  // lat->cells[pos]->getU2().getIm(4) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(5) << " " <<
-  // lat->cells[pos]->getU2().getIm(5) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(6) << " " <<
-  // lat->cells[pos]->getU2().getIm(6) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(7) << " " <<
-  // lat->cells[pos]->getU2().getIm(7) << " "
-  // 	       << lat->cells[pos]->getU2().getRe(8) << " " <<
-  // lat->cells[pos]->getU2().getIm(8)
-  // 	       << endl;
+  	  foutWL2 << x << " " << y << " "
+  	       << lat->cells[pos]->getU2().getRe(0) << " " <<
+  lat->cells[pos]->getU2().getIm(0) << " "
+  	       << lat->cells[pos]->getU2().getRe(1) << " " <<
+  lat->cells[pos]->getU2().getIm(1) << " "
+  	       << lat->cells[pos]->getU2().getRe(2) << " " <<
+  lat->cells[pos]->getU2().getIm(2) << " "
+  	       << lat->cells[pos]->getU2().getRe(3) << " " <<
+  lat->cells[pos]->getU2().getIm(3) << " "
+  	       << lat->cells[pos]->getU2().getRe(4) << " " <<
+  lat->cells[pos]->getU2().getIm(4) << " "
+  	       << lat->cells[pos]->getU2().getRe(5) << " " <<
+  lat->cells[pos]->getU2().getIm(5) << " "
+  	       << lat->cells[pos]->getU2().getRe(6) << " " <<
+  lat->cells[pos]->getU2().getIm(6) << " "
+  	       << lat->cells[pos]->getU2().getRe(7) << " " <<
+  lat->cells[pos]->getU2().getIm(7) << " "
+  	       << lat->cells[pos]->getU2().getRe(8) << " " <<
+  lat->cells[pos]->getU2().getIm(8)
+  	       << endl;
 
-  // 	}
-  //     foutWL << endl;
-  //     foutWL2 << endl;
-  //   }
+  	}
+      foutWL << endl;
+      foutWL2 << endl;
+    }
 
-  // foutWL.close();
-  // foutWL2.close();
+  foutWL.close();
+  foutWL2.close();
 
 
   messager.info("Finding fields in forward lightcone...");
@@ -2525,7 +2527,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
     // compute Ux(3) Uy(3) after the collision
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) // loops over all cells
+    for (pos = 0; pos < N * N; pos++) // loops over all cells
     {
       if (lat->cells[pos]->getU().trace() != lat->cells[pos]->getU().trace()) {
         lat->cells[pos]->setU(one);
@@ -2538,7 +2540,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     }
 
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) // loops over all cells
+    for (pos = 0; pos < N * N; pos++) // loops over all cells
     {
       UDx = lat->cells[lat->pospX[pos]]->getU();
       UDx.conjg();
@@ -2560,7 +2562,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     // from Ux(1,2) and Uy(1,2) compute Ux(3) and Uy(3):
 
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) // loops over all cells
+    for (pos = 0; pos < N * N; pos++) // loops over all cells
     {
       UDx1 = lat->cells[pos]->getUx1();
       UDx2 = lat->cells[pos]->getUx2();
@@ -2644,9 +2646,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
           // ---- set new Ux(3) --------------------------------------------
 
-          for (int a = 0; a < Nc2m1; a++) {
-            in[a] =
-                (alpha[a]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
+          for (int ai = 0; ai < Nc2m1; ai++) {
+            in[ai] =
+                (alpha[ai]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
           }
 
           U = tempNew.expmCoeff(in, Nc);
@@ -2678,9 +2680,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
               alpha[ai] = 0.1 * random->Gauss();
             }
 
-            for (int a = 0; a < Nc2m1; a++) {
-              in[a] =
-                  (alpha[a]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
+            for (int ai = 0; ai < Nc2m1; ai++) {
+              in[ai] =
+                  (alpha[ai]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
             }
 
             U = tempNew.expmCoeff(in, Nc);
@@ -2806,9 +2808,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
           // ---- set new Uy(3) --------------------------------------------
 
-          for (int a = 0; a < Nc2m1; a++) {
-            in[a] =
-                (alpha[a]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
+          for (int ai = 0; ai < Nc2m1; ai++) {
+            in[ai] =
+                (alpha[ai]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
           }
 
           U = tempNew.expmCoeff(in, Nc);
@@ -2839,8 +2841,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
               alpha[ai] = 0.1 * random->Gauss();
             }
 
-            for (int a = 0; a < Nc2m1; a++) {
-              in[a] = (alpha[a])
+            for (int ai = 0; ai < Nc2m1; ai++) {
+              in[ai] = (alpha[ai])
                           .real(); // expmCoeff will calculate exp(i in[a]t[a])
             }
 
@@ -2893,7 +2895,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 // compute initial electric field
 // with minus ax, ay
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) {
+    for (pos = 0; pos < N * N; pos++) {
       // x part in sum:
       Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
       UDx1 = lat->cells[pos]->getUx1();
@@ -2956,7 +2958,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
     // with plus ax, ay
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) {
+    for (pos = 0; pos < N * N; pos++) {
       // x part in sum:
       Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
       UDx1 = lat->cells[pos]->getUx1();
@@ -3018,7 +3020,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     }
 // compute the plaquette
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) {
+    for (pos = 0; pos < N * N; pos++) {
       UDx = lat->cells[lat->pospY[pos]]->getUx();
       UDy = lat->cells[pos]->getUy();
       UDx.conjg();
@@ -3030,7 +3032,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     }
 
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) {
+    for (pos = 0; pos < N * N; pos++) {
       AM = (lat->cells[pos]->getE1()); //+lat->cells[pos]->getAetaP());
       AP = (lat->cells[pos]->getE2()); //+lat->cells[pos]->getAetaP());
       // this is pi in lattice units as needed for the evolution. (later, the
@@ -3044,7 +3046,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     }
 
 #pragma omp for
-    for (int pos = 0; pos < N * N; pos++) {
+    for (pos = 0; pos < N * N; pos++) {
       lat->cells[pos]->setE1(zero);
       lat->cells[pos]->setE2(zero);
       lat->cells[pos]->setphi(zero);

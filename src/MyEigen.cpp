@@ -39,7 +39,7 @@ void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it) {
 
       pos = si * N + sj;
       GSL_SET_COMPLEX(&square, 0, 0);
-
+      //one upper, one lower index
       double data[] = {
           lat->cells[pos]->getTtautau(),
           -lat->cells[pos]->getTtaux(),

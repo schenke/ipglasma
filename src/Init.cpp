@@ -1499,7 +1499,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
           if (log(2 * M_PI * BG * lat->cells[localpos]->getTpA()) < 0.)
             {
               if (isinf(log(2 * M_PI * BG * lat->cells[localpos]->getTpA()))==1)
-                distanceA= param->getRmax()+1;
+                distanceA= param->getRmax()+1.;
               else 
                 distanceA =
                   sqrt(-2. * BG *
@@ -1944,7 +1944,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
       for (int pos = 0; pos < N * N; pos++) {
         for (int aa = 0; aa < Nc2m1; aa++) {
           in[aa] = -(rhoACoeff[aa][pos])
-                        .real(); // expmCoeff wil calculate exp(i in[a]t[a]), so
+                        .real(); // expmCoeff will calculate exp(i in[a]t[a]), so
                                  // just multiply by -1 (not -i)
         }
 
@@ -1956,6 +1956,12 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
                   U[7] * group->getT(6) + U[8] * group->getT(7);
 
         temp = tempNew * lat->cells[pos]->getU();
+
+        if (U[0] == 0.)
+          {
+            temp = one; 
+          }
+        
         // set U
         lat->cells[pos]->setU(temp);
       }
@@ -2040,6 +2046,12 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
                   U[7] * group->getT(6) + U[8] * group->getT(7);
 
         temp = tempNew * lat->cells[pos]->getU2();
+
+        if (U[0] == 0.)
+          {
+            temp = one; 
+          }
+        
         // set U
         lat->cells[pos]->setU2(temp);
       }
@@ -2539,7 +2551,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 #pragma omp for
     for (pos = 0; pos < N * N; pos++) // loops over all cells
     {
-      if (lat->cells[pos]->getU().trace() != lat->cells[pos]->getU().trace()) {
+      if (lat->cells[pos]->getU().trace() != 
+          lat->cells[pos]->getU().trace()) {
         lat->cells[pos]->setU(one);
       }
 

@@ -1344,7 +1344,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                 bp2 /= hbarc * hbarc;
 
                 T += exp(-bp2 / (2. * BGq2[i][iq])) / (2. * M_PI * BGq2[i][iq]) /
-                     (static_cast<double>(xq1[i].size())) *
+                     (static_cast<double>(xq2[i].size())) *
                      gauss2[i][iq];
               }
             } else {

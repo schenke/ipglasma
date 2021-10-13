@@ -9,6 +9,7 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <random>
 
 #ifndef DISABLEMPI
 #include "mpi.h"
@@ -70,7 +71,9 @@ int main(int argc, char *argv[]) {
   unsigned long long int rnum;
   if (param->getUseSeedList() == 0) {
     if (param->getUseTimeForSeed() == 1) {
-      rnum = time(0) + param->getSeed() * 10000;
+      std::random_device ran_dev;
+      rnum = ran_dev();
+      //rnum = time(0) + param->getSeed() * 10000;
     } else {
       rnum = param->getSeed();
       messager << "Random seed = " << rnum + (rank * 1000)
@@ -79,10 +82,10 @@ int main(int argc, char *argv[]) {
     }
     param->setRandomSeed(rnum + rank * 1000);
     if (param->getUseTimeForSeed() == 1) {
-      messager << "Random seed = " << param->getRandomSeed()
-               << " made from time " << rnum - param->getSeed() - (rank * 1000)
-               << " and argument (+1000*rank) "
-               << param->getSeed() + (rank * 1000);
+      messager << "Random seed = " << param->getRandomSeed();
+               //<< " made from time " << rnum - param->getSeed() - (rank * 1000)
+               //<< " and argument (+1000*rank) "
+               //<< param->getSeed() + (rank * 1000);
       messager.flush("info");
     }
     random->init_genrand64(rnum + rank * 1000);

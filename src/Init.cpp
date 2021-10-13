@@ -1032,6 +1032,7 @@ double Init::getNuclearQs2(double T, double y) {
 // prop tp g^mu(b,y) also compute N_part using Glauber
 void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                                  Random *random, Glauber *glauber) {
+  std::cout << "set color charge density ..." << std::endl;
   int pos, posA, posB;
   int N = param->getSize();
   int A1, A2;
@@ -1308,7 +1309,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
               T = 0.;
               for (unsigned int iq = 0; iq < xq1[i].size(); iq++) {
                 bp2 = (xm + xq1[i][iq] - x) * (xm + xq1[i][iq] - x) +
-                      (ym + yq2[i][iq] - y) * (ym + yq2[i][iq] - y);
+                      (ym + yq1[i][iq] - y) * (ym + yq1[i][iq] - y);
                 bp2 /= hbarc * hbarc;
 
                 T += exp(-bp2 / (2. * BGq1[i][iq])) / (2. * M_PI * BGq1[i][iq]) /
@@ -1808,7 +1809,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       strup_name << "usedParameters" << param->getEventId() << ".dat";
       string up_name;
       up_name = strup_name.str();
-      
+
       ofstream fout1(up_name.c_str(), ios::app);
       fout1 << " " << endl;
       fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
@@ -1831,7 +1832,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   if ( averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) 
     cout << " **** Rejected event - Qsmin^2 S_T=" << averageQs2min2 * a * a / hbarc / hbarc << " too small ( < " << param->getMinimumQs2ST() << ")." << endl;
-   
+
 
   param->setalphas(alphas);
 
@@ -1839,14 +1840,13 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";
   string NEst_name;
   NEst_name = strNEst_name.str();
-  
+
   ofstream foutNEst(NEst_name.c_str(), ios::out);
-  
+
   foutNEst << "#Q_s^2(min) S_T  " <<  "Q_s^2(avg) S_T  " << "Q_s^2(max) S_T " << " Q_s^2(min) S_T Log^2( Q_s^2(max) / Q_s^2(min))  " << endl;
   foutNEst << averageQs2min2 * a * a / hbarc / hbarc  <<  "         " << averageQs2Avg * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2 * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2min2 * a * a / hbarc / hbarc * pow(log(averageQs2* static_cast<double>(count)/averageQs2min2),2.) << endl;
-  
-  foutNEst.close();
 
+  foutNEst.close();
 }
 
 void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
@@ -2317,9 +2317,10 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   }
   // to generate your own Wilson lines
   else {
-    if (param->getUseNucleus() == 1)
+    if (param->getUseNucleus() == 1) {
       sampleTA(param, random, glauber); // populate the lists nucleusA and
                                         // nucleusB with position data of the
+    }
 
     // set color charge densities
     setColorChargeDensity(lat, param, random, glauber);
@@ -2352,9 +2353,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           param->setb(b);
           cout << "Using b=" << b << " fm" << endl;
 
-          sampleTA(param, random,
-                   glauber); // populate the lists nucleusA and nucleusB with
-                             // position data of the
+          // populate the lists nucleusA and nucleusB with position data
+          sampleTA(param, random, glauber);
+
           setColorChargeDensity(lat, param, random, glauber);
         }
       }

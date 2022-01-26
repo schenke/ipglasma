@@ -4,7 +4,7 @@ readMultFromFile 0
 size 1024
 L 30
 Nc 3
-m 0.4
+m 0.2
 rmax 1000.
 UVdamp 0.
 Jacobianm 0.35
@@ -33,7 +33,8 @@ useFluctuatingx 1
 xFromThisFactorTimesQs 1
 useNucleus 1
 useGaussian 0
-nucleonPositionsFromFile 0
+beta2 0.28
+nucleonPositionsFromFile 1
 NucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_200.in
 QsmuRatio 0.8
 samplebFromLinearDistribution 1
@@ -49,17 +50,16 @@ Projectile Pb
 Target Pb
 bmin 0
 bmax 0
-lightNucleusOption 2
-beta2 0.28
+lightNucleusOption 1
 useFixedNpart 0
 averageOverThisManyNuclei 1
-SigmaNN 42.
+SigmaNN 70.
 gaussianWounding 1
 inverseQsForMaxTime 0
 maxtime 0.0
 dtau 0.1
 LOutput 30
-sizeOutput 1024
+sizeOutput 512
 etaSizeOutput 1
 detaOutput 0
 writeOutputs 5
@@ -67,4 +67,3 @@ writeEvolution 0
 writeInitialWilsonLines 0
 writeOutputsToHDF5 0
 EndOfFile
-

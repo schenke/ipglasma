@@ -5,6 +5,7 @@
 #include <algorithm>
 #include <utility>
 
+using namespace std;
 using PhysConst::hbarc;
 
 //**************************************************************************
@@ -888,6 +889,84 @@ void Init::readNuclearQs(Parameters *param) {
 //     }
 // }
 
+
+void Init::samplePartonPositions(Parameters *param, Random *random,
+                                 vector<double> &x_array,
+                                 vector<double> &y_array,
+                                 vector<double> &z_array,
+                                 vector<double> &BGq_array) {
+    const double sqrtBG = sqrt(param->getBG())*hbarc;    // fm
+    const double BGqMean = param->getBGq();
+    const double BGqVar = param->getBGqVar();
+    const double BGq = (
+        0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar));
+    const double QsSmearWidth = param->getSmearingWidth();
+    const int Nq = sampleNumberOfPartons(random, param);
+    const double dq_min = param->getDqmin();             // fm
+    const double dq_min_sq = dq_min*dq_min;
+
+    vector<double> r_array(Nq, 0.);
+    BGq_array.resize(Nq, BGq);
+    for (int iq = 0; iq < Nq; iq++) {
+        double xq = sqrtBG*random->Gauss();
+        double yq = sqrtBG*random->Gauss();
+        double zq = sqrtBG*random->Gauss();
+        r_array[iq] = sqrt(xq*xq + yq*yq + zq*zq);
+    }
+    std::sort(r_array.begin(), r_array.end());
+
+    x_array.resize(Nq, 0.);
+    y_array.resize(Nq, 0.);
+    z_array.resize(Nq, 0.);
+    for (unsigned int i = 0; i < r_array.size(); i++) {
+        double r_i = r_array[i];
+        int reject_flag = 0;
+        int iter = 0;
+        double x_i, y_i, z_i;
+        do {
+            iter++;
+            reject_flag  = 0;
+            double phi   = 2.*M_PI*random->genrand64_real2();
+            double theta = acos(1. - 2.*random->genrand64_real2());
+            x_i = r_i*sin(theta)*cos(phi);
+            y_i = r_i*sin(theta)*sin(phi);
+            z_i = r_i*cos(theta);
+            for (int j = i - 1; j >= 0; j--) {
+                if ((r_i - r_array[j])*(r_i - r_array[j]) > dq_min_sq) break;
+                double dsq = (  (x_i - x_array[j])*(x_i - x_array[j])
+                              + (y_i - y_array[j])*(y_i - y_array[j])
+                              + (z_i - z_array[j])*(z_i - z_array[j]));
+                if (dsq < dq_min_sq) {
+                    reject_flag = 1;
+                    break;
+                }
+            }
+        } while (reject_flag == 1 && iter < 100);
+        x_array[i] = x_i;
+        y_array[i] = y_i;
+        z_array[i] = z_i;
+    }
+    double avgxq = 0.;
+    double avgyq = 0.;
+    double avgzq = 0.;
+    if (param->getShiftConstituentQuarkProtonOrigin()) {
+        for (int iq = 0; iq < Nq; iq++) {
+            avgxq += x_array[iq];
+            avgyq += y_array[iq];
+            avgzq += z_array[iq];
+        }
+        avgxq /= static_cast<double>(Nq);
+        avgyq /= static_cast<double>(Nq);
+        avgzq /= static_cast<double>(Nq);
+        for (int iq = 0; iq < Nq; iq++) {
+            x_array[iq] -= avgxq;
+            y_array[iq] -= avgyq;
+            z_array[iq] -= avgzq;
+        }
+    }
+}
+
+
 // Q_s as a function of \sum T_p and y (new in this version of the code - v1.2
 // and up)
 double Init::getNuclearQs2(double T, double y) {
@@ -953,6 +1032,7 @@ double Init::getNuclearQs2(double T, double y) {
 // prop tp g^mu(b,y) also compute N_part using Glauber
 void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
                                  Random *random, Glauber *glauber) {
+  std::cout << "set color charge density ..." << std::endl;
   int pos, posA, posB;
   int N = param->getSize();
   int A1, A2;
@@ -1002,66 +1082,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   int count = 0;
   double nucleiInAverage;
   nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
-
-  // Arrays to store Q_s fluctuations
-  // Make sure that array size is always at least 1
-  int len_quark_array = param->getUseConstituentQuarkProton();
-  if (len_quark_array == 0)
-    len_quark_array = 1;
-  double gaussA[A1][len_quark_array];
-  double gaussB[A2][len_quark_array];
-
-  for (int i = 0; i < A1; i++) {
-    if (param->getUseConstituentQuarkProton() > 0) {
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        gaussA[i][iq] = 1.;
-      }
-    } else
-      gaussA[i][0] = 1.;
-  }
-  for (int i = 0; i < A2; i++) {
-    if (param->getUseConstituentQuarkProton() > 0) {
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        gaussB[i][iq] = 1.;
-      }
-    } else
-      gaussB[i][0] = 1.;
-  }
-
-  // let the log fluctuate
-  if (param->getSmearQs() == 1) {
-    if (A1 > 0) {
-      for (int i = 0; i < A1; i++) {
-        // Note: len_quark_array is the number of constituent quarks if
-        // useConstituentQuarkProton>0, and 1, if fluctuations are not included.
-        // This way Q_s fluctuations can be implemented for each nucleon even if
-        // useConstituentQuarkProton=0
-        for (int iq = 0; iq < len_quark_array; iq++) {
-          gaussA[i][iq] =
-              (exp(random->Gauss(0, param->getSmearingWidth()))) /
-              std::exp(param->getSmearingWidth() * param->getSmearingWidth() /
-                       2.0); // dividing by exp(0.5 sigma^2) restores the same
-                             // mean Q_s
-          // cout << i << " " << iq << " " << gaussA[i][iq] << endl;
-          //	  if (gaussA[i]<0)
-          //  gaussA[i]=0.;
-        }
-      }
-    }
-    if (A2 > 0) {
-      for (int i = 0; i < A2; i++) {
-        for (int iq = 0; iq < len_quark_array; iq++) {
-          gaussB[i][iq] = (exp(random->Gauss(0, param->getSmearingWidth()))) /
-                          std::exp(param->getSmearingWidth() *
-                                   param->getSmearingWidth() / 2.0);
-
-          //	      cout << i << " " << iq << " " << gaussB[i][iq] << endl;
-          // if (gaussB[i]<0)
-          //  gaussB[i]=0.;
-        }
-      }
-    }
-  }
 
   param->setQsmuRatioB(param->getQsmuRatio());
 
@@ -1139,9 +1159,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   }
 
-  double BG;
-  BG = param->getBG();
-  double BGq = param->getBGq(); // quark size in GeV^-2
   double xi = param->getProtonAnisotropy();
 
   if (xi != 0.) {
@@ -1162,58 +1179,40 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   }
 
-  //  cout << "BG=" << BG << endl;
+  const int NqFlag = param->getUseConstituentQuarkProton();
+  vector< vector<double> > xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
+  vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
 
-  double xq[A1][len_quark_array], xq2[A2][len_quark_array];
-  double yq[A1][len_quark_array], yq2[A2][len_quark_array];
-  double avgxq = 0.;
-  double avgyq = 0.;
-
-  if (param->getUseConstituentQuarkProton() > 0) {
-    for (int i = 0; i < A1; i++) {
-      avgxq = 0.;
-      avgyq = 0.;
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        xq[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-        yq[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-      }
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        avgxq += xq[i][iq];
-        avgyq += yq[i][iq];
-      }
+  for (int i = 0; i < A1; i++) {
+    x_array.clear();
+    if (NqFlag > 0) {
+      samplePartonPositions(param, random, x_array, y_array, z_array,
+                            BGq_array);
+      // if (param->getShiftConstituentQuarkProtonOrigin())
       // Move center of mass to the origin
       // Note that 1607.01711 this is not done, so parameters quoted in
       // that paper can't be used if this is done
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        if (param->getShiftConstituentQuarkProtonOrigin()) {
-          xq[i][iq] -= avgxq / double(param->getUseConstituentQuarkProton());
-          yq[i][iq] -= avgyq / double(param->getUseConstituentQuarkProton());
-        }
-      }
+      xq1.push_back(x_array);
+      yq1.push_back(y_array);
+      BGq1.push_back(BGq_array);
     }
+    int Npartons = std::max(1, static_cast<int>(x_array.size()));
+    sampleQsNormalization(random, param, Npartons, gauss_array);
+    gauss1.push_back(gauss_array);
   }
 
-  if (param->getUseConstituentQuarkProton() > 0) {
-    for (int i = 0; i < A2; i++) {
-      avgxq = 0.;
-      avgyq = 0.;
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        xq2[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-        yq2[i][iq] = sqrt(BG * hbarc * hbarc) * random->Gauss();
-      }
-
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        avgxq += xq2[i][iq];
-        avgyq += yq2[i][iq];
-      }
-      // Move center of mass to the origin, see comment above
-      for (int iq = 0; iq < param->getUseConstituentQuarkProton(); iq++) {
-        if (param->getShiftConstituentQuarkProtonOrigin()) {
-          xq2[i][iq] -= avgxq / double(param->getUseConstituentQuarkProton());
-          yq2[i][iq] -= avgyq / double(param->getUseConstituentQuarkProton());
-        }
-      }
+  for (int i = 0; i < A2; i++) {
+    x_array.clear();
+    if (NqFlag > 0) {
+      samplePartonPositions(param, random, x_array, y_array, z_array,
+                            BGq_array);
+      xq2.push_back(x_array);
+      yq2.push_back(y_array);
+      BGq2.push_back(BGq_array);
     }
+    int Npartons = std::max(1, static_cast<int>(x_array.size()));
+    sampleQsNormalization(random, param, Npartons, gauss_array);
+    gauss2.push_back(gauss_array);
   }
 
   // test what a smmoth Woods-Saxon would give
@@ -1308,25 +1307,25 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
             if (param->getUseConstituentQuarkProton() > 0) {
               T = 0.;
-              for (int iq = 0; iq < param->getUseConstituentQuarkProton();
-                   iq++) {
-                bp2 = (xm + xq[i][iq] - x) * (xm + xq[i][iq] - x) +
-                      (ym + yq[i][iq] - y) * (ym + yq[i][iq] - y);
+              for (unsigned int iq = 0; iq < xq1[i].size(); iq++) {
+                bp2 = (xm + xq1[i][iq] - x) * (xm + xq1[i][iq] - x) +
+                      (ym + yq1[i][iq] - y) * (ym + yq1[i][iq] - y);
                 bp2 /= hbarc * hbarc;
 
-                T += exp(-bp2 / (2. * BGq)) / (2. * M_PI * BGq) /
-                     (double(param->getUseConstituentQuarkProton())) *
-                     gaussA[i][iq]; // I removed the 2/3 here to make it a bit
+                T += exp(-bp2 / (2. * BGq1[i][iq])) / (2. * M_PI * BGq1[i][iq]) /
+                     (static_cast<double>(xq1[i].size())) *
+                     gauss1[i][iq]; // I removed the 2/3 here to make it a bit
                                     // bigger
               }
             } else {
+              const double BG = param->getBG();
               phi = nucleusA.at(i).phi;
 
               bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y) +
                     xi * pow((xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
               bp2 /= hbarc * hbarc;
               T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG) *
-                  gaussA[i][0]; // T_p in this cell for the current nucleon
+                  gauss1[i][0]; // T_p in this cell for the current nucleon
             }
             lat->cells[localpos]->setTpA(lat->cells[localpos]->getTpA() +
                                          T / nucleiInAverage); // add up all T_p
@@ -1340,17 +1339,17 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
 
             if (param->getUseConstituentQuarkProton() > 0) {
               T = 0.;
-              for (int iq = 0; iq < param->getUseConstituentQuarkProton();
-                   iq++) {
+              for (unsigned int iq = 0; iq < xq2[i].size(); iq++) {
                 bp2 = (xm + xq2[i][iq] - x) * (xm + xq2[i][iq] - x) +
                       (ym + yq2[i][iq] - y) * (ym + yq2[i][iq] - y);
                 bp2 /= hbarc * hbarc;
 
-                T += exp(-bp2 / (2. * BGq)) / (2. * M_PI * BGq) /
-                     double(param->getUseConstituentQuarkProton()) *
-                     gaussB[i][iq];
+                T += exp(-bp2 / (2. * BGq2[i][iq])) / (2. * M_PI * BGq2[i][iq]) /
+                     (static_cast<double>(xq2[i].size())) *
+                     gauss2[i][iq];
               }
             } else {
+              const double BG = param->getBG();
               phi = nucleusB.at(i).phi;
 
               bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y) +
@@ -1358,7 +1357,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
               bp2 /= hbarc * hbarc;
 
               T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG) *
-                  gaussB[i][0]; // T_p in this cell for the current nucleon
+                  gauss2[i][0]; // T_p in this cell for the current nucleon
             }
 
             lat->cells[localpos]->setTpB(lat->cells[localpos]->getTpB() +
@@ -1368,6 +1367,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       }
     }
   }
+
 
   if (param->getUseSmoothNucleus() == 0) {
     stringstream strNcoll_name;
@@ -1492,6 +1492,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
         if (param->getUseSmoothNucleus() == 1)
           check = 2;
         else {
+          const double BG = param->getBG();
 
           //	  cut proton at a radius of rmax [fm] (about twice the gluonic
           //radius to be generous)
@@ -1820,7 +1821,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       strup_name << "usedParameters" << param->getEventId() << ".dat";
       string up_name;
       up_name = strup_name.str();
-      
+
       ofstream fout1(up_name.c_str(), ios::app);
       fout1 << " " << endl;
       fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
@@ -1843,7 +1844,7 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   if ( averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) 
     cout << " **** Rejected event - Qsmin^2 S_T=" << averageQs2min2 * a * a / hbarc / hbarc << " too small ( < " << param->getMinimumQs2ST() << ")." << endl;
-   
+
 
   param->setalphas(alphas);
 
@@ -1851,14 +1852,13 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";
   string NEst_name;
   NEst_name = strNEst_name.str();
-  
-  ofstream foutNEst(NEst_name.c_str(), ios::out);
-  
-  foutNEst << "Q_s^2(min) S_T  " <<  "Q_s^2(avg) S_T  " << "Q_s^2(max) S_T " << " Q_s^2(min) S_T Log^2( Q_s^2(max) / Q_s^2(min))  " << endl;
-  foutNEst << averageQs2min2 * a * a / hbarc / hbarc  <<  "         " << averageQs2Avg * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2 * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2min2 * a * a / hbarc / hbarc * pow(log(averageQs2* static_cast<double>(count)/averageQs2min2),2.) << endl;
-  
-  foutNEst.close();
 
+  ofstream foutNEst(NEst_name.c_str(), ios::out);
+
+  foutNEst << "#Q_s^2(min) S_T  " <<  "Q_s^2(avg) S_T  " << "Q_s^2(max) S_T " << " Q_s^2(min) S_T Log^2( Q_s^2(max) / Q_s^2(min))  " << endl;
+  foutNEst << averageQs2min2 * a * a / hbarc / hbarc  <<  "         " << averageQs2Avg * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2 * a * a / hbarc / hbarc * static_cast<double>(count) << "         " << averageQs2min2 * a * a / hbarc / hbarc * pow(log(averageQs2* static_cast<double>(count)/averageQs2min2),2.) << endl;
+
+  foutNEst.close();
 }
 
 void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
@@ -2341,9 +2341,10 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   }
   // to generate your own Wilson lines
   else {
-    if (param->getUseNucleus() == 1)
+    if (param->getUseNucleus() == 1) {
       sampleTA(param, random, glauber); // populate the lists nucleusA and
                                         // nucleusB with position data of the
+    }
 
     // set color charge densities
     setColorChargeDensity(lat, param, random, glauber);
@@ -2376,9 +2377,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           param->setb(b);
           cout << "Using b=" << b << " fm" << endl;
 
-          sampleTA(param, random,
-                   glauber); // populate the lists nucleusA and nucleusB with
-                             // position data of the
+          // populate the lists nucleusA and nucleusB with position data
+          sampleTA(param, random, glauber);
+
           setColorChargeDensity(lat, param, random, glauber);
         }
       }
@@ -3125,6 +3126,7 @@ void Init::generate_nucleus_configuration(Random *random, int A, int Z,
   }
 }
 
+
 void Init::generate_nucleus_configuration_with_woods_saxon(
     Random *random, int A, int Z, double a_WS, double R_WS,
     std::vector<ReturnValue> *nucleus) {
@@ -3162,10 +3164,6 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
         }
       }
     } while (reject_flag == 1 && iter < 100);
-    // if (iter == 100) {
-    //    cout << "[Warning] can not find configuration : "
-    //         << "r[i] = " << r_i << ", r[i-1] = " << r_array[i-1] << endl;
-    //}
     x_array[i] = x_i;
     y_array[i] = y_i;
     z_array[i] = z_i;
@@ -3347,4 +3345,47 @@ void Init::rotate_nucleus(double phi, double theta, std::vector<double> &x,
     y[i] = y_new;
     z[i] = z_new;
   }
+}
+
+
+double Init::sampleLogNormalDistribution(Random *random,
+                                         const double mean,
+                                         const double variance) {
+    const double meansq = mean*mean;
+    const double mu = log(meansq/sqrt(variance + meansq));
+    const double sigma = sqrt(log(variance/meansq + 1.));
+    double sampleX = exp(mu + sigma*random->Gauss());
+    return(sampleX);
+}
+
+
+void Init::sampleQsNormalization(Random *random,
+                                 Parameters *param,
+                                 const int Nq,
+                                 vector<double> &gauss_array) {
+    const double QsSmearWidth = param->getSmearingWidth();
+    gauss_array.resize(Nq, 1.);    // default norm = 1
+    if (param->getSmearQs() == 1) {
+        // introduce a log-normal distribution for Qs normalization
+        // dividing by exp(0.5 sigma^2) to ensure the mean is 1
+        // the varirance in this case is exp(sigma) - 1 for the log-normal
+        // distribution
+        for (int iq = 0; iq < Nq; iq++) {
+            gauss_array[iq] = (exp(random->Gauss(0, QsSmearWidth))/
+                               exp(QsSmearWidth*QsSmearWidth/2.));
+        }
+    }
+}
+
+
+int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
+    double NqBase = param->getNqBase();
+    int NqBaseInt = static_cast<int>(NqBase);
+    double ran = random->genrand64_real2();
+    int Nq = NqBaseInt;
+    if (ran < NqBase - NqBaseInt) {
+        Nq += 1;
+    }
+    Nq += random->Poisson(param->getNqFluc());
+    return(std::max(1, Nq));
 }

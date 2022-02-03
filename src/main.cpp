@@ -1,4 +1,4 @@
-#include "mpi.h"
+
 #include <cmath>
 #include <complex>
 #include <cstdlib>
@@ -9,6 +9,11 @@
 #include <stdio.h>
 #include <string>
 #include <vector>
+#include <random>
+
+#ifndef DISABLEMPI
+#include "mpi.h"
+#endif
 
 #include "Evolution.h"
 #include "FFT.h"
@@ -40,10 +45,15 @@ int main(int argc, char *argv[]) {
     nev = atoi(argv[2]);
   }
 
+#ifndef DISABLEMPI
   // initialize MPI
   MPI_Init(&argc, &argv);
   MPI_Comm_rank(MPI_COMM_WORLD, &rank); // get current process id
   MPI_Comm_size(MPI_COMM_WORLD, &size); // get number of processes
+#else
+  rank = 0;
+  size = 1;
+#endif
 
   int h5Flag = 0;
   pretty_ostream messager;
@@ -61,7 +71,9 @@ int main(int argc, char *argv[]) {
   unsigned long long int rnum;
   if (param->getUseSeedList() == 0) {
     if (param->getUseTimeForSeed() == 1) {
-      rnum = time(0) + param->getSeed() * 10000;
+      std::random_device ran_dev;
+      rnum = ran_dev();
+      //rnum = time(0) + param->getSeed() * 10000;
     } else {
       rnum = param->getSeed();
       messager << "Random seed = " << rnum + (rank * 1000)
@@ -70,10 +82,10 @@ int main(int argc, char *argv[]) {
     }
     param->setRandomSeed(rnum + rank * 1000);
     if (param->getUseTimeForSeed() == 1) {
-      messager << "Random seed = " << param->getRandomSeed()
-               << " made from time " << rnum - param->getSeed() - (rank * 1000)
-               << " and argument (+1000*rank) "
-               << param->getSeed() + (rank * 1000);
+      messager << "Random seed = " << param->getRandomSeed();
+               //<< " made from time " << rnum - param->getSeed() - (rank * 1000)
+               //<< " and argument (+1000*rank) "
+               //<< param->getSeed() + (rank * 1000);
       messager.flush("info");
     }
     random->init_genrand64(rnum + rank * 1000);
@@ -324,7 +336,9 @@ int main(int argc, char *argv[]) {
 
     }
 
+#ifndef DISABLEMPI
     MPI_Barrier(MPI_COMM_WORLD);
+#endif
 
     messager.info("One event finished");
     if (param->getWriteOutputsToHDF5() == 1) {
@@ -357,7 +371,10 @@ int main(int argc, char *argv[]) {
     messager.flush("info");
   }
 
+#ifndef DISABLEMPI
   MPI_Finalize();
+#endif
+
   return 1;
 }
 
@@ -430,6 +447,8 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setLOutput(setup->DFind(file_name, "LOutput"));
   param->setBG(setup->DFind(file_name, "BG"));
   param->setBGq(setup->DFind(file_name, "BGq"));
+  param->setBGqVar(setup->DFind(file_name, "BGqVar"));
+  param->setDqmin(setup->DFind(file_name, "dqMin"));
   param->setMuZero(setup->DFind(file_name, "muZero"));
   param->setc(setup->DFind(file_name, "c"));
   param->setSize(setup->IFind(file_name, "size"));
@@ -489,6 +508,8 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setProtonAnisotropy(setup->DFind(file_name, "protonAnisotropy"));
   param->setUseConstituentQuarkProton(
       setup->DFind(file_name, "useConstituentQuarkProton"));
+  param->setNqBase(setup->DFind(file_name, "useConstituentQuarkProton"));
+  param->setNqFluc(setup->DFind(file_name, "NqFluc"));
   param->setUseSmoothNucleus(setup->IFind(file_name, "useSmoothNucleus"));
   param->setShiftConstituentQuarkProtonOrigin(
       setup->DFind(file_name, "shiftConstituentQuarkProtonOrigin"));

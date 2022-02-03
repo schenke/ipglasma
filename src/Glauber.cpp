@@ -166,7 +166,8 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->R_WS = 5.42; // 5.36       // new values from arXiv:1508.06294
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.57;    // 0.590;     // new values from arXiv:1508.06294
-    nucleus->beta2 = 0.162;  // from arXiv:1508.06294
+    //nucleus->beta2 = 0.162;  // from arXiv:1508.06294
+    nucleus->beta2 = beta2;   // can be modified by the user
     nucleus->beta4 = -0.003; // from arXiv:1508.06294
   }
 

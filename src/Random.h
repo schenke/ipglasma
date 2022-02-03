@@ -47,6 +47,7 @@ public:
   void gslRandomInit(unsigned long long seed);
   double tdist(double nu);
   double NBD(double nbar, double k);
+  int Poisson(const double mean);
   double Gauss(double mean = 0., double width = 1.);
   double Gauss2(double mean, double sigma);
 };

@@ -12,3 +12,4 @@ src/obj/
 test.out
 ipglasma
 Tmunu
+*.dylib

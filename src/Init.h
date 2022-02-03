@@ -23,10 +23,7 @@
 #include "Parameters.h"
 #include "Random.h"
 #include "gsl/gsl_linalg.h"
-#include "mpi.h"
 #include "pretty_ostream.h"
-
-using namespace std;
 
 class Init {
 
@@ -45,9 +42,9 @@ private:
 
   double As[1];
 
-  vector<ReturnValue>
+  std::vector<ReturnValue>
       nucleusA; // list of x and y coordinates of nucleons in nucleus A
-  vector<ReturnValue>
+  std::vector<ReturnValue>
       nucleusB; // list of x and y coordinates of nucleons in nucleus B
 
   pretty_ostream messager;
@@ -62,8 +59,8 @@ public:
             Glauber *glauber, int READFROMFILE);
   void sampleTA(Parameters *param, Random *random, Glauber *glauber);
   void readNuclearQs(Parameters *param);
-  vector<complex<double>> solveAxb(Parameters *param, complex<double> *A,
-                                   complex<double> *b);
+  std::vector<complex<double>> solveAxb(Parameters *param, complex<double> *A,
+                                        complex<double> *b);
   double getNuclearQs2(double Qs2atZeroY, double y);
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random,
                              Glauber *glauber);
@@ -95,6 +92,20 @@ public:
                         std::vector<double> &z);
   void rotate_nucleus(double phi, double theta, std::vector<double> &x,
                       std::vector<double> &y, std::vector<double> &z);
+
+  void samplePartonPositions(Parameters *param, Random *random,
+                             std::vector<double> &x_array,
+                             std::vector<double> &y_array,
+                             std::vector<double> &z_array,
+                             std::vector<double> &BGq_array);
+
+  double sampleLogNormalDistribution(Random *random, const double mean,
+                                     const double variance);
+
+  void sampleQsNormalization(Random *random, Parameters *param,
+                             const int Nq,
+                             std::vector<double> &gauss_array);
+  int sampleNumberOfPartons(Random *random, Parameters *param);
 };
 
-#endif // Init_H
+#endif  // Init_H

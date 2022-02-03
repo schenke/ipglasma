@@ -95,10 +95,13 @@ private:
                                  // as a function of Y and Qs^2(Y=0)
   double BG;  // the width of the Gaussian describing the shape of the proton in
               // GeV^(-2)
-  double BGq; // the width of the Gaussian describing the shape of a constituent
-              // quark in GeV^(-2)
-  double muZero; // mu_0 in the running coupling (makes it infrared finite)
-  double c;      // determines how smooth the cutoff in the running coupling is
+  double BGq_; // the mean width of the Gaussian describing the shape of
+               // a constituent quark in GeV^(-2)
+  double BGqVar_;  // the variance of the Gaussian width describing the shape
+                   // of a constituent quark in GeV^(-4)
+  double dq_min_;  // the minimum distance between valence quarks [fm]
+  double muZero;   // mu_0 in the running coupling (makes it infrared finite)
+  double c;        // determines how smooth the cutoff in the running coupling is
   double
       roots; // square root of s: center of mass energy of the collision in GeV
   int useFluctuatingx; // switch to determine if the rapidity value in the input
@@ -171,6 +174,8 @@ private:
   int useConstituentQuarkProton; // if >0, use proton made up of
                                  // useConstituentQuarkProton constituent
                                  // quarks.
+  double NqBase_;
+  double NqFluc_;
   int useSmoothNucleus; // if 1, use a smooth Woods-Saxon distribution for a
                         // heavy nucleus
   int shiftConstituentQuarkProtonOrigin; // if 1, move constituent quark center
@@ -286,8 +291,12 @@ public:
   int getA2FromFile() { return A2FromFile; }
   void setBG(double x) { BG = x; }
   double getBG() { return BG; }
-  void setBGq(double x) { BGq = x; }
-  double getBGq() { return BGq; }
+  void setBGq(double x) { BGq_ = x; }
+  double getBGq() { return BGq_; }
+  void setBGqVar(double BGqVar) { BGqVar_ = BGqVar; }
+  double getBGqVar() { return BGqVar_; }
+  void setDqmin(double dq_min) { dq_min_ = dq_min; }
+  double getDqmin() { return dq_min_; }
   void setMuZero(double x) { muZero = x; }
   double getMuZero() { return muZero; }
   void setc(double x) { c = x; }
@@ -372,6 +381,10 @@ public:
   int getUsePseudoRapidity() { return usePseudoRapidity; }
   void setUseConstituentQuarkProton(int x) { useConstituentQuarkProton = x; }
   int getUseConstituentQuarkProton() { return useConstituentQuarkProton; }
+  void setNqBase(double NqBase) { NqBase_ = NqBase; }
+  double getNqBase() { return NqBase_; }
+  void setNqFluc(double NqFluc) { NqFluc_ = NqFluc; }
+  double getNqFluc() { return NqFluc_; }
   void setUseSmoothNucleus(int x) { useSmoothNucleus = x; }
   int getUseSmoothNucleus() { return useSmoothNucleus; }
   void setShiftConstituentQuarkProtonOrigin(int x) {

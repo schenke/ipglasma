@@ -320,8 +320,7 @@ int main(int argc, char *argv[]) {
       // random->gslRandomInit(rnum);
 
       // initialize U-fields on the lattice
-      int READFROMFILE = 0;
-      init.init(&lat, &group, param, random, &glauber, READFROMFILE);
+      init.init(&lat, &group, param, random, &glauber, param->getReadInitialWilsonLines());
       messager.info("initialization done.");
 
 
@@ -497,6 +496,8 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setWriteEvolution(setup->IFind(file_name, "writeEvolution"));
   param->setWriteInitialWilsonLines(
       setup->IFind(file_name, "writeInitialWilsonLines"));
+  param->setReadInitialWilsonLines(
+        setup->IFind(file_name, "readInitialWilsonLines"));
   param->setAverageOverNuclei(
       setup->IFind(file_name, "averageOverThisManyNuclei"));
   param->setUseTimeForSeed(setup->IFind(file_name, "useTimeForSeed"));

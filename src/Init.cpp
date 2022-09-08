@@ -2064,6 +2064,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     delete[] rhoACoeff[ic];
   }
   delete[] rhoACoeff;
+  
 
   // // output U
   if (param->getWriteInitialWilsonLines() > 0) {
@@ -2086,7 +2087,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
       strVTwo_name << ".txt";
     string VTwo_name;
     VTwo_name = strVTwo_name.str();
-    // Outpu in text
+    // Output in text
     if (param->getWriteInitialWilsonLines() == 1) {
       ofstream foutU(VOne_name.c_str(), ios::out);
       foutU.precision(15);
@@ -2187,94 +2188,271 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
   messager.flush("info");
 }
 
-void Init::readV(Lattice *lat, Parameters *param) {
-  int pos;
-  int N = param->getSize();
-  int Nc = param->getNc();
-  int nn[2];
-  nn[0] = N;
-  nn[1] = N;
-
-  Matrix temp(Nc, 1.);
-
-  double Re[9], Im[9];
-  double dummy;
-
+void Init::readV(Lattice *lat, Parameters *param, int format) {
+  // format 1 = plain text, 2 = binary
+    
+  if (format > 2 or format < 1)
+  {
+    messager << "Unknown format " << format << " when reading the initial Wilson lines, supported formats: 1,2";
+    messager.flush("info");
+    exit(1);
+  }
+    
   stringstream strVOne_name;
-  strVOne_name << "V1Y-0.4.txt";
+  // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
+  strVOne_name << "V-"
+               << param->getEventId() +
+                      2 * param->getSeed() * param->getMPISize();
+  if (format == 1)
+    strVOne_name << ".txt";
   string VOne_name;
   VOne_name = strVOne_name.str();
-  ifstream finV1(VOne_name.c_str(), ios::in);
-
-  if (!finV1) {
-    cerr << "File " << VOne_name << " not found. Exiting." << endl;
-    exit(1);
-  }
-
-  cout << "Reading Wilson line from file " << VOne_name << " ..." << endl;
-
-  // set V for nucleus A
-  for (int i = 0; i < nn[0]; i++) {
-    for (int j = 0; j < nn[1]; j++) {
-
-      finV1 >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1] >> Re[2] >>
-          Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4] >> Re[5] >> Im[5] >>
-          Re[6] >> Im[6] >> Re[7] >> Im[7] >> Re[8] >> Im[8];
-
-      temp.set(0, 0, complex<double>(Re[0], Im[0]));
-      temp.set(0, 1, complex<double>(Re[1], Im[1]));
-      temp.set(0, 2, complex<double>(Re[2], Im[2]));
-      temp.set(1, 0, complex<double>(Re[3], Im[3]));
-      temp.set(1, 1, complex<double>(Re[4], Im[4]));
-      temp.set(1, 2, complex<double>(Re[5], Im[5]));
-      temp.set(2, 0, complex<double>(Re[6], Im[6]));
-      temp.set(2, 1, complex<double>(Re[7], Im[7]));
-      temp.set(2, 2, complex<double>(Re[8], Im[8]));
-
-      pos = i * N + j;
-      lat->cells[pos]->setU(temp);
-    }
-  }
-
-  finV1.close();
 
   stringstream strVTwo_name;
-  strVTwo_name << "V3Y0.4.txt";
+  // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
+  strVTwo_name << "V-"
+                 << param->getEventId() +
+                        (1 + 2 * param->getSeed()) * param->getMPISize();
+  if (format == 1)
+    strVTwo_name << ".txt";
   string VTwo_name;
   VTwo_name = strVTwo_name.str();
-  ifstream finV2(VTwo_name.c_str(), ios::in);
+  
+  messager << "Reading Wilson lines from files " << VOne_name << " and " << VTwo_name;
+  messager.flush("info");
+  
+  if (format == 1)
+  {
+    int N = param->getSize();
+    int Nc = param->getNc();
+    
+    int nn[2];
+    nn[0] = N;
+    nn[1] = N;
 
-  if (!finV2) {
-    cerr << "File " << VTwo_name << " not found. Exiting." << endl;
-    exit(1);
-  }
+    Matrix temp(Nc, 1.);
 
-  cout << "Reading Wilson line from file " << VTwo_name << " ..." << endl;
+    double Re[9], Im[9];
+    double dummy;
 
-  // set V for nucleus B
-  for (int i = 0; i < nn[0]; i++) {
-    for (int j = 0; j < nn[1]; j++) {
+    ifstream finV1(VOne_name.c_str(), ios::in);
 
-      finV2 >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1] >> Re[2] >>
-          Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4] >> Re[5] >> Im[5] >>
-          Re[6] >> Im[6] >> Re[7] >> Im[7] >> Re[8] >> Im[8];
-
-      temp.set(0, 0, complex<double>(Re[0], Im[0]));
-      temp.set(0, 1, complex<double>(Re[1], Im[1]));
-      temp.set(0, 2, complex<double>(Re[2], Im[2]));
-      temp.set(1, 0, complex<double>(Re[3], Im[3]));
-      temp.set(1, 1, complex<double>(Re[4], Im[4]));
-      temp.set(1, 2, complex<double>(Re[5], Im[5]));
-      temp.set(2, 0, complex<double>(Re[6], Im[6]));
-      temp.set(2, 1, complex<double>(Re[7], Im[7]));
-      temp.set(2, 2, complex<double>(Re[8], Im[8]));
-
-      pos = i * N + j;
-      lat->cells[pos]->setU2(temp);
+    if (!finV1) {
+      messager << "File " << VOne_name << " not found. Exiting.";
+      messager.flush("info");
+      exit(1);
     }
-  }
 
-  finV2.close();
+    messager << "Reading Wilson line from file " << VOne_name << " ..." ;
+
+    // set V for nucleus A
+    for (int i = 0; i < nn[0]; i++) {
+      for (int j = 0; j < nn[1]; j++) {
+
+        finV1 >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1] >> Re[2] >>
+            Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4] >> Re[5] >> Im[5] >>
+            Re[6] >> Im[6] >> Re[7] >> Im[7] >> Re[8] >> Im[8];
+
+        temp.set(0, 0, complex<double>(Re[0], Im[0]));
+        temp.set(0, 1, complex<double>(Re[1], Im[1]));
+        temp.set(0, 2, complex<double>(Re[2], Im[2]));
+        temp.set(1, 0, complex<double>(Re[3], Im[3]));
+        temp.set(1, 1, complex<double>(Re[4], Im[4]));
+        temp.set(1, 2, complex<double>(Re[5], Im[5]));
+        temp.set(2, 0, complex<double>(Re[6], Im[6]));
+        temp.set(2, 1, complex<double>(Re[7], Im[7]));
+        temp.set(2, 2, complex<double>(Re[8], Im[8]));
+
+        int pos = i * N + j;
+        lat->cells[pos]->setU(temp);
+      }
+    }
+
+    finV1.close();
+
+    
+    ifstream finV2(VTwo_name.c_str(), ios::in);
+
+    if (!finV2) {
+      cerr << "File " << VTwo_name << " not found. Exiting." << endl;
+      exit(1);
+    }
+
+    cout << "Reading Wilson line from file " << VTwo_name << " ..." << endl;
+
+    // set V for nucleus B
+    for (int i = 0; i < nn[0]; i++) {
+      for (int j = 0; j < nn[1]; j++) {
+
+        finV2 >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1] >> Re[2] >>
+            Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4] >> Re[5] >> Im[5] >>
+            Re[6] >> Im[6] >> Re[7] >> Im[7] >> Re[8] >> Im[8];
+
+        temp.set(0, 0, complex<double>(Re[0], Im[0]));
+        temp.set(0, 1, complex<double>(Re[1], Im[1]));
+        temp.set(0, 2, complex<double>(Re[2], Im[2]));
+        temp.set(1, 0, complex<double>(Re[3], Im[3]));
+        temp.set(1, 1, complex<double>(Re[4], Im[4]));
+        temp.set(1, 2, complex<double>(Re[5], Im[5]));
+        temp.set(2, 0, complex<double>(Re[6], Im[6]));
+        temp.set(2, 1, complex<double>(Re[7], Im[7]));
+        temp.set(2, 2, complex<double>(Re[8], Im[8]));
+
+        int pos = i * N + j;
+        lat->cells[pos]->setU2(temp);
+      }
+    }
+
+    finV2.close();
+  }
+  else if (format == 2)
+  {
+    std::ifstream InStream;
+    InStream.precision(15);
+    InStream.open(VOne_name.c_str(), std::ios::in | std::ios::binary);
+    int N;
+    int Nc;
+    double L,a, temp;
+
+    if(InStream.is_open())
+    {
+        // READING IN PARAMETERS
+        InStream.read(reinterpret_cast<char*>(&N), sizeof(int));
+        InStream.read(reinterpret_cast<char*>(&Nc), sizeof(int));
+        InStream.read(reinterpret_cast<char*>(&L), sizeof(double));
+        InStream.read(reinterpret_cast<char*>(&a), sizeof(double));
+        InStream.read(reinterpret_cast<char*>(&temp), sizeof(double));
+                  
+                  
+        if(N != param->getSize())
+        {
+          messager << "# ERROR wrong lattice size, data is " << N
+          << " but you have specified " << param->getSize() ;
+           exit(0);
+        }
+      if(std::abs(L - param->getL()) > 1e-5)
+      {
+        messager << "# ERROR grid length, data has " << L
+        << " but you have specified " << param->getL();
+         exit(0);
+      }
+                  
+                  
+        // READING ACTUAL DATA
+        double ValueBuffer;
+        int INPUT_CTR=0;
+        double re,im;
+                  
+        while( InStream.read(reinterpret_cast<char*>(&ValueBuffer), sizeof(double)))
+        {
+            if(INPUT_CTR%2==0)              //this is the real part
+            {
+                 re=ValueBuffer;
+            }
+            else                            // this is the imaginary part, write then to variable //
+            {
+                im=ValueBuffer;
+                          
+                int TEMPINDX=((INPUT_CTR-1)/2);
+                int PositionIndx = TEMPINDX / 9;
+                          
+                int ix = PositionIndx / N;
+                int iy = PositionIndx - N*ix;
+                        
+                          
+                int MatrixIndx=TEMPINDX - PositionIndx*9;
+                int j=MatrixIndx/3;
+                int k=MatrixIndx-j*3;
+                     
+                int indx = N*iy + ix;
+                if (indx >= N*N)
+              {
+                messager << "Warning: datafile " << VOne_name << " has an element " << indx << " (iy=" << iy << ", ix=" << ix << "), but the grid is N="<< N << ". Element is (" << re <<" + " << im << "i), skipping it";
+                messager.flush("info");
+                continue;
+                
+              }
+                lat->cells[indx]->getU().set(j,k, complex<double> (re,im));
+
+            }
+            INPUT_CTR++;
+      }
+   
+      InStream.close();
+      
+      std::ifstream InStream2;
+      InStream2.precision(15);
+      InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
+      INPUT_CTR=0;
+      if(InStream2.is_open())
+      {
+          // READING IN PARAMETERS
+          InStream2.read(reinterpret_cast<char*>(&N), sizeof(int));
+          InStream2.read(reinterpret_cast<char*>(&Nc), sizeof(int));
+          InStream2.read(reinterpret_cast<char*>(&L), sizeof(double));
+          InStream2.read(reinterpret_cast<char*>(&a), sizeof(double));
+          InStream2.read(reinterpret_cast<char*>(&temp), sizeof(double));
+                    
+                    
+                    
+          if(N != param->getSize())
+          {
+            messager << "# ERROR wrong lattice size, data is " << N
+            << " but you have specified " << param->getSize();
+            messager.flush("info");
+             exit(0);
+          }
+        if(std::abs(L - param->getL()) > 1e-5)
+        {
+          messager << "# ERROR grid length, dataas " << L
+          << " but you have specified " << param->getL() ;
+          messager.flush("info");
+           exit(0);
+        }
+                    
+                    
+          // READING ACTUAL DATA
+          while( InStream2.read(reinterpret_cast<char*>(&ValueBuffer), sizeof(double)))
+          {
+              if(INPUT_CTR%2==0)              //this is the real part
+              {
+                   re=ValueBuffer;
+              }
+              else                            // this is the imaginary part, write then to variable //
+              {
+                  im=ValueBuffer;
+                            
+                  int TEMPINDX=((INPUT_CTR-1)/2);
+                  int PositionIndx = TEMPINDX / 9;
+                            
+                  int ix = PositionIndx / N;
+                  int iy = PositionIndx - N*ix;
+                          
+                            
+                  int MatrixIndx=TEMPINDX - PositionIndx*9;
+                  int j=MatrixIndx/3;
+                  int k=MatrixIndx-j*3;
+                       
+                  int indx = N*iy + ix;
+                  
+                  if (indx >= N*N)
+                  {
+                    messager << "Warning: datafile " << VTwo_name << " has an element " << indx << " (iy=" << iy << ", ix=" << ix << "), but the grid is N="<< N << ". Element is (" << re <<" + " << im << "i), skipping it";
+                    messager.flush("info");
+                    continue;
+                  }
+                
+                  lat->cells[indx]->getU2().set(j,k, complex<double> (re,im));
+               // if (indx > 65000) cout << "Save ok" << endl;
+
+              }
+              INPUT_CTR++;
+        }
+        InStream2.close();
+      }
+    }
+      
+  }
 
   messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
            << ". ";
@@ -2335,8 +2513,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
   // to read Wilson lines from file (e.g. after JIMWLK evolution for the
   // 3DGlasma)
-  if (READFROMFILE) {
-    readV(lat, param);
+  if (READFROMFILE > 0) {
+    readV(lat, param, READFROMFILE);
     param->setSuccess(1);
   }
   // to generate your own Wilson lines
@@ -2401,69 +2579,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   int pos, pos0;
   double x,y;
 
-  ofstream foutWL("V-1.dat",ios::out);
-  foutWL << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
-
-  ofstream foutWL2("V-2.dat",ios::out);
-  foutWL2 << "# Wilson lines. Format: x and y coordinate in [fm], then 3x3 matrix: Re(V_{i,j}) Im(V_{i,j}), i is the row, j the column, j is the inner loop, i.e., the order is Re(V_{0,0}) Im(V_{0,0}) Re(V_{0,1}) Im(V_{0,1}) Re(V_{0,2}) Im(V_{0,2}) Re(V_{1,0}) Im(V_{1,0}) ..." << endl;
-
-  for (int i=0; i<N; i++)      //loops over all cells
-    {
-      for (int j=0; j<N; j++)      //loops over all cells
-  	{
-  	  pos = i*N+j;
-  	  x = -L/2.+a*i;
-  	  y = -L/2.+a*j;
-
-  	  foutWL << x << " " << y << " "
-  	       << lat->cells[pos]->getU().getRe(0) << " " <<
-  lat->cells[pos]->getU().getIm(0) << " "
-  	       << lat->cells[pos]->getU().getRe(1) << " " <<
-  lat->cells[pos]->getU().getIm(1) << " "
-  	       << lat->cells[pos]->getU().getRe(2) << " " <<
-  lat->cells[pos]->getU().getIm(2) << " "
-  	       << lat->cells[pos]->getU().getRe(3) << " " <<
-  lat->cells[pos]->getU().getIm(3) << " "
-  	       << lat->cells[pos]->getU().getRe(4) << " " <<
-  lat->cells[pos]->getU().getIm(4) << " "
-  	       << lat->cells[pos]->getU().getRe(5) << " " <<
-  lat->cells[pos]->getU().getIm(5) << " "
-  	       << lat->cells[pos]->getU().getRe(6) << " " <<
-  lat->cells[pos]->getU().getIm(6) << " "
-  	       << lat->cells[pos]->getU().getRe(7) << " " <<
-  lat->cells[pos]->getU().getIm(7) << " "
-  	       << lat->cells[pos]->getU().getRe(8) << " " <<
-  lat->cells[pos]->getU().getIm(8)
-  	       << endl;
-
-  	  foutWL2 << x << " " << y << " "
-  	       << lat->cells[pos]->getU2().getRe(0) << " " <<
-  lat->cells[pos]->getU2().getIm(0) << " "
-  	       << lat->cells[pos]->getU2().getRe(1) << " " <<
-  lat->cells[pos]->getU2().getIm(1) << " "
-  	       << lat->cells[pos]->getU2().getRe(2) << " " <<
-  lat->cells[pos]->getU2().getIm(2) << " "
-  	       << lat->cells[pos]->getU2().getRe(3) << " " <<
-  lat->cells[pos]->getU2().getIm(3) << " "
-  	       << lat->cells[pos]->getU2().getRe(4) << " " <<
-  lat->cells[pos]->getU2().getIm(4) << " "
-  	       << lat->cells[pos]->getU2().getRe(5) << " " <<
-  lat->cells[pos]->getU2().getIm(5) << " "
-  	       << lat->cells[pos]->getU2().getRe(6) << " " <<
-  lat->cells[pos]->getU2().getIm(6) << " "
-  	       << lat->cells[pos]->getU2().getRe(7) << " " <<
-  lat->cells[pos]->getU2().getIm(7) << " "
-  	       << lat->cells[pos]->getU2().getRe(8) << " " <<
-  lat->cells[pos]->getU2().getIm(8)
-  	       << endl;
-
-  	}
-      foutWL << endl;
-      foutWL2 << endl;
-    }
-
-  foutWL.close();
-  foutWL2.close();
+  
 
 
   messager.info("Finding fields in forward lightcone...");

@@ -65,7 +65,7 @@ public:
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random,
                              Glauber *glauber);
   void setV(Lattice *lat, Group *group, Parameters *param, Random *random);
-  void readV(Lattice *lat, Parameters *param);
+  void readV(Lattice *lat, Parameters *param, int format);
   // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
   // *random, Glauber *glauber);
   void multiplicity(Lattice *lat, Parameters *param);

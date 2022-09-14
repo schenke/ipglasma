@@ -89,6 +89,8 @@ private:
   int writeInitialWilsonLines; // decide whether to write (1) in text or (2) in
                                // binary format or not write (0) generated
                                // Wilson lines (before any evolution)
+  int readInitialWilsonLines; // decide wheter to generate initial Wilson lines (0),
+                              // or read these in plain text (1) or in binary format (2)
   unsigned long long int randomSeed; // stores the random seed used (so the
                                      // event can be reproduced)
   string NucleusQsTableFileName; // the file name for the table containing Qs^2
@@ -365,6 +367,8 @@ public:
   int getWriteEvolution() { return writeEvolution; }
   void setWriteInitialWilsonLines(int x) { writeInitialWilsonLines = x; }
   int getWriteInitialWilsonLines() { return writeInitialWilsonLines; }
+  void setReadInitialWilsonLines(int x) { readInitialWilsonLines = x; }
+  int getReadInitialWilsonLines() { return readInitialWilsonLines; }
   void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile = x; }
   int getNucleonPositionsFromFile() { return nucleonPositionsFromFile; }
   void setInverseQsForMaxTime(int x) { inverseQsForMaxTime = x; };

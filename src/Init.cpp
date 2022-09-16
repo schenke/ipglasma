@@ -1368,7 +1368,6 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
     }
   }
 
-
   if (param->getUseSmoothNucleus() == 0) {
     stringstream strNcoll_name;
     strNcoll_name << "NcollList" << param->getEventId() << ".dat";
@@ -2220,12 +2219,15 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
   
   messager << "Reading Wilson lines from files " << VOne_name << " and " << VTwo_name;
   messager.flush("info");
-  
+    
   if (format == 1)
   {
     int N = param->getSize();
     int Nc = param->getNc();
-    
+
+    double L = param->getL();
+    double a = L/static_cast<double>(N);
+
     int nn[2];
     nn[0] = N;
     nn[1] = N;
@@ -2236,13 +2238,13 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     double dummy;
 
     ifstream finV1(VOne_name.c_str(), ios::in);
-
+     
     if (!finV1) {
       messager << "File " << VOne_name << " not found. Exiting.";
       messager.flush("info");
       exit(1);
     }
-
+    
     messager << "Reading Wilson line from file " << VOne_name << " ..." ;
 
     // set V for nucleus A
@@ -2263,7 +2265,16 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         temp.set(2, 1, complex<double>(Re[7], Im[7]));
         temp.set(2, 2, complex<double>(Re[8], Im[8]));
 
-        int pos = i * N + j;
+        double bb = param->getb();
+        a = L/static_cast<double>(N);
+        
+        double xtemp = a * i - bb / 2.;
+        int ix = xtemp / a;
+
+        if (ix<0)
+          continue;
+        
+        int pos = ix * N + j;
         lat->cells[pos]->setU(temp);
       }
     }
@@ -2298,7 +2309,16 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         temp.set(2, 1, complex<double>(Re[7], Im[7]));
         temp.set(2, 2, complex<double>(Re[8], Im[8]));
 
-        int pos = i * N + j;
+        double bb = param->getb();
+        a = L/static_cast<double>(N);
+        
+        double xtemp = a * i + bb / 2.;
+        int ix = xtemp / a;
+
+        if (ix>=N)
+          continue;
+        
+        int pos = ix * N + j;
         lat->cells[pos]->setU2(temp);
       }
     }
@@ -2307,13 +2327,16 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
   }
   else if (format == 2)
   {
+
     std::ifstream InStream;
     InStream.precision(15);
     InStream.open(VOne_name.c_str(), std::ios::in | std::ios::binary);
     int N;
     int Nc;
-    double L,a, temp;
+    double L, a, temp;
 
+    Matrix tempM(Nc, 1.);
+    
     if(InStream.is_open())
     {
         // READING IN PARAMETERS
@@ -2322,8 +2345,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         InStream.read(reinterpret_cast<char*>(&L), sizeof(double));
         InStream.read(reinterpret_cast<char*>(&a), sizeof(double));
         InStream.read(reinterpret_cast<char*>(&temp), sizeof(double));
-                  
-                  
+                                    
         if(N != param->getSize())
         {
           messager << "# ERROR wrong lattice size, data is " << N
@@ -2336,12 +2358,14 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         << " but you have specified " << param->getL();
          exit(0);
       }
-                  
-                  
+
+                 
         // READING ACTUAL DATA
         double ValueBuffer;
         int INPUT_CTR=0;
         double re,im;
+        re = 0.;
+        im = 0.;
                   
         while( InStream.read(reinterpret_cast<char*>(&ValueBuffer), sizeof(double)))
         {
@@ -2356,19 +2380,31 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
                 int TEMPINDX=((INPUT_CTR-1)/2);
                 int PositionIndx = TEMPINDX / 9;
                           
-                int ix = PositionIndx / N;
-                int iy = PositionIndx - N*ix;
-                        
-                          
+                // shift here by half an impact parameter
+                int iy = PositionIndx / N;
+                int ixIn = PositionIndx - N*iy;
+
+                double bb = param->getb();
+                a = L/static_cast<double>(N);
+              
+                double xtemp = a * ixIn - bb / 2.;
+
+                int ix = round(xtemp / a);
+
+                // cout << ixIn << " " << ix << endl;
+                
                 int MatrixIndx=TEMPINDX - PositionIndx*9;
                 int j=MatrixIndx/3;
                 int k=MatrixIndx-j*3;
-                     
-                int indx = N*iy + ix;
-                if (indx >= N*N)
+
+                int indx = N*ix + iy;
+                if (indx >= N*N || indx < 0)
               {
-                messager << "Warning: datafile " << VOne_name << " has an element " << indx << " (iy=" << iy << ", ix=" << ix << "), but the grid is N="<< N << ". Element is (" << re <<" + " << im << "i), skipping it";
-                messager.flush("info");
+                if (bb==0){
+                  messager << "Warning: datafile " << VOne_name << " has an element " << indx << " (iy=" << iy << ", ix=" << ix << "), but the grid is N="<< N << ". Element is (" << re <<" + " << im << "i), skipping it";
+                  messager.flush("info");
+                }
+                INPUT_CTR++;
                 continue;
                 
               }
@@ -2376,7 +2412,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
 
             }
             INPUT_CTR++;
-      }
+        }
    
       InStream.close();
       
@@ -2393,8 +2429,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
           InStream2.read(reinterpret_cast<char*>(&a), sizeof(double));
           InStream2.read(reinterpret_cast<char*>(&temp), sizeof(double));
                     
-                    
-                    
+                   
           if(N != param->getSize())
           {
             messager << "# ERROR wrong lattice size, data is " << N
@@ -2425,23 +2460,35 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
                   int TEMPINDX=((INPUT_CTR-1)/2);
                   int PositionIndx = TEMPINDX / 9;
                             
-                  int ix = PositionIndx / N;
-                  int iy = PositionIndx - N*ix;
+                  // shift here by half an impact parameter
+                  int iy = PositionIndx / N;
+                  int ixIn = PositionIndx - N*iy;
                           
-                            
+                  double bb = param->getb();
+                  a = L/static_cast<double>(N);
+                  
+                  double xtemp = a * ixIn + bb / 2.;
+                  
+                  int ix = round(xtemp / a);
+
+                  //                  if (ixIn != ix)
+                  //  cout << ixIn << " " << ix << endl;
+            
                   int MatrixIndx=TEMPINDX - PositionIndx*9;
                   int j=MatrixIndx/3;
                   int k=MatrixIndx-j*3;
                        
-                  int indx = N*iy + ix;
+                  int indx = N*ix + iy;
                   
-                  if (indx >= N*N)
+                  if (indx >= N*N || indx < 0)
                   {
-                    messager << "Warning: datafile " << VTwo_name << " has an element " << indx << " (iy=" << iy << ", ix=" << ix << "), but the grid is N="<< N << ". Element is (" << re <<" + " << im << "i), skipping it";
-                    messager.flush("info");
+                    if (bb==0){
+                      messager << "Warning: datafile " << VTwo_name << " has an element " << indx << " (iy=" << iy << ", ix=" << ix << "), but the grid is N="<< N << ". Element is (" << re <<" + " << im << "i), skipping it";
+                      messager.flush("info");
+                    }
+                    INPUT_CTR++;
                     continue;
-                  }
-                
+                  }          
                   lat->cells[indx]->getU2().set(j,k, complex<double> (re,im));
                // if (indx > 65000) cout << "Save ok" << endl;
 
@@ -2527,6 +2574,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     // set color charge densities
     setColorChargeDensity(lat, param, random, glauber);
 
+    // for enforcing a specific Npart:
     if (param->getUseNucleus() == 1 && param->getUseFixedNpart() != 0 &&
         param->getNucleonPositionsFromFile() != 1) {
       if (param->getNpart() != param->getUseFixedNpart()) {
@@ -2578,9 +2626,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   double a = L / N; // lattice spacing in fm
   int pos, pos0;
   double x,y;
-
-  
-
 
   messager.info("Finding fields in forward lightcone...");
 
@@ -2665,7 +2710,10 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     Matrix UDy1mUDy2(int(Nc), 0.);
 
     // compute Ux(3) Uy(3) after the collision
-#pragma omp for
+
+
+    //    ofstream fout("test1", ios::out);
+ #pragma omp for
     for (pos = 0; pos < N * N; pos++) // loops over all cells
     {
       if (lat->cells[pos]->getU().trace() != 
@@ -2677,7 +2725,14 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           lat->cells[pos]->getU2().trace()) {
         lat->cells[pos]->setU2(one);
       }
+
+      ////check - remove later
+      //      fout << lat->cells[pos]->getU() << endl;
+      //fout << lat->cells[pos]->getU2() << endl;
+          
     }
+
+    //fout.close();
 
 #pragma omp for
     for (pos = 0; pos < N * N; pos++) // loops over all cells
@@ -2870,7 +2925,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
             cout << param->getAverageQs() << " " << param->getAverageQsAvg()
                  << " " << param->getAverageQsmin() << endl;
             cout << param->getb() << " " << endl;
-            cout << lat->cells[pos]->getUx1() << " "
+            cout << lat->cells[pos]->getUx1() << endl
                  << lat->cells[pos]->getUx2() << endl;
             cout << lat->cells[pos]->getU() << endl;
           }

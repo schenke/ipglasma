@@ -3661,7 +3661,13 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param,
 
   double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
   double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
-
+  dNdetaHadrons = 0.;
+  dNdetaHadronsCut = 0.;
+  dNdetaHadronsCut2 = 0.;
+  dEdetaHadrons = 0.;
+  dEdetaHadronsCut = 0.;
+  dEdetaHadronsCut2 =0.;
+  
   // compute hadrons using fragmentation function
   if (it == itmax && param->getWriteOutputs() == 3) {
     cout << " Hadronizing ... " << endl;

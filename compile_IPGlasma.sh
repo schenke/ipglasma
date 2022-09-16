@@ -10,7 +10,7 @@ if [ "$Flag" == "KNL" ]; then
 elif [ "$Flag" == "noMPI" ]; then
     cmake .. -DdisableMPI=ON
 else
-    cmake ..
+    CXX=g++ cmake ..
 fi
 
 make -j4

@@ -2067,6 +2067,9 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
 
   // // output U
   if (param->getWriteInitialWilsonLines() > 0) {
+      if (std::abs(param->getb()) > 1e-5)
+          messager.warning("Writing Wilson lines with a non-zero impact parameter b!");
+    
     stringstream strVOne_name;
     // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
     strVOne_name << "V-"
@@ -2336,6 +2339,13 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     double L, a, temp;
 
     Matrix tempM(Nc, 1.);
+      
+    if (!InStream.good())
+    {
+        messager << "File " << VOne_name.c_str() << " does not exist!";
+        messager.flush("info");
+        exit(1);
+    }
     
     if(InStream.is_open())
     {
@@ -2419,6 +2429,13 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
       std::ifstream InStream2;
       InStream2.precision(15);
       InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
+      if (!InStream.good())
+      {
+          messager << "File " << VTwo_name.c_str() << " does not exist!";
+          messager.flush("info");
+          exit(1);
+      }
+        
       INPUT_CTR=0;
       if(InStream2.is_open())
       {

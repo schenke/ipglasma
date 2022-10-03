@@ -2429,7 +2429,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
       std::ifstream InStream2;
       InStream2.precision(15);
       InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
-      if (!InStream.good())
+      if (!InStream2.good())
       {
           messager << "File " << VTwo_name.c_str() << " does not exist!";
           messager.flush("info");

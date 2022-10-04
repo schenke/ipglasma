@@ -5,8 +5,9 @@
 using namespace std;
 
 void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
-                               bool setWSDeformParams, double beta2,
-                               double beta3, double beta4, double gamma) {
+                               bool setWSDeformParams, double R_WS, double a_WS,
+                               double beta2, double beta3, double beta4,
+                               double gamma) {
   string densityFunction;
   if (name.compare("Au") == 0) {
     nucleus->A = 197;
@@ -212,6 +213,8 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
   nucleus->rho_WS = nucleus->R_WS;
 
   if (setWSDeformParams) {
+    nucleus->R_WS = R_WS;
+    nucleus->a_WS = a_WS;
     nucleus->beta2 = beta2;
     nucleus->beta3 = beta3;
     nucleus->beta4 = beta4;
@@ -1100,7 +1103,8 @@ double Glauber::PAB(double x, double y) {
 } /* PAB */
 
 void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
-                          double inb, bool setWSDeformParams, double beta2,
+                          double inb, bool setWSDeformParams,
+                          double R_WS, double a_WS, double beta2,
                           double beta3, double beta4, double gamma, int imax) {
   string Target_Name;
   Target_Name = Target;
@@ -1126,9 +1130,9 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
   paf = p_name;
 
   FindNucleusData2(&(GlauberData.Target), Target_Name,
-                   setWSDeformParams, beta2, beta3, beta4, gamma);
+                   setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma);
   FindNucleusData2(&(GlauberData.Projectile), Projectile_Name,
-                   setWSDeformParams, beta2, beta3, beta4, gamma);
+                   setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma);
 
   GlauberData.SigmaNN = 0.1 * SigmaNN; // sigma in fm^2
   currentA1 = GlauberData.Projectile.A;

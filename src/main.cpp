@@ -580,7 +580,7 @@ void writeparams(Parameters *param)
   fout1 << "rmax " << param->getRmax() << endl;
   fout1 << "UVdamp " << param->getUVdamp() << endl;
   if (param->getSetWSDeformParams()) {
-    fout1 << "setWSDeformParams" << param->getSetWSDeformParams() << endl;
+    fout1 << "setWSDeformParams " << param->getSetWSDeformParams() << endl;
     fout1 << "R_WS " << param->getR_WS() << endl;
     fout1 << "a_WS " << param->getA_WS() << endl;
     fout1 << "beta2 " << param->getBeta2() << endl;

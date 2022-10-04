@@ -4,7 +4,9 @@
 
 using namespace std;
 
-void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
+void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
+                               bool setWSDeformParams, double beta2,
+                               double beta3, double beta4, double gamma) {
   string densityFunction;
   if (name.compare("Au") == 0) {
     nucleus->A = 197;
@@ -14,7 +16,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.535;
     nucleus->beta2 = -0.13;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = -0.03;
+    nucleus->gamma = 0.;
   } else if (name.compare("Pb") == 0) {
     nucleus->A = 208.;
     nucleus->Z = 82.;
@@ -23,7 +27,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0.;
     nucleus->a_WS = 0.546;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("p") == 0) {
     nucleus->A = 1.;
     nucleus->Z = 1.;
@@ -32,7 +38,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0.;
     nucleus->a_WS = 1.;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("He3") == 0) {
     nucleus->A = 3;
     nucleus->Z = 2;
@@ -41,7 +49,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("d") == 0) {
     nucleus->A = 2;
     nucleus->Z = 1;
@@ -50,7 +60,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 1.18;
     nucleus->a_WS = 0.228;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("C") == 0) {
     nucleus->A = 12;
     nucleus->Z = 6;
@@ -59,7 +71,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 1.403;
     nucleus->a_WS = 1.635;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("O") == 0) {
     nucleus->A = 16;
     nucleus->Z = 8;
@@ -68,7 +82,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = -0.051;
     nucleus->a_WS = 0.513;
     nucleus->beta2 = -0.01;  // from arXiv:1508.06294
+    nucleus->beta3 = 0.;
     nucleus->beta4 = -0.122; // from arXiv:1508.06294
+    nucleus->gamma = 0.;
   } else if (name.compare("S") == 0) {
     nucleus->A = 32;
     nucleus->Z = 16;
@@ -77,7 +93,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0.16;
     nucleus->a_WS = 2.191;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("W") == 0) {
     nucleus->A = 184;
     nucleus->Z = 74;
@@ -86,7 +104,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.535;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("Al") == 0) {
     nucleus->A = 27;
     nucleus->Z = 13;
@@ -95,7 +115,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.519;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("Ca") == 0) {
     nucleus->A = 40;
     nucleus->Z = 20;
@@ -104,7 +126,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = -0.161;
     nucleus->a_WS = 0.586;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("Cu") == 0) {
     nucleus->A = 63;
     nucleus->Z = 29;
@@ -113,7 +137,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.606;
     nucleus->beta2 = 0.162;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.006;
+    nucleus->gamma = 0.;
   } else if (name.compare("Fe") == 0) {
     nucleus->A = 56;
     nucleus->Z = 26;
@@ -122,7 +148,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.519;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("Pt") == 0) {
     nucleus->A = 195;
     nucleus->Z = 78;
@@ -131,7 +159,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.54;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("U") == 0) {
     nucleus->A = 238;
     nucleus->Z = 92;
@@ -140,7 +170,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.55;
     nucleus->beta2 = beta2; //0.28
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.093;
+    nucleus->gamma = 0.;
   } else if (name.compare("Ru") == 0) {
     nucleus->A = 96;
     nucleus->Z = 44;
@@ -149,7 +181,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.46;
     nucleus->beta2 = 0.158;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("Zr") == 0) {
     nucleus->A = 96;
     nucleus->Z = 40;
@@ -158,7 +192,9 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->w_WS = 0;
     nucleus->a_WS = 0.46;
     nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("Xe") == 0) {
     nucleus->A = 129;
     nucleus->Z = 54;
@@ -168,10 +204,19 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name, double beta2) {
     nucleus->a_WS = 0.57;    // 0.590;     // new values from arXiv:1508.06294
     //nucleus->beta2 = 0.162;  // from arXiv:1508.06294
     nucleus->beta2 = beta2;   // can be modified by the user
+    nucleus->beta3 = 0.;
     nucleus->beta4 = -0.003; // from arXiv:1508.06294
+    nucleus->gamma = 0.;
   }
 
   nucleus->rho_WS = nucleus->R_WS;
+
+  if (setWSDeformParams) {
+    nucleus->beta2 = beta2;
+    nucleus->beta3 = beta3;
+    nucleus->beta4 = beta4;
+    nucleus->gamma = gamma;
+  }
 
   if (densityFunction.compare("2HO") == 0) {
     nucleus->AnumFunc = 1;          // Anum2HO;
@@ -1055,7 +1100,8 @@ double Glauber::PAB(double x, double y) {
 } /* PAB */
 
 void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
-                          double inb, double beta2, int imax) {
+                          double inb, bool setWSDeformParams, double beta2,
+                          double beta3, double beta4, double gamma, int imax) {
   string Target_Name;
   Target_Name = Target;
 
@@ -1079,8 +1125,10 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
   string paf;
   paf = p_name;
 
-  FindNucleusData2(&(GlauberData.Target), Target_Name, beta2);
-  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name, beta2);
+  FindNucleusData2(&(GlauberData.Target), Target_Name,
+                   setWSDeformParams, beta2, beta3, beta4, gamma);
+  FindNucleusData2(&(GlauberData.Projectile), Projectile_Name,
+                   setWSDeformParams, beta2, beta3, beta4, gamma);
 
   GlauberData.SigmaNN = 0.1 * SigmaNN; // sigma in fm^2
   currentA1 = GlauberData.Projectile.A;

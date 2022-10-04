@@ -241,7 +241,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             random, A1, Z1, glauber->GlauberData.Projectile.a_WS,
             glauber->GlauberData.Projectile.R_WS,
             glauber->GlauberData.Projectile.beta2,
-            glauber->GlauberData.Projectile.beta4, &nucleusA);
+            glauber->GlauberData.Projectile.beta3,
+            glauber->GlauberData.Projectile.beta4,
+            glauber->GlauberData.Projectile.gamma,
+            &nucleusA);
       }
     } else if (A1 == 16) // 16O
     {
@@ -318,14 +321,20 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             random, A1, Z1, glauber->GlauberData.Projectile.a_WS,
             glauber->GlauberData.Projectile.R_WS,
             glauber->GlauberData.Projectile.beta2,
-            glauber->GlauberData.Projectile.beta4, &nucleusA);
+            glauber->GlauberData.Projectile.beta3,
+            glauber->GlauberData.Projectile.beta4,
+            glauber->GlauberData.Projectile.gamma,
+            &nucleusA);
       }
     } else {
       generate_nucleus_configuration(
           random, A1, Z1, glauber->GlauberData.Projectile.a_WS,
           glauber->GlauberData.Projectile.R_WS,
           glauber->GlauberData.Projectile.beta2,
-          glauber->GlauberData.Projectile.beta4, &nucleusA);
+          glauber->GlauberData.Projectile.beta3,
+          glauber->GlauberData.Projectile.beta4,
+          glauber->GlauberData.Projectile.gamma,
+          &nucleusA);
     }
 
     if (A2 == 1) {
@@ -470,9 +479,14 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
       } else // standard sampling for carbon
       {
         generate_nucleus_configuration(
-            random, A2, Z2, glauber->GlauberData.Target.a_WS,
-            glauber->GlauberData.Target.R_WS, glauber->GlauberData.Target.beta2,
-            glauber->GlauberData.Target.beta4, &nucleusB);
+            random, A2, Z2,
+            glauber->GlauberData.Target.a_WS,
+            glauber->GlauberData.Target.R_WS,
+            glauber->GlauberData.Target.beta2,
+            glauber->GlauberData.Target.beta3,
+            glauber->GlauberData.Target.beta4,
+            glauber->GlauberData.Target.gamma,
+            &nucleusB);
       }
     } else if (A2 == 16) // 16O
     {
@@ -545,15 +559,25 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
       } else // standard sampling for oxygen
       {
         generate_nucleus_configuration(
-            random, A2, Z2, glauber->GlauberData.Target.a_WS,
-            glauber->GlauberData.Target.R_WS, glauber->GlauberData.Target.beta2,
-            glauber->GlauberData.Target.beta4, &nucleusB);
+            random, A2, Z2,
+            glauber->GlauberData.Target.a_WS,
+            glauber->GlauberData.Target.R_WS,
+            glauber->GlauberData.Target.beta2,
+            glauber->GlauberData.Target.beta3,
+            glauber->GlauberData.Target.beta4,
+            glauber->GlauberData.Target.gamma,
+            &nucleusB);
       }
     } else {
       generate_nucleus_configuration(
-          random, A2, Z2, glauber->GlauberData.Target.a_WS,
-          glauber->GlauberData.Target.R_WS, glauber->GlauberData.Target.beta2,
-          glauber->GlauberData.Target.beta4, &nucleusB);
+          random, A2, Z2,
+          glauber->GlauberData.Target.a_WS,
+          glauber->GlauberData.Target.R_WS,
+          glauber->GlauberData.Target.beta2,
+          glauber->GlauberData.Target.beta3,
+          glauber->GlauberData.Target.beta4,
+          glauber->GlauberData.Target.gamma,
+          &nucleusB);
     }
     cout << "done. " << endl;
   } else if (param->getNucleonPositionsFromFile() == 1) {
@@ -3115,14 +3139,21 @@ void Init::multiplicity(Lattice *lat, Parameters *param) {
 
 void Init::generate_nucleus_configuration(Random *random, int A, int Z,
                                           double a_WS, double R_WS,
-                                          double beta2, double beta4,
+                                          double beta2, double beta3,
+                                          double beta4, double gamma,
                                           std::vector<ReturnValue> *nucleus) {
-  if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15) {
-    generate_nucleus_configuration_with_woods_saxon(random, A, Z, a_WS, R_WS,
-                                                    nucleus);
+  if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
+          && std::abs(beta3) < 1e-15 && std::abs(gamma) > 1e-15) {
+    generate_nucleus_configuration_with_woods_saxon(
+                                            random, A, Z, a_WS, R_WS, nucleus);
   } else {
-    generate_nucleus_configuration_with_deformed_woods_saxon(
-        random, A, Z, a_WS, R_WS, beta2, beta4, nucleus);
+    if (std::abs(gamma) > 1e-15) {
+      generate_nucleus_configuration_with_deformed_woods_saxon2(
+                random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, nucleus);
+    } else {
+      generate_nucleus_configuration_with_deformed_woods_saxon(
+                random, A, Z, a_WS, R_WS, beta2, beta4, nucleus);
+    }
   }
 }
 
@@ -3183,7 +3214,7 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
   std::random_shuffle(nucleus->begin(), nucleus->end());
 
   for (unsigned int i = 0; i < r_array.size(); i++) {
-    if (i < abs(Z))
+    if (static_cast<int>(i) < std::abs(Z))
       nucleus->at(i).proton = 1;
     else
       nucleus->at(i).proton = 0;
@@ -3222,7 +3253,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
   std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
   const double d_min = 0.9;
   const double d_min_sq = d_min * d_min;
-  for (unsigned int i = 0; i < abs(A); i++) {
+  for (unsigned int i = 0; i < x_array.size(); i++) {
     // const double r_i     = r_array[i];
     // const double theta_i = acos(costheta_array[i]);
     const double r_i = pair_array[i].first;
@@ -3273,7 +3304,59 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
   std::random_shuffle(nucleus->begin(), nucleus->end());
 
   for (unsigned int i = 0; i < r_array.size(); i++) {
-    if (i < abs(Z))
+    if (static_cast<int>(i) < std::abs(Z))
+      nucleus->at(i).proton = 1;
+    else
+      nucleus->at(i).proton = 0;
+  }
+}
+
+
+void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
+    Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
+    double beta3, double beta4, double gamma,
+    std::vector<ReturnValue> *nucleus) {
+  double rmaxCut = R_WS + 10.*a_WS;
+  double r = 0.;
+  double costheta = 0.;
+  double phi = 0.;
+  double R_WS_theta = 0.;
+  std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
+  for (unsigned int i = 0; i < x_array.size(); i++) {
+    do {
+        r = rmaxCut*pow(random->genrand64_real3(), 1.0/3.0);
+        costheta = 1.0 - 2.0 * random->genrand64_real3();
+        phi  = 2.*M_PI*random->genrand64_real3();
+        double y20 = spherical_harmonics(2, costheta);
+        double y30 = spherical_harmonics(3, costheta);
+        double y40 = spherical_harmonics(4, costheta);
+        double y22 = spherical_harmonics_Y22(costheta, phi);
+        R_WS_theta = R_WS*(1.0
+                           + beta2*(cos(gamma)*y20 + sin(gamma)*y22)
+                           + beta3*y30 + beta4*y40);
+    } while (random->genrand64_real3()
+             > fermi_distribution(r, R_WS_theta, a_WS));
+    double sintheta = sqrt(1. - costheta*costheta);
+    x_array[i] = r*sintheta*cos(phi);
+    y_array[i] = r*sintheta*sin(phi);
+    z_array[i] = r*costheta;
+  }
+
+  recenter_nucleus(x_array, y_array, z_array);
+
+  for (unsigned int i = 0; i < x_array.size(); i++) {
+    ReturnValue rv;
+    rv.x = x_array[i];
+    rv.y = y_array[i];
+    rv.phi = atan2(y_array[i], x_array[i]);
+    rv.collided = 0;
+    nucleus->push_back(rv);
+  }
+
+  std::random_shuffle(nucleus->begin(), nucleus->end());
+
+  for (unsigned int i = 0; i < x_array.size(); i++) {
+    if (static_cast<int>(i) < std::abs(Z))
       nucleus->at(i).proton = 1;
     else
       nucleus->at(i).proton = 0;
@@ -3301,6 +3384,10 @@ double Init::spherical_harmonics(int l, double ct) const {
   if (l == 2) {
     ylm = 3.0 * ct * ct - 1.0;
     ylm *= 0.31539156525252005; // pow(5.0/16.0/M_PI,0.5);
+  } else if (l == 3) {
+    ylm  = 5.0*ct*ct*ct;
+    ylm -= 3.0*ct;
+    ylm *= 0.3731763325901154;  // pow(7.0/16.0/M_PI,0.5);
   } else if (l == 4) {
     ylm = 35.0 * ct * ct * ct * ct;
     ylm -= 30.0 * ct * ct;
@@ -3308,6 +3395,15 @@ double Init::spherical_harmonics(int l, double ct) const {
     ylm *= 0.10578554691520431; // 3.0/16.0/pow(M_PI,0.5);
   }
   return (ylm);
+}
+
+double Init::spherical_harmonics_Y22(double ct, double phi) const {
+    // Y2,2
+    double ylm = 0.0;
+    ylm  = 1.0 - ct*ct;
+    ylm *= cos(2.*phi);
+    ylm *= 0.5462742152960397;  // sqrt(2*15)/4/pow(2*M_PI,0.5);
+    return(ylm);
 }
 
 void Init::recenter_nucleus(std::vector<double> &x, std::vector<double> &y,

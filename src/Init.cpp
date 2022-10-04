@@ -596,6 +596,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         nucleusA.push_back(rv);
         A++;
       }
+    } else {
+      cerr << "[Init.cpp]: The nucleus1.dat does not found "
+           << "with the option getNucleonPositionsFromFile == 1" << endl;
+      exit(1);
     }
 
     fin.close();
@@ -609,6 +613,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         nucleusB.push_back(rv);
         A2++;
       }
+    } else {
+      cerr << "[Init.cpp]: The nucleus2.dat does not found "
+           << "with the option getNucleonPositionsFromFile == 1" << endl;
+      exit(1);
     }
 
     A = A - 1;

@@ -3151,7 +3151,7 @@ void Init::generate_nucleus_configuration(Random *random, int A, int Z,
                                           double beta4, double gamma,
                                           std::vector<ReturnValue> *nucleus) {
   if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
-          && std::abs(beta3) < 1e-15 && std::abs(gamma) > 1e-15) {
+          && std::abs(beta3) < 1e-15 && std::abs(gamma) < 1e-15) {
     generate_nucleus_configuration_with_woods_saxon(
                                             random, A, Z, a_WS, R_WS, nucleus);
   } else {
@@ -3160,7 +3160,7 @@ void Init::generate_nucleus_configuration(Random *random, int A, int Z,
                 random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, nucleus);
     } else {
       generate_nucleus_configuration_with_deformed_woods_saxon(
-                random, A, Z, a_WS, R_WS, beta2, beta4, nucleus);
+                random, A, Z, a_WS, R_WS, beta2, beta3, beta4, nucleus);
     }
   }
 }
@@ -3246,13 +3246,13 @@ double Init::fermi_distribution(double r, double R_WS, double a_WS) const {
 
 void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-    double beta4, std::vector<ReturnValue> *nucleus) {
+    double beta3, double beta4, std::vector<ReturnValue> *nucleus) {
   std::vector<double> r_array(A, 0.);
   std::vector<double> costheta_array(A, 0.);
   std::vector<std::pair<double, double>> pair_array;
   for (int i = 0; i < A; i++) {
     sample_r_and_costheta_from_deformed_woods_saxon(
-        random, a_WS, R_WS, beta2, beta4, r_array[i], costheta_array[i]);
+        random, a_WS, R_WS, beta2, beta3, beta4, r_array[i], costheta_array[i]);
     pair_array.push_back(std::make_pair(r_array[i], costheta_array[i]));
   }
   // std::sort(r_array.begin(), r_array.end());
@@ -3372,16 +3372,17 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
 }
 
 void Init::sample_r_and_costheta_from_deformed_woods_saxon(
-    Random *random, double a_WS, double R_WS, double beta2, double beta4,
-    double &r, double &costheta) const {
+    Random *random, double a_WS, double R_WS, double beta2, double beta3,
+    double beta4, double &r, double &costheta) const {
   double rmaxCut = R_WS + 10. * a_WS;
   double R_WS_theta = R_WS;
   do {
     r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);
     costheta = 1.0 - 2.0 * random->genrand64_real3();
     auto y20 = spherical_harmonics(2, costheta);
+    auto y30 = spherical_harmonics(3, costheta);
     auto y40 = spherical_harmonics(4, costheta);
-    R_WS_theta = R_WS * (1.0 + beta2 * y20 + beta4 * y40);
+    R_WS_theta = R_WS * (1.0 + beta2 * y20 + beta3 * y30 + beta4 * y40);
   } while (random->genrand64_real3() > fermi_distribution(r, R_WS_theta, a_WS));
 }
 

@@ -2335,7 +2335,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     InStream.precision(15);
     InStream.open(VOne_name.c_str(), std::ios::in | std::ios::binary);
     int N;
-    int Nc;
+    int Nc=param->getNc();
     double L, a, temp;
 
     Matrix tempM(Nc, 1.);

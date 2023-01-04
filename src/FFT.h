@@ -3,6 +3,12 @@
 
 #ifndef FFT_H
 #define FFT_H
+
+
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
+
 #include "Matrix.h"
 #include <algorithm>
 #include <cmath>
@@ -10,7 +16,6 @@
 #include <functional>
 #include <iostream>
 #include <math.h>
-#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

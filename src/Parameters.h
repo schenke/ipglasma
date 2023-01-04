@@ -184,7 +184,10 @@ private:
                                          // of mass to origin
   double UVdamp;                         // UV damping parameter
   int minimumQs2ST;        // if >0 this will excludes events with Qs_min^2 S_T < minimumQs2ST. Can be used to trigger on high multiplicity events.
+  double R_WS_, a_WS_;
   double beta2;        // value of deformation parameter beta2 to test sensitivity in Uranium
+  double beta3, beta4, gamma;
+  bool setWSDeformParams_;
 
 public:
   // constructor:
@@ -339,8 +342,25 @@ public:
   double getRmax() { return rmax; }
   void setUVdamp(double x) { UVdamp = x; }
   double getUVdamp() { return UVdamp; }
-  void setbeta2(double x) { beta2 = x; }
-  double getbeta2() { return beta2; }
+  void setSetWSDeformParams(int x) {
+    if (x == 0)
+      setWSDeformParams_ = false;
+    else
+      setWSDeformParams_ = true;
+  }
+  bool getSetWSDeformParams() { return setWSDeformParams_; }
+  void setR_WS(double x) { R_WS_ = x; }
+  double getR_WS() { return R_WS_; }
+  void setA_WS(double x) { a_WS_ = x; }
+  double getA_WS() { return a_WS_; }
+  void setBeta2(double x) { beta2 = x; }
+  double getBeta2() { return beta2; }
+  void setBeta3(double x) { beta3 = x; }
+  double getBeta3() { return beta3; }
+  void setBeta4(double x) { beta4 = x; }
+  double getBeta4() { return beta4; }
+  void setGamma(double x) { gamma = x; }
+  double getGamma() { return gamma; }
 
   // switches:
   void setInitMethod(int x) { initMethod = x; }

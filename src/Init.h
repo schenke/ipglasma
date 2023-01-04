@@ -42,10 +42,10 @@ private:
 
   double As[1];
 
-  std::vector<ReturnValue>
-      nucleusA; // list of x and y coordinates of nucleons in nucleus A
-  std::vector<ReturnValue>
-      nucleusB; // list of x and y coordinates of nucleons in nucleus B
+  // list of x and y coordinates of nucleons in nucleus A
+  std::vector<ReturnValue> nucleusA_;
+  // list of x and y coordinates of nucleons in nucleus B
+  std::vector<ReturnValue> nucleusB_;
 
   pretty_ostream messager;
 
@@ -71,27 +71,30 @@ public:
   void multiplicity(Lattice *lat, Parameters *param);
 
   void generate_nucleus_configuration(Random *random, int A, int Z, double a_WS,
-                                      double R_WS, double beta2, double beta4,
-                                      std::vector<ReturnValue> *nucleus);
+                                      double R_WS, double beta2, double beta3,
+                                      double beta4, double gamma,
+                                      std::vector<ReturnValue> &nucleus);
   void generate_nucleus_configuration_with_woods_saxon(
       Random *random, int A, int Z, double a_WS, double R_WS,
-      std::vector<ReturnValue> *nucleus);
+      std::vector<ReturnValue> &nucleus);
   void generate_nucleus_configuration_with_deformed_woods_saxon(
       Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-      double beta4, std::vector<ReturnValue> *nucleus);
+      double beta3, double beta4, std::vector<ReturnValue> &nucleus);
+  void generate_nucleus_configuration_with_deformed_woods_saxon2(
+      Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
+      double beta3, double beta4, double gamma,
+      std::vector<ReturnValue> &nucleus);
   double sample_r_from_woods_saxon(Random *random, double a_WS,
                                    double R_WS) const;
-  void sample_r_and_costheta_from_deformed_woods_saxon(Random *random,
-                                                       double a_WS, double R_WS,
-                                                       double beta2,
-                                                       double beta4, double &r,
-                                                       double &costheta) const;
+  void sample_r_and_costheta_from_deformed_woods_saxon(
+      Random *random, double a_WS, double R_WS, double beta2, double beta3,
+      double beta4, double &r, double &costheta) const;
   double fermi_distribution(double r, double R_WS, double a_WS) const;
   double spherical_harmonics(int l, double ct) const;
+  double spherical_harmonics_Y22(double ct, double phi) const;
   void recenter_nucleus(std::vector<double> &x, std::vector<double> &y,
                         std::vector<double> &z);
-  void rotate_nucleus(double phi, double theta, std::vector<double> &x,
-                      std::vector<double> &y, std::vector<double> &z);
+  void rotate_nucleus(Random* random, std::vector<ReturnValue> &nucleus);
 
   void samplePartonPositions(Parameters *param, Random *random,
                              std::vector<double> &x_array,

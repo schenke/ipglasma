@@ -16,6 +16,7 @@
 struct ReturnValue {
   double x;
   double y;
+  double z;
   double phi;
   int collided;
   bool proton;
@@ -34,7 +35,9 @@ typedef struct nucleus {
   double R_WS;
   double rho_WS;
   double beta2;
+  double beta3;
   double beta4;
+  double gamma;
 } Nucleus;
 
 typedef struct data {
@@ -72,7 +75,10 @@ public:
   int IsFile(char *file_name);
   void FindNucleusData(Nucleus *nucleus, string target, string file_name,
                        int rank);
-  void FindNucleusData2(Nucleus *nucleus, string name, double beta2);
+  void FindNucleusData2(Nucleus *nucleus, string name,
+                        bool setWSDeformParams, double R_WS, double a_WS,
+                        double beta2, double beta3, double beta4,
+                        double gamma);
   void PrintGlauberData();
   void PrintNucleusData(Nucleus *nucleus);
   int LinearFindXorg(double x, double *Vx, int ymax);
@@ -111,8 +117,10 @@ public:
   double OLSIntegrand(double s);
   double TAB();
   double PAB(double x, double y);
-  void initGlauber(double SigmaNN, string Target, string Projectile, double b,
-                   double beta2, int imax);
+  void initGlauber(double SigmaNN, string Target, string Projectile,
+                   double inb, bool setWSDeformParams, double R_WS, double a_WS,
+                   double beta2, double beta3, double beta4, double gamma,
+                   int imax);
   double areaTA(double x, double A);
   ReturnValue SampleTARejection(Random *random, int PorT);
 };

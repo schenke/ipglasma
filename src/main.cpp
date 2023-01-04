@@ -156,7 +156,11 @@ int main(int argc, char *argv[]) {
     messager.flush("info");
     Glauber glauber;
     glauber.initGlauber(param->getSigmaNN(), param->getTarget(),
-                        param->getProjectile(), param->getb(), param->getbeta2(), 100);
+                        param->getProjectile(), param->getb(),
+                        param->getSetWSDeformParams(),
+                        param->getR_WS(), param->getA_WS(),
+                        param->getBeta2(), param->getBeta3(),
+                        param->getBeta4(), param->getGamma(), 100);
 
     // measure and output eccentricity, triangularity
     // init.eccentricity(lat, &group, param, random, glauber);
@@ -469,7 +473,15 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setSigmaNN(setup->DFind(file_name, "SigmaNN"));
   param->setRmax(setup->DFind(file_name, "rmax"));
   param->setUVdamp(setup->DFind(file_name, "UVdamp"));
-  param->setbeta2(setup->DFind(file_name, "beta2"));
+  param->setSetWSDeformParams(setup->IFind(file_name, "setWSDeformParams"));
+  if (param->getSetWSDeformParams()) {
+    param->setR_WS(setup->DFind(file_name, "R_WS"));
+    param->setA_WS(setup->DFind(file_name, "a_WS"));
+    param->setBeta2(setup->DFind(file_name, "beta2"));
+    param->setBeta3(setup->DFind(file_name, "beta3"));
+    param->setBeta4(setup->DFind(file_name, "beta4"));
+    param->setGamma(setup->DFind(file_name, "gamma"));
+  }
   param->setbmin(setup->DFind(file_name, "bmin"));
   param->setbmax(setup->DFind(file_name, "bmax"));
   param->setQsmuRatio(setup->DFind(file_name, "QsmuRatio"));
@@ -568,7 +580,15 @@ void writeparams(Parameters *param)
   fout1 << "m " << param->getm() << endl;
   fout1 << "rmax " << param->getRmax() << endl;
   fout1 << "UVdamp " << param->getUVdamp() << endl;
-  fout1 << "beta2 " << param->getbeta2() << endl;
+  if (param->getSetWSDeformParams()) {
+    fout1 << "setWSDeformParams " << param->getSetWSDeformParams() << endl;
+    fout1 << "R_WS " << param->getR_WS() << endl;
+    fout1 << "a_WS " << param->getA_WS() << endl;
+    fout1 << "beta2 " << param->getBeta2() << endl;
+    fout1 << "beta3 " << param->getBeta3() << endl;
+    fout1 << "beta4 " << param->getBeta4() << endl;
+    fout1 << "gamma " << param->getGamma() << endl;
+  }
   if (param->getSmearQs() == 1) {
     fout1 << "smearing width " << param->getSmearingWidth() << endl;
   }

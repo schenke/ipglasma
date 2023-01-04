@@ -4,11 +4,14 @@
 #ifndef Evolution_H
 #define Evolution_H
 
+#ifdef _OPENMP
+    #include <omp.h>
+#endif
+
 #include <complex>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <omp.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

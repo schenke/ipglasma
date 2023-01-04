@@ -3659,8 +3659,12 @@ int Evolution::multiplicitynkxky(Lattice *lat, Group *group, Parameters *param,
 
   foutMult.close();
 
-  double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
-  double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
+  double dNdetaHadrons     = 0;
+  double dNdetaHadronsCut  = 0;
+  double dNdetaHadronsCut2 = 0;
+  double dEdetaHadrons     = 0;
+  double dEdetaHadronsCut  = 0;
+  double dEdetaHadronsCut2 = 0;
 
   // compute hadrons using fragmentation function
   if (it == itmax && param->getWriteOutputs() == 3) {

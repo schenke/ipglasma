@@ -2368,13 +2368,13 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
 
         double bb = param->getb();
         a = L/static_cast<double>(N);
-        
+
         double xtemp = a * i + bb / 2.;
         int ix = xtemp / a;
 
         if (ix>=N)
           continue;
-        
+
         int pos = ix * N + j;
         lat->cells[pos]->setU2(temp);
       }
@@ -2695,7 +2695,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   // output Wilson lines (used also for the proton plots)
   double L = param->getL();
   double a = L / N; // lattice spacing in fm
-  int pos, pos0;
   double x,y;
 
   messager.info("Finding fields in forward lightcone...");
@@ -2784,7 +2783,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
     //    ofstream fout("test1", ios::out);
  #pragma omp for
-    for (pos = 0; pos < N * N; pos++) // loops over all cells
+    for (int pos = 0; pos < N * N; pos++) // loops over all cells
     {
       if (lat->cells[pos]->getU().trace() != 
           lat->cells[pos]->getU().trace()) {

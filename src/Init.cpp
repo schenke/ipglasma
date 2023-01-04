@@ -3210,6 +3210,10 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
 
   recenter_nucleus(x_array, y_array, z_array);
 
+  double phi_global = 2. * M_PI * random->genrand64_real3();
+  double theta_global = acos(1. - 2. * random->genrand64_real3());
+  rotate_nucleus(phi_global, theta_global, x_array, y_array, z_array);
+
   for (unsigned int i = 0; i < r_array.size(); i++) {
     ReturnValue rv;
     rv.x = x_array[i];
@@ -3351,6 +3355,11 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
   }
 
   recenter_nucleus(x_array, y_array, z_array);
+
+  // global rotation of the nucleus
+  double phi_global = 2. * M_PI * random->genrand64_real3();
+  double theta_global = acos(1. - 2. * random->genrand64_real3());
+  rotate_nucleus(phi_global, theta_global, x_array, y_array, z_array);
 
   for (unsigned int i = 0; i < x_array.size(); i++) {
     ReturnValue rv;

@@ -16,6 +16,7 @@
 struct ReturnValue {
   double x;
   double y;
+  double z;
   double phi;
   int collided;
   bool proton;

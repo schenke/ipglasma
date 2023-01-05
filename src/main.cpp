@@ -324,7 +324,8 @@ int main(int argc, char *argv[]) {
       // random->gslRandomInit(rnum);
 
       // initialize U-fields on the lattice
-      init.init(&lat, &group, param, random, &glauber, param->getReadInitialWilsonLines());
+      init.init(&lat, &group, param, random, &glauber,
+                param->getReadInitialWilsonLines());
       messager.info("initialization done.");
 
 

@@ -2634,9 +2634,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   if (READFROMFILE > 0) {
     readV(lat, param, READFROMFILE);
     param->setSuccess(1);
-  }
-  // to generate your own Wilson lines
-  else {
+  } else {
+    // to generate your own Wilson lines
     if (param->getUseNucleus() == 1) {
       sampleTA(param, random, glauber); // populate the lists nucleusA_ and
                                         // nucleusB_ with position data of the

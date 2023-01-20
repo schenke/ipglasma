@@ -446,8 +446,8 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
     if (it == 1) {
       Tmunu(lat, param, it);
     }
-    if (it == floor(it0) || it == floor(it1) || it == floor(it2) ||
-        it == floor(it3) || it == floor(itmax)) {
+    if (it == it0 || it == it1 || it == it2
+        || it == it3 || it == itmax) {
       Tmunu(lat, param, it);
       // computes flow velocity and correct energy density
       u(lat, param, it);
@@ -651,8 +651,8 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
     }
 
     int success = 1;
-    if (it == 3 || it == floor(it0) || it == floor(it1) || it == floor(it2) ||
-        it == floor(it3) || it == itmax) {
+    if (it == 3 || it == it0 || it == it1 || it == it2
+        || it == it3 || it == itmax) {
       eccentricity(lat, param, it, 0.1, 0);
       eccentricity(lat, param, it, 1., 0);
       eccentricity(lat, param, it, 10., 0);

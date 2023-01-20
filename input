@@ -52,17 +52,17 @@ Ny 50
 useSeedList 0
 seed 0
 useTimeForSeed 0
-Projectile Pb
-Target Pb
-bmin 8
-bmax 8
+Projectile p
+Target Au
+bmin 0
+bmax 5
 lightNucleusOption 1
 useFixedNpart 0
 averageOverThisManyNuclei 1
 SigmaNN 67.
 gaussianWounding 1
 inverseQsForMaxTime 0
-maxtime 0.1
+maxtime 0.4
 dtau 0.1
 LOutput 30
 sizeOutput 512
@@ -70,7 +70,7 @@ etaSizeOutput 1
 detaOutput 0
 writeOutputs 5
 writeEvolution 0
-readInitialWilsonLines 2
+readInitialWilsonLines 0
 writeInitialWilsonLines 0
 writeOutputsToHDF5 0
 EndOfFile

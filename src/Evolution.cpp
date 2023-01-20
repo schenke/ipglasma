@@ -646,13 +646,6 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
       foutEps2.close();
     }
 
-    // if(it==1 || it==floor(it1) || it==floor(it2) || it==itmax)
-    // 	{
-    // 	  eccentricity(lat, param, it, 0.1, 0);
-    // 	  eccentricity(lat, param, it, 1., 0);
-    // 	  eccentricity(lat, param, it, 10., 0);
-    // 	}
-
     if (it == itmax) {
       checkGaussLaw(lat, param);
     }
@@ -660,6 +653,10 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
     int success = 1;
     if (it == 3 || it == floor(it0) || it == floor(it1) || it == floor(it2) ||
         it == floor(it3) || it == itmax) {
+      eccentricity(lat, param, it, 0.1, 0);
+      eccentricity(lat, param, it, 1., 0);
+      eccentricity(lat, param, it, 10., 0);
+
       success = multiplicity(lat, group, param, it);
     }
 

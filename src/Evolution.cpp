@@ -654,8 +654,8 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
     if (it == 3 || it == it0 || it == it1 || it == it2
         || it == it3 || it == itmax) {
       eccentricity(lat, param, it, 0.1, 0);
-      eccentricity(lat, param, it, 1., 0);
-      eccentricity(lat, param, it, 10., 0);
+      //eccentricity(lat, param, it, 1., 0);
+      //eccentricity(lat, param, it, 10., 0);
 
       success = multiplicity(lat, group, param, it);
     }

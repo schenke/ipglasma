@@ -443,10 +443,7 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
 
   // do evolution
   for (int it = 1; it <= itmax; it++) {
-    if (it == 1) {
-      Tmunu(lat, param, it);
-    }
-    if (it == it0 || it == it1 || it == it2
+    if (it == 1 || it == it0 || it == it1 || it == it2
         || it == it3 || it == itmax) {
       Tmunu(lat, param, it);
       // computes flow velocity and correct energy density
@@ -651,9 +648,10 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
     }
 
     int success = 1;
-    if (it == 3 || it == it0 || it == it1 || it == it2
+    if (it == 1 || it == it0 || it == it1 || it == it2
         || it == it3 || it == itmax) {
-      eccentricity(lat, param, it, 0.1, 0);
+      eccentricity(lat, param, it, 0.0, 0);
+      //eccentricity(lat, param, it, 0.1, 0);
       //eccentricity(lat, param, it, 1., 0);
       //eccentricity(lat, param, it, 10., 0);
 
@@ -1451,7 +1449,9 @@ void Evolution::eccentricity(Lattice *lat, Parameters *param, int it,
       {
         weight = 0.;
       } else {
-        weight = lat->cells[pos]->getEpsilon() * gfactor;
+        //weight = lat->cells[pos]->getEpsilon() * gfactor;
+        weight = (lat->cells[pos]->getEpsilon()*lat->cells[pos]->getutau()
+                  *gfactor);
         area += a * a;
         sum += 1;
         avgeden += lat->cells[pos]->getEpsilon() * hbarc * gfactor; // GeV/fm^3
@@ -1592,7 +1592,9 @@ void Evolution::eccentricity(Lattice *lat, Parameters *param, int it,
       {
         weight = 0.;
       } else {
-        weight = lat->cells[pos]->getEpsilon() * gfactor;
+        //weight = lat->cells[pos]->getEpsilon() * gfactor;
+        weight = (lat->cells[pos]->getEpsilon()*lat->cells[pos]->getutau()
+                  *gfactor);
       }
 
       rA = sqrt(x * x + y * y);
@@ -1737,7 +1739,9 @@ void Evolution::eccentricity(Lattice *lat, Parameters *param, int it,
       {
         weight = 0.;
       } else {
-        weight = lat->cells[pos]->getEpsilon() * gfactor;
+        //weight = lat->cells[pos]->getEpsilon() * gfactor;
+        weight = (lat->cells[pos]->getEpsilon()*lat->cells[pos]->getutau()
+                  *gfactor);
       }
 
       y = -L / 2. + a * iy - avy2;

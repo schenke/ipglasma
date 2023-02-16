@@ -4,15 +4,15 @@
 #ifndef Parameters_H
 #define Parameters_H
 
-#include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-using namespace std;
+#include <string>
+#include <vector>
 
 class Parameters {
 private:
+  int subNucleonParamType_;
+  int subNucleonParamSet_;
+  std::vector<std::vector<float>> posteriorParamSets_;
+  std::vector<std::vector<float>> posteriorParamSetsNq3_;
   // switches:
   int initMethod;
 
@@ -93,7 +93,7 @@ private:
                               // or read these in plain text (1) or in binary format (2)
   unsigned long long int randomSeed; // stores the random seed used (so the
                                      // event can be reproduced)
-  string NucleusQsTableFileName; // the file name for the table containing Qs^2
+  std::string NucleusQsTableFileName; // the file name for the table containing Qs^2
                                  // as a function of Y and Qs^2(Y=0)
   double BG;  // the width of the Gaussian describing the shape of the proton in
               // GeV^(-2)
@@ -134,8 +134,8 @@ private:
   double bmax;    // maximum impact parameter to sample to
   int linearb; // sample b from a linear distribution if 1, uniform distribution
                // otherwise
-  string Target;     // target nucleus' name
-  string Projectile; // projectile nucleus' name
+  std::string Target;     // target nucleus' name
+  std::string Projectile; // projectile nucleus' name
   double L;          // lattice size in fm
   double LOutput;    // lattice size for the output in fm
   int useNucleus;    // use nuclei (1) or a constant g^2mu distribution over the
@@ -194,6 +194,14 @@ public:
   Parameters(){};
 
   // functions to access the private variables:
+  void setSubNucleonParamType(int paramType) {
+      subNucleonParamType_ = paramType;
+  }
+  int getSubNucleonParamType() const { return(subNucleonParamType_); }
+  void setSubNucleonParamSet(int paramSet) {
+      subNucleonParamSet_ = paramSet;
+  }
+  int getSubNucleonParamSet() const { return(subNucleonParamSet_); }
   void setSeed(unsigned long long int x) { seed = x; }
   unsigned long long int getSeed() { return seed; }
   void setA(int x) { A = x; }
@@ -248,10 +256,10 @@ public:
   double getbmin() { return bmin; }
   void setbmax(double x) { bmax = x; }
   double getbmax() { return bmax; }
-  void setTarget(string x) { Target = x; }
-  string getTarget() { return Target; }
-  void setProjectile(string x) { Projectile = x; }
-  string getProjectile() { return Projectile; }
+  void setTarget(std::string x) { Target = x; }
+  std::string getTarget() { return Target; }
+  void setProjectile(std::string x) { Projectile = x; }
+  std::string getProjectile() { return Projectile; }
   void setL(double x) { L = x; }
   double getL() { return L; }
   void setLOutput(double x) { LOutput = x; }
@@ -288,8 +296,8 @@ public:
   int getUseTimeForSeed() { return useTimeForSeed; }
   void setUseSeedList(int x) { useSeedList = x; };
   int getUseSeedList() { return useSeedList; }
-  void setNucleusQsTableFileName(string x) { NucleusQsTableFileName = x; }
-  string getNucleusQsTableFileName() { return NucleusQsTableFileName; }
+  void setNucleusQsTableFileName(std::string x) { NucleusQsTableFileName = x; }
+  std::string getNucleusQsTableFileName() { return NucleusQsTableFileName; }
   void setA1FromFile(int x) { A1FromFile = x; }
   int getA1FromFile() { return A1FromFile; }
   void setA2FromFile(int x) { A2FromFile = x; }
@@ -419,5 +427,10 @@ public:
   }
   void setMinimumQs2ST(int x) { minimumQs2ST = x; }
   int getMinimumQs2ST() { return minimumQs2ST; }
+
+  void loadPosteriorParameterSetsFromFile(std::string posteriorFileName,
+                                          std::vector<std::vector<float>> &ParamSet);
+  void loadPosteriorParameterSets();
+  void setParamsWithPosteriorParameterSet(const int itype, int iset);
 };
 #endif // Parameters_H

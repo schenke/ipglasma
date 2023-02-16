@@ -125,6 +125,16 @@ int main(int argc, char *argv[]) {
     if (rank == 0)
       display_logo();
 
+    if (param->getSubNucleonParamType() > 0) {
+        // sample the sub-nucleon parameters from the posterior distribution
+        int iSubNucleonParamSet = param->getSubNucleonParamSet();
+        if (iSubNucleonParamSet == -1) {
+            iSubNucleonParamSet = random->genrand64_int63();
+        }
+        param->setParamsWithPosteriorParameterSet(
+                param->getSubNucleonParamType(), iSubNucleonParamSet);
+    }
+
     // initialize helper class objects
 
     param->setEventId(rank + iev * size);
@@ -528,6 +538,11 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setShiftConstituentQuarkProtonOrigin(
       setup->DFind(file_name, "shiftConstituentQuarkProtonOrigin"));
   param->setMinimumQs2ST(setup->IFind(file_name, "minimumQs2ST"));
+  param->setSubNucleonParamType(setup->IFind(file_name, "SubNucleonParamType"));
+  param->setSubNucleonParamSet(setup->IFind(file_name, "SubNucleonParamSet"));
+  if (param->getSubNucleonParamType() > 0) {
+      param->loadPosteriorParameterSets();
+  }
   if (rank == 0)
     cout << "done." << endl;
 

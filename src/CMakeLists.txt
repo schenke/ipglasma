@@ -15,6 +15,7 @@ set (SOURCES
     Spinor.cpp
     MyEigen.cpp
     pretty_ostream.cpp
+    Parameters.cpp
     )
 
 set(CompileFlags "")

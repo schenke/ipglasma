@@ -79,7 +79,8 @@ int Setup::IFind(string file_name, string st) {
   double f;
   f = DFind(file_name, st);
 
-  return (int)(f + 0.5);
+  //return (int)(f + 0.5);
+  return static_cast<int>(f);
 } /* IFind */
 
 // reads an integer using stringfind:

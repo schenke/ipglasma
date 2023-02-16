@@ -53,7 +53,7 @@ runWithkt 0
 Ny 50
 useSeedList 0
 seed 0
-useTimeForSeed 0
+useTimeForSeed 1
 Projectile p
 Target Au
 bmin 0

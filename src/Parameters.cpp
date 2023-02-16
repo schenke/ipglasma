@@ -40,10 +40,10 @@ void Parameters::loadPosteriorParameterSets() {
 
 void Parameters::setParamsWithPosteriorParameterSet(const int itype,
                                                     int iset) {
-    if (iset < 0) return;
     if (itype == 1) {
         // variant Nq
         iset = (iset % posteriorParamSets_.size());
+        std::cout << "set subnucleon param set:" << iset << std::endl;
         setm(posteriorParamSets_[iset][0]);
         setBG(posteriorParamSets_[iset][1]);
         setBGq(posteriorParamSets_[iset][2]);
@@ -54,6 +54,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype,
     } else if (itype == 2) {
         // fixed Nq = 3
         iset = (iset % posteriorParamSetsNq3_.size());
+        std::cout << "set subnucleon param set (Nq = 3):" << iset << std::endl;
         setm(posteriorParamSetsNq3_[iset][0]);
         setBG(posteriorParamSetsNq3_[iset][1]);
         setBGq(posteriorParamSetsNq3_[iset][2]);

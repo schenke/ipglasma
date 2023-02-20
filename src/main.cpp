@@ -541,7 +541,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setSubNucleonParamType(setup->IFind(file_name, "SubNucleonParamType"));
   param->setSubNucleonParamSet(setup->IFind(file_name, "SubNucleonParamSet"));
   if (param->getSubNucleonParamType() > 0) {
-      param->loadPosteriorParameterSets();
+      param->loadPosteriorParameterSets(param->getSubNucleonParamType());
   }
   if (rank == 0)
     cout << "done." << endl;

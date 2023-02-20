@@ -30,11 +30,17 @@ void Parameters::loadPosteriorParameterSetsFromFile(
 }
 
 
-void Parameters::loadPosteriorParameterSets() {
-    loadPosteriorParameterSetsFromFile("tables/posterior.csv",
-                                       posteriorParamSets_);
-    loadPosteriorParameterSetsFromFile("tables/posterior_Nq3.csv",
-                                       posteriorParamSetsNq3_);
+void Parameters::loadPosteriorParameterSets(const int itype) {
+    if (itype == 1) {
+        loadPosteriorParameterSetsFromFile("tables/posterior.csv",
+                                           posteriorParamSets_);
+    } else if (itype == 2) {
+        loadPosteriorParameterSetsFromFile("tables/posterior_Nq3.csv",
+                                           posteriorParamSetsNq3_);
+    } else if (itype == 4) {
+        loadPosteriorParameterSetsFromFile("tables/posterior5020_Nq3.csv",
+                                           posteriorParamSetsNq3_);
+    }
 }
 
 
@@ -51,7 +57,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype,
         setNqBase(posteriorParamSets_[iset][4]);
         setQsmuRatio(posteriorParamSets_[iset][5]);
         setDqmin(posteriorParamSets_[iset][6]);
-    } else if (itype == 2) {
+    } else if (itype == 2 || itype == 4) {
         // fixed Nq = 3
         iset = (iset % posteriorParamSetsNq3_.size());
         std::cout << "set subnucleon param set (Nq = 3):" << iset << std::endl;

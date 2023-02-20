@@ -430,7 +430,7 @@ public:
 
   void loadPosteriorParameterSetsFromFile(std::string posteriorFileName,
                                           std::vector<std::vector<float>> &ParamSet);
-  void loadPosteriorParameterSets();
+  void loadPosteriorParameterSets(const int itype);
   void setParamsWithPosteriorParameterSet(const int itype, int iset);
 };
 #endif // Parameters_H

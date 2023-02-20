@@ -503,7 +503,10 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setlightNucleusOption(setup->IFind(file_name, "lightNucleusOption"));
   param->setg2mu(setup->DFind(file_name, "g2mu"));
   param->setMaxtime(setup->DFind(file_name, "maxtime"));
-  param->setdtau(setup->DFind(file_name, "dtau"));
+  double lattice_a = param->getL()/static_cast<double>(param->getSize());
+  //param->setdtau(setup->DFind(file_name, "dtau"));
+  double dtau = param->getMaxtime()/100./lattice_a;
+  param->setdtau(dtau);
   // param->setxExponent(setup->DFind(file_name,"xExponent")); //  is now
   // obsolete
   param->setRunWithQs(setup->IFind(file_name, "runWith0Min1Avg2MaxQs"));

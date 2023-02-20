@@ -432,11 +432,11 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
   evolvePhi(lat, bufferlat, param, dtau, 0.);
   evolveU(lat, bufferlat, param, dtau, 0.);
 
-  int itmax = static_cast<int>(floor(maxtime / (a * dtau) + 1e-10));
-  int it0 = static_cast<int>(floor(0.1 / (a * dtau) + 1e-10));
-  int it1 = static_cast<int>(floor(0.2 / (a * dtau) + 1e-10));
-  int it2 = static_cast<int>(floor(0.4 / (a * dtau) + 1e-10));
-  int it3 = static_cast<int>(floor(0.8 / (a * dtau) + 1e-10));
+  int itmax = static_cast<int>(maxtime/(a*dtau) + 0.1);
+  int it0   = static_cast<int>(0.1/(a*dtau) + 0.1);
+  int it1   = static_cast<int>(0.2/(a*dtau) + 0.1);
+  int it2   = static_cast<int>(0.4/(a*dtau) + 0.1);
+  int it3   = static_cast<int>(0.6/(a*dtau) + 0.1);
 
   cout << "Starting evolution" << endl;
   cout << "itmax=" << itmax << endl;
@@ -450,10 +450,10 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
       u(lat, param, it);
     }
 
-    if (it % 10 == 0)
-      cout << endl
-           << "Evolving to time " << it * a * dtau << " fm/c" << endl
-           << endl;
+    if (it % 10 == 0) {
+      cout << "Evolving to time " << it * a * dtau << " fm/c" << endl;
+    }
+
     // evolve from time tau-dtau/2 to tau+dtau/2
     if (it < itmax) {
       evolvePi(lat, bufferlat, param, dtau,

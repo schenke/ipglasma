@@ -494,6 +494,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
     param->setBeta4(setup->DFind(file_name, "beta4"));
     param->setGamma(setup->DFind(file_name, "gamma"));
     param->setForceDmin(setup->DFind(file_name, "force_dmin_flag"));
+    param->setDmin(setup->DFind(file_name, "d_min"));
   }
   param->setbmin(setup->DFind(file_name, "bmin"));
   param->setbmax(setup->DFind(file_name, "bmax"));

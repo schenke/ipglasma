@@ -75,7 +75,7 @@ vector<complex<double>> Init::solveAxb(Parameters *param, complex<double> *A,
 
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
   ReturnValue rv, rv2;
-  cout << "Sampling nucleon positions ... ";
+  messager.info("Sampling nucleon positions ... ");
 
   if (param->getNucleonPositionsFromFile() == 0) {
     int A1, A2, Z1, Z2;
@@ -604,7 +604,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
           glauber->GlauberData.Target.d_min,
           nucleusB_);
     }
-    cout << "done. " << endl;
   } else if (param->getNucleonPositionsFromFile() == 1) {
     ifstream fin;
     fin.open("nucleus1.dat");
@@ -657,7 +656,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
     fin.close();
 
-    cout << " ... done." << endl;
   } else if (param->getNucleonPositionsFromFile() == 2) {
     // Read in Alvioli's nucleon positions including correlations
     if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
@@ -831,8 +829,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
     param->setA1FromFile(A);
     param->setA2FromFile(A2);
-
-    cout << " ... done." << endl;
   } else {
     cerr << "NucleonPositionsFromFile can be 0 (sample nucleons) or 1 or 2 "
             "(read from files) - you chose "
@@ -876,7 +872,6 @@ void Init::readNuclearQs(Parameters *param) {
       }
     }
     fin.close();
-    cout << " done." << endl;
   } else {
     cout << "[Init.cpp:readNuclearQs]: File "
          << param->getNucleusQsTableFileName() << " does not exist. Exiting."
@@ -3549,6 +3544,9 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, double d_min,
     std::vector<ReturnValue> &nucleus) {
+  messager << "Sampling nucleon position forcing d_min = " << d_min
+           << " fm ...";
+  messager.flush("info");
   double rmaxCut = R_WS + 10.*a_WS;
   double r = 0.;
   double costheta = 0.;

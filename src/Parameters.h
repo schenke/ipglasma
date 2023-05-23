@@ -186,8 +186,9 @@ private:
   int minimumQs2ST;        // if >0 this will excludes events with Qs_min^2 S_T < minimumQs2ST. Can be used to trigger on high multiplicity events.
   double R_WS_, a_WS_;
   double beta2;        // value of deformation parameter beta2 to test sensitivity in Uranium
-  double beta3, beta4, gamma;
-  bool setWSDeformParams_;
+  double beta3, beta4, gamma_;
+  double d_min_;
+  bool setWSDeformParams_, force_dmin_flag_;
 
 public:
   // constructor:
@@ -356,19 +357,28 @@ public:
     else
       setWSDeformParams_ = true;
   }
-  bool getSetWSDeformParams() { return setWSDeformParams_; }
+  bool getSetWSDeformParams() const { return setWSDeformParams_; }
   void setR_WS(double x) { R_WS_ = x; }
-  double getR_WS() { return R_WS_; }
+  double getR_WS() const { return R_WS_; }
   void setA_WS(double x) { a_WS_ = x; }
-  double getA_WS() { return a_WS_; }
+  double getA_WS() const { return a_WS_; }
   void setBeta2(double x) { beta2 = x; }
-  double getBeta2() { return beta2; }
+  double getBeta2() const { return beta2; }
   void setBeta3(double x) { beta3 = x; }
-  double getBeta3() { return beta3; }
+  double getBeta3() const { return beta3; }
   void setBeta4(double x) { beta4 = x; }
-  double getBeta4() { return beta4; }
-  void setGamma(double x) { gamma = x; }
-  double getGamma() { return gamma; }
+  double getBeta4() const { return beta4; }
+  void setGamma(double x) { gamma_ = x; }
+  double getGamma() const { return gamma_; }
+  void setDmin(double x) { d_min_ = x; }
+  double getDmin() const { return d_min_; }
+  void setForceDmin(int x) {
+    if (x == 0)
+      force_dmin_flag_ = false;
+    else
+      force_dmin_flag_ = true;
+  }
+  bool getForceDmin() const { return (force_dmin_flag_); }
 
   // switches:
   void setInitMethod(int x) { initMethod = x; }

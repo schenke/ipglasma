@@ -7,7 +7,7 @@ using namespace std;
 void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
                                bool setWSDeformParams, double R_WS, double a_WS,
                                double beta2, double beta3, double beta4,
-                               double gamma) {
+                               double gamma, bool force_dmin, double d_min) {
   string densityFunction;
   if (name.compare("Au") == 0) {
     nucleus->A = 197;
@@ -220,6 +220,8 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
     nucleus->beta4 = beta4;
     nucleus->gamma = gamma;
   }
+  nucleus->forceDminFlag = force_dmin;
+  nucleus->d_min = d_min;
 
   if (densityFunction.compare("2HO") == 0) {
     nucleus->AnumFunc = 1;          // Anum2HO;
@@ -1105,7 +1107,8 @@ double Glauber::PAB(double x, double y) {
 void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
                           double inb, bool setWSDeformParams,
                           double R_WS, double a_WS, double beta2,
-                          double beta3, double beta4, double gamma, int imax) {
+                          double beta3, double beta4, double gamma,
+                          bool force_dmin, double d_min, int imax) {
   string Target_Name;
   Target_Name = Target;
 
@@ -1130,9 +1133,11 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
   paf = p_name;
 
   FindNucleusData2(&(GlauberData.Target), Target_Name,
-                   setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma);
+                   setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma,
+                   force_dmin, d_min);
   FindNucleusData2(&(GlauberData.Projectile), Projectile_Name,
-                   setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma);
+                   setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma,
+                   force_dmin, d_min);
 
   GlauberData.SigmaNN = 0.1 * SigmaNN; // sigma in fm^2
   currentA1 = GlauberData.Projectile.A;

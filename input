@@ -42,6 +42,8 @@ beta2 0.28
 beta3 0.0
 beta4 0.0
 gamma 0.0
+force_dmin_flag 0
+d_min 0.9
 nucleonPositionsFromFile 0
 NucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_200.in
 QsmuRatio 0.8

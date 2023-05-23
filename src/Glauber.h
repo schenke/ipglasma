@@ -38,6 +38,8 @@ typedef struct nucleus {
   double beta3;
   double beta4;
   double gamma;
+  bool forceDminFlag;
+  double d_min;
 } Nucleus;
 
 typedef struct data {
@@ -78,7 +80,7 @@ public:
   void FindNucleusData2(Nucleus *nucleus, string name,
                         bool setWSDeformParams, double R_WS, double a_WS,
                         double beta2, double beta3, double beta4,
-                        double gamma);
+                        double gamma, bool force_dmin, double d_min);
   void PrintGlauberData();
   void PrintNucleusData(Nucleus *nucleus);
   int LinearFindXorg(double x, double *Vx, int ymax);
@@ -120,7 +122,7 @@ public:
   void initGlauber(double SigmaNN, string Target, string Projectile,
                    double inb, bool setWSDeformParams, double R_WS, double a_WS,
                    double beta2, double beta3, double beta4, double gamma,
-                   int imax);
+                   bool force_dmin, double d_min, int imax);
   double areaTA(double x, double A);
   ReturnValue SampleTARejection(Random *random, int PorT);
 };

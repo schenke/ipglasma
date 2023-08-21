@@ -101,6 +101,7 @@ public:
   void recenter_nucleus(std::vector<double> &x, std::vector<double> &y,
                         std::vector<double> &z);
   void rotate_nucleus(Random* random, std::vector<ReturnValue> &nucleus);
+  void rotate_nucleus_3D(Random* random, std::vector<ReturnValue> &nucleus);
 
   void samplePartonPositions(Parameters *param, Random *random,
                              std::vector<double> &x_array,

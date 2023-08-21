@@ -837,8 +837,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
   }
 
   // global rotation of the nucleus
-  rotate_nucleus(random, nucleusA_);
-  rotate_nucleus(random, nucleusB_);
+  //rotate_nucleus(random, nucleusA_);
+  //rotate_nucleus(random, nucleusB_);
+  rotate_nucleus_3D(random, nucleusA_);
+  rotate_nucleus_3D(random, nucleusB_);
 }
 
 void Init::readNuclearQs(Parameters *param) {
@@ -3745,6 +3747,31 @@ void Init::rotate_nucleus(Random* random, std::vector<ReturnValue> &nucleus) {
     auto x_new = cth * cphi * n_i.x - sphi * n_i.y + sth * cphi * n_i.z;
     auto y_new = cth * sphi * n_i.x + cphi * n_i.y + sth * sphi * n_i.z;
     auto z_new = -sth * n_i.x + 0. * n_i.y + cth * n_i.z;
+    n_i.x = x_new;
+    n_i.y = y_new;
+    n_i.z = z_new;
+  }
+}
+
+
+void Init::rotate_nucleus_3D(Random* random,
+                             std::vector<ReturnValue> &nucleus) {
+  // rotate the nucleus with the full three solid angles
+  // required for tri-axial deformed nuclei
+  // https://en.wikipedia.org/wiki/Euler_angles
+  double alpha = 2*M_PI*random->genrand64_real3();
+  double beta = acos(1. - 2. * random->genrand64_real3());
+  double gamma = 2*M_PI*random->genrand64_real3();
+  auto c1 = cos(alpha);
+  auto s1 = sin(alpha);
+  auto c2 = cos(beta);
+  auto s2 = sin(beta);
+  auto c3 = cos(gamma);
+  auto s3 = sin(gamma);
+  for (auto &n_i: nucleus) {
+    auto x_new = c2*n_i.x - c3*s2*n_i.y + s2*s3*n_i.z;
+    auto y_new = c1*s2*n_i.x + (c1*c2*c3 - s1*s3)*n_i.y + (-c3*s1 - c1*c2*s3)*n_i.z;
+    auto z_new = s1*s2*n_i.x + (c1*s3 + c2*c3*s1)*n_i.y + (c1*c3 - c2*s1*s3)*n_i.z;
     n_i.x = x_new;
     n_i.y = y_new;
     n_i.z = z_new;

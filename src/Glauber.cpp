@@ -1,6 +1,12 @@
 #include "Glauber.h"
 #include "Util.h"
-#include <cstring>
+#include <string>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
 
 using namespace std;
 
@@ -260,6 +266,7 @@ void Glauber::PrintNucleusData(Nucleus *nucleus) {
   cout << " Nucleus.a_WS = " << nucleus->a_WS << endl;
   cout << " Nucleus.R_WS = " << nucleus->R_WS << endl;
 }
+
 
 int Glauber::LinearFindXorg(double x, double *Vx, int ymax) {
   /* finds the first of the 4 points, x is between the second and the third */

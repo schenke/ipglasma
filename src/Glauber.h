@@ -2,12 +2,6 @@
 #define glauber_h
 
 #include "Random.h"
-#include <fstream>
-#include <iostream>
-#include <math.h>
-#include <sstream>
-#include <stdio.h>
-#include <stdlib.h>
 
 #define TOL (1.0e-6)
 #define tiny (1.0e-10)
@@ -53,6 +47,7 @@ typedef struct data {
 
 class Glauber {
 private:
+
 public:
   typedef double (*ptr_func)(double);
 

@@ -953,6 +953,36 @@ void Init::readNuclearQs(Parameters *param) {
 // }
 
 
+void Init::readInNucleonConfigures(Parameters *param, Glauber *glauber) {
+    nucleonPosArr_.clear();
+    std::string fileName;
+    const int nucleusA = glauber->nucleusA1();
+    if (nucleusA == 16) {
+        if (param->getlightNucleusOption() == 4) {
+            fileName = "O16_PGCM.bin.in";
+        } else if (param->getlightNucleusOption() == 5) {
+            fileName = "O16_NLEFT.bin.in";
+        }
+    }
+    std::ifstream inFile(fileName, std::ios::binary);
+
+    while (true) {
+        vector<float> tempPos;
+        for (int i = 0; i < nucleusA; i++) {
+            for (int j = 0; j < 3; j++) {
+                float temp;
+                inFile.read(reinterpret_cast<char*>(&temp), sizeof(float));
+                tempPos.push_back(temp);
+            }
+        }
+        if (inFile.eof())
+            break;
+        nucleonPosArr_.push_back(tempPos);
+    }
+    inFile.close();
+}
+
+
 void Init::samplePartonPositions(Parameters *param, Random *random,
                                  vector<double> &x_array,
                                  vector<double> &y_array,
@@ -2568,7 +2598,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
                     }
                     INPUT_CTR++;
                     continue;
-                  }          
+                  }
                   lat->cells[indx]->getU2().set(j,k, complex<double> (re,im));
                // if (indx > 65000) cout << "Save ok" << endl;
 
@@ -2578,7 +2608,6 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         InStream2.close();
       }
     }
-      
   }
 
   messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
@@ -2633,6 +2662,8 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   if (param->getUseNucleus() == 1) {
     readNuclearQs(param);
   }
+
+  readInNucleonConfigures(param, glauber);
 
   // sample nucleon positions
   nucleusA_.clear();

@@ -42,6 +42,8 @@ private:
 
   double As[1];
 
+  std::vector< vector<float> > nucleonPosArr_;
+
   // list of x and y coordinates of nucleons in nucleus A
   std::vector<ReturnValue> nucleusA_;
   // list of x and y coordinates of nucleons in nucleus B
@@ -69,6 +71,8 @@ public:
   // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
   // *random, Glauber *glauber);
   void multiplicity(Lattice *lat, Parameters *param);
+
+  void readInNucleonConfigures(Parameters *param, Glauber *glauber);
 
   void generate_nucleus_configuration(Random *random, int A, int Z, double a_WS,
                                       double R_WS, double beta2, double beta3,

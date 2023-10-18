@@ -93,6 +93,17 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
     nucleus->beta3 = 0.;
     nucleus->beta4 = -0.122; // from arXiv:1508.06294
     nucleus->gamma = 0.;
+  } else if (name.compare("Ne") == 0) {
+    nucleus->A = 20;
+    nucleus->Z = 10;
+    densityFunction = "3Fermi";
+    nucleus->R_WS = 2.8;
+    nucleus->w_WS = 0.0;
+    nucleus->a_WS = 0.57;
+    nucleus->beta2 = 0.0;
+    nucleus->beta3 = 0.;
+    nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
   } else if (name.compare("S") == 0) {
     nucleus->A = 32;
     nucleus->Z = 16;
@@ -103,6 +114,17 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
     nucleus->beta2 = 0.0;
     nucleus->beta3 = 0.;
     nucleus->beta4 = 0.0;
+    nucleus->gamma = 0.;
+  } else if (name.compare("Ar") == 0) {
+    nucleus->A = 40;
+    nucleus->Z = 18;
+    densityFunction = "3Fermi";
+    nucleus->R_WS = 3.61;
+    nucleus->w_WS = 0.0;
+    nucleus->a_WS = 0.516;
+    nucleus->beta2 = 0.1668;
+    nucleus->beta3 = 0.;
+    nucleus->beta4 = 0.00695;
     nucleus->gamma = 0.;
   } else if (name.compare("W") == 0) {
     nucleus->A = 184;

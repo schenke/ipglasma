@@ -577,6 +577,10 @@ void Init::readInNucleusConfigs(const int nucleusA,
         } else if (lightNucleusOption == 5) {
             fileName = "O16_NLEFT.bin.in";
         }
+    } else if (nucleusA == 20) {
+        fileName = "Ne20_PGCM.bin.in";
+    } else if (nucleusA == 40) {
+        fileName = "Ar40_VMC.bin.in";
     } else {
         readFlag = false;
     }

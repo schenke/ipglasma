@@ -5,8 +5,11 @@
 """
 
 import array
+import numpy as np
 
-outputFile = open("O16_PGCM.bin.in", "wb")
+data = np.loadtxt("../carbon_alpha_3.in")
+
+outputFile = open("C12_alphaCluster.bin.in", "wb")
 for config_i in data:
     float_array = array.array('f', config_i)
     float_array.tofile(outputFile)

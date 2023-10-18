@@ -42,7 +42,8 @@ private:
 
   double As[1];
 
-  std::vector< vector<float> > nucleonPosArr_;
+  std::vector< vector<float> > nucleonPosArrA_;
+  std::vector< vector<float> > nucleonPosArrB_;
 
   // list of x and y coordinates of nucleons in nucleus A
   std::vector<ReturnValue> nucleusA_;
@@ -72,7 +73,9 @@ public:
   // *random, Glauber *glauber);
   void multiplicity(Lattice *lat, Parameters *param);
 
-  void readInNucleonConfigures(Parameters *param, Glauber *glauber);
+  void readInNucleusConfigs(const int nucleusA,
+                            const int lightNucleusOption,
+                            vector< vector<float> > &nucleonPosArr);
 
   void generate_nucleus_configuration(Random *random, int A, int Z, double a_WS,
                                       double R_WS, double beta2, double beta3,
@@ -104,6 +107,8 @@ public:
   double spherical_harmonics_Y22(double ct, double phi) const;
   void recenter_nucleus(std::vector<double> &x, std::vector<double> &y,
                         std::vector<double> &z);
+  void recenter_nucleus(std::vector<ReturnValue> &nucleus);
+  void assignProtons(std::vector<ReturnValue> &nucleus, const int Z);
   void rotate_nucleus(Random* random, std::vector<ReturnValue> &nucleus);
   void rotate_nucleus_3D(Random* random, std::vector<ReturnValue> &nucleus);
 

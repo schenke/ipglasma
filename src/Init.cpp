@@ -199,6 +199,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
           recenter_nucleus(nucleusA_);
       } else {
           // no configurations, sample with Woods-Saxon
+          messager << "configuration file for A = " << glauber->nucleusA1()
+                   << " is not available, generate the nucleus configuration "
+                   << "using Woods-Saxon distribution instead.";
+          messager.flush("info");
           generate_nucleus_configuration(
               random, glauber->nucleusA1(), glauber->nucleusZ1(),
               glauber->GlauberData.Projectile.a_WS,
@@ -232,6 +236,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
           recenter_nucleus(nucleusB_);
       } else {
           // no configurations, sample with Woods-Saxon
+          messager << "configuration file for A = " << glauber->nucleusA2()
+                   << " is not available, generate the nucleus configuration "
+                   << "using Woods-Saxon distribution instead.";
+          messager.flush("info");
           generate_nucleus_configuration(
               random, glauber->nucleusA2(), glauber->nucleusZ2(),
               glauber->GlauberData.Target.a_WS,

@@ -2924,10 +2924,10 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           }
         }
 
-        if (Nc == 2 && Fnew < 0.00000001)
+        if (Nc == 2 && Fnew < 0.000000001)
           checkConvergence = 0;
 
-        if (Nc == 3 && Fnew < 0.0001)
+        if (Nc == 3 && Fnew < 0.000000001)
           checkConvergence = 0;
 
         if (Dalpha[0].real() != Dalpha[0].real())
@@ -3084,13 +3084,12 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
             alphaCheck = 1;
         }
 
-        if (Nc == 2 && Fnew < 0.00000001)
+        if (Nc == 2 && Fnew < 0.000000001)
           checkConvergence = 0;
-        if (Nc == 3 && Fnew < 0.0001)
+        if (Nc == 3 && Fnew < 0.000000001)
           checkConvergence = 0;
         if (Dalpha[0].real() != Dalpha[0].real())
           checkConvergence = 0;
-
         else if (ni == maxIterations - 1) {
           cout << pos << " result for Uy(3) did not converge for y!" << endl;
           cout << "last Dalpha = " << endl;

@@ -1,3 +1,4 @@
+
 #include "Cell.h"
 
 Cell::Cell(int N) {

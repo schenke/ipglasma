@@ -188,6 +188,11 @@ void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it) {
             lat->cells[pos]->setueta(ueta);
             lat->cells[pos]->setEpsilon(eps);
 
+            // //clean up numerical noise outside the interaction region
+            // if (lat->cells[pos]->getg2mu2A() < 1e-12 ||
+            //     lat->cells[pos]->getg2mu2B() < 1e-12)
+            //   lat->cells[pos]->setEpsilon(0.);
+
             averageux += ux * ux * eps;
             averageuy += uy * uy * eps;
             averageueta += ueta * ueta * eps * it * dtau * a * it * dtau * a;

@@ -10,7 +10,7 @@ if [ "$Flag" == "KNL" ]; then
 elif [ "$Flag" == "noMPI" ]; then
     cmake .. -DdisableMPI=ON
 else
-    CXX=g++ cmake ..
+    CXX=/opt/homebrew/bin/g++-13 cmake ..
 fi
 
 make -j4

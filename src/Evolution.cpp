@@ -925,13 +925,12 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
                     real(((phiX - phiTildeXY2) * (phiX - phiTildeXY2))
                              .trace()))));
 
-      // clean up numerical noise outside the interaction region
-      if (lat->cells[pos]->getg2mu2A() < 1e-12 ||
-          lat->cells[pos]->getg2mu2B() < 1e-12)
-        lat->cells[pos]->setEpsilon(0.);
-      else
-        lat->cells[pos]->setEpsilon(lat->cells[pos]->getTtautau() * 1 /
-                                    pow(a, 4.));
+      //clean up numerical noise outside the interaction region
+      // if (lat->cells[pos]->getg2mu2A() < 1e-12 ||
+      //     lat->cells[pos]->getg2mu2B() < 1e-12)
+      //   lat->cells[pos]->setEpsilon(0.);
+      // else
+      lat->cells[pos]->setEpsilon(lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
 
       lat->cells[pos]->setTtautau(lat->cells[pos]->getTtautau() * 1 /
                                   pow(a, 4.));

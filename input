@@ -41,10 +41,12 @@ a_WS 0.52
 beta2 0.28
 beta3 0.0
 beta4 0.08
-gamma 0.82
-force_dmin_flag 1
+gamma 0.0
+force_dmin_flag 0
 d_min 0.9
-nucleonPositionsFromFile 1
+dR_np 0.0
+da_np 0.0
+nucleonPositionsFromFile 0
 NucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_200.in
 QsmuRatio 0.8
 samplebFromLinearDistribution 1
@@ -56,8 +58,8 @@ Ny 50
 useSeedList 0
 seed 0
 useTimeForSeed 1
-Projectile O
-Target O
+Projectile Pb
+Target Pb
 bmin 0
 bmax 2
 lightNucleusOption 5

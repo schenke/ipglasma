@@ -81,22 +81,23 @@ public:
                                       double R_WS, double beta2, double beta3,
                                       double beta4, double gamma,
                                       bool force_dmin_flag, double d_min,
+                                      double dR_np, double da_np,
                                       std::vector<ReturnValue> &nucleus);
   void generate_nucleus_configuration_with_woods_saxon(
       Random *random, int A, int Z, double a_WS, double R_WS, double d_min,
-      std::vector<ReturnValue> &nucleus);
+      double dR_np, double da_np, std::vector<ReturnValue> &nucleus);
   void generate_nucleus_configuration_with_deformed_woods_saxon(
       Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-      double beta3, double beta4, double d_min,
+      double beta3, double beta4, double d_min, double dR_np, double da_np,
       std::vector<ReturnValue> &nucleus);
   void generate_nucleus_configuration_with_deformed_woods_saxon2(
       Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-      double beta3, double beta4, double gamma,
+      double beta3, double beta4, double gamma, double dR_np, double da_np,
       std::vector<ReturnValue> &nucleus);
   void generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
       Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
       double beta3, double beta4, double gamma, double d_min,
-      std::vector<ReturnValue> &nucleus);
+      double dR_np, double da_np, std::vector<ReturnValue> &nucleus);
   double sample_r_from_woods_saxon(Random *random, double a_WS,
                                    double R_WS) const;
   void sample_r_and_costheta_from_deformed_woods_saxon(

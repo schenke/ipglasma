@@ -14,7 +14,8 @@ using namespace std;
 void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
                                bool setWSDeformParams, double R_WS, double a_WS,
                                double beta2, double beta3, double beta4,
-                               double gamma, bool force_dmin, double d_min) {
+                               double gamma, bool force_dmin, double d_min,
+                               double dR_np, double da_np) {
   string densityFunction;
   if (name.compare("Au") == 0) {
     nucleus->A = 197;
@@ -241,6 +242,10 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
 
   nucleus->rho_WS = nucleus->R_WS;
 
+  // Setting neutron skin to 0 by default
+  nucleus->dR_np = 0.;
+  nucleus->da_np = 0.;
+
   if (setWSDeformParams) {
     nucleus->R_WS = R_WS;
     nucleus->a_WS = a_WS;
@@ -248,6 +253,8 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
     nucleus->beta3 = beta3;
     nucleus->beta4 = beta4;
     nucleus->gamma = gamma;
+    nucleus->dR_np = dR_np;
+    nucleus->da_np = da_np;
   }
   nucleus->forceDminFlag = force_dmin;
   nucleus->d_min = d_min;
@@ -273,13 +280,15 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
     nucleus->AnumFuncIntegrand = 1;
     nucleus->DensityFunc = 1;
   }
-} /* FindNucleusData2 */
+}
+
 
 void Glauber::PrintGlauberData() {
   fprintf(stderr, "GlauberData.SigmaNN = %e\n", GlauberData.SigmaNN);
   fprintf(stderr, "GlauberData.InterMax = %d\n", GlauberData.InterMax);
   fprintf(stderr, "GlauberData.SCutOff = %f\n", GlauberData.SCutOff);
-} /* PrintGlauberData */
+}
+
 
 void Glauber::PrintNucleusData(Nucleus *nucleus) {
   cout << "Nucleus Name: " << nucleus->name << endl;
@@ -1132,13 +1141,15 @@ double Glauber::PAB(double x, double y) {
   double s2 = sqrt(pow(x - b / 2., 2.) + y * y);
   return InterNuPInSP(s1) * InterNuTInST(s2) /
          (currentTAB * GlauberData.SigmaNN);
-} /* PAB */
+}
+
 
 void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
                           double inb, bool setWSDeformParams,
                           double R_WS, double a_WS, double beta2,
                           double beta3, double beta4, double gamma,
-                          bool force_dmin, double d_min, int imax) {
+                          bool force_dmin, double d_min,
+                          double dR_np, double da_np, int imax) {
   string Target_Name;
   Target_Name = Target;
 
@@ -1164,12 +1175,12 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
 
   FindNucleusData2(&(GlauberData.Target), Target_Name,
                    setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma,
-                   force_dmin, d_min);
+                   force_dmin, d_min, dR_np, da_np);
   FindNucleusData2(&(GlauberData.Projectile), Projectile_Name,
                    setWSDeformParams, R_WS, a_WS, beta2, beta3, beta4, gamma,
-                   force_dmin, d_min);
+                   force_dmin, d_min, dR_np, da_np);
 
-  GlauberData.SigmaNN = 0.1 * SigmaNN; // sigma in fm^2
+  GlauberData.SigmaNN = 0.1 * SigmaNN;  // sigma in fm^2
   currentA1 = GlauberData.Projectile.A;
   currentA2 = GlauberData.Target.A;
   currentZ1 = GlauberData.Projectile.Z;
@@ -1179,7 +1190,7 @@ void Glauber::initGlauber(double SigmaNN, string Target, string Projectile,
   GlauberData.SCutOff = 12.;
 
   b = inb;
-} /* init */
+}
 
 double Glauber::areaTA(double x, double A) {
   double f;

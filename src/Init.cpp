@@ -134,6 +134,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
           glauber->GlauberData.Projectile.gamma,
           glauber->GlauberData.Projectile.forceDminFlag,
           glauber->GlauberData.Projectile.d_min,
+          glauber->GlauberData.Projectile.dR_np,
+          glauber->GlauberData.Projectile.da_np,
           nucleusA_);
     }
 
@@ -176,6 +178,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
           glauber->GlauberData.Target.gamma,
           glauber->GlauberData.Target.forceDminFlag,
           glauber->GlauberData.Target.d_min,
+          glauber->GlauberData.Target.dR_np,
+          glauber->GlauberData.Target.da_np,
           nucleusB_);
     }
   } else if (param->getNucleonPositionsFromFile() == 1) {
@@ -213,6 +217,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
               glauber->GlauberData.Projectile.gamma,
               glauber->GlauberData.Projectile.forceDminFlag,
               glauber->GlauberData.Projectile.d_min,
+              glauber->GlauberData.Projectile.dR_np,
+              glauber->GlauberData.Projectile.da_np,
               nucleusA_);
       }
 
@@ -250,6 +256,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
               glauber->GlauberData.Target.gamma,
               glauber->GlauberData.Target.forceDminFlag,
               glauber->GlauberData.Target.d_min,
+              glauber->GlauberData.Target.dR_np,
+              glauber->GlauberData.Target.da_np,
               nucleusB_);
       }
   } else if (param->getNucleonPositionsFromFile() == 2) {
@@ -3028,23 +3036,26 @@ void Init::generate_nucleus_configuration(Random *random, int A, int Z,
                                           double beta2, double beta3,
                                           double beta4, double gamma,
                                           bool force_dmin_flag, double d_min,
+                                          double dR_np, double da_np,
                                           std::vector<ReturnValue> &nucleus) {
   if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
           && std::abs(beta3) < 1e-15 && std::abs(gamma) < 1e-15) {
     generate_nucleus_configuration_with_woods_saxon(
-                                    random, A, Z, a_WS, R_WS, d_min, nucleus);
+                            random, A, Z, a_WS, R_WS, d_min, dR_np, da_np, nucleus);
   } else {
     if (force_dmin_flag) {
         generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
                 random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, d_min,
-                nucleus);
+                dR_np, da_np, nucleus);
     } else {
       if (std::abs(gamma) > 1e-15) {
         generate_nucleus_configuration_with_deformed_woods_saxon2(
-                random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, nucleus);
+                random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma,
+                dR_np, da_np, nucleus);
       } else {
         generate_nucleus_configuration_with_deformed_woods_saxon(
-                random, A, Z, a_WS, R_WS, beta2, beta3, beta4, d_min, nucleus);
+                random, A, Z, a_WS, R_WS, beta2, beta3, beta4, d_min,
+                dR_np, da_np, nucleus);
       }
     }
   }
@@ -3053,16 +3064,24 @@ void Init::generate_nucleus_configuration(Random *random, int A, int Z,
 
 void Init::generate_nucleus_configuration_with_woods_saxon(
     Random *random, int A, int Z, double a_WS, double R_WS, double d_min,
-    std::vector<ReturnValue> &nucleus) {
+    double dR_np, double da_np, std::vector<ReturnValue> &nucleus) {
   std::vector<double> r_array(A, 0.);
-  for (int i = 0; i < A; i++) {
+  std::vector<int> idx_array(A, 0);
+  for (int i = 0; i < Z; i++) {
     r_array[i] = sample_r_from_woods_saxon(random, a_WS, R_WS);
+    idx_array[i] = i;
   }
-  std::sort(r_array.begin(), r_array.end());
+  for (int i = Z; i < A; i++) {
+    r_array[i] = sample_r_from_woods_saxon(random, a_WS + da_np, R_WS + dR_np);
+    idx_array[i] = i;
+  }
+  std::stable_sort(idx_array.begin(), idx_array.end(),
+            [&r_array](int i1, int i2) { return r_array[i1] < r_array[i2]; });
+  std::stable_sort(r_array.begin(), r_array.end());
 
   std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
   const double d_min_sq = d_min * d_min;
-  for (unsigned int i = 0; i < r_array.size(); i++) {
+  for (int i = 0; i < A; i++) {
     double r_i = r_array[i];
     int reject_flag = 0;
     int iter = 0;
@@ -3094,26 +3113,22 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
 
   recenter_nucleus(x_array, y_array, z_array);
 
-  for (unsigned int i = 0; i < r_array.size(); i++) {
+  for (int i = 0; i < A; i++) {
     ReturnValue rv;
     rv.x = x_array[i];
     rv.y = y_array[i];
     rv.z = z_array[i];
     rv.phi = atan2(y_array[i], x_array[i]);
     rv.collided = 0;
+    if (idx_array[i] < Z) {
+      rv.proton = 1;
+    } else {
+      rv.proton = 1;
+    }
     nucleus.push_back(rv);
   }
-
-  std::random_shuffle(nucleus.begin(), nucleus.end());
-
-  for (unsigned int i = 0; i < r_array.size(); i++) {
-    if (static_cast<int>(i) < std::abs(Z)) {
-      nucleus.at(i).proton = 1;
-    } else {
-      nucleus.at(i).proton = 0;
-    }
-  }
 }
+
 
 double Init::sample_r_from_woods_saxon(Random *random, double a_WS,
                                        double R_WS) const {
@@ -3132,26 +3147,30 @@ double Init::fermi_distribution(double r, double R_WS, double a_WS) const {
 
 void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-    double beta3, double beta4, double d_min,
+    double beta3, double beta4, double d_min, double dR_np, double da_np,
     std::vector<ReturnValue> &nucleus) {
   std::vector<double> r_array(A, 0.);
   std::vector<double> costheta_array(A, 0.);
-  std::vector<std::pair<double, double>> pair_array;
-  for (int i = 0; i < A; i++) {
+  std::vector<int> idx_array(A, 0);
+  for (int i = 0; i < Z; i++) {
     sample_r_and_costheta_from_deformed_woods_saxon(
         random, a_WS, R_WS, beta2, beta3, beta4, r_array[i], costheta_array[i]);
-    pair_array.push_back(std::make_pair(r_array[i], costheta_array[i]));
+    idx_array[i] = i;
   }
-  // std::sort(r_array.begin(), r_array.end());
-  std::sort(pair_array.begin(), pair_array.end());
+  for (int i = Z; i < A; i++) {
+    sample_r_and_costheta_from_deformed_woods_saxon(
+        random, a_WS + da_np, R_WS + dR_np, beta2, beta3, beta4, r_array[i], costheta_array[i]);
+    idx_array[i] = i;
+  }
+  std::stable_sort(idx_array.begin(), idx_array.end(),
+            [&r_array](int i1, int i2) { return r_array[i1] < r_array[i2]; });
+  std::stable_sort(r_array.begin(), r_array.end());
 
   std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
   const double d_min_sq = d_min * d_min;
-  for (unsigned int i = 0; i < x_array.size(); i++) {
-    // const double r_i     = r_array[i];
-    // const double theta_i = acos(costheta_array[i]);
-    const double r_i = pair_array[i].first;
-    const double theta_i = acos(pair_array[i].second);
+  for (int i = 0; i < A; i++) {
+    const double r_i     = r_array[i];
+    const double theta_i = acos(costheta_array[idx_array[i]]);
     int reject_flag = 0;
     int iter = 0;
     double x_i, y_i, z_i;
@@ -3163,10 +3182,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
       y_i = r_i * sin(theta_i) * sin(phi);
       z_i = r_i * cos(theta_i);
       for (int j = i - 1; j >= 0; j--) {
-        // if ((r_i - r_array[j])*(r_i - r_array[j]) > d_min_sq) break;
-        if ((r_i - pair_array[j].first) * (r_i - pair_array[j].first) >
-            d_min_sq)
-          break;
+        if ((r_i - r_array[j])*(r_i - r_array[j]) > d_min_sq) break;
         double dsq = ((x_i - x_array[j]) * (x_i - x_array[j]) +
                       (y_i - y_array[j]) * (y_i - y_array[j]) +
                       (z_i - z_array[j]) * (z_i - z_array[j]));
@@ -3189,17 +3205,12 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     rv.z = z_array[i];
     rv.phi = atan2(y_array[i], x_array[i]);
     rv.collided = 0;
-    nucleus.push_back(rv);
-  }
-
-  std::random_shuffle(nucleus.begin(), nucleus.end());
-
-  for (unsigned int i = 0; i < r_array.size(); i++) {
-    if (static_cast<int>(i) < std::abs(Z)) {
-      nucleus.at(i).proton = 1;
+    if (idx_array[i] < Z) {
+      rv.proton = 1;
     } else {
-      nucleus.at(i).proton = 0;
+      rv.proton = 0;
     }
+    nucleus.push_back(rv);
   }
 }
 
@@ -3207,18 +3218,24 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
 void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, double d_min,
-    std::vector<ReturnValue> &nucleus) {
+    double dR_np, double da_np, std::vector<ReturnValue> &nucleus) {
   messager << "Sampling nucleon position forcing d_min = " << d_min
            << " fm ...";
   messager.flush("info");
-  double rmaxCut = R_WS + 10.*a_WS;
+  double rmaxCut = R_WS + dR_np + 10.*(a_WS + da_np);
   double r = 0.;
   double costheta = 0.;
   double phi = 0.;
   double R_WS_theta = 0.;
   const double d_min_sq = d_min * d_min;
   std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
-  for (unsigned int i = 0; i < x_array.size(); i++) {
+  for (int i = 0; i < A; i++) {
+    double R_WS_i = R_WS;
+    double a_WS_i = a_WS;
+    if (i >= Z) {
+        R_WS_i = R_WS + dR_np;
+        a_WS_i = a_WS + da_np;
+    }
     bool reSampleFlag = false;
     double x_i, y_i, z_i;
     do {
@@ -3231,11 +3248,11 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
         double y30 = spherical_harmonics(3, costheta);
         double y40 = spherical_harmonics(4, costheta);
         double y22 = spherical_harmonics_Y22(costheta, phi);
-        R_WS_theta = R_WS*(1.0
-                           + beta2*(cos(gamma)*y20 + sin(gamma)*y22)
-                           + beta3*y30 + beta4*y40);
+        R_WS_theta = R_WS_i*(1.0
+                             + beta2*(cos(gamma)*y20 + sin(gamma)*y22)
+                             + beta3*y30 + beta4*y40);
       } while (random->genrand64_real3()
-               > fermi_distribution(r, R_WS_theta, a_WS));
+               > fermi_distribution(r, R_WS_theta, a_WS_i));
       double sintheta = sqrt(1. - costheta*costheta);
       x_i = r*sintheta*cos(phi);
       y_i = r*sintheta*sin(phi);
@@ -3258,39 +3275,41 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
 
   recenter_nucleus(x_array, y_array, z_array);
 
-  for (unsigned int i = 0; i < x_array.size(); i++) {
+  for (int i = 0; i < A; i++) {
     ReturnValue rv;
     rv.x = x_array[i];
     rv.y = y_array[i];
     rv.z = z_array[i];
     rv.phi = atan2(y_array[i], x_array[i]);
     rv.collided = 0;
-    nucleus.push_back(rv);
-  }
-
-  std::random_shuffle(nucleus.begin(), nucleus.end());
-
-  for (unsigned int i = 0; i < x_array.size(); i++) {
-    if (static_cast<int>(i) < std::abs(Z)) {
-      nucleus.at(i).proton = 1;
+    if (i < Z) {
+      rv.proton = 1;
     } else {
-      nucleus.at(i).proton = 0;
+      rv.proton = 0;
     }
+    nucleus.push_back(rv);
   }
 }
 
 
 void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-    double beta3, double beta4, double gamma,
+    double beta3, double beta4, double gamma, double dR_np, double da_np,
     std::vector<ReturnValue> &nucleus) {
-  double rmaxCut = R_WS + 10.*a_WS;
+  double rmaxCut = R_WS + dR_np + 10.*(a_WS + da_np);
   double r = 0.;
   double costheta = 0.;
   double phi = 0.;
   double R_WS_theta = 0.;
   std::vector<double> x_array(A, 0.), y_array(A, 0.), z_array(A, 0.);
-  for (unsigned int i = 0; i < x_array.size(); i++) {
+  for (int i = 0; i < A; i++) {
+    double R_WS_i = R_WS;
+    double a_WS_i = a_WS;
+    if (i >= Z) {
+      // neutrons
+      R_WS_i = R_WS + dR_np;
+      a_WS_i = a_WS + da_np;
+    }
     do {
         r = rmaxCut*pow(random->genrand64_real3(), 1.0/3.0);
         costheta = 1.0 - 2.0 * random->genrand64_real3();
@@ -3299,11 +3318,11 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
         double y30 = spherical_harmonics(3, costheta);
         double y40 = spherical_harmonics(4, costheta);
         double y22 = spherical_harmonics_Y22(costheta, phi);
-        R_WS_theta = R_WS*(1.0
-                           + beta2*(cos(gamma)*y20 + sin(gamma)*y22)
-                           + beta3*y30 + beta4*y40);
+        R_WS_theta = R_WS_i*(1.0
+                             + beta2*(cos(gamma)*y20 + sin(gamma)*y22)
+                             + beta3*y30 + beta4*y40);
     } while (random->genrand64_real3()
-             > fermi_distribution(r, R_WS_theta, a_WS));
+             > fermi_distribution(r, R_WS_theta, a_WS_i));
     double sintheta = sqrt(1. - costheta*costheta);
     x_array[i] = r*sintheta*cos(phi);
     y_array[i] = r*sintheta*sin(phi);
@@ -3312,26 +3331,22 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
 
   recenter_nucleus(x_array, y_array, z_array);
 
-  for (unsigned int i = 0; i < x_array.size(); i++) {
+  for (int i = 0; i < A; i++) {
     ReturnValue rv;
     rv.x = x_array[i];
     rv.y = y_array[i];
     rv.z = z_array[i];
     rv.phi = atan2(y_array[i], x_array[i]);
     rv.collided = 0;
+    if (i < Z) {
+      rv.proton = 1;
+    } else {
+      rv.proton = 0;
+    }
     nucleus.push_back(rv);
   }
-
-  std::random_shuffle(nucleus.begin(), nucleus.end());
-
-  for (unsigned int i = 0; i < x_array.size(); i++) {
-    if (static_cast<int>(i) < std::abs(Z)) {
-      nucleus.at(i).proton = 1;
-    } else {
-      nucleus.at(i).proton = 0;
-    }
-  }
 }
+
 
 void Init::sample_r_and_costheta_from_deformed_woods_saxon(
     Random *random, double a_WS, double R_WS, double beta2, double beta3,

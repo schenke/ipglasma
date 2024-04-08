@@ -189,6 +189,7 @@ private:
   double beta3, beta4, gamma_;
   double d_min_;
   bool setWSDeformParams_, force_dmin_flag_;
+  double WSdR_np_, WSda_np_;
 
 public:
   // constructor:
@@ -379,6 +380,10 @@ public:
       force_dmin_flag_ = true;
   }
   bool getForceDmin() const { return (force_dmin_flag_); }
+  void setWSdR_np(double dR_np) { WSdR_np_ = dR_np; }
+  double getWSdR_np() const { return WSdR_np_; }
+  void setWSda_np(double da_np) { WSda_np_ = da_np; }
+  double getWSda_np() const { return WSda_np_; }
 
   // switches:
   void setInitMethod(int x) { initMethod = x; }

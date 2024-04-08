@@ -171,7 +171,9 @@ int main(int argc, char *argv[]) {
                         param->getR_WS(), param->getA_WS(),
                         param->getBeta2(), param->getBeta3(),
                         param->getBeta4(), param->getGamma(),
-                        param->getForceDmin(), param->getDmin(), 100);
+                        param->getForceDmin(), param->getDmin(),
+                        param->getWSdR_np(), param->getWSda_np(),
+                        100);
 
     // measure and output eccentricity, triangularity
     // init.eccentricity(lat, &group, param, random, glauber);
@@ -495,6 +497,8 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
     param->setGamma(setup->DFind(file_name, "gamma"));
     param->setForceDmin(setup->DFind(file_name, "force_dmin_flag"));
     param->setDmin(setup->DFind(file_name, "d_min"));
+    param->setWSdR_np(setup->DFind(file_name, "dR_np"));
+    param->setWSda_np(setup->DFind(file_name, "da_np"));
   }
   param->setbmin(setup->DFind(file_name, "bmin"));
   param->setbmax(setup->DFind(file_name, "bmax"));

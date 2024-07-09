@@ -502,6 +502,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   }
   param->setbmin(setup->DFind(file_name, "bmin"));
   param->setbmax(setup->DFind(file_name, "bmax"));
+  param->setRotateReactionPlane(setup->IFind(file_name, "rotateReactionPlane"));
   param->setQsmuRatio(setup->DFind(file_name, "QsmuRatio"));
   param->setUsePseudoRapidity(setup->DFind(file_name, "usePseudoRapidity"));
   param->setRapidity(setup->DFind(file_name, "Rapidity"));

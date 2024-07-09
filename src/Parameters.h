@@ -191,6 +191,8 @@ private:
   bool setWSDeformParams_, force_dmin_flag_;
   double WSdR_np_, WSda_np_;
 
+  bool rotateReactionPlane_;  // flag to randomly rotate the event reaction plane
+
 public:
   // constructor:
   Parameters(){};
@@ -384,6 +386,14 @@ public:
   double getWSdR_np() const { return WSdR_np_; }
   void setWSda_np(double da_np) { WSda_np_ = da_np; }
   double getWSda_np() const { return WSda_np_; }
+
+  void setRotateReactionPlane(int iflag) {
+    if (iflag == 0)
+      rotateReactionPlane_ = false;
+    else
+      rotateReactionPlane_ = true;
+  }
+  bool getRotateReactionPlane() const { return rotateReactionPlane_; }
 
   // switches:
   void setInitMethod(int x) { initMethod = x; }

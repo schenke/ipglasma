@@ -2,7 +2,13 @@
 #define glauber_h
 
 #include "Random.h"
-
+#include <fstream>
+#include <iostream>
+#include <math.h>
+#include <sstream>
+#include <stdio.h>
+#include <stdlib.h>
+#include <gsl/gsl_interp.h>
 #define TOL (1.0e-6)
 #define tiny (1.0e-10)
 #define limit 10000
@@ -15,6 +21,11 @@ struct ReturnValue {
   int collided;
   bool proton;
   // int acceptances;
+};
+
+typedef struct PointProbability {
+    double rmag, theta;
+    double prob;
 };
 
 typedef struct nucleus {
@@ -47,7 +58,6 @@ typedef struct data {
 
 class Glauber {
 private:
-
 public:
   typedef double (*ptr_func)(double);
 
@@ -107,6 +117,14 @@ public:
   double AnumHulthen();
   double AnumHulthenInt();
   double NuIntHulthen(double xi);
+  double readinrVr_for_pol_d(std::vector<double>& rVr_pro_, std::vector<double>& rVr_r_);
+  std::pair<double, double> Psi_pm1_0(double rmag, double theta, const std::vector<double>& rVr_r_, 
+                                      const std::vector<double>& rVr_pro_);
+  void generate_2D_dis_plo_pm1(double total_Vr_, std::vector<PointProbability>& distribution_pol_pm1,
+                               std::vector<PointProbability>& distribution_pol_0,
+                               const std::vector<double>& rVr_r_, const std::vector<double>& rVr_pro_);
+  std::vector<PointProbability> generate2DCDF(const std::vector<PointProbability>& distribution);
+  std::pair<double, double> sampleFrom2DCDF(Random *random, const std::vector<PointProbability>& cdf);
 
   double integral(int id, double down, double up, double tol, int *count);
   double qnc7(int id, double tol, double down, double dx, double *f_of,

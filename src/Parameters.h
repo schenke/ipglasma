@@ -15,6 +15,7 @@ private:
   std::vector<std::vector<float>> posteriorParamSetsNq3_;
   // switches:
   int initMethod;
+  int initStage;
 
   double myPI;
   double myhbarc;
@@ -99,6 +100,7 @@ private:
               // GeV^(-2)
   double BGq_; // the mean width of the Gaussian describing the shape of
                // a constituent quark in GeV^(-2)
+  double omega_;// The omega for Gamma distribution of hot spot position, omega = 1 means using the Gaussian
   double BGqVar_;  // the variance of the Gaussian width describing the shape
                    // of a constituent quark in GeV^(-4)
   double dq_min_;  // the minimum distance between valence quarks [fm]
@@ -142,6 +144,8 @@ private:
                      // lattice
   int lightNucleusOption; // for light nuclei (carbon, oxygen): 1: Woods-Saxon;
                           // 2: variational MC; 3: alpha clusters
+  int jz_d;       // For the spin projection of the polarizztion of deutron 
+  int DoPol;      // 0: Don't the polarized target; -1: the perpendicular polarized target; 1: the parallel polarization
   int useGaussian; // use a Gaussian profile on top of the constant background
   double dtau;     // time step in lattice units
   double maxtime;  // maximal evolution time in fm/c
@@ -188,7 +192,7 @@ private:
   double beta2;        // value of deformation parameter beta2 to test sensitivity in Uranium
   double beta3, beta4, gamma_;
   double d_min_;
-  bool setWSDeformParams_, force_dmin_flag_;
+  bool setWSDeformParams_, force_dmin_flag_, runTwoStage_;
 
 public:
   // constructor:
@@ -307,6 +311,8 @@ public:
   double getBG() { return BG; }
   void setBGq(double x) { BGq_ = x; }
   double getBGq() { return BGq_; }
+  void setomega(double x) { omega_ = x; }
+  double getomega() { return omega_; }
   void setBGqVar(double BGqVar) { BGqVar_ = BGqVar; }
   double getBGqVar() { return BGqVar_; }
   void setDqmin(double dq_min) { dq_min_ = dq_min; }
@@ -379,6 +385,17 @@ public:
       force_dmin_flag_ = true;
   }
   bool getForceDmin() const { return (force_dmin_flag_); }
+  
+  void setrunTwoStage(int x) {
+    if (x == 0)
+      runTwoStage_ = false;
+    else
+      runTwoStage_ = true;
+  }
+  
+  bool runTwoStage() const { return (runTwoStage_); }
+  void setStage(int x) { initStage = x; }
+  int getStage() { return initStage; }
 
   // switches:
   void setInitMethod(int x) { initMethod = x; }
@@ -389,6 +406,10 @@ public:
   int getUseGaussian() { return useGaussian; }
   void setlightNucleusOption(int x) { lightNucleusOption = x; };
   int getlightNucleusOption() { return lightNucleusOption; }
+  void setjz_d(int x) { jz_d = x; };
+  int getjz_d() { return jz_d; }
+  void setDoPol(int x) { DoPol = x; };
+  int getDoPol() { return DoPol; }
   void setRunWithQs(int x) { runWithQs = x; };
   int getRunWithQs() { return runWithQs; }
   void setRunWithkt(int x) { runWithkt = x; };

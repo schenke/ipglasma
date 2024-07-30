@@ -42,14 +42,15 @@ private:
 
   double As[1];
 
-  std::vector< vector<float> > nucleonPosArrA_;
-  std::vector< vector<float> > nucleonPosArrB_;
-
   // list of x and y coordinates of nucleons in nucleus A
   std::vector<ReturnValue> nucleusA_;
   // list of x and y coordinates of nucleons in nucleus B
   std::vector<ReturnValue> nucleusB_;
-
+  std::vector< vector<float> > nucleonPosArrA_;
+  std::vector< vector<float> > nucleonPosArrB_;
+  std::vector<double> ran_record_;
+  vector< vector<double> > xq1_, xq2_, yq1_, yq2_, BGq1_, BGq2_, gauss1_, gauss2_;
+  int ran_count_ = 0;
   pretty_ostream messager;
 
 public:
@@ -67,6 +68,8 @@ public:
   double getNuclearQs2(double Qs2atZeroY, double y);
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random,
                              Glauber *glauber);
+  void Get_shift_impact_b(Lattice *lat, Parameters *param, Random *random,
+                          Glauber *glauber);
   void setV(Lattice *lat, Group *group, Parameters *param, Random *random);
   void readV(Lattice *lat, Parameters *param, int format);
   // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random

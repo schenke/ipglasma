@@ -1,12 +1,5 @@
 #include "Glauber.h"
 #include "Util.h"
-#include <string>
-#include <fstream>
-#include <iostream>
-#include <sstream>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
 #include <cstring>
 
 using namespace std;
@@ -96,13 +89,13 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
   } else if (name.compare("Ne") == 0) {
     nucleus->A = 20;
     nucleus->Z = 10;
-    densityFunction = "3Fermi";
-    nucleus->R_WS = 2.8;
-    nucleus->w_WS = 0.0;
-    nucleus->a_WS = 0.57;
-    nucleus->beta2 = 0.0;
-    nucleus->beta3 = 0.;
-    nucleus->beta4 = 0.0;
+    densityFunction = "readFromFile";
+    nucleus->R_WS = 2.72428;
+    nucleus->w_WS = -0.051;
+    nucleus->a_WS = 0.498243;
+    nucleus->beta2 = 0.489885;  // from arXiv:1508.06294
+    nucleus->beta3 = 0.215998;
+    nucleus->beta4 = 0.305473; // from arXiv:1508.06294
     nucleus->gamma = 0.;
   } else if (name.compare("S") == 0) {
     nucleus->A = 32;
@@ -118,14 +111,14 @@ void Glauber::FindNucleusData2(Nucleus *nucleus, string name,
   } else if (name.compare("Ar") == 0) {
     nucleus->A = 40;
     nucleus->Z = 18;
-    densityFunction = "3Fermi";
-    nucleus->R_WS = 3.61;
-    nucleus->w_WS = 0.0;
-    nucleus->a_WS = 0.516;
-    nucleus->beta2 = 0.1668;
+    densityFunction = "readFromFile";
+    nucleus->R_WS = 3.61074;
+    nucleus->w_WS = 0.16;
+    nucleus->a_WS = 0.516211;
+    nucleus->beta2 = 0.166807;
     nucleus->beta3 = 0.;
-    nucleus->beta4 = 0.00695;
-    nucleus->gamma = 0.;
+    nucleus->beta4 = 0.00695193;
+    nucleus->gamma = 0.474393;
   } else if (name.compare("W") == 0) {
     nucleus->A = 184;
     nucleus->Z = 74;
@@ -289,7 +282,6 @@ void Glauber::PrintNucleusData(Nucleus *nucleus) {
   cout << " Nucleus.a_WS = " << nucleus->a_WS << endl;
   cout << " Nucleus.R_WS = " << nucleus->R_WS << endl;
 }
-
 
 int Glauber::LinearFindXorg(double x, double *Vx, int ymax) {
   /* finds the first of the 4 points, x is between the second and the third */
@@ -1185,6 +1177,134 @@ double Glauber::areaTA(double x, double A) {
   double f;
   f = A * 220. * (1. - exp(-0.025 * x * x));
   return f;
+}
+
+// Generate CDF from the probability distribution
+double Glauber::readinrVr_for_pol_d(std::vector<double>& rVr_pro_, std::vector<double>& rVr_r_) {
+    // read in the rV(r) profile 
+    double total_Vr_ = 0.0;
+    std::ifstream file("rVr.in"); 
+    if (file.is_open()) {
+        std::string line;
+        while (std::getline(file, line)) {
+            std::istringstream iss(line);
+            double val1, val2;
+            if (iss >> val1 >> val2) {
+                rVr_r_.push_back(val1);
+                val2 = val2/(val1 + 0.0000000001);
+                rVr_pro_.push_back(val2 + 0.0000000001);
+                total_Vr_ = total_Vr_ + 1./(val2 + 0.1);
+            }
+        }
+        file.close();
+    } else {
+        std::cerr << "Unable to open file rVr.in."  << std::endl;
+        return 0.;
+        exit(-1);
+    }
+    return total_Vr_;
+}
+
+// Generate |Psi(rmag, theta, phi, pm1)|^2 and |Psi(rmag, theta, phi, 0)|^2
+std::pair<double, double> Glauber::Psi_pm1_0(double rmag, double theta, 
+                                             const std::vector<double>& rVr_r_, 
+                                             const std::vector<double>& rVr_pro_) {
+
+    // Reid93, arXiv: 1512.08980
+    const double Ai[11] = {0.069165902087054, 0.016816805243013, 0.036276406025602, 0.054276523719886, 
+                           0.090259458024542, 0.061396673091335, 0.031841769081845, 0.005059996000766, 
+                           0.049562672796619, 0.000707435476194, 0.052754370232542};
+    const double ai[11] = {0.260694028992927, 0.003745637363879, 0.024248992643587, 0.260700699439171, 
+                           0.260967752832736, 0.063889193541223, 0.011654989924025, 0.001034701614202, 
+                           0.260727250929229, 0.000244188362049,0.063865550323201};
+    const double Bi[11] = {0.046691520051938, 0.251783375231406, 0.009532804413578, 0.000923945728241, 
+                           5.271594771417672, 0.052806780918954, 0.000228716768808, 0.003090018155478, 
+                           5.234984210722409, 0.052806780918950, 0.037043195071994};
+    const double bi[11] = {-0.45747046709213, 0.090050028918338, 0.011344840155198, 0.000912747409340, 
+                           -0.07565077617374, 0.183289904460344, 0.000121831213912, 0.003637935243084, 
+                           -0.07564966175244, 0.183289904460260, 0.161860429844891};
+    rmag = max(rmag, 0.0000001);
+    // First is the rU(r)
+    double rUr = 0.0;
+    for (int ii = 0; ii < 11; ii++) {
+        rUr = rUr + pow(rmag, 1.5) * Ai[ii] * exp(-ai[ii] * pow(rmag, 3.));
+    }
+    double Ur = rUr/rmag;
+    
+    gsl_interp *interp;
+    gsl_interp_accel *accel = gsl_interp_accel_alloc();
+
+    // Linear interpolation type
+    interp = gsl_interp_alloc(gsl_interp_linear, rVr_r_.size());
+    gsl_interp_init(interp, rVr_r_.data(), rVr_pro_.data(), rVr_r_.size());
+
+    // Point to interpolate
+    rmag = std::min(rmag, rVr_r_[rVr_r_.size()-1]);
+    double rVr_interp = gsl_interp_eval(interp, rVr_r_.data(), rVr_pro_.data(), rmag, accel);
+    gsl_interp_free(interp);
+    gsl_interp_accel_free(accel);
+    double Vr = rVr_interp/rmag;
+    
+    // Then the |Psi(r, theta, phi)|^2 and |Psi(rmag, theta, phi, 0)|^2
+    // PRL 121. 202301
+    double Psi_pm1_squ = 1/16./M_PI * (4.*Ur*Ur - 2.*1.4142135623730951 * (1.-3.*cos(theta)*cos(theta)) * Ur * Vr +
+                                       (5. - 3.*cos(theta)*cos(theta)) * Vr * Vr);\
+    double Psi_0_squ = 1/8./M_PI * (2.*Ur*Ur + 2.*1.4142135623730951 * (1.-3.*cos(theta)*cos(theta)) * Ur * Vr +
+                                       (1.+3.*cos(theta)*cos(theta)) * Vr * Vr);
+    return {Psi_pm1_squ, Psi_0_squ};
+}
+
+// Generate distribution from the probability distribution
+void Glauber::generate_2D_dis_plo_pm1(double total_Vr_, std::vector<PointProbability>& distribution_pol_pm1,
+                                      std::vector<PointProbability>& distribution_pol_0, 
+                                      const std::vector<double>& rVr_r_, const std::vector<double>& rVr_pro_) {
+    const double dcostheta = 1./100.;
+    double rstep = rVr_r_[rVr_r_.size() - 1] / total_Vr_;
+    for (int icostheta=0; icostheta < 200.; icostheta++) {
+        double costheta = icostheta * 1. * dcostheta -1.;
+        double theta  = acos(costheta);
+        double rmagtemp = 0.0;
+        for (int irmag=0; irmag < rVr_r_.size(); irmag ++) {
+            rmagtemp = rmagtemp + rstep * 1./(rVr_pro_[irmag]+0.1);
+            auto sample = Psi_pm1_0(rmagtemp, theta, rVr_r_, rVr_pro_);
+            distribution_pol_pm1.push_back({rmagtemp, theta, sample.first});
+            distribution_pol_0.push_back({rmagtemp, theta, sample.second});
+        }
+    }
+}
+
+
+// Generate CDF from the probability distribution
+std::vector<PointProbability> Glauber::generate2DCDF(const std::vector<PointProbability>& distribution) {
+    std::vector<PointProbability> cdf;
+    double cumulative = 0.0;
+    int iii = 0;
+    for (const auto& point : distribution) {
+        cumulative += point.prob;
+        cdf.push_back({point.rmag, point.theta, cumulative});
+    }
+    // Normalize CDF to have total probability of 1
+    for (auto& point : cdf) {
+        point.prob /= cumulative;
+    }
+
+    return cdf;
+}
+
+// Function to sample from the 2D distribution using the CDF
+std::pair<double, double> Glauber::sampleFrom2DCDF(Random *random, const std::vector<PointProbability>& cdf) {
+
+    // Find the point corresponding to the generated probability
+    double random_temp = random->genrand64_real1();
+    for (const auto& point : cdf) {
+        if ( random_temp < point.prob) {
+            return {point.rmag, point.theta};
+        }
+    }
+
+    // This will not be reached if the CDF sum is 1,
+    // but you might add error handling if necessary
+    return {0, 0};
 }
 
 ReturnValue Glauber::SampleTARejection(Random *random, int PorT) {

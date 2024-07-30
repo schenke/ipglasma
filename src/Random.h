@@ -50,6 +50,7 @@ public:
   int Poisson(const double mean);
   double Gauss(double mean = 0., double width = 1.);
   double Gauss2(double mean, double sigma);
+  double GammaGamma(double Rp, double omega);
 };
 
 #endif

@@ -463,6 +463,7 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setBG(setup->DFind(file_name, "BG"));
   param->setBGq(setup->DFind(file_name, "BGq"));
   param->setBGqVar(setup->DFind(file_name, "BGqVar"));
+  param->setomega(setup->DFind(file_name, "omega"));
   param->setDqmin(setup->DFind(file_name, "dqMin"));
   param->setMuZero(setup->DFind(file_name, "muZero"));
   param->setc(setup->DFind(file_name, "c"));
@@ -498,12 +499,16 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   }
   param->setbmin(setup->DFind(file_name, "bmin"));
   param->setbmax(setup->DFind(file_name, "bmax"));
+  param->setrunTwoStage(setup->DFind(file_name, "runTwoStage"));
+  param->setStage(setup->IFind(file_name, "WhichStage"));
   param->setQsmuRatio(setup->DFind(file_name, "QsmuRatio"));
   param->setUsePseudoRapidity(setup->DFind(file_name, "usePseudoRapidity"));
   param->setRapidity(setup->DFind(file_name, "Rapidity"));
   param->setUseNucleus(setup->IFind(file_name, "useNucleus"));
   param->setUseGaussian(setup->IFind(file_name, "useGaussian"));
   param->setlightNucleusOption(setup->IFind(file_name, "lightNucleusOption"));
+  param->setjz_d(setup->IFind(file_name, "jz_d"));
+  param->setDoPol(setup->IFind(file_name, "DoPol"));
   param->setg2mu(setup->DFind(file_name, "g2mu"));
   param->setMaxtime(setup->DFind(file_name, "maxtime"));
   double lattice_a = param->getL()/static_cast<double>(param->getSize());

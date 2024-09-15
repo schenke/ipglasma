@@ -29,7 +29,7 @@ public:
 
   ~MyEigen(){};
   void test();
-  void flowVelocity4D(Lattice *lat, Parameters *param, int it);
+  void flowVelocity4D(Lattice *lat, Parameters *param, int it, bool finalFlag);
 };
 
 #endif // MyEigen_H

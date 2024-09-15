@@ -57,7 +57,7 @@ public:
   void eccentricity(Lattice *lat, Parameters *param, int it, double cutoff,
                     int doAniso);
   void Tmunu(Lattice *lat, Parameters *param, int it);
-  void u(Lattice *lat, Parameters *param, int it);
+  void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
   int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
   int multiplicitynkxky(Lattice *lat, Group *group, Parameters *param, int it);
   int correlations(Lattice *lat, Group *group, Parameters *param, int it);

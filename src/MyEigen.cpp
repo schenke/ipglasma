@@ -9,7 +9,8 @@ using PhysConst::small_eps;
 //**************************************************************************
 // MyEigen class.
 
-void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it) {
+void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it,
+                             bool finalFlag) {
   int N = param->getSize();
   int pos;
   int changeSign;
@@ -333,8 +334,13 @@ void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it) {
   ha = hL / static_cast<double>(hx);
 
   stringstream streuH_name;
-  streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
+  if (finalFlag) {
+    streuH_name << "epsilon-u-Hydro-TauHydro-"
+                << param->getEventId() << ".dat";
+  } else {
+    streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
               << param->getEventId() << ".dat";
+  }
 
   // stringstream strEtot_name;
   // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getEventId() <<
@@ -346,7 +352,8 @@ void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it) {
 
     foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
              << " ymax= " << hy << " deta= " << deta << " dx= " << ha
-             << " dy= " << ha << endl;
+             << " dy= " << ha 
+             << " tau= " << tau0 << endl;
 
     for (int ieta = 0; ieta < heta; ieta++) // loop over all positions
     {
@@ -355,8 +362,6 @@ void MyEigen::flowVelocity4D(Lattice *lat, Parameters *param, int it) {
         for (int iy = 0; iy < hy; iy++) {
           x = -hL / 2. + ha * ix;
           y = -hL / 2. + ha * iy;
-
-          //		  cout << ix << " " << iy << endl;
 
           if (abs(x) < L / 2. && abs(y) < L / 2.) {
             xpos = static_cast<int>(floor((x + L / 2.) / a + 0.0000000001));

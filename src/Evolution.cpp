@@ -419,12 +419,10 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
   // for now I use the \tau=0 value at \tau=d\tau/2.
   double dtau = param->getdtau(); // dtau is in lattice units
 
-  double maxtime;
+  double maxtime = param->getMaxtime();    // maxtime is in fm
   if (param->getInverseQsForMaxTime() == 1) {
     maxtime = 1. / param->getAverageQs() * hbarc;
     cout << "maximal evolution time = " << maxtime << " fm" << endl;
-  } else {
-    maxtime = param->getMaxtime(); // maxtime is in fm
   }
 
   // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
@@ -433,21 +431,22 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
   evolveU(lat, bufferlat, param, dtau, 0.);
 
   int itmax = static_cast<int>(maxtime/(a*dtau) + 0.1);
-  int it0   = static_cast<int>(0.1/(a*dtau) + 0.1);
-  int it1   = static_cast<int>(0.2/(a*dtau) + 0.1);
-  int it2   = static_cast<int>(0.4/(a*dtau) + 0.1);
-  int it3   = static_cast<int>(0.6/(a*dtau) + 0.1);
+  //int it0   = static_cast<int>(0.1/(a*dtau) + 0.1);
+  //int it1   = static_cast<int>(0.2/(a*dtau) + 0.1);
+  //int it2   = static_cast<int>(0.4/(a*dtau) + 0.1);
+  //int it3   = static_cast<int>(0.6/(a*dtau) + 0.1);
 
   cout << "Starting evolution" << endl;
   cout << "itmax=" << itmax << endl;
 
   // do evolution
   for (int it = 1; it <= itmax; it++) {
-    if (it == 1 || it == it0 || it == it1 || it == it2
-        || it == it3 || it == itmax) {
+    //if (it == 1 || it == it0 || it == it1 || it == it2
+    //    || it == it3 || it == itmax) {
+    if (it == itmax) {
       Tmunu(lat, param, it);
       // computes flow velocity and correct energy density
-      u(lat, param, it);
+      u(lat, param, it, true);
     }
 
     if (it % 10 == 0) {
@@ -648,8 +647,9 @@ void Evolution::run(Lattice *lat, BufferLattice *bufferlat, Group *group,
     }
 
     int success = 1;
-    if (it == 1 || it == it0 || it == it1 || it == it2
-        || it == it3 || it == itmax) {
+    //if (it == 1 || it == it0 || it == it1 || it == it2
+    //    || it == it3 || it == itmax) {
+    if (it == 1 || it == itmax) {
       eccentricity(lat, param, it, 0.0, 0);
       //eccentricity(lat, param, it, 0.1, 0);
       //eccentricity(lat, param, it, 1., 0);
@@ -1275,9 +1275,9 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
   averageTxx /= double(N);
 }
 
-void Evolution::u(Lattice *lat, Parameters *param, int it) {
+void Evolution::u(Lattice *lat, Parameters *param, int it, bool finalFlag) {
   MyEigen myeigen;
-  myeigen.flowVelocity4D(lat, param, it);
+  myeigen.flowVelocity4D(lat, param, it, finalFlag);
 }
 
 void Evolution::anisotropy(Lattice *lat, Parameters *param, int it) {

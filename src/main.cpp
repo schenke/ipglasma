@@ -513,8 +513,8 @@ int readInput(Setup *setup, Parameters *param, int argc, char *argv[],
   param->setMaxtime(setup->DFind(file_name, "maxtime"));
   double lattice_a = param->getL()/static_cast<double>(param->getSize());
   //param->setdtau(setup->DFind(file_name, "dtau"));
-  double dtau = param->getMaxtime()/100./lattice_a;
-  param->setdtau(dtau);
+  int iTimeSteps = static_cast<int>(10*param->getMaxtime()/lattice_a) + 1;
+  param->setdtau(param->getMaxtime()/(iTimeSteps*lattice_a));
   // param->setxExponent(setup->DFind(file_name,"xExponent")); //  is now
   // obsolete
   param->setRunWithQs(setup->IFind(file_name, "runWith0Min1Avg2MaxQs"));

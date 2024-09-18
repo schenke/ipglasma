@@ -2379,14 +2379,12 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
 #pragma omp parallel
   {
-    int countMe;
     int checkConvergence;
     int alphaCheck;
 
-    double Fold;
-    double Fnew;
-    Fnew = 0.;
-    double lambda;
+    double Fold = 0.;
+    double Fnew = 0.;
+    double lambda = 1.;
 
     complex<double> *M = new complex<double>[Nc2m1 * Nc2m1];
     complex<double> *F = new complex<double>[Nc2m1];
@@ -2543,14 +2541,13 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         expNegAlpha = temp2; // contains exp(-i alpha_b t^b)
 
         // compute Jacobian
-        countMe = 0;
         for (int ai = 0; ai < Nc2m1; ai++) {
           for (int bi = 0; bi < Nc2m1; bi++) {
+            int countMe = ai * Nc2m1 + bi;
             temp = group->getT(ai) * Ux1pUx2 * group->getT(bi) * expNegAlpha +
                    group->getT(ai) * expAlpha * group->getT(bi) * UDx1pUDx2;
             // -i times trace of temp gives my Jacobian matrix elements:
             M[countMe] = complex<double>(0., -1.) * temp.trace();
-            countMe++;
           }
         }
 
@@ -2654,16 +2651,12 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           }
         }
 
-        if (Nc == 2 && Fnew < 0.000000001)
+        if (Fnew < 0.000000001)
           checkConvergence = 0;
 
-        if (Nc == 3 && Fnew < 0.000000001)
+        if (Dalpha[0].real() != Dalpha[0].real()) {
           checkConvergence = 0;
-
-        if (Dalpha[0].real() != Dalpha[0].real())
-          checkConvergence = 0;
-
-        else if (ni == maxIterations - 1) {
+        } else if (ni == maxIterations - 1) {
           cout << pos << " result for Ux(3) did not converge for x!" << endl;
           cout << "last Dalpha = " << endl;
           for (int ai = 0; ai < Nc2m1; ai++) {
@@ -2686,8 +2679,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         alpha[ai] = 0.;
       }
 
-      countMe = 0;
-
       lat->cells[pos]->setUy(one);
 
       // ---- done: set U(3) ------------------------------------------
@@ -2703,15 +2694,13 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         expNegAlpha = temp2; // contains exp(-i alpha_b t^b)
 
         // compute Jacobian
-        countMe = 0;
         for (int ai = 0; ai < Nc2m1; ai++) {
           for (int bi = 0; bi < Nc2m1; bi++) {
-
+            int countMe = ai * Nc2m1 + bi;
             temp = group->getT(ai) * Uy1pUy2 * group->getT(bi) * expNegAlpha +
                    group->getT(ai) * expAlpha * group->getT(bi) * UDy1pUDy2;
             // -i times trace of temp gives my Jacobian matrix elements:
             M[countMe] = complex<double>(0., -1.) * temp.trace();
-            countMe++;
           }
         }
 
@@ -2810,17 +2799,17 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
           if (Fnew > Fold - 0.00001 * (Fnew * 2.)) {
             lambda = max(lambda * 0.9, 0.1);
-          } else
+          } else {
             alphaCheck = 1;
+          }
         }
 
-        if (Nc == 2 && Fnew < 0.000000001)
+        if (Fnew < 0.000000001)
           checkConvergence = 0;
-        if (Nc == 3 && Fnew < 0.000000001)
+
+        if (Dalpha[0].real() != Dalpha[0].real()) {
           checkConvergence = 0;
-        if (Dalpha[0].real() != Dalpha[0].real())
-          checkConvergence = 0;
-        else if (ni == maxIterations - 1) {
+        } else if (ni == maxIterations - 1) {
           cout << pos << " result for Uy(3) did not converge for y!" << endl;
           cout << "last Dalpha = " << endl;
           for (int ai = 0; ai < Nc2m1; ai++) {

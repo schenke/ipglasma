@@ -1684,11 +1684,9 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
 
         temp = tempNew * lat->cells[pos]->getU();
 
-        if (U[0] == 0.)
-          {
-            temp = one; 
-          }
-        
+        if (U[0] == 0.) {
+            temp = one;
+        }
         // set U
         lat->cells[pos]->setU(temp);
       }
@@ -1776,9 +1774,8 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
 
         if (U[0] == 0.)
           {
-            temp = one; 
+            temp = one;
           }
-        
         // set U
         lat->cells[pos]->setU2(temp);
       }
@@ -1791,13 +1788,13 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     delete[] rhoACoeff[ic];
   }
   delete[] rhoACoeff;
-  
+
 
   // // output U
   if (param->getWriteInitialWilsonLines() > 0) {
       if (std::abs(param->getb()) > 1e-5)
           messager.warning("Writing Wilson lines with a non-zero impact parameter b!");
-    
+
     stringstream strVOne_name;
     // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
     strVOne_name << "V-"
@@ -1969,13 +1966,13 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     double dummy;
 
     ifstream finV1(VOne_name.c_str(), ios::in);
-     
+
     if (!finV1) {
       messager << "File " << VOne_name << " not found. Exiting.";
       messager.flush("info");
       exit(1);
     }
-    
+
     messager << "Reading Wilson line from file " << VOne_name << " ..." ;
 
     // set V for nucleus A
@@ -1998,13 +1995,13 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
 
         double bb = param->getb();
         a = L/static_cast<double>(N);
-        
+
         double xtemp = a * i - bb / 2.;
         int ix = xtemp / a;
 
         if (ix<0)
           continue;
-        
+
         int pos = ix * N + j;
         lat->cells[pos]->setU(temp);
       }
@@ -2012,7 +2009,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
 
     finV1.close();
 
-    
+
     ifstream finV2(VTwo_name.c_str(), ios::in);
 
     if (!finV2) {
@@ -2067,14 +2064,14 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     double L, a, temp;
 
     Matrix tempM(Nc, 1.);
-      
+
     if (!InStream.good())
     {
         messager << "File " << VOne_name.c_str() << " does not exist!";
         messager.flush("info");
         exit(1);
     }
-    
+
     if(InStream.is_open())
     {
         // READING IN PARAMETERS
@@ -2083,7 +2080,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         InStream.read(reinterpret_cast<char*>(&L), sizeof(double));
         InStream.read(reinterpret_cast<char*>(&a), sizeof(double));
         InStream.read(reinterpret_cast<char*>(&temp), sizeof(double));
-                                    
+
         if(N != param->getSize())
         {
           messager << "# ERROR wrong lattice size, data is " << N
@@ -2097,14 +2094,14 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
          exit(0);
       }
 
-                 
+
         // READING ACTUAL DATA
         double ValueBuffer;
         int INPUT_CTR=0;
         double re,im;
         re = 0.;
         im = 0.;
-                  
+
         while( InStream.read(reinterpret_cast<char*>(&ValueBuffer), sizeof(double)))
         {
             if(INPUT_CTR%2==0)              //this is the real part
@@ -2114,23 +2111,22 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
             else                            // this is the imaginary part, write then to variable //
             {
                 im=ValueBuffer;
-                          
                 int TEMPINDX=((INPUT_CTR-1)/2);
                 int PositionIndx = TEMPINDX / 9;
-                          
+
                 // shift here by half an impact parameter
                 int iy = PositionIndx / N;
                 int ixIn = PositionIndx - N*iy;
 
                 double bb = param->getb();
                 a = L/static_cast<double>(N);
-              
+
                 double xtemp = a * ixIn - bb / 2.;
 
                 int ix = round(xtemp / a);
 
                 // cout << ixIn << " " << ix << endl;
-                
+
                 int MatrixIndx=TEMPINDX - PositionIndx*9;
                 int j=MatrixIndx/3;
                 int k=MatrixIndx-j*3;
@@ -2144,16 +2140,16 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
                 }
                 INPUT_CTR++;
                 continue;
-                
+
               }
                 lat->cells[indx]->getU().set(j,k, complex<double> (re,im));
 
             }
             INPUT_CTR++;
         }
-   
+
       InStream.close();
-      
+
       std::ifstream InStream2;
       InStream2.precision(15);
       InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
@@ -2163,7 +2159,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
           messager.flush("info");
           exit(1);
       }
-        
+
       INPUT_CTR=0;
       if(InStream2.is_open())
       {
@@ -2173,8 +2169,8 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
           InStream2.read(reinterpret_cast<char*>(&L), sizeof(double));
           InStream2.read(reinterpret_cast<char*>(&a), sizeof(double));
           InStream2.read(reinterpret_cast<char*>(&temp), sizeof(double));
-                    
-                   
+
+
           if(N != param->getSize())
           {
             messager << "# ERROR wrong lattice size, data is " << N
@@ -2189,8 +2185,8 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
           messager.flush("info");
            exit(0);
         }
-                    
-                    
+
+
           // READING ACTUAL DATA
           while( InStream2.read(reinterpret_cast<char*>(&ValueBuffer), sizeof(double)))
           {
@@ -2201,30 +2197,29 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
               else                            // this is the imaginary part, write then to variable //
               {
                   im=ValueBuffer;
-                            
+
                   int TEMPINDX=((INPUT_CTR-1)/2);
                   int PositionIndx = TEMPINDX / 9;
-                            
+
                   // shift here by half an impact parameter
                   int iy = PositionIndx / N;
                   int ixIn = PositionIndx - N*iy;
-                          
+
                   double bb = param->getb();
                   a = L/static_cast<double>(N);
-                  
+
                   double xtemp = a * ixIn + bb / 2.;
-                  
+
                   int ix = round(xtemp / a);
 
                   //                  if (ixIn != ix)
                   //  cout << ixIn << " " << ix << endl;
-            
                   int MatrixIndx=TEMPINDX - PositionIndx*9;
                   int j=MatrixIndx/3;
                   int k=MatrixIndx-j*3;
-                       
+
                   int indx = N*ix + iy;
-                  
+
                   if (indx >= N*N || indx < 0)
                   {
                     if (bb==0){
@@ -2461,13 +2456,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
  #pragma omp for
     for (int pos = 0; pos < N * N; pos++) // loops over all cells
     {
-      if (lat->cells[pos]->getU().trace() != 
-          lat->cells[pos]->getU().trace()) {
+      if (std::isnan(lat->cells[pos]->getU().trace())) {
         lat->cells[pos]->setU(one);
       }
 
-      if (lat->cells[pos]->getU2().trace() !=
-          lat->cells[pos]->getU2().trace()) {
+      if (std::isnan(lat->cells[pos]->getU2().trace())) {
         lat->cells[pos]->setU2(one);
       }
 

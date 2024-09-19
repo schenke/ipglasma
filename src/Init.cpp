@@ -3476,8 +3476,8 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 }
 
 
-void Init::findFieldsInForwardLightcone(const Matrix &U1, const Matrix &U2,
-                                        Matrix &Usol) {
+void Init::findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
+                                   Matrix &Usol) {
     bool checkConvergence = false;
     const int maxIterations = 100000;
 
@@ -3554,6 +3554,9 @@ void Init::findFieldsInForwardLightcone(const Matrix &U1, const Matrix &U2,
           checkConvergence = true;
         }
     }
+    delete[] in;
+    delete[] Fa;
+    delete[] Jab;
 }
 
 

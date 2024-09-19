@@ -79,8 +79,8 @@ public:
   void multiplicity(Lattice *lat, Parameters *param);
 
   Matrix getUfromExponent(double *in);
-  void findFieldsInForwardLightcone(const Matrix &U1, const Matrix &U2,
-                                    Matrix &Usol);
+  void findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
+                               Matrix &Usol);
 
   void readInNucleusConfigs(const int nucleusA,
                             const int lightNucleusOption,

@@ -3484,6 +3484,76 @@ void Init::findFieldsInForwardLightcone(const Matrix &U1, const Matrix &U2,
     Matrix U1pU2 = U1 + U2;
     Matrix U1pU2dagger = U1pU2.conjg();
     std::vector< complex<double> > alpha(Nc2m1_, 0.);    // solution
+    std::vector< complex<double> > Dalpha(Nc2m1_, 0.);
+    std::vector< complex<double> > alphaSave(Nc2m1_, 0.);
+
+    complex<double> *Jab = new complex<double>[Nc2m1_ * Nc2m1_];
+    complex<double> *Fa = new complex<double>[Nc2m1_];
+    double *in = new double[Nc2m1_];
+
+    int iter = 0;
+    double Fold = 0.;
+    double Fnew = 0.;
+    double lambda = 1.;
+    Matrix temp(Nc_, 0.);
+
+    Matrix expAlpha = one_;
+    Matrix expNegAlpha = one_;
+    // compute function F that needs to be zero
+    for (int ai = 0; ai < Nc2m1_; ai++) {
+        temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
+               group_ptr_->getT(ai) * U1pU2 * expNegAlpha -
+               group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
+        // minus trace if temp gives -F_ai
+        Fa[ai] = (-1.) * temp.trace();
+    }
+    while (!checkConvergence && iter < maxIterations) {
+        iter++;
+
+        // compute Jacobian
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            for (int bi = 0; bi < Nc2m1_; bi++) {
+                int countMe = ai * Nc2m1_ + bi;
+                temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * expNegAlpha +
+                       group_ptr_->getT(ai) * expAlpha * group_ptr_->getT(bi) * U1pU2dagger;
+                // -i times trace of temp gives my Jacobian matrix elements:
+                Jab[countMe] = complex<double>(0., -1.) * temp.trace();
+            }
+        }
+
+        Dalpha = solveAxb(Jab, Fa);
+
+        lambda = 1.;
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            alphaSave[ai] = alpha[ai];
+            alpha[ai] = alphaSave[ai] + lambda * Dalpha[ai];
+        }
+
+        for (int i = 0; i < Nc2m1_; i++) {
+            in[i] = alpha[i].real();
+        }
+        Usol = getUfromExponent(in);
+        expAlpha = Usol;
+        expNegAlpha = Usol.conjg();
+
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
+                   group_ptr_->getT(ai) * U1pU2 * expNegAlpha -
+                   group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
+            // minus trace if temp gives -F_ai
+            Fa[ai] = (-1.) * temp.trace();
+        }
+
+        Fold = Fnew;
+        Fnew = 0.;
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            Fnew += 0.5 * (real(Fa[ai]) * real(Fa[ai])
+                           + imag(Fa[ai]) * imag(Fa[ai]));
+        }
+        if (Fnew < 0.000000001) {
+          checkConvergence = true;
+        }
+    }
 }
 
 

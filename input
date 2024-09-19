@@ -62,6 +62,7 @@ Projectile Pb
 Target Pb
 bmin 0
 bmax 2
+rotateReactionPlane 0
 lightNucleusOption 5
 useFixedNpart 0
 averageOverThisManyNuclei 1

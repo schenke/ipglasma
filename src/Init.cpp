@@ -760,20 +760,21 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   std::cout << "set color charge density ..." << std::endl;
   int pos, posA, posB;
   int N = param->getSize();
-  int A1, A2;
+  const int A1 = nucleusA_.size();
+  const int A2 = nucleusB_.size();
   // int check=0;
-  if (param->getNucleonPositionsFromFile() == 2) {
-    A1 = param->getA1FromFile();
-    A2 = param->getA2FromFile();
-  } else {
-    A1 = static_cast<int>(glauber->nucleusA1()) * param->getAverageOverNuclei();
-    A2 = static_cast<int>(glauber->nucleusA2()) * param->getAverageOverNuclei();
-  }
+  //if (param->getNucleonPositionsFromFile() == 2) {
+  //  A1 = param->getA1FromFile();
+  //  A2 = param->getA2FromFile();
+  //} else {
+  //  A1 = static_cast<int>(glauber->nucleusA1()) * param->getAverageOverNuclei();
+  //  A2 = static_cast<int>(glauber->nucleusA2()) * param->getAverageOverNuclei();
+  //}
 
   int Npart = 0;
   int Ncoll = 0;
   double g2mu2A, g2mu2B;
-  double b = param->getb();
+  const double impact_b = param->getb();
   double r;
   double L = param->getL();
   double P, m;
@@ -862,26 +863,19 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   // positions are shifted here. not later as in previous versions. bshift below
   // (in init(..)) is zero.
 
-  if (A1 < 4 && A2 > 1) {
-    for (int i = 0; i < A2; i++) {
-      nucleusB_.at(i).x = nucleusB_.at(i).x + b;
-    }
-  } else if (A2 < 4 && A1 > 1) {
-    for (int i = 0; i < A1; i++) {
-      nucleusA_.at(i).x = nucleusA_.at(i).x - b;
-    }
-  } else {
-    for (int i = 0; i < A1;
-         i++) // shift the nuclei's position by -b/2 or +b/2 respectively
-    {
-      nucleusA_.at(i).x = nucleusA_.at(i).x - b / 2.;
-    }
-
-    for (int i = 0; i < A2;
-         i++) // shift the nuclei's position by -b/2 or +b/2 respectively
-    {
-      nucleusB_.at(i).x = nucleusB_.at(i).x + b / 2.;
-    }
+  double phiRP = 0.;
+  if (param->getRotateReactionPlane()) {
+    phiRP = 2 * M_PI * random->genrand64_real2();
+  }
+  for (unsigned int i = 0; i < nucleusA_.size(); i++) {
+    // shift the nuclei's position by -b/2 or +b/2 respectively
+    nucleusA_.at(i).x -= impact_b/2.*cos(phiRP);
+    nucleusA_.at(i).y -= impact_b/2.*sin(phiRP);
+  }
+  for (unsigned int i = 0; i < nucleusB_.size(); i++) {
+    // shift the nuclei's position by -b/2 or +b/2 respectively
+    nucleusB_.at(i).x += impact_b/2.*cos(phiRP);
+    nucleusB_.at(i).y += impact_b/2.*sin(phiRP);
   }
 
   double xi = param->getProtonAnisotropy();
@@ -1550,7 +1544,8 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
       fout1 << " " << endl;
       fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
       fout1 << " " << endl;
-      fout1 << "b = " << b << " fm" << endl;
+      fout1 << "b = " << impact_b << " fm" << endl;
+      fout1 << "phiRP = " << phiRP << endl;
       fout1 << "Npart = " << Npart << endl;
       fout1 << "Ncoll = " << Ncoll << endl;
       if (param->getRunningCoupling()) {
@@ -2239,25 +2234,23 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   messager.info("Initializing fields ... ");
   param->setRnp(0.);
 
-  double b;
-  double xb =
-      random->genrand64_real1(); // uniformly distributed random variable
+  double b = 0.;
+  double xb = random->genrand64_real1();  // uniformly distributed random variable
 
-  if (param->getUseNucleus() == 0) // use b=0 fm for the constant g^2 mu case
-  {
+  if (param->getUseNucleus() == 0) {
+    // use b=0 fm for the constant g^2 mu case
     param->setSuccess(1);
     b = 0.;
     messager << "Setting b=0 for constant color charge density case.";
     messager.flush("info");
   } else {
-    if (param->getLinearb() ==
-        1) // use a linear probability distribution for b if we are doing nuclei
-    {
+    if (param->getLinearb() == 1) {
+      // use a linear probability distribution for b if we are doing nuclei
       messager << "Sampling linearly distributed b between " << bmin << " and "
                << bmax << "fm. Found ";
       b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
-    } else // use a uniform distribution instead
-    {
+    } else {
+      // use a uniform distribution instead
       messager << "Sampling uniformly distributed b between " << bmin << " and "
                << bmax << "fm. Found ";
       b = (bmax - bmin) * xb + bmin;

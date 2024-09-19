@@ -1651,9 +1651,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 #pragma omp parallel
     {
       double in[8];
-      vector<complex<double>> U;
       Matrix temp(Nc_, 1.);
-      Matrix temp2(Nc_, 0.);
       Matrix tempNew(Nc_, 0.);
 
 #pragma omp for
@@ -1667,15 +1665,6 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         temp = tempNew * lat->cells[pos]->getU();
         // set U
         lat->cells[pos]->setU(temp);
-        if (pos == 65530) {
-            std::cout << "check U: " << std::endl;
-            for (int ii = 0; ii < Nc_; ii++) {
-                for (int jj = 0; jj < Nc_; jj++) {
-                    std::cout << temp(ii, jj) << " ";
-                }
-            }
-            exit(0);
-        }
       }
     }
 
@@ -1736,9 +1725,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     //#pragma omp parallel
     {
       double in[8];
-      vector<complex<double>> U;
       Matrix temp(Nc_, 1.);
-      Matrix temp2(Nc_, 0.);
       Matrix tempNew(Nc_, 0.);
 
 #pragma omp for

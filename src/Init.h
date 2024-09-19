@@ -52,9 +52,14 @@ private:
 
   pretty_ostream messager;
 
+  int Nc_, Nc2m1_;
+  Group *group_ptr_;
+
+  Matrix one_;
+
 public:
   // Constructor.
-  Init(const int nn[]) : fft(nn){};
+  Init(const int nn[]) : fft(nn) {};
 
   ~Init(){};
 
@@ -62,21 +67,24 @@ public:
             Glauber *glauber, int READFROMFILE);
   void sampleTA(Parameters *param, Random *random, Glauber *glauber);
   void readNuclearQs(Parameters *param);
-  std::vector<complex<double>> solveAxb(Parameters *param, complex<double> *A,
+  std::vector<complex<double>> solveAxb(complex<double> *A,
                                         complex<double> *b);
   double getNuclearQs2(double Qs2atZeroY, double y);
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random,
                              Glauber *glauber);
-  void setV(Lattice *lat, Group *group, Parameters *param, Random *random);
+  void setV(Lattice *lat, Parameters *param, Random *random);
   void readV(Lattice *lat, Parameters *param, int format);
   // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
   // *random, Glauber *glauber);
   void multiplicity(Lattice *lat, Parameters *param);
 
+  Matrix getUfromExponent(double *in);
+  void findFieldsInForwardLightcone(const Matrix &U1, const Matrix &U2,
+                                    Matrix &Usol);
+
   void readInNucleusConfigs(const int nucleusA,
                             const int lightNucleusOption,
                             vector< vector<float> > &nucleonPosArr);
-
   void generate_nucleus_configuration(Random *random, int A, int Z, double a_WS,
                                       double R_WS, double beta2, double beta3,
                                       double beta4, double gamma,

@@ -11,13 +11,10 @@ using PhysConst::hbarc;
 //**************************************************************************
 // Init class.
 
-vector<complex<double>> Init::solveAxb(Parameters *param, complex<double> *A,
+vector<complex<double>> Init::solveAxb(complex<double> *A,
                                        complex<double> *b_in) {
-  const int Nc = param->getNc();
-  const int Nc2m1 = Nc * Nc - 1;
-
   vector<complex<double>> xvec;
-  xvec.reserve(Nc2m1);
+  xvec.reserve(Nc2m1_);
   double a_data[128];
 
   for (int i = 0; i < 64; i++) {
@@ -25,25 +22,25 @@ vector<complex<double>> Init::solveAxb(Parameters *param, complex<double> *A,
     a_data[2 * i + 1] = imag(A[i]);
   }
 
-  double b_data[2 * Nc2m1];
+  double b_data[2 * Nc2m1_];
 
-  for (int i = 0; i < Nc2m1; i++) {
+  for (int i = 0; i < Nc2m1_; i++) {
     b_data[2 * i] = real(b_in[i]);
     b_data[2 * i + 1] = imag(b_in[i]);
   }
 
   gsl_matrix_complex_view m =
-      gsl_matrix_complex_view_array(a_data, Nc2m1, Nc2m1);
-  gsl_vector_complex_view c = gsl_vector_complex_view_array(b_data, Nc2m1);
-  gsl_vector_complex *x = gsl_vector_complex_alloc(Nc2m1);
+      gsl_matrix_complex_view_array(a_data, Nc2m1_, Nc2m1_);
+  gsl_vector_complex_view c = gsl_vector_complex_view_array(b_data, Nc2m1_);
+  gsl_vector_complex *x = gsl_vector_complex_alloc(Nc2m1_);
 
   int s;
-  gsl_permutation *p = gsl_permutation_alloc(Nc2m1);
+  gsl_permutation *p = gsl_permutation_alloc(Nc2m1_);
   gsl_linalg_complex_LU_decomp(&m.matrix, p, &s);
   gsl_linalg_complex_LU_solve(&m.matrix, p, &c.vector, x);
   gsl_permutation_free(p);
 
-  if (Nc == 3) {
+  if (Nc_ == 3) {
     xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 0)),
                                    GSL_IMAG(gsl_vector_complex_get(x, 0))));
     xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 1)),
@@ -60,7 +57,7 @@ vector<complex<double>> Init::solveAxb(Parameters *param, complex<double> *A,
                                    GSL_IMAG(gsl_vector_complex_get(x, 6))));
     xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 7)),
                                    GSL_IMAG(gsl_vector_complex_get(x, 7))));
-  } else if (Nc == 2) {
+  } else if (Nc_ == 2) {
     xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 0)),
                                    GSL_IMAG(gsl_vector_complex_get(x, 0))));
     xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 1)),
@@ -1588,22 +1585,19 @@ void Init::setColorChargeDensity(Lattice *lat, Parameters *param,
   foutNEst.close();
 }
 
-void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
+void Init::setV(Lattice *lat, Parameters *param, Random *random) {
   messager.info("Setting Wilson lines ...");
   const int N = param->getSize();
   const int Ny = param->getNy();
-  const int Nc = param->getNc();
-  const int Nc2m1 = Nc * Nc - 1;
   const int nn[2] = {N, N};
   const double L = param->getL();
   const double a = L / N; // lattice spacing in fm
   const double m = param->getm() * a / hbarc;
-  const Matrix one(Nc, 1.);
   double UVdamp = param->getUVdamp(); // GeV^-1
   UVdamp = UVdamp / a * hbarc;
   complex<double> **rhoACoeff;
-  rhoACoeff = new complex<double> *[Nc2m1];
-  for (int i = 0; i < Nc2m1; i++) {
+  rhoACoeff = new complex<double> *[Nc2m1_];
+  for (int i = 0; i < Nc2m1_; i++) {
     rhoACoeff[i] = new complex<double>[N * N];
   }
 
@@ -1611,14 +1605,14 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
   for (int k = 0; k < Ny; k++) {
     double g2muA;
     for (int pos = 0; pos < N * N; pos++) {
-      for (int n = 0; n < Nc2m1; n++) {
+      for (int n = 0; n < Nc2m1_; n++) {
         g2muA = param->getg() *
                 sqrt(lat->cells[pos]->getg2mu2A() / static_cast<double>(Ny));
         rhoACoeff[n][pos] = g2muA * random->Gauss();
       }
     }
 
-    for (int n = 0; n < Nc2m1; n++) {
+    for (int n = 0; n < Nc2m1_; n++) {
       fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
     }
 
@@ -1636,16 +1630,16 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
                     sin(ky / 2.) * sin(ky / 2.)); // lattice momentum
         if (m == 0) {
           if (kt2 != 0) {
-            for (int n = 0; n < Nc2m1; n++) {
+            for (int n = 0; n < Nc2m1_; n++) {
               rhoACoeff[n][localpos] = rhoACoeff[n][localpos] * (1. / (kt2));
             }
           } else {
-            for (int n = 0; n < Nc2m1; n++) {
+            for (int n = 0; n < Nc2m1_; n++) {
               rhoACoeff[n][localpos] = 0.;
             }
           }
         } else {
-          for (int n = 0; n < Nc2m1; n++) {
+          for (int n = 0; n < Nc2m1_; n++) {
             rhoACoeff[n][localpos] *=
                 (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
           }
@@ -1654,7 +1648,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     }
 
     // Fourier transform back A^+
-    for (int n = 0; n < Nc2m1; n++) {
+    for (int n = 0; n < Nc2m1_; n++) {
       fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
     }
     // compute U
@@ -1663,32 +1657,30 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     {
       double in[8];
       vector<complex<double>> U;
-      Matrix temp(Nc, 1.);
-      Matrix temp2(Nc, 0.);
-      Matrix tempNew(Nc, 0.);
+      Matrix temp(Nc_, 1.);
+      Matrix temp2(Nc_, 0.);
+      Matrix tempNew(Nc_, 0.);
 
 #pragma omp for
       for (int pos = 0; pos < N * N; pos++) {
-        for (int aa = 0; aa < Nc2m1; aa++) {
-          in[aa] = -(rhoACoeff[aa][pos])
-                        .real(); // expmCoeff will calculate exp(i in[a]t[a]), so
-                                 // just multiply by -1 (not -i)
+        for (int aa = 0; aa < Nc2m1_; aa++) {
+          // expmCoeff will calculate exp(i in[a]t[a]),
+          // so just multiply by -1 (not -i)
+          in[aa] = -(rhoACoeff[aa][pos]).real();
         }
-
-        U = temp2.expmCoeff(in, Nc);
-
-        tempNew = U[0] * one + U[1] * group->getT(0) + U[2] * group->getT(1) +
-                  U[3] * group->getT(2) + U[4] * group->getT(3) +
-                  U[5] * group->getT(4) + U[6] * group->getT(5) +
-                  U[7] * group->getT(6) + U[8] * group->getT(7);
-
+        tempNew = getUfromExponent(in);
         temp = tempNew * lat->cells[pos]->getU();
-
-        if (U[0] == 0.) {
-            temp = one;
-        }
         // set U
         lat->cells[pos]->setU(temp);
+        if (pos == 65530) {
+            std::cout << "check U: " << std::endl;
+            for (int ii = 0; ii < Nc_; ii++) {
+                for (int jj = 0; jj < Nc_; jj++) {
+                    std::cout << temp(ii, jj) << " ";
+                }
+            }
+            exit(0);
+        }
       }
     }
 
@@ -1698,14 +1690,14 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
   for (int k = 0; k < Ny; k++) {
     double g2muB;
     for (int pos = 0; pos < N * N; pos++) {
-      for (int n = 0; n < Nc2m1; n++) {
+      for (int n = 0; n < Nc2m1_; n++) {
         g2muB = param->getg() *
                 sqrt(lat->cells[pos]->getg2mu2B() / static_cast<double>(Ny));
         rhoACoeff[n][pos] = g2muB * random->Gauss();
       }
     }
 
-    for (int n = 0; n < Nc2m1; n++) {
+    for (int n = 0; n < Nc2m1_; n++) {
       fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
     }
 
@@ -1723,16 +1715,16 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
                     sin(ky / 2.) * sin(ky / 2.)); // lattice momentum
         if (m == 0) {
           if (kt2 != 0) {
-            for (int n = 0; n < Nc2m1; n++) {
+            for (int n = 0; n < Nc2m1_; n++) {
               rhoACoeff[n][localpos] = rhoACoeff[n][localpos] * (1. / (kt2));
             }
           } else {
-            for (int n = 0; n < Nc2m1; n++) {
+            for (int n = 0; n < Nc2m1_; n++) {
               rhoACoeff[n][localpos] = 0.;
             }
           }
         } else {
-          for (int n = 0; n < Nc2m1; n++) {
+          for (int n = 0; n < Nc2m1_; n++) {
             rhoACoeff[n][localpos] *=
                 (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
           }
@@ -1741,7 +1733,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     }
 
     // Fourier transform back A^+
-    for (int n = 0; n < Nc2m1; n++) {
+    for (int n = 0; n < Nc2m1_; n++) {
       fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
     }
     // compute U
@@ -1750,32 +1742,21 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
     {
       double in[8];
       vector<complex<double>> U;
-      Matrix temp(Nc, 1.);
-      Matrix temp2(Nc, 0.);
-      Matrix tempNew(Nc, 0.);
+      Matrix temp(Nc_, 1.);
+      Matrix temp2(Nc_, 0.);
+      Matrix tempNew(Nc_, 0.);
 
 #pragma omp for
       for (int pos = 0; pos < N * N; pos++) {
 
-        for (int aa = 0; aa < Nc2m1; aa++) {
-          in[aa] = -(rhoACoeff[aa][pos])
-                        .real(); // expmCoeff will calculate exp(i in[a]t[a]), so
-                                 // just multiply by -1 (not -i)
+        for (int aa = 0; aa < Nc2m1_; aa++) {
+          // expmCoeff will calculate exp(i in[a]t[a]), so
+          // just multiply by -1 (not -i)
+          in[aa] = -(rhoACoeff[aa][pos]).real();
         }
-
-        U = temp2.expmCoeff(in, Nc);
-
-        tempNew = U[0] * one + U[1] * group->getT(0) + U[2] * group->getT(1) +
-                  U[3] * group->getT(2) + U[4] * group->getT(3) +
-                  U[5] * group->getT(4) + U[6] * group->getT(5) +
-                  U[7] * group->getT(6) + U[8] * group->getT(7);
-
+        tempNew = getUfromExponent(in);
         temp = tempNew * lat->cells[pos]->getU2();
 
-        if (U[0] == 0.)
-          {
-            temp = one;
-          }
         // set U
         lat->cells[pos]->setU2(temp);
       }
@@ -1784,7 +1765,7 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
   } // Ny loop
 
   // --------
-  for (int ic = 0; ic < Nc2m1; ic++) {
+  for (int ic = 0; ic < Nc2m1_; ic++) {
     delete[] rhoACoeff[ic];
   }
   delete[] rhoACoeff;
@@ -1856,13 +1837,13 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
 
       // print header ------------- //
       Outfile1.write((char *)&N, sizeof(int));
-      Outfile1.write((char *)&Nc, sizeof(int));
+      Outfile1.write((char *)&Nc_, sizeof(int));
       Outfile1.write((char *)&L, sizeof(double));
       Outfile1.write((char *)&a, sizeof(double));
       Outfile1.write((char *)&temp, sizeof(double));
 
       Outfile2.write((char *)&N, sizeof(int));
-      Outfile2.write((char *)&Nc, sizeof(int));
+      Outfile2.write((char *)&Nc_, sizeof(int));
       Outfile2.write((char *)&L, sizeof(double));
       Outfile2.write((char *)&a, sizeof(double));
       Outfile2.write((char *)&temp, sizeof(double));
@@ -1876,10 +1857,10 @@ void Init::setV(Lattice *lat, Group *group, Parameters *param, Random *random) {
           for (int a1 = 0; a1 < 3; a1++) {
             for (int b = 0; b < 3; b++) {
               int indx = N * iy + ix;
-              val1[0] = (lat->cells[indx]->getU()).getRe(a1 * Nc + b);
-              val1[1] = (lat->cells[indx]->getU()).getIm(a1 * Nc + b);
-              val2[0] = (lat->cells[indx]->getU2()).getRe(a1 * Nc + b);
-              val2[1] = (lat->cells[indx]->getU2()).getIm(a1 * Nc + b);
+              val1[0] = (lat->cells[indx]->getU()).getRe(a1 * Nc_ + b);
+              val1[1] = (lat->cells[indx]->getU()).getIm(a1 * Nc_ + b);
+              val2[0] = (lat->cells[indx]->getU2()).getRe(a1 * Nc_ + b);
+              val2[1] = (lat->cells[indx]->getU2()).getIm(a1 * Nc_ + b);
 
               Outfile1.write((char *)val1, 2 * sizeof(double));
               Outfile2.write((char *)val2, 2 * sizeof(double));
@@ -1951,7 +1932,6 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
   if (format == 1)
   {
     int N = param->getSize();
-    int Nc = param->getNc();
 
     double L = param->getL();
     double a = L/static_cast<double>(N);
@@ -1960,7 +1940,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     nn[0] = N;
     nn[1] = N;
 
-    Matrix temp(Nc, 1.);
+    Matrix temp(Nc_, 1.);
 
     double Re[9], Im[9];
     double dummy;
@@ -2060,10 +2040,9 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     InStream.precision(15);
     InStream.open(VOne_name.c_str(), std::ios::in | std::ios::binary);
     int N;
-    int Nc=param->getNc();
     double L, a, temp;
 
-    Matrix tempM(Nc, 1.);
+    Matrix tempM(Nc_, 1.);
 
     if (!InStream.good())
     {
@@ -2076,7 +2055,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
     {
         // READING IN PARAMETERS
         InStream.read(reinterpret_cast<char*>(&N), sizeof(int));
-        InStream.read(reinterpret_cast<char*>(&Nc), sizeof(int));
+        InStream.read(reinterpret_cast<char*>(&Nc_), sizeof(int));
         InStream.read(reinterpret_cast<char*>(&L), sizeof(double));
         InStream.read(reinterpret_cast<char*>(&a), sizeof(double));
         InStream.read(reinterpret_cast<char*>(&temp), sizeof(double));
@@ -2165,7 +2144,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
       {
           // READING IN PARAMETERS
           InStream2.read(reinterpret_cast<char*>(&N), sizeof(int));
-          InStream2.read(reinterpret_cast<char*>(&Nc), sizeof(int));
+          InStream2.read(reinterpret_cast<char*>(&Nc_), sizeof(int));
           InStream2.read(reinterpret_cast<char*>(&L), sizeof(double));
           InStream2.read(reinterpret_cast<char*>(&a), sizeof(double));
           InStream2.read(reinterpret_cast<char*>(&temp), sizeof(double));
@@ -2249,12 +2228,13 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
                 Glauber *glauber, int READFROMFILE) {
   const int maxIterations = 100000;
   const int N = param->getSize();
-  const int Nc = param->getNc();
-  const int Nc2m1 = Nc * Nc - 1;
+  Nc_ = param->getNc();
+  Nc2m1_ = Nc_ * Nc_ - 1;
+  group_ptr_ = group;
+  one_ = Matrix(Nc_, 1.);
   const double bmin = param->getbmin();
   const double bmax = param->getbmax();
-  const Matrix one(Nc, 1.);
-  const Matrix zero(Nc, 0.);
+  const Matrix zero(Nc_, 0.);
 
   messager.info("Initializing fields ... ");
   param->setRnp(0.);
@@ -2362,7 +2342,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       return;
     }
     // sample color charges and find Wilson lines V_A and V_B
-    setV(lat, group, param, random);
+    setV(lat, param, random);
   }
 
   // output Wilson lines (used also for the proton plots)
@@ -2381,74 +2361,73 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
     double Fnew = 0.;
     double lambda = 1.;
 
-    complex<double> *M = new complex<double>[Nc2m1 * Nc2m1];
-    complex<double> *F = new complex<double>[Nc2m1];
-    complex<double> *result = new complex<double>[Nc2m1];
-    complex<double> *alpha = new complex<double>[Nc2m1];
-    complex<double> *alphaSave = new complex<double>[Nc2m1];
+    complex<double> *M = new complex<double>[Nc2m1_ * Nc2m1_];
+    complex<double> *F = new complex<double>[Nc2m1_];
+    complex<double> *result = new complex<double>[Nc2m1_];
+    complex<double> *alpha = new complex<double>[Nc2m1_];
+    complex<double> *alphaSave = new complex<double>[Nc2m1_];
 
     vector<complex<double>> Dalpha;
-    Dalpha.reserve(Nc2m1);
+    Dalpha.reserve(Nc2m1_);
 
-    Matrix temp(Nc, 1.);
-    Matrix tempNew(Nc, 1.);
+    Matrix temp(Nc_, 1.);
+    Matrix tempNew(Nc_, 1.);
     double in[8];
     vector<complex<double>> U;
-    //   Matrix U(Nc,1.);
-    Matrix temp2(Nc, 0.);
-    Matrix expAlpha(Nc, 0.);
-    Matrix expNegAlpha(Nc, 0.);
-    Matrix Ux(int(Nc), 0.);
-    Matrix Uy(int(Nc), 0.);
-    Matrix Ux1(int(Nc), 0.);
-    Matrix Uy1(int(Nc), 0.);
-    Matrix Ux2(int(Nc), 0.);
-    Matrix Uy2(int(Nc), 0.);
-    Matrix UD(int(Nc), 0.);
-    Matrix UDx(int(Nc), 0.);
-    Matrix UDy(int(Nc), 0.);
-    Matrix UDx1(int(Nc), 0.);
-    Matrix UDy1(int(Nc), 0.);
+    Matrix temp2(Nc_, 0.);
+    Matrix expAlpha(Nc_, 0.);
+    Matrix expNegAlpha(Nc_, 0.);
+    Matrix Ux(Nc_, 0.);
+    Matrix Uy(Nc_, 0.);
+    Matrix Ux1(Nc_, 0.);
+    Matrix Uy1(Nc_, 0.);
+    Matrix Ux2(Nc_, 0.);
+    Matrix Uy2(Nc_, 0.);
+    Matrix UD(Nc_, 0.);
+    Matrix UDx(Nc_, 0.);
+    Matrix UDy(Nc_, 0.);
+    Matrix UDx1(Nc_, 0.);
+    Matrix UDy1(Nc_, 0.);
 
-    Matrix Uplaq(int(Nc), 0.);
-    Matrix Uplaq1(int(Nc), 0.);
-    Matrix Uplaq2(int(Nc), 0.);
-    Matrix Uplaq3(int(Nc), 0.);
-    Matrix Uplaq4(int(Nc), 0.);
+    Matrix Uplaq(Nc_, 0.);
+    Matrix Uplaq1(Nc_, 0.);
+    Matrix Uplaq2(Nc_, 0.);
+    Matrix Uplaq3(Nc_, 0.);
+    Matrix Uplaq4(Nc_, 0.);
 
-    Matrix UD2(int(Nc), 0.);
-    Matrix UDx2(int(Nc), 0.);
-    Matrix UDy2(int(Nc), 0.);
+    Matrix UD2(Nc_, 0.);
+    Matrix UDx2(Nc_, 0.);
+    Matrix UDy2(Nc_, 0.);
 
-    Matrix Ax(int(Nc), 0.);
-    Matrix Ay(int(Nc), 0.);
-    Matrix Ax1(int(Nc), 0.);
-    Matrix Ay1(int(Nc), 0.);
-    Matrix AT(int(Nc), 0.);
+    Matrix Ax(Nc_, 0.);
+    Matrix Ay(Nc_, 0.);
+    Matrix Ax1(Nc_, 0.);
+    Matrix Ay1(Nc_, 0.);
+    Matrix AT(Nc_, 0.);
 
-    Matrix Ax2(int(Nc), 0.);
-    Matrix Ay2(int(Nc), 0.);
-    Matrix AT2(int(Nc), 0.);
+    Matrix Ax2(Nc_, 0.);
+    Matrix Ay2(Nc_, 0.);
+    Matrix AT2(Nc_, 0.);
 
     // field strength tensor
-    Matrix Fxy(int(Nc), 0.);
-    Matrix Fyx(int(Nc), 0.);
+    Matrix Fxy(Nc_, 0.);
+    Matrix Fyx(Nc_, 0.);
 
-    Matrix AM(int(Nc), 0.);
-    Matrix AP(int(Nc), 0.);
+    Matrix AM(Nc_, 0.);
+    Matrix AP(Nc_, 0.);
 
-    Matrix AxUpY(int(Nc), 0.);
-    Matrix AyUpY(int(Nc), 0.);
+    Matrix AxUpY(Nc_, 0.);
+    Matrix AyUpY(Nc_, 0.);
 
-    Matrix Aeta2(int(Nc), 0.);
-    Matrix Ux1pUx2(int(Nc), 0.);
-    Matrix UDx1pUDx2(int(Nc), 0.);
-    Matrix Uy1pUy2(int(Nc), 0.);
-    Matrix UDy1pUDy2(int(Nc), 0.);
-    Matrix Ux1mUx2(int(Nc), 0.);
-    Matrix UDx1mUDx2(int(Nc), 0.);
-    Matrix Uy1mUy2(int(Nc), 0.);
-    Matrix UDy1mUDy2(int(Nc), 0.);
+    Matrix Aeta2(Nc_, 0.);
+    Matrix Ux1pUx2(Nc_, 0.);
+    Matrix UDx1pUDx2(Nc_, 0.);
+    Matrix Uy1pUy2(Nc_, 0.);
+    Matrix UDy1pUDy2(Nc_, 0.);
+    Matrix Ux1mUx2(Nc_, 0.);
+    Matrix UDx1mUDx2(Nc_, 0.);
+    Matrix Uy1mUy2(Nc_, 0.);
+    Matrix UDy1mUDy2(Nc_, 0.);
 
     // compute Ux(3) Uy(3) after the collision
 
@@ -2456,12 +2435,14 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
  #pragma omp for
     for (int pos = 0; pos < N * N; pos++) // loops over all cells
     {
-      if (std::isnan(lat->cells[pos]->getU().trace())) {
-        lat->cells[pos]->setU(one);
+      auto checkU = lat->cells[pos]->getU().trace();
+      if (checkU != checkU) {
+        lat->cells[pos]->setU(one_);
       }
 
-      if (std::isnan(lat->cells[pos]->getU2().trace())) {
-        lat->cells[pos]->setU2(one);
+      checkU = lat->cells[pos]->getU2().trace();
+      if (checkU != checkU) {
+        lat->cells[pos]->setU2(one_);
       }
 
       ////check - remove later
@@ -2515,13 +2496,13 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
       // do Ux(3) first
       // initial guess for alpha
-      for (int ai = 0; ai < Nc2m1; ai++) {
+      for (int ai = 0; ai < Nc2m1_; ai++) {
         alpha[ai] = 0.;
       }
 
       // ---- set new Ux(3) --------------------------------------------
 
-      lat->cells[pos]->setUx(one);
+      lat->cells[pos]->setUx(one_);
       int ni = 0;
       // solve for alpha iteratively (U(3)=exp(i alpha_b t^b))
       checkConvergence = 1;
@@ -2534,9 +2515,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         expNegAlpha = temp2; // contains exp(-i alpha_b t^b)
 
         // compute Jacobian
-        for (int ai = 0; ai < Nc2m1; ai++) {
-          for (int bi = 0; bi < Nc2m1; bi++) {
-            int countMe = ai * Nc2m1 + bi;
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+          for (int bi = 0; bi < Nc2m1_; bi++) {
+            int countMe = ai * Nc2m1_ + bi;
             temp = group->getT(ai) * Ux1pUx2 * group->getT(bi) * expNegAlpha +
                    group->getT(ai) * expAlpha * group->getT(bi) * UDx1pUDx2;
             // -i times trace of temp gives my Jacobian matrix elements:
@@ -2545,20 +2526,20 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         }
 
         // compute function F that needs to be zero
-        for (int ai = 0; ai < Nc2m1; ai++) {
+        for (int ai = 0; ai < Nc2m1_; ai++) {
           temp = group->getT(ai) * (Ux1pUx2 - UDx1pUDx2) +
                  group->getT(ai) * Ux1pUx2 * expNegAlpha -
                  group->getT(ai) * expAlpha * UDx1pUDx2;
           // minus trace if temp gives -F_ai
           F[ai] = (-1.) * temp.trace();
         }
-        Dalpha = solveAxb(param, M, F);
+        Dalpha = solveAxb(M, F);
 
         Fold = 0.;
         lambda = 1.;
 
 #pragma omp simd reduction(+ : Fold)
-        for (int ai = 0; ai < Nc2m1; ai++) {
+        for (int ai = 0; ai < Nc2m1_; ai++) {
           alphaSave[ai] = alpha[ai];
           Fold += 0.5 * (real(F[ai]) * real(F[ai]) + imag(F[ai]) * imag(F[ai]));
         }
@@ -2568,24 +2549,24 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         // reject or accept the new alpha:
         if (Dalpha[0].real() != Dalpha[0].real()) {
           alphaCheck = 1;
-          lat->cells[pos]->setUx(one);
+          lat->cells[pos]->setUx(one_);
         }
 
         while (alphaCheck == 0) {
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             alpha[ai] = alphaSave[ai] + lambda * Dalpha[ai];
           }
 
           // ---- set new Ux(3) --------------------------------------------
 
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             in[ai] =
                 (alpha[ai]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
           }
 
-          U = tempNew.expmCoeff(in, Nc);
+          U = tempNew.expmCoeff(in, Nc_);
 
-          temp2 = U[0] * one + U[1] * group->getT(0) + U[2] * group->getT(1) +
+          temp2 = U[0] * one_ + U[1] * group->getT(0) + U[2] * group->getT(1) +
                   U[3] * group->getT(2) + U[4] * group->getT(3) +
                   U[5] * group->getT(4) + U[6] * group->getT(5) +
                   U[7] * group->getT(6) + U[8] * group->getT(7);
@@ -2596,7 +2577,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           temp2.conjg();
           expNegAlpha = temp2; // contains exp(-i alpha_b t^b)
 
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             temp = group->getT(ai) * (Ux1pUx2 - UDx1pUDx2) +
                    group->getT(ai) * Ux1pUx2 * expNegAlpha -
                    group->getT(ai) * expAlpha * UDx1pUDx2;
@@ -2608,18 +2589,18 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
           // quit the misery and try a new start
           if (lambda == 0.1) {
-            for (int ai = 0; ai < Nc2m1; ai++) {
+            for (int ai = 0; ai < Nc2m1_; ai++) {
               alpha[ai] = 0.1 * random->Gauss();
             }
 
-            for (int ai = 0; ai < Nc2m1; ai++) {
+            for (int ai = 0; ai < Nc2m1_; ai++) {
               in[ai] =
                   (alpha[ai]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
             }
 
-            U = tempNew.expmCoeff(in, Nc);
+            U = tempNew.expmCoeff(in, Nc_);
 
-            temp2 = U[0] * one + U[1] * group->getT(0) + U[2] * group->getT(1) +
+            temp2 = U[0] * one_ + U[1] * group->getT(0) + U[2] * group->getT(1) +
                     U[3] * group->getT(2) + U[4] * group->getT(3) +
                     U[5] * group->getT(4) + U[6] * group->getT(5) +
                     U[7] * group->getT(6) + U[8] * group->getT(7);
@@ -2632,7 +2613,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
           Fnew = 0.;
 #pragma omp simd reduction(+ : Fnew)
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             Fnew +=
                 0.5 * (real(F[ai]) * real(F[ai]) + imag(F[ai]) * imag(F[ai]));
           }
@@ -2652,7 +2633,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         } else if (ni == maxIterations - 1) {
           cout << pos << " result for Ux(3) did not converge for x!" << endl;
           cout << "last Dalpha = " << endl;
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             cout << "Dalpha/alpha=" << Dalpha[ai] / alpha[ai] << endl;
             cout << "Dalpha=" << Dalpha[ai] << endl;
             cout << param->getAverageQs() << " " << param->getAverageQsAvg()
@@ -2668,11 +2649,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       // ------------------------------------------------------------------
       // now do Uy(3)
       // initial guess for alpha
-      for (int ai = 0; ai < Nc2m1; ai++) {
+      for (int ai = 0; ai < Nc2m1_; ai++) {
         alpha[ai] = 0.;
       }
 
-      lat->cells[pos]->setUy(one);
+      lat->cells[pos]->setUy(one_);
 
       // ---- done: set U(3) ------------------------------------------
       checkConvergence = 1;
@@ -2687,9 +2668,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         expNegAlpha = temp2; // contains exp(-i alpha_b t^b)
 
         // compute Jacobian
-        for (int ai = 0; ai < Nc2m1; ai++) {
-          for (int bi = 0; bi < Nc2m1; bi++) {
-            int countMe = ai * Nc2m1 + bi;
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+          for (int bi = 0; bi < Nc2m1_; bi++) {
+            int countMe = ai * Nc2m1_ + bi;
             temp = group->getT(ai) * Uy1pUy2 * group->getT(bi) * expNegAlpha +
                    group->getT(ai) * expAlpha * group->getT(bi) * UDy1pUDy2;
             // -i times trace of temp gives my Jacobian matrix elements:
@@ -2698,7 +2679,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         }
 
         // compute function F that needs to be zero
-        for (int ai = 0; ai < Nc2m1; ai++) {
+        for (int ai = 0; ai < Nc2m1_; ai++) {
           temp = group->getT(ai) * (Uy1pUy2 - UDy1pUDy2) +
                  group->getT(ai) * Uy1pUy2 * expNegAlpha -
                  group->getT(ai) * expAlpha * UDy1pUDy2;
@@ -2707,12 +2688,12 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         }
 
         // solve J_{ab} \Dalpha_b = -F_a and do alpha -> alpha+Dalpha
-        Dalpha = solveAxb(param, M, F);
+        Dalpha = solveAxb(M, F);
 
         Fold = 0.;
         lambda = 1.;
 #pragma omp simd reduction(+ : Fold)
-        for (int ai = 0; ai < Nc2m1; ai++) {
+        for (int ai = 0; ai < Nc2m1_; ai++) {
           alphaSave[ai] = alpha[ai];
           Fold += 0.5 * (real(F[ai]) * real(F[ai]) + imag(F[ai]) * imag(F[ai]));
         }
@@ -2722,24 +2703,24 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         // reject or accept the new alpha:
         if (Dalpha[0].real() != Dalpha[0].real()) {
           alphaCheck = 1;
-          lat->cells[pos]->setUy(one);
+          lat->cells[pos]->setUy(one_);
         }
 
         while (alphaCheck == 0) {
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             alpha[ai] = alphaSave[ai] + lambda * Dalpha[ai];
           }
 
           // ---- set new Uy(3) --------------------------------------------
 
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             in[ai] =
                 (alpha[ai]).real(); // expmCoeff wil calculate exp(i in[a]t[a])
           }
 
-          U = tempNew.expmCoeff(in, Nc);
+          U = tempNew.expmCoeff(in, Nc_);
 
-          temp2 = U[0] * one + U[1] * group->getT(0) + U[2] * group->getT(1) +
+          temp2 = U[0] * one_ + U[1] * group->getT(0) + U[2] * group->getT(1) +
                   U[3] * group->getT(2) + U[4] * group->getT(3) +
                   U[5] * group->getT(4) + U[6] * group->getT(5) +
                   U[7] * group->getT(6) + U[8] * group->getT(7);
@@ -2750,7 +2731,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           temp2.conjg();
           expNegAlpha = temp2; // contains exp(-i alpha_b t^b)
 
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             temp = group->getT(ai) * (Uy1pUy2 - UDy1pUDy2) +
                    group->getT(ai) * Uy1pUy2 * expNegAlpha -
                    group->getT(ai) * expAlpha * UDy1pUDy2;
@@ -2761,18 +2742,18 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
           // ---- done: set U(3) ------------------------------------------
 
           if (lambda == 0.1) {
-            for (int ai = 0; ai < Nc2m1; ai++) {
+            for (int ai = 0; ai < Nc2m1_; ai++) {
               alpha[ai] = 0.1 * random->Gauss();
             }
 
-            for (int ai = 0; ai < Nc2m1; ai++) {
+            for (int ai = 0; ai < Nc2m1_; ai++) {
               in[ai] = (alpha[ai])
                           .real(); // expmCoeff will calculate exp(i in[a]t[a])
             }
 
-            U = tempNew.expmCoeff(in, Nc);
+            U = tempNew.expmCoeff(in, Nc_);
 
-            temp2 = U[0] * one + U[1] * group->getT(0) + U[2] * group->getT(1) +
+            temp2 = U[0] * one_ + U[1] * group->getT(0) + U[2] * group->getT(1) +
                     U[3] * group->getT(2) + U[4] * group->getT(3) +
                     U[5] * group->getT(4) + U[6] * group->getT(5) +
                     U[7] * group->getT(6) + U[8] * group->getT(7);
@@ -2785,7 +2766,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
           Fnew = 0.;
 #pragma omp simd reduction(+ : Fnew)
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             Fnew +=
                 0.5 * (real(F[ai]) * real(F[ai]) + imag(F[ai]) * imag(F[ai]));
           }
@@ -2805,7 +2786,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
         } else if (ni == maxIterations - 1) {
           cout << pos << " result for Uy(3) did not converge for y!" << endl;
           cout << "last Dalpha = " << endl;
-          for (int ai = 0; ai < Nc2m1; ai++) {
+          for (int ai = 0; ai < Nc2m1_; ai++) {
             cout << "Dalpha/alpha=" << Dalpha[ai] / alpha[ai] << endl;
             cout << "Dalpha=" << Dalpha[ai] << endl;
             cout << param->getAverageQs() << " " << param->getAverageQsAvg()
@@ -2974,7 +2955,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       lat->cells[pos]->setE2(zero);
       lat->cells[pos]->setphi(zero);
       lat->cells[pos]->setUx1(
-          one); // reset the Ux1 to be used for other purposes later
+          one_); // reset the Ux1 to be used for other purposes later
     }
 
     delete[] M;
@@ -3512,4 +3493,38 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
     }
     Nq += random->Poisson(param->getNqFluc());
     return(std::max(1, Nq));
+}
+
+
+void Init::findFieldsInForwardLightcone(const Matrix &U1, const Matrix &U2,
+                                        Matrix &Usol) {
+    bool checkConvergence = false;
+    const int maxIterations = 100000;
+
+    Matrix U1pU2 = U1 + U2;
+    Matrix U1pU2dagger = U1pU2.conjg();
+    std::vector< complex<double> > alpha(Nc2m1_, 0.);    // solution
+}
+
+
+Matrix Init::getUfromExponent(double *in) {
+    Matrix tempM(Nc_, 0.);
+
+    // expmCoeff wil calculate exp(i in[a]t[a])
+    auto U = tempM.expmCoeff(in, Nc_);
+    if (std::abs(U[0].real()) < 1e-15) {
+        tempM = one_;
+    } else {
+        tempM = (  U[0] * one_
+                 + U[1] * group_ptr_->getT(0)
+                 + U[2] * group_ptr_->getT(1)
+                 + U[3] * group_ptr_->getT(2)
+                 + U[4] * group_ptr_->getT(3)
+                 + U[5] * group_ptr_->getT(4)
+                 + U[6] * group_ptr_->getT(5)
+                 + U[7] * group_ptr_->getT(6)
+                 + U[8] * group_ptr_->getT(7)
+        );
+    }
+    return(tempM);
 }

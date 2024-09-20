@@ -15,7 +15,6 @@ class Matrix {
 private:
   int ndim;
   int nn;
-  // complex<double>* e;
   std::vector<complex<double>> e;
 
 public:
@@ -25,9 +24,7 @@ public:
   Matrix(int n, double a);
 
   // destructor
-  ~Matrix() {
-    // delete[] e;
-  }
+  ~Matrix() {}
 
   Matrix &inv();
   Matrix &logm_pade(const int m);

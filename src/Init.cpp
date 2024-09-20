@@ -2426,16 +2426,6 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       UDx2 = lat->cells[pos]->getUx2();
       findUInForwardLightcone(UDx1, UDx2, temp2);
       lat->cells[pos]->setUx(temp2);
-      if (pos == 65280) {
-          for (int ii = 0; ii < Nc_; ii++) {
-              for (int jj = 0; jj < Nc_; jj++) {
-                  cout << UDx1(ii, jj) << " "
-                       << UDx2(ii, jj) << " "
-                       << temp2(ii, jj) << endl;
-              }
-          }
-          exit(0);
-      }
 
       UDy1 = lat->cells[pos]->getUy1();
       UDy2 = lat->cells[pos]->getUy2();
@@ -3140,7 +3130,6 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 
 void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                                    Matrix &Usol) {
-    bool checkConvergence = false;
     const int maxIterations = 10000;
 
     Matrix U1pU2 = U1 + U2;
@@ -3149,14 +3138,21 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
 
     std::vector<double> alpha(Nc2m1_, 0.);          // solution
     std::vector<double> Dalpha(Nc2m1_, 0.);
-    std::vector<double> alphaSave(Nc2m1_, 0.);
+
+    Matrix temp(Nc_, 0.);
+    Matrix Mtemp(Nc_, 0.);
+    std::vector<Matrix> MtempArr;
+    std::vector<complex<double>> traceCache(Nc2m1_, 0.);
+    for (int ai = 0; ai < Nc2m1_; ai++) {
+        temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger);
+        traceCache[ai] = temp.trace();
+        MtempArr.push_back(group_ptr_->getT(ai) * U1pU2);
+    }
 
     double *Jab = new double [2 * Nc2m1_ * Nc2m1_];
     double *Fa = new double [2 * Nc2m1_];
 
     double Fnew = 10.;
-    double lambda = 1.;
-    Matrix temp(Nc_, 0.);
 
     Usol = one_;
     Matrix Usoldagger = one_;
@@ -3167,51 +3163,58 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
 
         Fnew = 0.;
         // compute function F that needs to be zero
+        Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
         for (int ai = 0; ai < Nc2m1_; ai++) {
-            temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
-                   group_ptr_->getT(ai) * U1pU2 * Usoldagger -
-                   group_ptr_->getT(ai) * Usol * U1pU2dagger;
+            //temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
+            //       group_ptr_->getT(ai) * U1pU2 * Usoldagger -
+            //       group_ptr_->getT(ai) * Usol * U1pU2dagger;
+            temp = group_ptr_->getT(ai) * Mtemp;
+
             // minus trace if temp gives -F_ai
-            auto traceRes = (-1.) * temp.trace();
+            auto traceRes = (-1.) * (traceCache[ai] + temp.trace());
             Fa[2 * ai] = real(traceRes);
             Fa[2 * ai + 1] = imag(traceRes);
             Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
         }
 
         // compute Jacobian
-        for (int ai = 0; ai < Nc2m1_; ai++) {
-            for (int bi = 0; bi < Nc2m1_; bi++) {
+        for (int bi = 0; bi < Nc2m1_; bi++) {
+            Mtemp = group_ptr_->getT(bi) * Usoldagger;
+            for (int ai = 0; ai < Nc2m1_; ai++) {
                 int countMe = ai * Nc2m1_ + bi;
-                temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * Usoldagger +
-                       group_ptr_->getT(ai) * Usol * group_ptr_->getT(bi) * U1pU2dagger;
+                //temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * Usoldagger +
+                //       group_ptr_->getT(ai) * Usol * group_ptr_->getT(bi) * U1pU2dagger;
                 // -i times trace of temp gives my Jacobian matrix elements:
-                auto traceRes = complex<double>(0., -1.) * temp.trace();
+                //auto traceRes = complex<double>(0., -1.) * temp.trace();
+
+                temp = MtempArr[ai] * Mtemp;
+                auto traceRes = complex<double>(0., -1.) * (2.*real(temp.trace()));
+
                 Jab[2 * countMe] = real(traceRes);
                 Jab[2 * countMe + 1] = imag(traceRes);
             }
         }
 
         Dalpha = solveAxb(Jab, Fa);
-
-        lambda = 1.;
         for (int ai = 0; ai < Nc2m1_; ai++) {
-            alphaSave[ai] = alpha[ai];
-            alpha[ai] = alphaSave[ai] + lambda * Dalpha[ai];
+            alpha[ai] = alpha[ai] + Dalpha[ai];
         }
 
         Usol = getUfromExponent(alpha);
         Usoldagger = Usol;
         Usoldagger.conjg();
 
-        cout << "nRestart = " << nRestart << " iter = " << iter << ", F = " << Fnew << endl;
-
         if (iter == maxIterations) {
             for (int ai = 0; ai < Nc2m1_; ai++) {
-                alpha[ai] = random_ptr_->genrand64_real1();
+                alpha[ai] = nRestart * random_ptr_->genrand64_real1();
             }
             nRestart++;
             iter = 0;
         }
+    }
+    if (nRestart == 100) {
+        std::cout << "Did not converge in findUInForwardLightcone" << std::endl;
+        std::cout << "Fnew: " << Fnew << std::endl;
     }
     delete[] Fa;
     delete[] Jab;

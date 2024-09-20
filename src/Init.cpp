@@ -2183,26 +2183,26 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   const Matrix zero(Nc_, 0.);
 
 
-///test
-    std::vector<double> in1(Nc2m1_, 0);
-    std::vector<double> in2(Nc2m1_, 0);
-    for (int ii = 0; ii < 8; ii++) {
-        in1[ii] = 10*random->genrand64_real1();
-        in2[ii] = 10*random->genrand64_real1();
-    }
-    Matrix U1 = getUfromExponent(in1);
-    Matrix U2 = getUfromExponent(in2);
-    Matrix USol;
-    findUInForwardLightcone(U1, U2, USol);
-    for (int ii = 0; ii < Nc_; ii++) {
-        for (int jj = 0; jj < Nc_; jj++) {
-            cout << U1(ii, jj) << " "
-                 << U2(ii, jj) << " "
-                 << USol(ii, jj) << endl;
-        }
-    }
-    exit(0);
-///
+/////test
+//    std::vector<double> in1(Nc2m1_, 0);
+//    std::vector<double> in2(Nc2m1_, 0);
+//    for (int ii = 0; ii < 8; ii++) {
+//        in1[ii] = 10*random->genrand64_real1();
+//        in2[ii] = 10*random->genrand64_real1();
+//    }
+//    Matrix U1 = getUfromExponent(in1);
+//    Matrix U2 = getUfromExponent(in2);
+//    Matrix USol;
+//    findUInForwardLightcone(U1, U2, USol);
+//    for (int ii = 0; ii < Nc_; ii++) {
+//        for (int jj = 0; jj < Nc_; jj++) {
+//            cout << U1(ii, jj) << " "
+//                 << U2(ii, jj) << " "
+//                 << USol(ii, jj) << endl;
+//        }
+//    }
+//    exit(0);
+/////
 
   messager.info("Initializing fields ... ");
   param->setRnp(0.);
@@ -3131,6 +3131,7 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                                    Matrix &Usol) {
     const int maxIterations = 10000;
+    const int maxRetrys = 50;
 
     Matrix U1pU2 = U1 + U2;
     Matrix U1pU2dagger = U1pU2;
@@ -3142,26 +3143,30 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
     Matrix temp(Nc_, 0.);
     Matrix Mtemp(Nc_, 0.);
     std::vector<Matrix> MtempArr;
+    MtempArr.resize(Nc2m1_);
     std::vector<complex<double>> traceCache(Nc2m1_, 0.);
     for (int ai = 0; ai < Nc2m1_; ai++) {
         temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger);
         traceCache[ai] = temp.trace();
-        MtempArr.push_back(group_ptr_->getT(ai) * U1pU2);
+        MtempArr[ai] = group_ptr_->getT(ai) * U1pU2;
     }
 
+    // use raw pointers to interface with gsl
     double *Jab = new double [2 * Nc2m1_ * Nc2m1_];
     double *Fa = new double [2 * Nc2m1_];
 
-    double Fnew = 10.;
+    double Fzero = 10.;
+    double FzeroMin = 1e6;
+    Matrix UsolBestEst(Nc_, 1.);
 
     Usol = one_;
     Matrix Usoldagger = one_;
     int iter = 0;
     int nRestart = 0;
-    while (Fnew > 1e-6 && iter < maxIterations && nRestart < 100) {
+    while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
         iter++;
 
-        Fnew = 0.;
+        Fzero = 0.;
         // compute function F that needs to be zero
         Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
         for (int ai = 0; ai < Nc2m1_; ai++) {
@@ -3174,7 +3179,7 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
             auto traceRes = (-1.) * (traceCache[ai] + temp.trace());
             Fa[2 * ai] = real(traceRes);
             Fa[2 * ai + 1] = imag(traceRes);
-            Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
+            Fzero += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
         }
 
         // compute Jacobian
@@ -3210,11 +3215,16 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
             }
             nRestart++;
             iter = 0;
+            if (Fzero < FzeroMin) {
+                FzeroMin = Fzero;
+                UsolBestEst = Usol;
+            }
         }
     }
-    if (nRestart == 100) {
+    if (nRestart == maxRetrys) {
         std::cout << "Did not converge in findUInForwardLightcone" << std::endl;
-        std::cout << "Fnew: " << Fnew << std::endl;
+        std::cout << "Fzero: " << FzeroMin << std::endl;
+        Usol = UsolBestEst;     // return the best estimate
     }
     delete[] Fa;
     delete[] Jab;

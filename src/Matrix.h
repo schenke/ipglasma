@@ -194,6 +194,8 @@ public:
   Matrix prodABconj(const Matrix &a, const Matrix &b);
   Matrix prodAconjB(const Matrix &a, const Matrix &b);
 
+  complex<double> traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const;
+
   //<<
   friend ostream &operator<<(ostream &os, const Matrix &p) {
     for (int i = 0; i < p.getNDim(); i++) {

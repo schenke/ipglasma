@@ -543,6 +543,20 @@ complex<double> Matrix::trace() {
   return trace;
 }
 
+
+complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
+    // this function returns the trace of the product of two matrices
+    complex<double> trace = 0.;
+    int n = M1.getNDim();
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            trace += M1(i, j) * M2(j, i);
+        }
+    }
+    return(trace);
+}
+
+
 string Matrix::MatrixToString() {
   int n = this->getNDim();
   Matrix Q(n);

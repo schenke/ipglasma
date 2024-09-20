@@ -3134,9 +3134,8 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 }
 
 
-bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
-                                   Matrix &Usol) {
-    const int maxIterations = 10000;
+bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
+    const int maxIterations = 2000;
     const int maxRetrys = 50;
 
     Matrix U1pU2 = U1 + U2;
@@ -3179,10 +3178,12 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
             //temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
             //       group_ptr_->getT(ai) * U1pU2 * Usoldagger -
             //       group_ptr_->getT(ai) * Usol * U1pU2dagger;
-            temp = group_ptr_->getT(ai) * Mtemp;
+            //temp = group_ptr_->getT(ai) * Mtemp;
+            complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
+                                                group_ptr_->getT(ai), Mtemp);
 
             // minus trace if temp gives -F_ai
-            auto traceRes = (-1.) * (traceCache[ai] + temp.trace());
+            auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
             Fa[2 * ai] = real(traceRes);
             Fa[2 * ai + 1] = imag(traceRes);
             Fzero += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
@@ -3198,8 +3199,10 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                 // -i times trace of temp gives my Jacobian matrix elements:
                 //auto traceRes = complex<double>(0., -1.) * temp.trace();
 
-                temp = MtempArr[ai] * Mtemp;
-                auto traceRes = complex<double>(0., -1.) * (2.*real(temp.trace()));
+                //temp = MtempArr[ai] * Mtemp;
+                complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
+                                                    MtempArr[ai], Mtemp);
+                auto traceRes = complex<double>(0., -1.) * (2.*real(traceLoc));
 
                 Jab[2 * countMe] = real(traceRes);
                 Jab[2 * countMe + 1] = imag(traceRes);

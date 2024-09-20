@@ -1,7 +1,7 @@
 mode 1
 minimumQs2ST 0
 readMultFromFile 0
-size 512
+size 720
 L 30
 Nc 3
 m 0.4
@@ -48,7 +48,7 @@ dR_np 0.0
 da_np 0.0
 nucleonPositionsFromFile 0
 NucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_200.in
-QsmuRatio 0.5
+QsmuRatio 0.3
 samplebFromLinearDistribution 1
 runWith0Min1Avg2MaxQs 2
 runWithThisFactorTimesQs 0.5

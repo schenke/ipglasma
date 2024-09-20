@@ -3232,8 +3232,8 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
     }
     bool success = true;
     if (nRestart == maxRetrys) {
-        std::cout << "Did not converge in findUInForwardLightcone" << std::endl;
-        std::cout << "Fzero: " << FzeroMin << std::endl;
+        std::cout << "Did not converge in findUInForwardLightcone, "
+                  << "Fzero: " << FzeroMin << std::endl;
         Usol = UsolBestEst;     // return the best estimate
         success = false;
     }

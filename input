@@ -1,8 +1,8 @@
 mode 1
 minimumQs2ST 0
 readMultFromFile 0
-size 720
-L 30
+size 512
+L 20
 Nc 3
 m 0.4
 rmax 1000.
@@ -60,8 +60,8 @@ seed 23
 useTimeForSeed 1
 Projectile Pb
 Target Pb
-bmin 0
-bmax 2
+bmin 10
+bmax 12
 rotateReactionPlane 0
 lightNucleusOption 5
 useFixedNpart 0

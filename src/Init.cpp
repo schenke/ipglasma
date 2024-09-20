@@ -3154,34 +3154,36 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
     double *Jab = new double [2 * Nc2m1_ * Nc2m1_];
     double *Fa = new double [2 * Nc2m1_];
 
-    double Fnew = 0.;
+    double Fnew = 10.;
     double lambda = 1.;
     Matrix temp(Nc_, 0.);
 
-    Matrix expAlpha = one_;
-    Matrix expNegAlpha = one_;
-    // compute function F that needs to be zero
-    for (int ai = 0; ai < Nc2m1_; ai++) {
-        temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
-               group_ptr_->getT(ai) * U1pU2 * expNegAlpha -
-               group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
-        // minus trace if temp gives -F_ai
-        auto traceRes = (-1.) * temp.trace();
-        Fa[2 * ai] = real(traceRes);
-        Fa[2 * ai + 1] = imag(traceRes);
-        Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
-    }
+    Usol = one_;
+    Matrix Usoldagger = one_;
     int iter = 0;
     int nRestart = 0;
-    while (!checkConvergence && iter < maxIterations && nRestart < 100) {
+    while (Fnew > 1e-6 && iter < maxIterations && nRestart < 100) {
         iter++;
+
+        Fnew = 0.;
+        // compute function F that needs to be zero
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
+                   group_ptr_->getT(ai) * U1pU2 * Usoldagger -
+                   group_ptr_->getT(ai) * Usol * U1pU2dagger;
+            // minus trace if temp gives -F_ai
+            auto traceRes = (-1.) * temp.trace();
+            Fa[2 * ai] = real(traceRes);
+            Fa[2 * ai + 1] = imag(traceRes);
+            Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
+        }
 
         // compute Jacobian
         for (int ai = 0; ai < Nc2m1_; ai++) {
             for (int bi = 0; bi < Nc2m1_; bi++) {
                 int countMe = ai * Nc2m1_ + bi;
-                temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * expNegAlpha +
-                       group_ptr_->getT(ai) * expAlpha * group_ptr_->getT(bi) * U1pU2dagger;
+                temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * Usoldagger +
+                       group_ptr_->getT(ai) * Usol * group_ptr_->getT(bi) * U1pU2dagger;
                 // -i times trace of temp gives my Jacobian matrix elements:
                 auto traceRes = complex<double>(0., -1.) * temp.trace();
                 Jab[2 * countMe] = real(traceRes);
@@ -3198,26 +3200,10 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
         }
 
         Usol = getUfromExponent(alpha);
-        expAlpha = Usol;
-        expNegAlpha = Usol;
-        expNegAlpha.conjg();
-
-        Fnew = 0.;
-        for (int ai = 0; ai < Nc2m1_; ai++) {
-            temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
-                   group_ptr_->getT(ai) * U1pU2 * expNegAlpha -
-                   group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
-            // minus trace if temp gives -F_ai
-            auto traceRes = (-1.) * temp.trace();
-            Fa[2 * ai] = real(traceRes);
-            Fa[2 * ai + 1] = imag(traceRes);
-            Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
-        }
+        Usoldagger = Usol;
+        Usoldagger.conjg();
 
         cout << "nRestart = " << nRestart << " iter = " << iter << ", F = " << Fnew << endl;
-        if (Fnew < 1e-10) {
-            checkConvergence = true;
-        }
 
         if (iter == maxIterations) {
             for (int ai = 0; ai < Nc2m1_; ai++) {

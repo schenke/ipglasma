@@ -280,7 +280,7 @@ Matrix &Matrix::imag() {
 
 // matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
 // Q^a of generators t^a as argument. Dimension is Nc
-vector<complex<double>> Matrix::expmCoeff(double *Q, int Nc) {
+vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
   int Nc2m1 = Nc * Nc - 1;
   vector<complex<double>> result;
   result.reserve(9);

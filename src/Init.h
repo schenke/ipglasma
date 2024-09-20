@@ -68,8 +68,7 @@ public:
             Glauber *glauber, int READFROMFILE);
   void sampleTA(Parameters *param, Random *random, Glauber *glauber);
   void readNuclearQs(Parameters *param);
-  std::vector<complex<double>> solveAxb(complex<double> *A,
-                                        complex<double> *b);
+  std::vector<double> solveAxb(double *Jab, double *Fa);
   double getNuclearQs2(double Qs2atZeroY, double y);
   void setColorChargeDensity(Lattice *lat, Parameters *param, Random *random,
                              Glauber *glauber);
@@ -79,7 +78,7 @@ public:
   // *random, Glauber *glauber);
   void multiplicity(Lattice *lat, Parameters *param);
 
-  Matrix getUfromExponent(double *in);
+  Matrix getUfromExponent(std::vector<double> &in);
   void findUInForwardLightcone(Matrix &U1, Matrix &U2,
                                Matrix &Usol);
 

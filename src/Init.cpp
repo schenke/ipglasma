@@ -11,27 +11,12 @@ using PhysConst::hbarc;
 //**************************************************************************
 // Init class.
 
-vector<complex<double>> Init::solveAxb(complex<double> *A,
-                                       complex<double> *b_in) {
-  vector<complex<double>> xvec;
-  xvec.reserve(Nc2m1_);
-  double a_data[128];
-
-  for (int i = 0; i < 64; i++) {
-    a_data[2 * i] = real(A[i]);
-    a_data[2 * i + 1] = imag(A[i]);
-  }
-
-  double b_data[2 * Nc2m1_];
-
-  for (int i = 0; i < Nc2m1_; i++) {
-    b_data[2 * i] = real(b_in[i]);
-    b_data[2 * i + 1] = imag(b_in[i]);
-  }
+vector<double> Init::solveAxb(double *Jab, double *Fa) {
+  vector<double> xvec(Nc2m1_, 0.);
 
   gsl_matrix_complex_view m =
-      gsl_matrix_complex_view_array(a_data, Nc2m1_, Nc2m1_);
-  gsl_vector_complex_view c = gsl_vector_complex_view_array(b_data, Nc2m1_);
+      gsl_matrix_complex_view_array(Jab, Nc2m1_, Nc2m1_);
+  gsl_vector_complex_view c = gsl_vector_complex_view_array(Fa, Nc2m1_);
   gsl_vector_complex *x = gsl_vector_complex_alloc(Nc2m1_);
 
   int s;
@@ -40,33 +25,11 @@ vector<complex<double>> Init::solveAxb(complex<double> *A,
   gsl_linalg_complex_LU_solve(&m.matrix, p, &c.vector, x);
   gsl_permutation_free(p);
 
-  if (Nc_ == 3) {
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 0)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 0))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 1)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 1))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 2)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 2))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 3)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 3))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 4)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 4))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 5)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 5))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 6)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 6))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 7)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 7))));
-  } else if (Nc_ == 2) {
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 0)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 0))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 1)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 1))));
-    xvec.push_back(complex<double>(GSL_REAL(gsl_vector_complex_get(x, 2)),
-                                   GSL_IMAG(gsl_vector_complex_get(x, 2))));
+  for (int i = 0; i < Nc2m1_; i++) {
+    xvec[i] = GSL_REAL(gsl_vector_complex_get(x, i));
   }
-  gsl_vector_complex_free(x);
 
+  gsl_vector_complex_free(x);
   return (xvec);
 }
 
@@ -1650,7 +1613,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 
 #pragma omp parallel
     {
-      double in[8];
+      std::vector<double> in(Nc2m1_, 0.);
       Matrix temp(Nc_, 1.);
       Matrix tempNew(Nc_, 0.);
 
@@ -1724,7 +1687,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 
     //#pragma omp parallel
     {
-      double in[8];
+      std::vector<double> in(Nc2m1_, 0.);
       Matrix temp(Nc_, 1.);
       Matrix tempNew(Nc_, 0.);
 
@@ -2221,11 +2184,11 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
 
 ///test
-    double in1[8] = {1,0.3,0,0,1,0,0,0};
-    double in2[8] = {0,1,0,0.5,0,0,1,0};
+    std::vector<double> in1(Nc2m1_, 0);
+    std::vector<double> in2(Nc2m1_, 0);
     for (int ii = 0; ii < 8; ii++) {
-        in1[ii] = 1*random->genrand64_real1();
-        in2[ii] = 1*random->genrand64_real1();
+        in1[ii] = 10*random->genrand64_real1();
+        in2[ii] = 10*random->genrand64_real1();
     }
     Matrix U1 = getUfromExponent(in1);
     Matrix U2 = getUfromExponent(in2);
@@ -3184,13 +3147,12 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
     Matrix U1pU2dagger = U1pU2;
     U1pU2dagger.conjg();
 
-    std::vector< complex<double> > alpha(Nc2m1_, 0.);    // solution
-    std::vector< complex<double> > Dalpha(Nc2m1_, 0.);
-    std::vector< complex<double> > alphaSave(Nc2m1_, 0.);
+    std::vector<double> alpha(Nc2m1_, 0.);          // solution
+    std::vector<double> Dalpha(Nc2m1_, 0.);
+    std::vector<double> alphaSave(Nc2m1_, 0.);
 
-    complex<double> *Jab = new complex<double>[Nc2m1_ * Nc2m1_];
-    complex<double> *Fa = new complex<double>[Nc2m1_];
-    double *in = new double[Nc2m1_];
+    double *Jab = new double [2 * Nc2m1_ * Nc2m1_];
+    double *Fa = new double [2 * Nc2m1_];
 
     double Fnew = 0.;
     double lambda = 1.;
@@ -3204,8 +3166,10 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                group_ptr_->getT(ai) * U1pU2 * expNegAlpha -
                group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
         // minus trace if temp gives -F_ai
-        Fa[ai] = (-1.) * temp.trace();
-        Fnew += (std::abs(real(Fa[ai])) + std::abs(imag(Fa[ai])));
+        auto traceRes = (-1.) * temp.trace();
+        Fa[2 * ai] = real(traceRes);
+        Fa[2 * ai + 1] = imag(traceRes);
+        Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
     }
     int iter = 0;
     int nRestart = 0;
@@ -3219,7 +3183,9 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                 temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * expNegAlpha +
                        group_ptr_->getT(ai) * expAlpha * group_ptr_->getT(bi) * U1pU2dagger;
                 // -i times trace of temp gives my Jacobian matrix elements:
-                Jab[countMe] = complex<double>(0., -1.) * temp.trace();
+                auto traceRes = complex<double>(0., -1.) * temp.trace();
+                Jab[2 * countMe] = real(traceRes);
+                Jab[2 * countMe + 1] = imag(traceRes);
             }
         }
 
@@ -3231,25 +3197,23 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
             alpha[ai] = alphaSave[ai] + lambda * Dalpha[ai];
         }
 
-        for (int i = 0; i < Nc2m1_; i++) {
-            in[i] = alpha[i].real();
-        }
-        Usol = getUfromExponent(in);
+        Usol = getUfromExponent(alpha);
         expAlpha = Usol;
-        expNegAlpha = Usol.conjg();
+        expNegAlpha = Usol;
+        expNegAlpha.conjg();
 
+        Fnew = 0.;
         for (int ai = 0; ai < Nc2m1_; ai++) {
             temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
                    group_ptr_->getT(ai) * U1pU2 * expNegAlpha -
                    group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
             // minus trace if temp gives -F_ai
-            Fa[ai] = (-1.) * temp.trace();
+            auto traceRes = (-1.) * temp.trace();
+            Fa[2 * ai] = real(traceRes);
+            Fa[2 * ai + 1] = imag(traceRes);
+            Fnew += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
         }
 
-        Fnew = 0.;
-        for (int ai = 0; ai < Nc2m1_; ai++) {
-            Fnew += (std::abs(real(Fa[ai])) + std::abs(imag(Fa[ai])));
-        }
         cout << "nRestart = " << nRestart << " iter = " << iter << ", F = " << Fnew << endl;
         if (Fnew < 1e-10) {
             checkConvergence = true;
@@ -3263,13 +3227,12 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
             iter = 0;
         }
     }
-    delete[] in;
     delete[] Fa;
     delete[] Jab;
 }
 
 
-Matrix Init::getUfromExponent(double *in) {
+Matrix Init::getUfromExponent(std::vector<double> &in) {
     Matrix tempM(Nc_, 0.);
 
     // expmCoeff wil calculate exp(i in[a]t[a])

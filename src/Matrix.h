@@ -61,9 +61,10 @@ public:
   string MatrixToString();
 
   Matrix &expm(double t = 1.0, const int p = 6);
-  vector<complex<double>>
-  expmCoeff(double *Q, int n); // Matrix exponential of traceless hermitian
-                               // matrix using coefficients of t^a as input
+
+  // Matrix exponential of traceless hermitian
+  // matrix using coefficients of t^a as input
+  vector<complex<double>> expmCoeff(std::vector<double> &Q, int n);
 
   complex<double> det();
   complex<double> trace();

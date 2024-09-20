@@ -12,7 +12,6 @@ using namespace std;
 
 class Cell {
 private:
-  int Nc;
   double epsilon; // energy density after collision
 
   // nucleus A
@@ -70,7 +69,7 @@ private:
   double ueta; // flow velocity
 
 public:
-  Cell(int N);
+  Cell(const int Nc);
   ~Cell();
 
   //  void setParity(bool in) { parity = in; };
@@ -181,12 +180,11 @@ public:
 
 class SmallCell {
 private:
-  int Nc;
   Matrix *buffer1;
   Matrix *buffer2;
 
 public:
-  SmallCell(int N);
+  SmallCell(const int Nc);
   ~SmallCell();
 
   Matrix &getbuffer1() const { return *buffer1; };

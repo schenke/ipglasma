@@ -1,8 +1,7 @@
 
 #include "Cell.h"
 
-Cell::Cell(int N) {
-  Nc = N;
+Cell::Cell(const int Nc) {
   U = new Matrix(Nc, 1.);
   U2 = new Matrix(Nc, 1.);
   Ux = new Matrix(Nc, 1.);
@@ -24,8 +23,7 @@ Cell::~Cell() {
   delete Uy2;
 }
 
-SmallCell::SmallCell(int N) {
-  Nc = N;
+SmallCell::SmallCell(const int Nc) {
   buffer1 = new Matrix(Nc, 1.);
   buffer2 = new Matrix(Nc, 1.);
 }

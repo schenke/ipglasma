@@ -54,6 +54,7 @@ private:
 
   int Nc_, Nc2m1_;
   Group *group_ptr_;
+  Random *random_ptr_;
 
   Matrix one_;
 
@@ -79,7 +80,7 @@ public:
   void multiplicity(Lattice *lat, Parameters *param);
 
   Matrix getUfromExponent(double *in);
-  void findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
+  void findUInForwardLightcone(Matrix &U1, Matrix &U2,
                                Matrix &Usol);
 
   void readInNucleusConfigs(const int nucleusA,

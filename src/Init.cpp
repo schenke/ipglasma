@@ -2213,10 +2213,33 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
   Nc_ = param->getNc();
   Nc2m1_ = Nc_ * Nc_ - 1;
   group_ptr_ = group;
+  random_ptr_ = random;
   one_ = Matrix(Nc_, 1.);
   const double bmin = param->getbmin();
   const double bmax = param->getbmax();
   const Matrix zero(Nc_, 0.);
+
+
+///test
+    double in1[8] = {1,0.3,0,0,1,0,0,0};
+    double in2[8] = {0,1,0,0.5,0,0,1,0};
+    for (int ii = 0; ii < 8; ii++) {
+        in1[ii] = 1*random->genrand64_real1();
+        in2[ii] = 1*random->genrand64_real1();
+    }
+    Matrix U1 = getUfromExponent(in1);
+    Matrix U2 = getUfromExponent(in2);
+    Matrix USol;
+    findUInForwardLightcone(U1, U2, USol);
+    for (int ii = 0; ii < Nc_; ii++) {
+        for (int jj = 0; jj < Nc_; jj++) {
+            cout << U1(ii, jj) << " "
+                 << U2(ii, jj) << " "
+                 << USol(ii, jj) << endl;
+        }
+    }
+    exit(0);
+///
 
   messager.info("Initializing fields ... ");
   param->setRnp(0.);
@@ -2440,6 +2463,16 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       UDx2 = lat->cells[pos]->getUx2();
       findUInForwardLightcone(UDx1, UDx2, temp2);
       lat->cells[pos]->setUx(temp2);
+      if (pos == 65280) {
+          for (int ii = 0; ii < Nc_; ii++) {
+              for (int jj = 0; jj < Nc_; jj++) {
+                  cout << UDx1(ii, jj) << " "
+                       << UDx2(ii, jj) << " "
+                       << temp2(ii, jj) << endl;
+              }
+          }
+          exit(0);
+      }
 
       UDy1 = lat->cells[pos]->getUy1();
       UDy2 = lat->cells[pos]->getUy2();
@@ -3142,13 +3175,15 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 }
 
 
-void Init::findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
+void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                                    Matrix &Usol) {
     bool checkConvergence = false;
-    const int maxIterations = 100000;
+    const int maxIterations = 10000;
 
     Matrix U1pU2 = U1 + U2;
-    Matrix U1pU2dagger = U1pU2.conjg();
+    Matrix U1pU2dagger = U1pU2;
+    U1pU2dagger.conjg();
+
     std::vector< complex<double> > alpha(Nc2m1_, 0.);    // solution
     std::vector< complex<double> > Dalpha(Nc2m1_, 0.);
     std::vector< complex<double> > alphaSave(Nc2m1_, 0.);
@@ -3157,8 +3192,6 @@ void Init::findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
     complex<double> *Fa = new complex<double>[Nc2m1_];
     double *in = new double[Nc2m1_];
 
-    int iter = 0;
-    double Fold = 0.;
     double Fnew = 0.;
     double lambda = 1.;
     Matrix temp(Nc_, 0.);
@@ -3172,8 +3205,11 @@ void Init::findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
                group_ptr_->getT(ai) * expAlpha * U1pU2dagger;
         // minus trace if temp gives -F_ai
         Fa[ai] = (-1.) * temp.trace();
+        Fnew += (std::abs(real(Fa[ai])) + std::abs(imag(Fa[ai])));
     }
-    while (!checkConvergence && iter < maxIterations) {
+    int iter = 0;
+    int nRestart = 0;
+    while (!checkConvergence && iter < maxIterations && nRestart < 100) {
         iter++;
 
         // compute Jacobian
@@ -3210,14 +3246,21 @@ void Init::findUInForwardLightcone(const Matrix &U1, const Matrix &U2,
             Fa[ai] = (-1.) * temp.trace();
         }
 
-        Fold = Fnew;
         Fnew = 0.;
         for (int ai = 0; ai < Nc2m1_; ai++) {
-            Fnew += 0.5 * (real(Fa[ai]) * real(Fa[ai])
-                           + imag(Fa[ai]) * imag(Fa[ai]));
+            Fnew += (std::abs(real(Fa[ai])) + std::abs(imag(Fa[ai])));
         }
-        if (Fnew < 0.000000001) {
-          checkConvergence = true;
+        cout << "nRestart = " << nRestart << " iter = " << iter << ", F = " << Fnew << endl;
+        if (Fnew < 1e-10) {
+            checkConvergence = true;
+        }
+
+        if (iter == maxIterations) {
+            for (int ai = 0; ai < Nc2m1_; ai++) {
+                alpha[ai] = random_ptr_->genrand64_real1();
+            }
+            nRestart++;
+            iter = 0;
         }
     }
     delete[] in;

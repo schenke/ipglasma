@@ -3136,7 +3136,7 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 
 bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
     const int maxIterations = 2000;
-    const int maxRetrys = 50;
+    const int maxRetrys = 100;
 
     Matrix U1pU2 = U1 + U2;
     Matrix U1pU2dagger = U1pU2;
@@ -3219,15 +3219,20 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
         Usoldagger.conjg();
 
         if (iter == maxIterations) {
-            for (int ai = 0; ai < Nc2m1_; ai++) {
-                alpha[ai] = nRestart * random_ptr_->genrand64_real1();
-            }
-            nRestart++;
-            iter = 0;
             if (Fzero < FzeroMin) {
                 FzeroMin = Fzero;
                 UsolBestEst = Usol;
             }
+
+            for (int ai = 0; ai < Nc2m1_; ai++) {
+                alpha[ai] = nRestart * random_ptr_->genrand64_real1();
+            }
+            Usol = getUfromExponent(alpha);
+            Usoldagger = Usol;
+            Usoldagger.conjg();
+
+            nRestart++;
+            iter = 0;
         }
     }
     bool success = true;

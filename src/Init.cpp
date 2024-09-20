@@ -2424,13 +2424,19 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       // loops over all cells
       UDx1 = lat->cells[pos]->getUx1();
       UDx2 = lat->cells[pos]->getUx2();
-      findUInForwardLightcone(UDx1, UDx2, temp2);
+      bool status = findUInForwardLightcone(UDx1, UDx2, temp2);
       lat->cells[pos]->setUx(temp2);
+      if (!status) {
+        cout << "pos x = " << pos/512 << " y = " << pos%512 << endl;
+      }
 
       UDy1 = lat->cells[pos]->getUy1();
       UDy2 = lat->cells[pos]->getUy2();
-      findUInForwardLightcone(UDy1, UDy2, temp2);
+      status = findUInForwardLightcone(UDy1, UDy2, temp2);
       lat->cells[pos]->setUy(temp2);
+      if (!status) {
+        cout << "pos x = " << pos/512 << " y = " << pos%512 << endl;
+      }
     }
 
 // compute initial electric field
@@ -3128,7 +3134,7 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 }
 
 
-void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
+bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
                                    Matrix &Usol) {
     const int maxIterations = 10000;
     const int maxRetrys = 50;
@@ -3221,13 +3227,16 @@ void Init::findUInForwardLightcone(Matrix &U1, Matrix &U2,
             }
         }
     }
+    bool success = true;
     if (nRestart == maxRetrys) {
         std::cout << "Did not converge in findUInForwardLightcone" << std::endl;
         std::cout << "Fzero: " << FzeroMin << std::endl;
         Usol = UsolBestEst;     // return the best estimate
+        success = false;
     }
     delete[] Fa;
     delete[] Jab;
+    return(success);
 }
 
 

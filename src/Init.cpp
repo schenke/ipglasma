@@ -3164,11 +3164,14 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
     double FzeroMin = 1e6;
     Matrix UsolBestEst(Nc_, 1.);
 
-    Usol = one_;
-    Matrix Usoldagger = one_;
+    // set up initial guess
+    Usol = U1*U2;
+    Matrix Usoldagger = Usol;
+    Usoldagger.conjg();
+
     int iter = 0;
     int nRestart = 0;
-    while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
+    while (Fzero > 1e-8 && iter < maxIterations && nRestart < maxRetrys) {
         iter++;
 
         Fzero = 0.;

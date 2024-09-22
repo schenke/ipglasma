@@ -2,7 +2,7 @@ mode 1
 minimumQs2ST 0
 readMultFromFile 0
 size 512
-L 20
+L 30
 Nc 3
 m 0.4
 rmax 1000.
@@ -28,7 +28,7 @@ tDistNu 3
 smearQs 1
 smearingWidth 0.6
 protonAnisotropy 0
-roots 200
+roots 5020
 usePseudoRapidity 0
 Rapidity 0.
 useFluctuatingx 1
@@ -48,7 +48,7 @@ dR_np 0.0
 da_np 0.0
 nucleonPositionsFromFile 0
 NucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_200.in
-QsmuRatio 0.3
+QsmuRatio 0.8
 samplebFromLinearDistribution 1
 runWith0Min1Avg2MaxQs 2
 runWithThisFactorTimesQs 0.5
@@ -56,13 +56,13 @@ runWithLocalQs 0
 runWithkt 0
 Ny 50
 useSeedList 0
-seed 23
-useTimeForSeed 1
+seed 13
+useTimeForSeed 0
 Projectile Pb
 Target Pb
-bmin 10
-bmax 12
-rotateReactionPlane 0
+bmin 12
+bmax 15
+rotateReactionPlane 1
 lightNucleusOption 5
 useFixedNpart 0
 averageOverThisManyNuclei 1

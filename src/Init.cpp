@@ -2187,13 +2187,21 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 //    std::vector<double> in1(Nc2m1_, 0);
 //    std::vector<double> in2(Nc2m1_, 0);
 //    for (int ii = 0; ii < 8; ii++) {
-//        in1[ii] = 10*random->genrand64_real1();
-//        in2[ii] = 10*random->genrand64_real1();
+//        in1[ii] = 1.*random->genrand64_real1();
+//        in2[ii] = 1.*random->genrand64_real1();
 //    }
 //    Matrix U1 = getUfromExponent(in1);
 //    Matrix U2 = getUfromExponent(in2);
 //    Matrix USol;
 //    findUInForwardLightcone(U1, U2, USol);
+//    for (int ii = 0; ii < Nc_; ii++) {
+//        for (int jj = 0; jj < Nc_; jj++) {
+//            cout << U1(ii, jj) << " "
+//                 << U2(ii, jj) << " "
+//                 << USol(ii, jj) << endl;
+//        }
+//    }
+//    findUInForwardLightcone1(U1, U2, USol);
 //    for (int ii = 0; ii < Nc_; ii++) {
 //        for (int jj = 0; jj < Nc_; jj++) {
 //            cout << U1(ii, jj) << " "
@@ -2425,17 +2433,25 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       UDx1 = lat->cells[pos]->getUx1();
       UDx2 = lat->cells[pos]->getUx2();
       bool status = findUInForwardLightcone(UDx1, UDx2, temp2);
+      if (!status) {
+        status = findUInForwardLightcone1(UDx1, UDx2, temp2);
+      }
       lat->cells[pos]->setUx(temp2);
       if (!status) {
-        cout << "pos x = " << pos/512 << " y = " << pos%512 << endl;
+        cout << "pos x = " << pos/param->getSize()
+             << " y = " << pos%param->getSize() << endl;
       }
 
       UDy1 = lat->cells[pos]->getUy1();
       UDy2 = lat->cells[pos]->getUy2();
       status = findUInForwardLightcone(UDy1, UDy2, temp2);
+      if (!status) {
+        status = findUInForwardLightcone1(UDy1, UDy2, temp2);
+      }
       lat->cells[pos]->setUy(temp2);
       if (!status) {
-        cout << "pos x = " << pos/512 << " y = " << pos%512 << endl;
+        cout << "pos x = " << pos/param->getSize()
+             << " y = " << pos%param->getSize() << endl;
       }
     }
 
@@ -3135,6 +3151,135 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 
 
 bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
+    const int maxIterations = 100000;
+
+    Matrix U1pU2 = U1 + U2;
+    Matrix U1pU2dagger = U1pU2;
+    U1pU2dagger.conjg();
+
+    std::vector<double> alpha(Nc2m1_, 0.);          // solution
+    std::vector<double> alphaSave(Nc2m1_, 0.);
+    std::vector<double> Dalpha(Nc2m1_, 0.);
+
+    Matrix Mtemp(Nc_, 0.);
+    std::vector<Matrix> MtempArr;
+    MtempArr.resize(Nc2m1_);
+    std::vector<complex<double>> traceCache(Nc2m1_, 0.);
+    for (int ai = 0; ai < Nc2m1_; ai++) {
+        Mtemp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger);
+        traceCache[ai] = Mtemp.trace();
+        MtempArr[ai] = group_ptr_->getT(ai) * U1pU2;
+    }
+
+    // use raw pointers to interface with gsl
+    double *Jab = new double [2 * Nc2m1_ * Nc2m1_];
+    double *Fa = new double [2 * Nc2m1_];
+
+    double Fzero = 10.;
+    double Fprev = 0.;
+
+    // set up initial guess
+    Usol = one_;
+    Matrix Usoldagger = one_;
+
+    int iter = 0;
+    bool converged = false;
+    bool alphaGood = false;
+    double lambda = 1.;
+    while (!converged && iter < maxIterations) {
+        iter++;
+
+        // compute function F that needs to be zero
+        Fzero = 0.;
+        Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
+                                                group_ptr_->getT(ai), Mtemp);
+            // minus trace if temp gives -F_ai
+            auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
+            Fa[2 * ai] = real(traceRes);
+            Fa[2 * ai + 1] = imag(traceRes);
+            Fzero += 0.5*(Fa[2 * ai]*Fa[2 * ai] + Fa[2 * ai + 1]*Fa[2 * ai + 1]);
+        }
+
+        // compute Jacobian
+        for (int bi = 0; bi < Nc2m1_; bi++) {
+            Mtemp = group_ptr_->getT(bi) * Usoldagger;
+            for (int ai = 0; ai < Nc2m1_; ai++) {
+                int countMe = ai * Nc2m1_ + bi;
+                complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
+                                                    MtempArr[ai], Mtemp);
+                auto traceRes = - 2.*real(traceLoc);
+                Jab[2 * countMe] = 0.;
+                Jab[2 * countMe + 1] = traceRes;
+            }
+        }
+
+        Dalpha = solveAxb(Jab, Fa);
+
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            alphaSave[ai] = alpha[ai];
+        }
+
+        lambda = 1.;
+        Fprev = Fzero;
+        alphaGood = false;
+        while (!alphaGood) {
+            for (int ai = 0; ai < Nc2m1_; ai++) {
+                alpha[ai] = alphaSave[ai] + lambda * Dalpha[ai];
+            }
+            Usol = getUfromExponent(alpha);
+            Usoldagger = Usol;
+            Usoldagger.conjg();
+
+            Fzero = 0.;
+            Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
+            for (int ai = 0; ai < Nc2m1_; ai++) {
+                complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
+                                                group_ptr_->getT(ai), Mtemp);
+                // minus trace if temp gives -F_ai
+                auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
+                Fa[2 * ai] = real(traceRes);
+                Fa[2 * ai + 1] = imag(traceRes);
+                Fzero += 0.5*(Fa[2 * ai]*Fa[2 * ai] + Fa[2 * ai + 1]*Fa[2 * ai + 1]);
+            }
+
+            if (lambda < 0.1) {
+                for (int ai = 0; ai < Nc2m1_; ai++) {
+                    alpha[ai] = 0.1 * random_ptr_->Gauss();
+                }
+                Usol = getUfromExponent(alpha);
+                Usoldagger = Usol;
+                Usoldagger.conjg();
+                lambda = 1.;
+                alphaGood = true;
+            }
+
+            if (Fzero > Fprev - 0.00001 * (Fzero * 2.)) {
+                lambda *= 0.5;
+            } else {
+                alphaGood = true;
+            }
+        }
+
+        if (Fzero < 1e-12) {
+            converged = true;
+        }
+    }
+    bool success = true;
+    if (iter == maxIterations) {
+        std::cout << "Did not converge in findUInForwardLightcone, "
+                  << "Fzero: " << Fzero << std::endl;
+        success = false;
+        Usol = one_;
+    }
+    delete[] Fa;
+    delete[] Jab;
+    return(success);
+}
+
+
+bool Init::findUInForwardLightcone1(Matrix &U1, Matrix &U2, Matrix &Usol) {
     const int maxIterations = 2000;
     const int maxRetrys = 100;
 
@@ -3145,14 +3290,13 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
     std::vector<double> alpha(Nc2m1_, 0.);          // solution
     std::vector<double> Dalpha(Nc2m1_, 0.);
 
-    Matrix temp(Nc_, 0.);
     Matrix Mtemp(Nc_, 0.);
     std::vector<Matrix> MtempArr;
     MtempArr.resize(Nc2m1_);
     std::vector<complex<double>> traceCache(Nc2m1_, 0.);
     for (int ai = 0; ai < Nc2m1_; ai++) {
-        temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger);
-        traceCache[ai] = temp.trace();
+        Mtemp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger);
+        traceCache[ai] = Mtemp.trace();
         MtempArr[ai] = group_ptr_->getT(ai) * U1pU2;
     }
 
@@ -3171,20 +3315,15 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
 
     int iter = 0;
     int nRestart = 0;
-    while (Fzero > 1e-8 && iter < maxIterations && nRestart < maxRetrys) {
+    while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
         iter++;
 
-        Fzero = 0.;
         // compute function F that needs to be zero
+        Fzero = 0.;
         Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
         for (int ai = 0; ai < Nc2m1_; ai++) {
-            //temp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger) +
-            //       group_ptr_->getT(ai) * U1pU2 * Usoldagger -
-            //       group_ptr_->getT(ai) * Usol * U1pU2dagger;
-            //temp = group_ptr_->getT(ai) * Mtemp;
             complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
                                                 group_ptr_->getT(ai), Mtemp);
-
             // minus trace if temp gives -F_ai
             auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
             Fa[2 * ai] = real(traceRes);
@@ -3197,38 +3336,30 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
             Mtemp = group_ptr_->getT(bi) * Usoldagger;
             for (int ai = 0; ai < Nc2m1_; ai++) {
                 int countMe = ai * Nc2m1_ + bi;
-                //temp = group_ptr_->getT(ai) * U1pU2 * group_ptr_->getT(bi) * Usoldagger +
-                //       group_ptr_->getT(ai) * Usol * group_ptr_->getT(bi) * U1pU2dagger;
-                // -i times trace of temp gives my Jacobian matrix elements:
-                //auto traceRes = complex<double>(0., -1.) * temp.trace();
-
-                //temp = MtempArr[ai] * Mtemp;
                 complex<double> traceLoc = Mtemp.traceOfProdcutOfMatrix(
                                                     MtempArr[ai], Mtemp);
-                auto traceRes = complex<double>(0., -1.) * (2.*real(traceLoc));
-
-                Jab[2 * countMe] = real(traceRes);
-                Jab[2 * countMe + 1] = imag(traceRes);
+                auto traceRes = - 2.*real(traceLoc);
+                Jab[2 * countMe] = 0.;
+                Jab[2 * countMe + 1] = traceRes;
             }
         }
 
         Dalpha = solveAxb(Jab, Fa);
+
         for (int ai = 0; ai < Nc2m1_; ai++) {
             alpha[ai] = alpha[ai] + Dalpha[ai];
         }
-
         Usol = getUfromExponent(alpha);
         Usoldagger = Usol;
         Usoldagger.conjg();
 
+        if (Fzero < FzeroMin) {
+            FzeroMin = Fzero;
+            UsolBestEst = Usol;
+        }
         if (iter == maxIterations) {
-            if (Fzero < FzeroMin) {
-                FzeroMin = Fzero;
-                UsolBestEst = Usol;
-            }
-
             for (int ai = 0; ai < Nc2m1_; ai++) {
-                alpha[ai] = nRestart * random_ptr_->genrand64_real1();
+                alpha[ai] = 0.1 * random_ptr_->Gauss();
             }
             Usol = getUfromExponent(alpha);
             Usoldagger = Usol;
@@ -3240,9 +3371,10 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
     }
     bool success = true;
     if (nRestart == maxRetrys) {
-        std::cout << "Did not converge in findUInForwardLightcone, "
+        std::cout << "Did not converge in findUInForwardLightcone1, "
                   << "Fzero: " << FzeroMin << std::endl;
-        Usol = UsolBestEst;     // return the best estimate
+        //Usol = UsolBestEst;     // return the best estimate
+        Usol = one_;
         success = false;
     }
     delete[] Fa;

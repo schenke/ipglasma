@@ -11,9 +11,7 @@ using PhysConst::hbarc;
 //**************************************************************************
 // Init class.
 
-vector<double> Init::solveAxb(double *Jab, double *Fa) {
-  vector<double> xvec(Nc2m1_, 0.);
-
+void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
   gsl_matrix_complex_view m =
       gsl_matrix_complex_view_array(Jab, Nc2m1_, Nc2m1_);
   gsl_vector_complex_view c = gsl_vector_complex_view_array(Fa, Nc2m1_);
@@ -30,7 +28,6 @@ vector<double> Init::solveAxb(double *Jab, double *Fa) {
   }
 
   gsl_vector_complex_free(x);
-  return (xvec);
 }
 
 
@@ -2193,7 +2190,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 //    Matrix U1 = getUfromExponent(in1);
 //    Matrix U2 = getUfromExponent(in2);
 //    Matrix USol;
-//    findUInForwardLightcone(U1, U2, USol);
+//    findUInForwardLightconeBjoern(U1, U2, USol);
 //    for (int ii = 0; ii < Nc_; ii++) {
 //        for (int jj = 0; jj < Nc_; jj++) {
 //            cout << U1(ii, jj) << " "
@@ -2201,7 +2198,7 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 //                 << USol(ii, jj) << endl;
 //        }
 //    }
-//    findUInForwardLightcone1(U1, U2, USol);
+//    findUInForwardLightconeChun(U1, U2, USol);
 //    for (int ii = 0; ii < Nc_; ii++) {
 //        for (int jj = 0; jj < Nc_; jj++) {
 //            cout << U1(ii, jj) << " "
@@ -2432,9 +2429,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
       // loops over all cells
       UDx1 = lat->cells[pos]->getUx1();
       UDx2 = lat->cells[pos]->getUx2();
-      bool status = findUInForwardLightcone(UDx1, UDx2, temp2);
+      bool status = findUInForwardLightconeBjoern(UDx1, UDx2, temp2);
       if (!status) {
-        status = findUInForwardLightcone1(UDx1, UDx2, temp2);
+        status = findUInForwardLightconeChun(UDx1, UDx2, temp2);
       }
       lat->cells[pos]->setUx(temp2);
       if (!status) {
@@ -2444,9 +2441,9 @@ void Init::init(Lattice *lat, Group *group, Parameters *param, Random *random,
 
       UDy1 = lat->cells[pos]->getUy1();
       UDy2 = lat->cells[pos]->getUy2();
-      status = findUInForwardLightcone(UDy1, UDy2, temp2);
+      status = findUInForwardLightconeBjoern(UDy1, UDy2, temp2);
       if (!status) {
-        status = findUInForwardLightcone1(UDy1, UDy2, temp2);
+        status = findUInForwardLightconeChun(UDy1, UDy2, temp2);
       }
       lat->cells[pos]->setUy(temp2);
       if (!status) {
@@ -3150,7 +3147,8 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
 }
 
 
-bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
+bool Init::findUInForwardLightconeBjoern(
+            Matrix &U1, Matrix &U2, Matrix &Usol) {
     const int maxIterations = 100000;
 
     Matrix U1pU2 = U1 + U2;
@@ -3215,7 +3213,7 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
             }
         }
 
-        Dalpha = solveAxb(Jab, Fa);
+        solveAxb(Jab, Fa, Dalpha);
 
         for (int ai = 0; ai < Nc2m1_; ai++) {
             alphaSave[ai] = alpha[ai];
@@ -3256,19 +3254,19 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
             }
 
             if (Fzero > Fprev - 0.00001 * (Fzero * 2.)) {
-                lambda *= 0.5;
+                lambda *= 0.9;
             } else {
                 alphaGood = true;
             }
         }
 
-        if (Fzero < 1e-12) {
+        if (Fzero < 1e-9) {
             converged = true;
         }
     }
     bool success = true;
     if (iter == maxIterations) {
-        std::cout << "Did not converge in findUInForwardLightcone, "
+        std::cout << "Did not converge in findUInForwardLightconeBjoern, "
                   << "Fzero: " << Fzero << std::endl;
         success = false;
         Usol = one_;
@@ -3279,7 +3277,7 @@ bool Init::findUInForwardLightcone(Matrix &U1, Matrix &U2, Matrix &Usol) {
 }
 
 
-bool Init::findUInForwardLightcone1(Matrix &U1, Matrix &U2, Matrix &Usol) {
+bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
     const int maxIterations = 2000;
     const int maxRetrys = 100;
 
@@ -3344,7 +3342,7 @@ bool Init::findUInForwardLightcone1(Matrix &U1, Matrix &U2, Matrix &Usol) {
             }
         }
 
-        Dalpha = solveAxb(Jab, Fa);
+        solveAxb(Jab, Fa, Dalpha);
 
         for (int ai = 0; ai < Nc2m1_; ai++) {
             alpha[ai] = alpha[ai] + Dalpha[ai];
@@ -3371,7 +3369,7 @@ bool Init::findUInForwardLightcone1(Matrix &U1, Matrix &U2, Matrix &Usol) {
     }
     bool success = true;
     if (nRestart == maxRetrys) {
-        std::cout << "Did not converge in findUInForwardLightcone1, "
+        std::cout << "Did not converge in findUInForwardLightconeChun, "
                   << "Fzero: " << FzeroMin << std::endl;
         //Usol = UsolBestEst;     // return the best estimate
         Usol = one_;

@@ -3279,7 +3279,7 @@ bool Init::findUInForwardLightconeBjoern(
 
 bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
     const int maxIterations = 2000;
-    const int maxRetrys = 100;
+    const int maxRetrys = 200;
 
     Matrix U1pU2 = U1 + U2;
     Matrix U1pU2dagger = U1pU2;
@@ -3357,7 +3357,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
         }
         if (iter == maxIterations) {
             for (int ai = 0; ai < Nc2m1_; ai++) {
-                alpha[ai] = 0.1 * random_ptr_->Gauss();
+                alpha[ai] = nRestart * random_ptr_->Gauss();
             }
             Usol = getUfromExponent(alpha);
             Usoldagger = Usol;
@@ -3371,8 +3371,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
     if (nRestart == maxRetrys) {
         std::cout << "Did not converge in findUInForwardLightconeChun, "
                   << "Fzero: " << FzeroMin << std::endl;
-        //Usol = UsolBestEst;     // return the best estimate
-        Usol = one_;
+        Usol = UsolBestEst;     // return the best estimate
         success = false;
     }
     delete[] Fa;

@@ -4,13 +4,14 @@
 #ifndef GaugeFix_H
 #define GaugeFix_H
 
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
 #include <complex>
 #include <fstream>
 #include <iomanip>
 #include <iostream>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
 #include "FFT.h"
 #include "Glauber.h"
@@ -24,26 +25,26 @@
 using namespace std;
 
 class GaugeFix {
-private:
-  // FFT *fft;
-  // Random *random;
+  private:
+    // FFT *fft;
+    // Random *random;
 
-public:
-  // Constructor.
-  GaugeFix(){
-      //  fft = new FFT(nn);
-      // random = new Random();
-  };
+  public:
+    // Constructor.
+    GaugeFix() {
+        //  fft = new FFT(nn);
+        // random = new Random();
+    };
 
-  // Destructor.
-  ~GaugeFix(){
-      // delete fft;
-      // delete random;
-  };
+    // Destructor.
+    ~GaugeFix() {
+        // delete fft;
+        // delete random;
+    };
 
-  void gaugeTransform(Lattice *lat, Parameters *param, int i, int j);
-  void FFTChi(FFT *fft, Lattice *lat, Group *group, Parameters *param,
-              int steps);
+    void gaugeTransform(Lattice *lat, Parameters *param, int i, int j);
+    void FFTChi(
+        FFT *fft, Lattice *lat, Group *group, Parameters *param, int steps);
 };
 
-#endif // GaugeFix_H
+#endif  // GaugeFix_H

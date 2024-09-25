@@ -18,38 +18,38 @@
 using namespace std;
 
 class Random {
-private:
-  int iset;
-  double gset;
+  private:
+    int iset;
+    double gset;
 
-  unsigned long long mt[NN];
-  /* mti==NN+1 means mt[NN] is not initialized */
-  int mti;
+    unsigned long long mt[NN];
+    /* mti==NN+1 means mt[NN] is not initialized */
+    int mti;
 
-  gsl_rng *gslRandom;
+    gsl_rng *gslRandom;
 
-public:
-  Random() {
-    iset = 0;
-    gslRandom = gsl_rng_alloc(gsl_rng_taus);
-  }; // constructor
+  public:
+    Random() {
+        iset = 0;
+        gslRandom = gsl_rng_alloc(gsl_rng_taus);
+    };  // constructor
 
-  ~Random() { gsl_rng_free(gslRandom); }; // destructor
-  void init_genrand64(unsigned long long seed);
-  void init_by_array64(unsigned long long init_key[],
-                       unsigned long long key_length);
-  unsigned long long genrand64_int64(void);
-  long long genrand64_int63(void);
-  double genrand64_real1(void);
-  double genrand64_real2(void);
-  double genrand64_real3(void);
+    ~Random() { gsl_rng_free(gslRandom); };  // destructor
+    void init_genrand64(unsigned long long seed);
+    void init_by_array64(
+        unsigned long long init_key[], unsigned long long key_length);
+    unsigned long long genrand64_int64(void);
+    long long genrand64_int63(void);
+    double genrand64_real1(void);
+    double genrand64_real2(void);
+    double genrand64_real3(void);
 
-  void gslRandomInit(unsigned long long seed);
-  double tdist(double nu);
-  double NBD(double nbar, double k);
-  int Poisson(const double mean);
-  double Gauss(double mean = 0., double width = 1.);
-  double Gauss2(double mean, double sigma);
+    void gslRandomInit(unsigned long long seed);
+    double tdist(double nu);
+    double NBD(double nbar, double k);
+    int Poisson(const double mean);
+    double Gauss(double mean = 0., double width = 1.);
+    double Gauss2(double mean, double sigma);
 };
 
 #endif

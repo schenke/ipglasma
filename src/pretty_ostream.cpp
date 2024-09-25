@@ -1,12 +1,13 @@
 // Copyright Chun Shen @ 2017
 // This class is inspired by the JetScapeLogger class written by Joern Putschke
 
-#include <algorithm>
-#include <iomanip>
+#include "pretty_ostream.h"
+
 #include <sys/resource.h>
 #include <sys/time.h>
 
-#include "pretty_ostream.h"
+#include <algorithm>
+#include <iomanip>
 
 using std::cout;
 using std::endl;
@@ -18,56 +19,56 @@ pretty_ostream::~pretty_ostream() {}
 
 //! This function flushes out message to the screen
 void pretty_ostream::flush(string type) {
-  std::transform(type.begin(), type.end(), type.begin(), ::tolower);
-  if (type == "info") {
-    info(message_stream.str());
-  } else if (type == "warning") {
-    warning(message_stream.str());
-  } else if (type == "error") {
-    error(message_stream.str());
-  } else if (type == "debug") {
-    debug(message_stream.str());
-  }
-  message_stream.str("");
-  message_stream.clear();
+    std::transform(type.begin(), type.end(), type.begin(), ::tolower);
+    if (type == "info") {
+        info(message_stream.str());
+    } else if (type == "warning") {
+        warning(message_stream.str());
+    } else if (type == "error") {
+        error(message_stream.str());
+    } else if (type == "debug") {
+        debug(message_stream.str());
+    }
+    message_stream.str("");
+    message_stream.clear();
 }
 
 //! This function output information message
 void pretty_ostream::info(string message) {
-  cout << "[Info] " << get_memory_usage() << " " << message << endl;
+    cout << "[Info] " << get_memory_usage() << " " << message << endl;
 }
 
 //! This function output debug message
 void pretty_ostream::debug(string message) {
-  cout << CYAN << "[Debug] " << get_memory_usage() << " " << message << RESET
-       << endl;
+    cout << CYAN << "[Debug] " << get_memory_usage() << " " << message << RESET
+         << endl;
 }
 
 //! This function output warning message
 void pretty_ostream::warning(string message) {
-  cout << BOLD << YELLOW << "[Warning] " << message << RESET << endl;
+    cout << BOLD << YELLOW << "[Warning] " << message << RESET << endl;
 }
 
 //! This function output error message
 void pretty_ostream::error(string message) {
-  cout << BOLD << RED << "[Error] " << message << RESET << endl;
+    cout << BOLD << RED << "[Error] " << message << RESET << endl;
 }
 
 //! This function returns a string for the memory usage
 //! of the current program in MB
 string pretty_ostream::get_memory_usage() {
-  struct rusage usage;
-  if (getrusage(RUSAGE_SELF, &usage) == 0) {
-    double memory_usage_in_MB = 0.0;
+    struct rusage usage;
+    if (getrusage(RUSAGE_SELF, &usage) == 0) {
+        double memory_usage_in_MB = 0.0;
 #ifdef APPLE
-    memory_usage_in_MB = usage.ru_maxrss / 1024. / 1024.; // MB in Apple
+        memory_usage_in_MB = usage.ru_maxrss / 1024. / 1024.;  // MB in Apple
 #else
-    memory_usage_in_MB = usage.ru_maxrss / 1024.; // MB in linux
+        memory_usage_in_MB = usage.ru_maxrss / 1024.;  // MB in linux
 #endif
-    std::ostringstream memory_usage;
-    memory_usage << std::setprecision(4) << memory_usage_in_MB << " MB";
-    return (memory_usage.str());
-  } else {
-    return (0);
-  }
+        std::ostringstream memory_usage;
+        memory_usage << std::setprecision(4) << memory_usage_in_MB << " MB";
+        return (memory_usage.str());
+    } else {
+        return (0);
+    }
 }

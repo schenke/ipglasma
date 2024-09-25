@@ -1,13 +1,14 @@
 #ifndef Lattice_h
 #define Lattice_h
 
-#include "Cell.h"
-#include "Matrix.h"
-#include "Parameters.h"
 #include <complex>
 #include <cstdlib>
 #include <iostream>
 #include <vector>
+
+#include "Cell.h"
+#include "Matrix.h"
+#include "Parameters.h"
 
 // The Lattice class is a level higher than the Cell class
 // It takes care of the overall structure of the lattice and the arrangement of
@@ -18,43 +19,43 @@
 using namespace std;
 
 class Lattice {
-private:
-  int size; // the total number of cells (length*length)
-  int Nc;   // the number of colors in SU(Nc): Determines the dimension of the
-            // used matrices
+  private:
+    int size;  // the total number of cells (length*length)
+    int Nc;  // the number of colors in SU(Nc): Determines the dimension of the
+             // used matrices
 
-public:
-  // constructor
-  Lattice(Parameters *param, int N, int length);
-  // destructor
-  ~Lattice();
+  public:
+    // constructor
+    Lattice(Parameters *param, int N, int length);
+    // destructor
+    ~Lattice();
 
-  // functions to access values within individual cells
-  int getSize() { return size; };
+    // functions to access values within individual cells
+    int getSize() { return size; };
 
-  vector<Cell *> cells; // the actual array of cells, the "lattice". cells is an
-                        // array of pointers to cell objects
+    vector<Cell *> cells;  // the actual array of cells, the "lattice". cells is
+                           // an array of pointers to cell objects
 
-  vector<int> posmX;
-  vector<int> pospX;
-  vector<int> posmY;
-  vector<int> pospY;
+    vector<int> posmX;
+    vector<int> pospX;
+    vector<int> posmY;
+    vector<int> pospY;
 };
 
 class BufferLattice {
-private:
-  int size; // the total number of cells (length*length)
-  int Nc;   // the number of colors in SU(Nc): Determines the dimension of the
-            // used matrices
+  private:
+    int size;  // the total number of cells (length*length)
+    int Nc;  // the number of colors in SU(Nc): Determines the dimension of the
+             // used matrices
 
-public:
-  // constructor
-  BufferLattice(int N, int length);
-  // destructor
-  ~BufferLattice();
+  public:
+    // constructor
+    BufferLattice(int N, int length);
+    // destructor
+    ~BufferLattice();
 
-  vector<SmallCell *> cells; // the actual array of cells, the "lattice". cells
-                             // is an array of pointers to cell objects
+    vector<SmallCell *> cells;  // the actual array of cells, the "lattice".
+                                // cells is an array of pointers to cell objects
 };
 
 #endif

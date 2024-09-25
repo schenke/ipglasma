@@ -15,8 +15,7 @@ using PhysConst::m_proton;
 // Evolution class.
 
 void Evolution::evolveU(
-    Lattice *lat, BufferLattice *bufferlat, Parameters *param, double dtau,
-    double tau) {
+    Lattice *lat, Parameters *param, double dtau, double tau) {
     // tau is the current time. The time argument of E^i is tau+dtau/2
     // we evolve to tau+dtau
     const int Nc = param->getNc();
@@ -64,21 +63,14 @@ void Evolution::evolveU(
 
             E2 = temp2;
 
-            bufferlat->cells[pos]->setbuffer1(E1 * lat->cells[pos]->getUx());
-            bufferlat->cells[pos]->setbuffer2(E2 * lat->cells[pos]->getUy());
-        }
-
-#pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            lat->cells[pos]->setUx(bufferlat->cells[pos]->getbuffer1());
-            lat->cells[pos]->setUy(bufferlat->cells[pos]->getbuffer2());
+            lat->cells[pos]->setUx(E1 * lat->cells[pos]->getUx());
+            lat->cells[pos]->setUy(E2 * lat->cells[pos]->getUy());
         }
     }
 }
 
 void Evolution::evolvePhi(
-    Lattice *lat, BufferLattice *bufferlat, Parameters *param, double dtau,
-    double tau) {
+    Lattice *lat, Parameters *param, double dtau, double tau) {
     // tau is the current time. The time argument of pi is tau+dtau/2
     // we evolve to tau+dtau
     const int Nc = param->getNc();
@@ -99,19 +91,13 @@ void Evolution::evolvePhi(
             phi = phi + (tau + dtau / 2.) * dtau * pi;
 
             // set the new phi (at time tau+dtau)
-            bufferlat->cells[pos]->setbuffer1(phi);
-        }
-
-#pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            lat->cells[pos]->setphi(bufferlat->cells[pos]->getbuffer1());
+            lat->cells[pos]->setphi(phi);
         }
     }
 }
 
 void Evolution::evolvePi(
-    Lattice *lat, BufferLattice *bufferlat, Parameters *param, double dtau,
-    double tau) {
+    Lattice *lat, Parameters *param, double dtau, double tau) {
     const int Nc = param->getNc();
     const int N = param->getSize();
 
@@ -161,26 +147,21 @@ void Evolution::evolvePi(
             phimY = Ux.prodAconjB(UyYm1, lat->cells[lat->posmY[pos]]->getphi())
                     * UyYm1;
 
-            bracket = phiX + phimX + phiY + phimY
-                      - 4. * phi;  // sum over both directions is included here
+            // sum over both directions is included here
+            bracket = phiX + phimX + phiY + phimY - 4. * phi;
 
             pi += dtau / (tau)*bracket;  // divide by \tau because this is
                                          // computing pi(tau+dtau/2) from
                                          // pi(tau-dtau/2) and phi(tau)
 
             // set the new pi (at time tau+dtau/2)
-            bufferlat->cells[pos]->setbuffer1(pi);
-        }
-#pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            lat->cells[pos]->setpi(bufferlat->cells[pos]->getbuffer1());
+            lat->cells[pos]->setpi(pi);
         }
     }
 }
 
 void Evolution::evolveE(
-    Lattice *lat, BufferLattice *bufferlat, Parameters *param, double dtau,
-    double tau) {
+    Lattice *lat, Parameters *param, double dtau, double tau) {
     const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
@@ -264,7 +245,7 @@ void Evolution::evolveE(
 
             trace = En.trace();
             En -= (trace / static_cast<double>(Nc)) * one;
-            bufferlat->cells[pos]->setbuffer1(En);
+            lat->cells[pos]->setE1(En);
 
             // do E2 update:
 
@@ -289,13 +270,7 @@ void Evolution::evolveE(
 
             trace = En.trace();
             En -= (trace / static_cast<double>(Nc)) * one;
-            bufferlat->cells[pos]->setbuffer2(En);
-        }
-
-#pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            lat->cells[pos]->setE1(bufferlat->cells[pos]->getbuffer1());
-            lat->cells[pos]->setE2(bufferlat->cells[pos]->getbuffer2());
+            lat->cells[pos]->setE2(En);
         }
     }
 }
@@ -383,8 +358,7 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     cout << "Gauss violation=" << largest << endl;
 }
 
-void Evolution::run(
-    Lattice *lat, BufferLattice *bufferlat, Group *group, Parameters *param) {
+void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     int Nc = param->getNc();
     int pos;
     int N = param->getSize();
@@ -441,8 +415,8 @@ void Evolution::run(
 
     // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
     // now evolve phi and U to time tau=dtau.
-    evolvePhi(lat, bufferlat, param, dtau, 0.);
-    evolveU(lat, bufferlat, param, dtau, 0.);
+    evolvePhi(lat, param, dtau, 0.);
+    evolveU(lat, param, dtau, 0.);
 
     int itmax = static_cast<int>(maxtime / (a * dtau) + 0.1);
     // int it0   = static_cast<int>(0.1/(a*dtau) + 0.1);
@@ -469,19 +443,19 @@ void Evolution::run(
 
         // evolve from time tau-dtau/2 to tau+dtau/2
         if (it < itmax) {
-            evolvePi(
-                lat, bufferlat, param, dtau,
-                (it)*dtau);  // the last argument is the current time tau.
-            evolveE(lat, bufferlat, param, dtau, (it)*dtau);
+            evolvePi(lat, param, dtau, (it)*dtau);
+            // the last argument is the current time tau.
+
+            evolveE(lat, param, dtau, (it)*dtau);
 
             // evolve from time tau to tau+dtau
-            evolvePhi(lat, bufferlat, param, dtau, (it)*dtau);
-            evolveU(lat, bufferlat, param, dtau, (it)*dtau);
+            evolvePhi(lat, param, dtau, (it)*dtau);
+            evolveU(lat, param, dtau, (it)*dtau);
         } else if (it == itmax) {
-            evolvePi(
-                lat, bufferlat, param, dtau / 2.,
-                (it)*dtau);  // the last argument is the current time tau.
-            evolveE(lat, bufferlat, param, dtau / 2., (it)*dtau);
+            evolvePi(lat, param, dtau / 2., (it)*dtau);
+            // the last argument is the current time tau.
+
+            evolveE(lat, param, dtau / 2., (it)*dtau);
         }
 
         if (it == 1 && param->getWriteOutputs() == 3) {

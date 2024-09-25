@@ -327,7 +327,6 @@ int main(int argc, char *argv[]) {
 
         // allocate lattice
         Lattice lat(param, param->getNc(), param->getSize());
-        BufferLattice bufferlat(param->getNc(), param->getSize());
         messager.info("Lattice generated.");
 
         while (param->getSuccess() == 0) {
@@ -350,7 +349,7 @@ int main(int argc, char *argv[]) {
             messager.info("Start evolution");
             // do the CYM evolution of the initialized fields using parmeters in
             // param
-            evolution.run(&lat, &bufferlat, &group, param);
+            evolution.run(&lat, &group, param);
         }
 
 #ifndef DISABLEMPI

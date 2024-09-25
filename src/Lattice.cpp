@@ -19,27 +19,17 @@ Lattice::Lattice(Parameters *param, int N, int length) {
   for (int i = 0; i < length; i++) {
     for (int j = 0; j < length; j++) {
       // pos = i*length+j;
-      pospX.push_back(((i + 1) % length) * length + j);
-      pospY.push_back(i * length + (j + 1) % length);
+      pospX.push_back((std::min(length - 1, i + 1)) * length + j);
+      pospY.push_back(i * length + std::min(length - 1, j + 1));
 
-      if (i > 0)
-        posmX.push_back((i - 1) * length + j);
-      else
-        posmX.push_back((length - 1) * length + j);
-      if (j > 0)
-        posmY.push_back(i * length + (j - 1));
-      else
-        posmY.push_back(i * length + (length - 1));
+      posmX.push_back((std::max(0, i - 1)) * length + j);
+      posmY.push_back(i * length + std::max(0, j - 1));
 
-      if (i > 0)
-        posmXpY.push_back((i - 1) * length + (j + 1) % length);
-      else
-        posmXpY.push_back((length - 1) * length + (j + 1) % length);
+      posmXpY.push_back((std::max(0, i - 1)) * length
+                        + std::min(length - 1, j + 1));
 
-      if (j > 0)
-        pospXmY.push_back(((i + 1) % length) * length + j - 1);
-      else
-        pospXmY.push_back(((i + 1) % length) * length + length - 1);
+      pospXmY.push_back((std::min(length - 1, i + 1)) * length
+                        + std::max(0, j - 1));
     }
   }
   cout << " done on rank " << param->getMPIRank() << "." << endl;

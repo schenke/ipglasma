@@ -113,11 +113,10 @@ void Evolution::evolvePi(
         Matrix phiY(Nc);   // this is \tilde{phi}_y
         Matrix phimX(Nc);  // this is \tilde{-phi}_x
         Matrix phimY(Nc);  // this is \tilde{-phi}_y
-        Matrix bracket(
-            Nc);  // this will hold [phiX+phimX-2*phi+phiY+phimY-2*phi]
+
+        // this will hold [phiX+phimX-2*phi+phiY+phimY-2*phi]
+        Matrix bracket(Nc);
         Matrix pi(Nc);
-        Matrix one(Nc, 1.);
-        // Matrix zero(Nc,0.);
 
 #pragma omp for
         for (int pos = 0; pos < N * N; pos++) {
@@ -281,27 +280,19 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
 
     Matrix Ux(Nc);
     Matrix UxXm1(Nc);
-    Matrix UxYp1(Nc);
     Matrix UxYm1(Nc);
-    Matrix UxXm1Yp1(Nc);
 
     Matrix Uy(Nc);
     Matrix UyXm1(Nc);
-    Matrix UyXp1(Nc);
     Matrix UyYm1(Nc);
-    Matrix UyXp1Ym1(Nc);
 
     Matrix UxDag(Nc);
     Matrix UxXm1Dag(Nc);
-    Matrix UxYp1Dag(Nc);
     Matrix UxYm1Dag(Nc);
-    Matrix UxXm1Yp1Dag(Nc);
 
     Matrix UyDag(Nc);
     Matrix UyXm1Dag(Nc);
-    Matrix UyXp1Dag(Nc);
     Matrix UyYm1Dag(Nc);
-    Matrix UyXp1Ym1Dag(Nc);
 
     Matrix E1(Nc);
     Matrix E2(Nc);
@@ -309,12 +300,8 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     Matrix E2mY(Nc);
     Matrix phi(Nc);
     Matrix pi(Nc);
-    Matrix phiX(Nc);  // this is \tilde{phi}_x
-    Matrix phiY(Nc);  // this is \tilde{phi}_y
 
     Matrix Gauss(Nc);
-    complex<double> trace;
-    Matrix one(Nc, 1.);
     double largest = 0;
 
     for (int pos = 0; pos < N * N; pos++) {
@@ -367,41 +354,11 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     double a = L / N;  // lattice spacing in fm
     double x, y;
 
-    Matrix one(Nc, 1.);
-
-    Matrix zero(Nc, 0.);
-    Matrix AM(int(Nc), 0.);
-    Matrix AP(int(Nc), 0.);
-    Matrix Uplaq(int(Nc), 0.);
-    Matrix Uplaq1(int(Nc), 0.);
-    Matrix Uplaq2(int(Nc), 0.);
-    Matrix Uplaq3(int(Nc), 0.);
-    Matrix Uplaq4(int(Nc), 0.);
-    Matrix Ux(int(Nc), 0.);
-    Matrix Uy(int(Nc), 0.);
-    Matrix UxDag(int(Nc), 0.);
-    Matrix UyDag(int(Nc), 0.);
-    Matrix Ux2(int(Nc), 0.);
-    Matrix Uy2(int(Nc), 0.);
-    Matrix UD(int(Nc), 0.);
-    Matrix UDx(int(Nc), 0.);
-    Matrix UDy(int(Nc), 0.);
-    Matrix UDx1(int(Nc), 0.);
-    Matrix UDy1(int(Nc), 0.);
-    Matrix E1(int(Nc), 0.);
-    Matrix E2(int(Nc), 0.);
-    Matrix phi(int(Nc), 0.);
-    Matrix phiX(int(Nc), 0.);
-    Matrix phiY(int(Nc), 0.);
-    Matrix pi(Nc);
-
     double alphas = 0.;
     double gfactor;
     double Qs = 0., g2mu2A, g2mu2B;
     double muZero = param->getMuZero();
     double c = param->getc();
-    Matrix phiTildeX(Nc);
-    Matrix phiTildeY(Nc);
 
     // do the first half step of the momenta (E1,E2,pi)
     // for now I use the \tau=0 value at \tau=d\tau/2.
@@ -731,12 +688,9 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
     Matrix UDxp2Y(Nc);
     Matrix UDypY(Nc);
     Matrix UDymX(Nc);
-    Matrix Uplaq(Nc), UplaqD(Nc), Uplaq1(Nc), Uplaq1D(Nc), Uplaq2(Nc),
-        Uplaq3(Nc), Uplaq4(Nc);
+    Matrix Uplaq(Nc), UplaqD(Nc), Uplaq1(Nc), Uplaq1D(Nc), Uplaq2(Nc);
     Matrix E1(Nc);
     Matrix E2(Nc);
-    Matrix E1m(Nc);
-    Matrix E2m(Nc);
     Matrix E1p(Nc);
     Matrix E2p(Nc);
     Matrix pi(Nc);

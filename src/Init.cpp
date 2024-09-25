@@ -2438,62 +2438,26 @@ void Init::init(
         Matrix temp2(Nc_, 0.);
         Matrix Ux(Nc_, 0.);
         Matrix Uy(Nc_, 0.);
-        Matrix Ux1(Nc_, 0.);
-        Matrix Uy1(Nc_, 0.);
-        Matrix Ux2(Nc_, 0.);
-        Matrix Uy2(Nc_, 0.);
-        Matrix UD(Nc_, 0.);
         Matrix UDx(Nc_, 0.);
         Matrix UDy(Nc_, 0.);
         Matrix UDx1(Nc_, 0.);
         Matrix UDy1(Nc_, 0.);
 
         Matrix Uplaq(Nc_, 0.);
-        Matrix Uplaq1(Nc_, 0.);
-        Matrix Uplaq2(Nc_, 0.);
-        Matrix Uplaq3(Nc_, 0.);
-        Matrix Uplaq4(Nc_, 0.);
 
         Matrix UD2(Nc_, 0.);
         Matrix UDx2(Nc_, 0.);
         Matrix UDy2(Nc_, 0.);
 
-        Matrix Ax(Nc_, 0.);
-        Matrix Ay(Nc_, 0.);
-        Matrix Ax1(Nc_, 0.);
-        Matrix Ay1(Nc_, 0.);
-        Matrix AT(Nc_, 0.);
-
-        Matrix Ax2(Nc_, 0.);
-        Matrix Ay2(Nc_, 0.);
-        Matrix AT2(Nc_, 0.);
-
-        // field strength tensor
-        Matrix Fxy(Nc_, 0.);
-        Matrix Fyx(Nc_, 0.);
-
-        Matrix AM(Nc_, 0.);
-        Matrix AP(Nc_, 0.);
-
-        Matrix AxUpY(Nc_, 0.);
-        Matrix AyUpY(Nc_, 0.);
-
-        Matrix Aeta2(Nc_, 0.);
-        Matrix Ux1pUx2(Nc_, 0.);
-        Matrix UDx1pUDx2(Nc_, 0.);
-        Matrix Uy1pUy2(Nc_, 0.);
-        Matrix UDy1pUDy2(Nc_, 0.);
         Matrix Ux1mUx2(Nc_, 0.);
         Matrix UDx1mUDx2(Nc_, 0.);
         Matrix Uy1mUy2(Nc_, 0.);
         Matrix UDy1mUDy2(Nc_, 0.);
 
         // compute Ux(3) Uy(3) after the collision
-
-        //    ofstream fout("test1", ios::out);
 #pragma omp for
-        for (int pos = 0; pos < N * N; pos++)  // loops over all cells
-        {
+        for (int pos = 0; pos < N * N; pos++) {
+            // loops over all cells
             auto checkU = lat->cells[pos]->getU().trace();
             if (checkU != checkU) {
                 lat->cells[pos]->setU(one_);
@@ -2503,17 +2467,11 @@ void Init::init(
             if (checkU != checkU) {
                 lat->cells[pos]->setU2(one_);
             }
-
-            ////check - remove later
-            //      fout << lat->cells[pos]->getU() << endl;
-            // fout << lat->cells[pos]->getU2() << endl;
         }
 
-        // fout.close();
-
 #pragma omp for
-        for (int pos = 0; pos < N * N; pos++)  // loops over all cells
-        {
+        for (int pos = 0; pos < N * N; pos++) {
+            // loops over all cells
             UDx = lat->cells[lat->pospX[pos]]->getU();
             UDx.conjg();
             lat->cells[pos]->setUx1(lat->cells[pos]->getU() * UDx);
@@ -2708,14 +2666,17 @@ void Init::init(
 
 #pragma omp for
         for (int pos = 0; pos < N * N; pos++) {
-            AM = (lat->cells[pos]->getE1());  //+lat->cells[pos]->getAetaP());
-            AP = (lat->cells[pos]->getE2());  //+lat->cells[pos]->getAetaP());
+            // AM = (lat->cells[pos]->getE1()); //+lat->cells[pos]->getAetaP());
+            // AP = (lat->cells[pos]->getE2()); //+lat->cells[pos]->getAetaP());
+
             // this is pi in lattice units as needed for the evolution. (later,
             // the a^4 gives the right units for the energy density
             lat->cells[pos]->setpi(
                 complex<double>(0., -2. / param->getg())
-                * (AM));  // factor -2 because I have A^eta (note the
-                          // 1/8 before) but want \pi (E^z).
+                * (lat->cells[pos]->getE1()));
+            // factor -2 because I have A^eta (note the 1/8 before)
+            // but want \pi (E^z).
+
             // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP));
             // // factor -2 because I have A^eta (note the 1/8 before) but want
             // \pi (E^z).
@@ -2726,8 +2687,9 @@ void Init::init(
             lat->cells[pos]->setE1(zero);
             lat->cells[pos]->setE2(zero);
             lat->cells[pos]->setphi(zero);
-            lat->cells[pos]->setUx1(
-                one_);  // reset the Ux1 to be used for other purposes later
+
+            // reset the Ux1 to be used for other purposes later
+            lat->cells[pos]->setUx1(one_);
         }
     }
 

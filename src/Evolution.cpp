@@ -714,8 +714,6 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
     Matrix phiTildeXY1(Nc);
     Matrix phiTildeXY2(Nc);
 
-    //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-
     // set plaquette in every cell
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
@@ -826,7 +824,7 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
             phiTildeX = Ux * phiX * UDx;
             phiTildeY = Uy * phiY * UDy;
 
-            // same at one up in he other direction
+            // same at one up in the other direction
             Ux = lat->cells[posY]->getUx();
             Uy = lat->cells[posX]->getUy();
             UDx = Ux;
@@ -888,15 +886,21 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
                                   + real(((phiX - phiTildeXY2)
                                           * (phiX - phiTildeXY2))
                                              .trace()))));
+        }
+    }
 
-            // clean up numerical noise outside the interaction region
-            //  if (lat->cells[pos]->getg2mu2A() < 1e-12 ||
-            //      lat->cells[pos]->getg2mu2B() < 1e-12)
-            //    lat->cells[pos]->setEpsilon(0.);
-            //  else
+    for (pos = 0; pos < N * N; pos++) {
+        // clean up numerical noise outside the interaction region
+        if (lat->cells[pos]->getg2mu2A() < 1e-12
+            || lat->cells[pos]->getg2mu2B() < 1e-12) {
+            lat->cells[pos]->setEpsilon(0.);
+            lat->cells[pos]->setTtautau(0.);
+            lat->cells[pos]->setTxx(0.);
+            lat->cells[pos]->setTyy(0.);
+            lat->cells[pos]->setTetaeta(0.);
+        } else {
             lat->cells[pos]->setEpsilon(
                 lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
-
             lat->cells[pos]->setTtautau(
                 lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
             lat->cells[pos]->setTxx(lat->cells[pos]->getTxx() * 1 / pow(a, 4.));

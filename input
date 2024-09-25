@@ -2,7 +2,7 @@ mode 1
 minimumQs2ST 0
 readMultFromFile 0
 size 512
-L 30
+L 15
 Nc 3
 m 0.4
 rmax 1000.

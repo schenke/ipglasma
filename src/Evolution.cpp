@@ -198,6 +198,12 @@ void Evolution::evolveE(Lattice *lat, BufferLattice *bufferlat,
 
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
+
+      int i = pos / N;
+      int j = pos % N;
+      int posmXpY = std::max(0, i - 1) * N + std::min(N - 1, j + 1);
+      int pospXmY = std::min(N - 1, i + 1) * N + std::max(0, j - 1);
+
       // retrieve current E1 and E2 (that's the one defined at tau-dtau/2)
       En = lat->cells[pos]->getE1();
       // retrieve current phi (at time tau) at this x_T
@@ -217,12 +223,12 @@ void Evolution::evolveE(Lattice *lat, BufferLattice *bufferlat,
             (Ux.prodABconj(temp1, Uy));
 
       temp1 = lat->cells[lat->posmY[pos]]->getUx();   // UxYm1Dag
-      temp2 = lat->cells[lat->pospXmY[pos]]->getUy(); // UyXp1Ym1Dag
+      temp2 = lat->cells[pospXmY]->getUy(); // UyXp1Ym1Dag
       U1m2 = (Ux.prodABconj(Ux, temp2)) *
              (Ux.prodAconjB(temp1, lat->cells[lat->posmY[pos]]->getUy()));
 
       temp1 = lat->cells[lat->posmX[pos]]->getUy();   // UyXm1Dag
-      temp2 = lat->cells[lat->posmXpY[pos]]->getUx(); // UxXm1Yp1Dag
+      temp2 = lat->cells[posmXpY]->getUx(); // UxXm1Yp1Dag
       U2m1 = (Ux.prodABconj(Uy, temp2)) *
              (Ux.prodAconjB(temp1, lat->cells[lat->posmX[pos]]->getUx()));
 
@@ -746,14 +752,8 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
     for (int j = 0; j < N; j++) {
       pos = i * N + j;
 
-      if (i < N - 1)
-        posX = (i + 1) * N + j;
-      else
-        posX = j;
-      if (j < N - 1)
-        posY = i * N + (j + 1);
-      else
-        posY = i * N;
+      posX = lat->pospX[pos];
+      posY = lat->pospY[pos];
 
       UDx = lat->cells[posY]->getUx();
       UDy = lat->cells[pos]->getUy();
@@ -773,23 +773,10 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < N; j++) {
       pos = i * N + j;
-      if (i < N - 1)
-        posX = (i + 1) * N + j;
-      else
-        posX = j;
-      if (j < N - 1)
-        posY = i * N + (j + 1);
-      else
-        posY = i * N;
+      posX = lat->pospX[pos];
+      posY = lat->pospY[pos];
 
-      if (i < N - 1 && j < N - 1)
-        posXY = (i + 1) * N + j + 1;
-      else if (i < N - 1)
-        posXY = (i + 1) * N;
-      else if (j < N - 1)
-        posXY = j + 1;
-      else
-        posXY = 0;
+      posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
 
       E1 = lat->cells[pos]->getE1();
       E2 = lat->cells[pos]->getE2();
@@ -840,23 +827,11 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < N; j++) {
       pos = i * N + j;
-      if (i < N - 1)
-        posX = (i + 1) * N + j;
-      else
-        posX = j;
-      if (j < N - 1)
-        posY = i * N + (j + 1);
-      else
-        posY = i * N;
 
-      if (i < N - 1 && j < N - 1)
-        posXY = (i + 1) * N + j + 1;
-      else if (i < N - 1)
-        posXY = (i + 1) * N;
-      else if (j < N - 1)
-        posXY = j + 1;
-      else
-        posXY = 0;
+      posX = lat->pospX[pos];
+      posY = lat->pospY[pos];
+
+      posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
 
       Uplaq = lat->cells[pos]->getUplaq();
 
@@ -945,78 +920,21 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
   for (int i = 0; i < N; i++) {
     for (int j = 0; j < N; j++) {
       pos = i * N + j;
-      if (i < N - 1)
-        posX = (i + 1) * N + j;
-      else
-        posX = j;
-      if (j < N - 1)
-        posY = i * N + (j + 1);
-      else
-        posY = i * N;
+      posX = lat->pospX[pos];
+      posY = lat->pospY[pos];
+      posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
 
-      if (i < N - 1 && j < N - 1)
-        posXY = (i + 1) * N + j + 1;
-      else if (i < N - 1)
-        posXY = (i + 1) * N;
-      else if (j < N - 1)
-        posXY = j + 1;
-      else
-        posXY = 0;
+      posmX = lat->posmX[pos];
+      posmY = lat->posmY[pos];
 
-      if (i > 0)
-        posmX = (i - 1) * N + j;
-      else
-        posmX = (N - 1) * N + j;
+      posmXpY = std::max(0, i - 1) * N + std::min(N - 1, j + 1);
+      pospXmY = std::min(N - 1, i + 1) * N + std::max(0, j - 1);
 
-      if (j > 0)
-        posmY = i * N + (j - 1);
-      else
-        posmY = i * N + N - 1;
+      pos2X = std::min(N - 1, i + 2) * N + j;
+      pos2Y = i * N + std::min(N - 1, j + 2);
 
-      if (i > 0 && j < N - 1)
-        posmXpY = (i - 1) * N + j + 1;
-      else if (i > 0)
-        posmXpY = (i - 1) * N;
-      else if (j < N - 1)
-        posmXpY = (N - 1) * N + j + 1;
-      else
-        posmXpY = (N - 1) * N;
-
-      if (j > 0 && i < N - 1)
-        pospXmY = (i + 1) * N + j - 1;
-      else if (j > 0)
-        pospXmY = j - 1;
-      else if (i < N - 1)
-        pospXmY = (i + 1) * N + N - 1;
-      else
-        pospXmY = N - 1;
-
-      if (i < N - 2)
-        pos2X = (i + 2) * N + j;
-      else
-        pos2X = (i + 2 - N) * N + j;
-      if (j < N - 2)
-        pos2Y = i * N + (j + 2);
-      else
-        pos2Y = i * N + (j + 2 - N);
-
-      if (i < N - 2 && j < N - 1)
-        pos2XY = (i + 2) * N + j + 1;
-      else if (i < N - 2)
-        pos2XY = (i + 2) * N;
-      else if (j < N - 1)
-        pos2XY = (i + 2 - N) * N + j + 1;
-      else
-        pos2XY = (i + 2 - N) * N;
-
-      if (i < N - 1 && j < N - 2)
-        posX2Y = (i + 1) * N + j + 2;
-      else if (i < N - 1)
-        posX2Y = (i + 1) * N + j + 2 - N;
-      else if (j < N - 2)
-        posX2Y = j + 2;
-      else
-        posX2Y = j + 2 - N;
+      pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
+      posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
 
       E1 = lat->cells[pos]->getE1();
       E2 = lat->cells[pos]->getE2();

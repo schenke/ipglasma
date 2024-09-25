@@ -24,12 +24,6 @@ Lattice::Lattice(Parameters *param, int N, int length) {
 
       posmX.push_back((std::max(0, i - 1)) * length + j);
       posmY.push_back(i * length + std::max(0, j - 1));
-
-      posmXpY.push_back((std::max(0, i - 1)) * length
-                        + std::min(length - 1, j + 1));
-
-      pospXmY.push_back((std::min(length - 1, i + 1)) * length
-                        + std::max(0, j - 1));
     }
   }
   cout << " done on rank " << param->getMPIRank() << "." << endl;

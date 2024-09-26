@@ -326,9 +326,9 @@ vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
     }
     c1 *= 0.25;
 
-    c0max = 2. * pow(c1 / 3., 1.5);
+    c0max = std::max(1e-15, 2. * pow(c1 / 3., 1.5));
 
-    thetaOverThree = acos(c0 / c0max) / 3.;
+    thetaOverThree = acos(std::max(-1., std::min(1., c0 / c0max))) / 3.;
 
     u = sqrt(c1 / 3.) * cos(thetaOverThree);
     w = sqrt(c1) * sin(thetaOverThree);
@@ -357,6 +357,22 @@ vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
     f2 /= den;
 
     u0 = f0 + 2. / 3. * c1 * f2;
+    // if (std::isnan(real(u0))) {
+    //     for (int i = 0; i < Nc2m1; i++) {
+    //         cout << Q[i] << " ";
+    //     }
+    //     cout << endl;
+    //     cout << "c0 = " << c0 << endl;
+    //     cout << "c0max=" << c0max << endl;
+    //     cout << "c0/c0max=" << c0 / c0max << endl;
+    //     cout << "thetaOverThree=" << thetaOverThree << endl;
+    //     cout << "u = " << u << endl;
+    //     cout << "w = " << w << endl;
+    //     cout << "f0=" << f0 << endl;
+    //     cout << "f2=" << f2 << endl;
+    //     cout << "c1=" << c1 << endl;
+    //     exit(1);
+    // }
 
     f1 /= (0.5 * f2);  // will multiply everything by 0.5 f2 again later
 

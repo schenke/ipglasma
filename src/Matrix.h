@@ -1,17 +1,15 @@
 #ifndef Matrix_h
 #define Matrix_h
 
-#include <gsl/gsl_integration.h>  // include gsl for Gauss-Legendre nodes and weights for log Pade
-
-#include <cmath>
 #include <complex>
-#include <cstdlib>
-#include <iostream>
+#include <string>
 #include <vector>
 
 #include "Spinor.h"
 
-using namespace std;
+using std::ostream;
+using std::string;
+using std::vector;
 
 class Matrix {
   private:

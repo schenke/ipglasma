@@ -1,6 +1,15 @@
 #include "Matrix.h"
 
+#include <gsl/gsl_integration.h>  // include gsl for Gauss-Legendre nodes and weights for log Pade
+
+#include <iostream>
+#include <sstream>
 #include <vector>
+
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::stringstream;
 
 // constructor if just dimension is given
 Matrix::Matrix(int n) {
@@ -448,7 +457,7 @@ Matrix &Matrix::expm(double t, const int p) {
     for (int i = 0; i < n; ++i) {
         double temp = 0.0;
         for (int j = 0; j < n; j++) temp += abs((*this)(i, j));
-        norm = t * max<double>(norm, temp);
+        norm = t * std::max<double>(norm, temp);
     }
     // If norm = 0, and all H elements are not nan or infinity but zero,
     // then U should be identity.
@@ -477,7 +486,7 @@ Matrix &Matrix::expm(double t, const int p) {
     int s = 0;
     double scale = 1.0;
     if (norm > 0.5) {
-        s = max<int>(0, static_cast<int>((log(norm) / log(2.0) + 2.0)));
+        s = std::max<int>(0, static_cast<int>((log(norm) / log(2.0) + 2.0)));
         scale /= double(pow(2.0, s));
         U = (scale * t)
             * (*this);  // Here U is used as temp value due to that H is const
@@ -647,8 +656,8 @@ double Matrix::OneNorm() {
         }
     }
 
-    onenorm = max(norm[0], norm[1]);
-    onenorm = max(onenorm, norm[2]);
+    onenorm = std::max(norm[0], norm[1]);
+    onenorm = std::max(onenorm, norm[2]);
 
     return onenorm;
 }

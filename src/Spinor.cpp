@@ -1,5 +1,10 @@
 #include "Spinor.h"
 
+#include <iostream>
+
+using std::cout;
+using std::endl;
+
 // constructor if just dimension is given
 Spinor::Spinor(int n) {
     ndim = n;

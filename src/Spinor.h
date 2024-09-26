@@ -2,11 +2,10 @@
 #define Spinor_h
 
 #include <complex>
-#include <cstdlib>
-#include <iostream>
 #include <vector>
 
-using namespace std;
+using std::complex;
+using std::ostream;
 
 class Spinor {
   private:

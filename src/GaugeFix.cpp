@@ -3,6 +3,14 @@
 
 #include "GaugeFix.h"
 
+#include <complex>
+#include <iostream>
+
+#include "Matrix.h"
+
+using std::cout;
+using std::endl;
+
 //**************************************************************************
 // GaugeFix class.
 
@@ -25,7 +33,8 @@ void GaugeFix::FFTChi(
     const int max_gfiter = steps;
 
     Matrix zero(Nc, 0.);
-    double gresidual = 10000.;
+    double gresidual_prev = 10000.;
+    double gresidual = 0.;
 
     Matrix **chi;
     chi = new Matrix *[N * N];
@@ -75,9 +84,16 @@ void GaugeFix::FFTChi(
 
         if (gfiter % 10 == 0) {
             cout << gfiter << " " << gresidual << endl;
+            gresidual_prev = gresidual;
         }
 
         if (gresidual < 1e-9) {
+            break;
+        }
+
+        if (gresidual > gresidual_prev && gresidual < 1e-6) {
+            // make sure it is progressively converging
+            // otherwise, break the loop with less accuracy
             break;
         }
 

@@ -10,6 +10,7 @@
 
 #include <fftw3.h>
 
+#include <algorithm>
 #include <complex>
 #include <vector>
 

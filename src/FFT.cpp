@@ -3,6 +3,11 @@
 // This version uses FFTW
 #include "FFT.h"
 
+#include <algorithm>
+#include <complex>
+#include <iostream>
+#include <vector>
+
 #include "Matrix.h"
 
 //**************************************************************************

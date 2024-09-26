@@ -6,6 +6,7 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
+#include <algorithm>
 #include <iomanip>
 #include <iostream>
 #include <sstream>

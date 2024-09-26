@@ -17,14 +17,12 @@ void GaugeFix::FFTChi(
     int Nc2m1 = Nc * Nc - 1;
 
     Matrix one(Nc, 1.);
-    Matrix oldg(Nc), g(Nc), gdag(Nc), temp(Nc);
-    Matrix divA(Nc), divAdag(Nc);
-    Matrix divANew(Nc);
-    Matrix Uplaq(Nc), U(Nc), UDx(Nc), UDy(Nc), UDxMx(Nc), UDyMy(Nc), Ux(Nc),
-        Uy(Nc), UxMx(Nc), UyMy(Nc);
-    Matrix UmxDag(Nc), UmyDag(Nc);
+    Matrix g(Nc), gdag(Nc);
+    Matrix divA(Nc);
+    Matrix UDx(Nc), UDy(Nc), UDxMx(Nc), UDyMy(Nc), Ux(Nc), Uy(Nc), UxMx(Nc),
+        UyMy(Nc);
 
-    int max_gfiter = steps;
+    const int max_gfiter = steps;
 
     Matrix zero(Nc, 0.);
     double gresidual = 10000.;
@@ -43,14 +41,8 @@ void GaugeFix::FFTChi(
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 pos = i * N + j;
-                if (i > 0)
-                    posmX = (i - 1) * N + j;
-                else
-                    posmX = (N - 1) * N + j;
-                if (j > 0)
-                    posmY = i * N + (j - 1);
-                else
-                    posmY = i * N + (N - 1);
+                posmX = std::max(0, i - 1) * N + j;
+                posmY = i * N + std::max(0, j - 1);
 
                 Ux = UDx = lat->cells[pos]->getUx();
                 Uy = UDy = lat->cells[pos]->getUy();
@@ -150,20 +142,11 @@ void GaugeFix::gaugeTransform(Lattice *lat, Parameters *param, int i, int j) {
     int N = param->getSize();
     int pos, posmX, posmY;
     int Nc = param->getNc();
-    Matrix g(Nc), gdag(Nc), temp(Nc);
+    Matrix g(Nc), gdag(Nc);
 
     pos = i * N + j;
-    if (i > 0) {
-        posmX = (i - 1) * N + j;
-    } else {
-        posmX = (N - 1) * N + j;
-    }
-
-    if (j > 0) {
-        posmY = i * N + (j - 1);
-    } else {
-        posmY = i * N + N - 1;
-    }
+    posmX = std::max(0, i - 1) * N + j;
+    posmY = i * N + std::max(0, j - 1);
 
     g = gdag = lat->cells[pos]->getg();
     gdag.conjg();

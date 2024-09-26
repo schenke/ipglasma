@@ -23,8 +23,6 @@
 
 #include "Matrix.h"
 
-using namespace std;
-
 template <typename T>
 std::vector<T> operator+(const std::vector<T> &a, const std::vector<T> &b) {
     // assert(a.size() == b.size());

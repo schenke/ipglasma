@@ -8,8 +8,6 @@
 
 #include "Matrix.h"
 
-using namespace std;
-
 class Cell {
   private:
     double epsilon;  // energy density after collision

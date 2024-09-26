@@ -1,5 +1,11 @@
 #include "Group.h"
 
+#include <complex>
+#include <iostream>
+
+using std::cout;
+using std::endl;
+
 Group::Group(int N) {
     cout << "Initializing group SU(" << N << ") ... ";
     Nc = N;

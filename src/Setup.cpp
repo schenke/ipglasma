@@ -2,6 +2,18 @@
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Setup.h"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
+
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::ifstream;
+using std::string;
+using std::stringstream;
+
 //**************************************************************************
 // Setup class.
 

@@ -29,7 +29,14 @@
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
-using namespace std;
+
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::ifstream;
+using std::ofstream;
+using std::string;
+using std::stringstream;
 
 int readInput(
     Setup *setup, Parameters *param, int argc, char *argv[], int rank);
@@ -151,7 +158,7 @@ int main(int argc, char *argv[]) {
         strup_name << "usedParameters" << param->getEventId() << ".dat";
         string up_name;
         up_name = strup_name.str();
-        ofstream fout1(up_name.c_str(), ios::app);
+        ofstream fout1(up_name.c_str(), std::ios::app);
         fout1 << "Random seed used on rank " << rank << ": "
               << param->getRandomSeed() << endl;
         fout1.close();
@@ -577,7 +584,7 @@ void writeparams(Parameters *param) {
     string up_name;
     up_name = strup_name.str();
 
-    fstream fout1(up_name.c_str(), ios::out);
+    ofstream fout1(up_name.c_str(), std::ios::out);
     char *timestring = ctime(&rawtime);
     fout1 << "File created on " << timestring << endl;
     fout1 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ " << endl;

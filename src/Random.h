@@ -15,8 +15,6 @@
 #define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
 #define LM 0x7FFFFFFFULL         /* Least significant 31 bits */
 
-using namespace std;
-
 class Random {
   private:
     int iset;

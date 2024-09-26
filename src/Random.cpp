@@ -221,7 +221,7 @@ double Random::tdist(double nu) {
     // variance is always 1
 
     if (nu <= 2) {
-        cerr << "nu has to be > 2. Exiting." << endl;
+        std::cerr << "nu has to be > 2. Exiting." << std::endl;
         exit(1);
     }
 

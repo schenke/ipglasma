@@ -4,23 +4,8 @@
 #ifndef MyEigen_H
 #define MyEigen_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <complex>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-
 #include "Lattice.h"
-#include "Matrix.h"
 #include "Parameters.h"
-#include "gsl/gsl_complex.h"
-#include "gsl/gsl_complex_math.h"
-#include "gsl/gsl_eigen.h"
-
-using namespace std;
 
 class MyEigen {
   private:

@@ -2,10 +2,21 @@
 // Copyright (C) 2012 Bjoern Schenke.
 #include "MyEigen.h"
 
+#include <fstream>
+#include <sstream>
+
 #include "Phys_consts.h"
+#include "gsl/gsl_complex.h"
+#include "gsl/gsl_complex_math.h"
+#include "gsl/gsl_eigen.h"
 
 using PhysConst::hbarc;
 using PhysConst::small_eps;
+
+using std::cout;
+using std::endl;
+using std::ofstream;
+using std::stringstream;
 
 //**************************************************************************
 // MyEigen class.
@@ -378,7 +389,7 @@ void MyEigen::flowVelocity4D(
     // ".dat"; string Etot_name; Etot_name = strEtot_name.str();
 
     if (param->getWriteOutputs() % 2 == 1) {
-        ofstream foutEps2(streuH_name.str().c_str(), ios::out);
+        ofstream foutEps2(streuH_name.str().c_str(), std::ios::out);
         //      ofstream foutEtot(Etot_name.c_str(),ios::out);
 
         foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
@@ -793,7 +804,7 @@ void MyEigen::flowVelocity4D(
         stringstream strTmunu_name;
         strTmunu_name << "Tmunu-t" << it * dtau * a << "-"
                       << param->getEventId() << ".dat";
-        ofstream foutEps1(strTmunu_name.str().c_str(), ios::out);
+        ofstream foutEps1(strTmunu_name.str().c_str(), std::ios::out);
         foutEps1 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
                  << " ymax= " << hy << " deta= " << deta << " dx= " << ha
                  << " dy= " << ha << endl;
@@ -1130,7 +1141,7 @@ void MyEigen::flowVelocity4D(
         // param->getEventId()
         // << ".dat"; string two_name; two_name = strtwo_name.str();
 
-        ofstream foutEps3(Jaz_name.c_str(), ios::out);
+        ofstream foutEps3(Jaz_name.c_str(), std::ios::out);
 
         foutEps3 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
                  << " ymax= " << hy << " deta= " << deta << " dx= " << ha

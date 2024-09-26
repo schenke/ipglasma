@@ -2,6 +2,10 @@
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Evolution.h"
 
+#include <fstream>
+#include <iostream>
+#include <sstream>
+
 #include "Fragmentation.h"
 #include "Phys_consts.h"
 
@@ -10,6 +14,14 @@ using PhysConst::hbarc;
 using PhysConst::m_kaon;
 using PhysConst::m_pion;
 using PhysConst::m_proton;
+
+using std::stringstream;
+
+using std::cout;
+using std::endl;
+using std::ifstream;
+using std::ofstream;
+using std::string;
 
 //**************************************************************************
 // Evolution class.
@@ -421,7 +433,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             string eI_name;
             eI_name = streI_name.str();
 
-            ofstream foutEps(eI_name.c_str(), ios::out);
+            ofstream foutEps(eI_name.c_str(), std::ios::out);
             for (int ix = 0; ix < N; ix++)  // loop over all positions
             {
                 for (int iy = 0; iy < N; iy++) {
@@ -503,7 +515,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             string eInt_name;
             eInt_name = streInt_name.str();
 
-            ofstream foutEps2(eInt_name.c_str(), ios::out);
+            ofstream foutEps2(eInt_name.c_str(), std::ios::out);
             for (int ix = 0; ix < N; ix++)  // loop over all positions
             {
                 for (int iy = 0; iy < N; iy++) {
@@ -1241,7 +1253,7 @@ void Evolution::anisotropy(Lattice *lat, Parameters *param, int it) {
     string aniso_name;
     aniso_name = straniso_name.str();
 
-    ofstream foutAniso(aniso_name.c_str(), ios::app);
+    ofstream foutAniso(aniso_name.c_str(), std::ios::app);
     int N = param->getSize();
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
@@ -1313,7 +1325,7 @@ void Evolution::eccentricity(
     for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
             pos = ix * N + iy;
-            maxEps = max(lat->cells[pos]->getEpsilon(), maxEps);
+            maxEps = std::max(lat->cells[pos]->getEpsilon(), maxEps);
         }
     }
 
@@ -1781,7 +1793,7 @@ void Evolution::eccentricity(
     if (it == 1) param->setPsi(Psi2);
 
     if (doAniso == 0) {
-        ofstream foutEcc(ecc_name.c_str(), ios::app);
+        ofstream foutEcc(ecc_name.c_str(), std::ios::app);
         foutEcc << it * a * param->getdtau() << " " << eccentricity1 << " "
                 << Psi1 << " " << eccentricity2 << " " << Psi2 << " "
                 << eccentricity3 << " " << Psi3 << " " << eccentricity4 << " "
@@ -1800,7 +1812,7 @@ void Evolution::eccentricity(
         string aniso_name;
         aniso_name = straniso_name.str();
 
-        ofstream foutAniso(aniso_name.c_str(), ios::app);
+        ofstream foutAniso(aniso_name.c_str(), std::ios::app);
 
         double TxxRot, TyyRot;
         double ux, uy, PsiU;
@@ -2258,7 +2270,7 @@ void Evolution::readNkt(Parameters *param) {
     dNdeta *= cosh(param->getRapidity())
               / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / P / P));
 
-    ofstream foutNN("NpartdNdy-mod.dat", ios::out);
+    ofstream foutNN("NpartdNdy-mod.dat", std::ios::out);
     foutNN << Npart << " " << dNdeta << " " << dNdeta2 << " "
            << atof(Tpp.c_str()) << " " << atof(b.c_str()) << endl;
     foutNN.close();
@@ -3057,7 +3069,7 @@ int Evolution::multiplicity(
         string multHad_name;
         multHad_name = strmultHad_name.str();
 
-        ofstream foutdNdpt(multHad_name.c_str(), ios::out);
+        ofstream foutdNdpt(multHad_name.c_str(), std::ios::out);
         for (int ih = 0; ih <= hbins; ih++) {
             if (ih % 10 == 0)
                 foutdNdpt << ih * 20. / static_cast<double>(hbins) << " "
@@ -3136,7 +3148,7 @@ int Evolution::multiplicity(
     }
 
     if (it == itmax) {
-        ofstream foutNN(NpartdNdy_name.c_str(), ios::out);
+        ofstream foutNN(NpartdNdy_name.c_str(), std::ios::out);
         foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp()
                << " " << param->getb() << " " << dEdeta << " "
                << param->getRandomSeed() << " "
@@ -3391,7 +3403,7 @@ int Evolution::multiplicitynkxky(
     //     NhH[ih]=0.;
     //   }
 
-    ofstream foutNkxky((nkxky_name).c_str(), ios::out);
+    ofstream foutNkxky((nkxky_name).c_str(), std::ios::out);
 
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
@@ -3834,7 +3846,7 @@ int Evolution::multiplicitynkxky(
     m = param->getJacobianm();                                // in GeV
     P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
 
-    ofstream foutMult(mult_name.c_str(), ios::out);
+    ofstream foutMult(mult_name.c_str(), std::ios::out);
     for (int ik = 0; ik < bins; ik++) {
         if (counter[ik] > 0) {
             n[ik] = n[ik] / static_cast<double>(counter[ik]);
@@ -4034,7 +4046,7 @@ int Evolution::multiplicitynkxky(
         string multHad_name;
         multHad_name = strmultHad_name.str();
 
-        ofstream foutdNdpt(multHad_name.c_str(), ios::out);
+        ofstream foutdNdpt(multHad_name.c_str(), std::ios::out);
         for (int ih = 0; ih <= hbins; ih++) {
             if (ih % 10 == 0)
                 foutdNdpt << ih * 20. / static_cast<double>(hbins) << " "
@@ -4124,12 +4136,12 @@ int Evolution::multiplicitynkxky(
         string meanpt_name;
         meanpt_name = strmeanpt_name.str();
 
-        ofstream foutNch(meanpt_name.c_str(), ios::out);
+        ofstream foutNch(meanpt_name.c_str(), std::ios::out);
         foutNch << dNdeta << " " << dEdeta / dNdeta << " " << dNdetaHadrons
                 << " " << dEdetaHadrons / dNdetaHadrons << endl;
         foutNch.close();
 
-        ofstream foutNN(NpartdNdy_name.c_str(), ios::app);
+        ofstream foutNN(NpartdNdy_name.c_str(), std::ios::app);
         foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp()
                << " " << param->getb() << " " << dEdeta << " "
                << param->getRandomSeed() << " "
@@ -4153,7 +4165,7 @@ int Evolution::multiplicitynkxky(
                << endl;
         foutNN.close();
 
-        ofstream foutNNH(NpartdNdyH_name.c_str(), ios::app);
+        ofstream foutNNH(NpartdNdyH_name.c_str(), std::ios::app);
         foutNNH << param->getNpart() << " " << dNdetaHadrons << " "
                 << param->getTpp() << " " << param->getb() << " "
                 << dEdetaHadrons << " " << param->getRandomSeed() << " "
@@ -4660,7 +4672,7 @@ int Evolution::correlations(
     cout << "N=" << dNdeta << ", k and phi integrated N=" << fullResult << endl;
 
     // output dN/d^2k
-    ofstream foutPhiMult(PhiMult_name.c_str(), ios::out);
+    ofstream foutPhiMult(PhiMult_name.c_str(), std::ios::out);
     if (it == 1) {
         foutPhiMult
             << "3"
@@ -4766,7 +4778,7 @@ int Evolution::correlations(
         }
     }
     // output dN/d^2k
-    ofstream foutPhiMultHad(PhiMultHad_name.c_str(), ios::out);
+    ofstream foutPhiMultHad(PhiMultHad_name.c_str(), std::ios::out);
     if (it == 1) {
         foutPhiMultHad
             << "3"
@@ -4782,7 +4794,7 @@ int Evolution::correlations(
     }
     foutPhiMultHad.close();
 
-    ofstream foutCorr(Corr_name.c_str(), ios::out);
+    ofstream foutCorr(Corr_name.c_str(), std::ios::out);
     foutCorr << it * dtau * a << " " << dNdeta1 << " " << dNdeta2 << " "
              << dNdeta3 << " " << dNdeta4 << " " << dNdeta5 << " " << dNdeta6
              << " " << dNdeta << " " << dNdetaNoMixedTerms << endl;

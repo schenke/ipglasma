@@ -12,7 +12,8 @@
 
 #include "Util.h"
 
-using namespace std;
+using std::cout;
+using std::endl;
 
 void Glauber::FindNucleusData2(
     Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,
@@ -1142,7 +1143,7 @@ void Glauber::initGlauber(
     Projectile_Name = Projectile;
 
     string p_name;
-    stringstream sp_name;
+    std::stringstream sp_name;
 
     const char *EOSPATH = "HYDROPROGRAMPATH";
     char *envPath = getenv(EOSPATH);

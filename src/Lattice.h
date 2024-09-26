@@ -16,8 +16,6 @@
 // lattice. The values of the quantities in a cell can be modified or retrieved
 // by the public functions in both lattice and cells.
 
-using namespace std;
-
 class Lattice {
   private:
     int size;  // the total number of cells (length*length)

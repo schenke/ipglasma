@@ -1,13 +1,7 @@
 #ifndef Group_h
 #define Group_h
 
-#include <complex>
-#include <cstdlib>
-#include <iostream>
-
 #include "Matrix.h"
-
-using namespace std;
 
 class Group {
   private:

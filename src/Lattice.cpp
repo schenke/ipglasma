@@ -6,8 +6,8 @@ Lattice::Lattice(Parameters *param, int N, int length) {
     size = length * length;
     double a = param->getL() / static_cast<double>(length);
 
-    cout << "Allocating square lattice of size " << length << "x" << length
-         << " with a=" << a << " fm ...";
+    std::cout << "Allocating square lattice of size " << length << "x" << length
+              << " with a=" << a << " fm ...";
 
     // initialize the array of cells
     for (int i = 0; i < size; i++) {
@@ -26,7 +26,7 @@ Lattice::Lattice(Parameters *param, int N, int length) {
             posmY.push_back(i * length + std::max(0, j - 1));
         }
     }
-    cout << " done on rank " << param->getMPIRank() << "." << endl;
+    std::cout << " done on rank " << param->getMPIRank() << "." << std::endl;
 }
 
 Lattice::~Lattice() {

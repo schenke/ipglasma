@@ -3,12 +3,22 @@
 #include "Init.h"
 
 #include <algorithm>
+#include <fstream>
+#include <iostream>
+#include <sstream>
+#include <string>
 #include <utility>
 
 #include "Phys_consts.h"
 
-using namespace std;
 using PhysConst::hbarc;
+using std::cerr;
+using std::cout;
+using std::endl;
+using std::ifstream;
+using std::ofstream;
+using std::string;
+using std::stringstream;
 
 //**************************************************************************
 // Init class.
@@ -1090,7 +1100,7 @@ void Init::setColorChargeDensity(
         string Ncoll_name;
         Ncoll_name = strNcoll_name.str();
 
-        ofstream foutNcoll(Ncoll_name.c_str(), ios::out);
+        ofstream foutNcoll(Ncoll_name.c_str(), std::ios::out);
 
         if (param->getGaussianWounding() == 0) {
             for (int i = 0; i < A1; i++) {
@@ -1146,7 +1156,7 @@ void Init::setColorChargeDensity(
         string Npart_name;
         Npart_name = strNpart_name.str();
 
-        ofstream foutNpart(Npart_name.c_str(), ios::out);
+        ofstream foutNpart(Npart_name.c_str(), std::ios::out);
 
         for (int i = 0; i < A1; i++) {
             foutNpart << nucleusA_.at(i).x << " " << nucleusA_.at(i).y << " "
@@ -1591,7 +1601,7 @@ void Init::setColorChargeDensity(
         string up_name;
         up_name = strup_name.str();
 
-        ofstream fout1(up_name.c_str(), ios::app);
+        ofstream fout1(up_name.c_str(), std::ios::app);
         fout1 << " " << endl;
         fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
         fout1 << " " << endl;
@@ -1625,7 +1635,7 @@ void Init::setColorChargeDensity(
     string NEst_name;
     NEst_name = strNEst_name.str();
 
-    ofstream foutNEst(NEst_name.c_str(), ios::out);
+    ofstream foutNEst(NEst_name.c_str(), std::ios::out);
 
     foutNEst << "#Q_s^2(min) S_T  " << "Q_s^2(avg) S_T  " << "Q_s^2(max) S_T "
              << " Q_s^2(min) S_T Log^2( Q_s^2(max) / Q_s^2(min))  " << endl;
@@ -1849,7 +1859,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         VTwo_name = strVTwo_name.str();
         // Output in text
         if (param->getWriteInitialWilsonLines() == 1) {
-            ofstream foutU(VOne_name.c_str(), ios::out);
+            ofstream foutU(VOne_name.c_str(), std::ios::out);
             foutU.precision(15);
 
             for (int ix = 0; ix < N; ix++) {
@@ -1865,7 +1875,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 
             cout << "wrote " << strVOne_name.str() << endl;
 
-            ofstream foutU2(VTwo_name.c_str(), ios::out);
+            ofstream foutU2(VTwo_name.c_str(), std::ios::out);
             foutU2.precision(15);
             for (int ix = 0; ix < N; ix++) {
                 for (int iy = 0; iy < N; iy++)  // loop over all positions
@@ -1883,8 +1893,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }  // end output in text
         else if (param->getWriteInitialWilsonLines() == 2) {
             std::ofstream Outfile1, Outfile2;
-            Outfile1.open(VOne_name.c_str(), ios::out | ios::binary);
-            Outfile2.open(VTwo_name.c_str(), ios::out | ios::binary);
+            Outfile1.open(VOne_name.c_str(), std::ios::out | std::ios::binary);
+            Outfile2.open(VTwo_name.c_str(), std::ios::out | std::ios::binary);
 
             double temp = param->getRapidity();
 
@@ -2003,7 +2013,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
         double Re[9], Im[9];
         double dummy;
 
-        ifstream finV1(VOne_name.c_str(), ios::in);
+        ifstream finV1(VOne_name.c_str(), std::ios::in);
 
         if (!finV1) {
             messager << "File " << VOne_name << " not found. Exiting.";
@@ -2046,7 +2056,7 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
 
         finV1.close();
 
-        ifstream finV2(VTwo_name.c_str(), ios::in);
+        ifstream finV2(VTwo_name.c_str(), std::ios::in);
 
         if (!finV2) {
             cerr << "File " << VTwo_name << " not found. Exiting." << endl;
@@ -2683,7 +2693,7 @@ void Init::multiplicity(Lattice *lat, Parameters *param) {
     string tE_name;
     tE_name = strtE_name.str();
 
-    ofstream fout(tE_name.c_str(), ios::out);
+    ofstream fout(tE_name.c_str(), std::ios::out);
     fout << epsilonSum << endl;
     fout.close();
 }

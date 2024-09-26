@@ -337,7 +337,7 @@ vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
 
     c0max = std::max(1e-15, 2. * pow(c1 / 3., 1.5));
 
-    thetaOverThree = acos(std::max(-1., std::min(1., c0 / c0max))) / 3.;
+    thetaOverThree = acos(c0 / c0max) / 3.;
 
     u = sqrt(c1 / 3.) * cos(thetaOverThree);
     w = sqrt(c1) * sin(thetaOverThree);

@@ -2,11 +2,18 @@
 // Copyright (C) 2012 Bjoern Schenke.
 #include "Evolution.h"
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_interp.h>
+#include <gsl/gsl_spline.h>
+
+#include <complex>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 
 #include "Fragmentation.h"
+#include "GaugeFix.h"
+#include "MyEigen.h"
 #include "Phys_consts.h"
 
 using Fragmentation::kkp;
@@ -15,13 +22,12 @@ using PhysConst::m_kaon;
 using PhysConst::m_pion;
 using PhysConst::m_proton;
 
-using std::stringstream;
-
 using std::cout;
 using std::endl;
 using std::ifstream;
 using std::ofstream;
 using std::string;
+using std::stringstream;
 
 //**************************************************************************
 // Evolution class.

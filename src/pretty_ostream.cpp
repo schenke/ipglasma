@@ -6,8 +6,9 @@
 #include <sys/resource.h>
 #include <sys/time.h>
 
-#include <algorithm>
 #include <iomanip>
+#include <iostream>
+#include <sstream>
 
 using std::cout;
 using std::endl;

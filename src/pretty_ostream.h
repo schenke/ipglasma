@@ -15,7 +15,6 @@
 #ifndef PRETTY_OSTREAM_H_
 #define PRETTY_OSTREAM_H_
 
-#include <iostream>
 #include <sstream>
 #include <string>
 

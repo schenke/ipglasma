@@ -1,8 +1,8 @@
 // Init.cpp is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
+
 #include "Init.h"
 
-#include <algorithm>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -10,6 +10,7 @@
 #include <utility>
 
 #include "Phys_consts.h"
+#include "gsl/gsl_linalg.h"
 
 using PhysConst::hbarc;
 using std::cerr;

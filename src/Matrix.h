@@ -8,8 +8,6 @@
 #include "Spinor.h"
 
 using std::ostream;
-using std::string;
-using std::vector;
 
 class Matrix {
   private:
@@ -55,13 +53,13 @@ class Matrix {
     int getNDim() const { return ndim; }
     int getNN() const { return nn; }
 
-    string MatrixToString();
+    std::string MatrixToString();
 
     Matrix &expm(double t = 1.0, const int p = 6);
 
     // Matrix exponential of traceless hermitian
     // matrix using coefficients of t^a as input
-    vector<complex<double>> expmCoeff(std::vector<double> &Q, int n);
+    std::vector<complex<double>> expmCoeff(std::vector<double> &Q, int n);
 
     complex<double> det();
     complex<double> trace();

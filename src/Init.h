@@ -4,26 +4,13 @@
 #ifndef Init_H
 #define Init_H
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
-#include <complex>
-#include <ctime>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-#include <limits>
-
 #include "FFT.h"
-#include "GaugeFix.h"
 #include "Glauber.h"
 #include "Group.h"
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
 #include "Random.h"
-#include "gsl/gsl_linalg.h"
 #include "pretty_ostream.h"
 
 class Init {

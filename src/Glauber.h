@@ -1,6 +1,8 @@
 #ifndef glauber_h  // avoids multiple inclusions of the header file
 #define glauber_h
 
+#include <string>
+
 #include "Random.h"
 
 #define TOL (1.0e-6)
@@ -18,7 +20,7 @@ struct ReturnValue {
 };
 
 typedef struct nucleus {
-    string name;
+    std::string name;
     double A;
     double Z;
     int AnumFunc;
@@ -72,9 +74,9 @@ class Glauber {
     double nucleusZ2() const { return currentZ2; }
     int IsFile(char *file_name);
     void FindNucleusData(
-        Nucleus *nucleus, string target, string file_name, int rank);
+        Nucleus *nucleus, std::string target, std::string file_name, int rank);
     void FindNucleusData2(
-        Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,
+        Nucleus *nucleus, std::string name, bool setWSDeformParams, double R_WS,
         double a_WS, double beta2, double beta3, double beta4, double gamma,
         bool force_dmin, double d_min, double dR_np, double da_np);
     void PrintGlauberData();
@@ -118,7 +120,7 @@ class Glauber {
     double TAB();
     double PAB(double x, double y);
     void initGlauber(
-        double SigmaNN, string Target, string Projectile, double inb,
+        double SigmaNN, std::string Target, std::string Projectile, double inb,
         bool setWSDeformParams, double R_WS, double a_WS, double beta2,
         double beta3, double beta4, double gamma, bool force_dmin, double d_min,
         double dR_np, double da_np, int imax);

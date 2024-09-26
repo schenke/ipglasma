@@ -8,28 +8,10 @@
 #include <omp.h>
 #endif
 
-#include <gsl/gsl_errno.h>
-#include <gsl/gsl_interp.h>
-#include <gsl/gsl_spline.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <unistd.h>
-
-#include <complex>
-#include <fstream>
-#include <iomanip>
-#include <iostream>
-
 #include "FFT.h"
-#include "GaugeFix.h"
-#include "Glauber.h"
 #include "Group.h"
 #include "Lattice.h"
-#include "Matrix.h"
-#include "MyEigen.h"
 #include "Parameters.h"
-#include "Random.h"
 
 class Evolution {
   private:

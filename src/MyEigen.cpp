@@ -4,6 +4,7 @@
 
 #include <fstream>
 #include <sstream>
+#include <string>
 
 #include "Phys_consts.h"
 #include "gsl/gsl_complex.h"
@@ -1133,7 +1134,7 @@ void MyEigen::flowVelocity4D(
         stringstream strJaz_name;
         strJaz_name << "Jazma-Hydro-t" << it * dtau * a << "-"
                     << param->getEventId() << ".dat";
-        string Jaz_name;
+        std::string Jaz_name;
         Jaz_name = strJaz_name.str();
 
         // stringstream strtwo_name;

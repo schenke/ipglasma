@@ -3,6 +3,8 @@
 // This version uses FFTW
 #include "FFT.h"
 
+#include "Matrix.h"
+
 //**************************************************************************
 // FFT class.
 

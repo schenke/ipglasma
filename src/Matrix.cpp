@@ -9,7 +9,7 @@
 using std::cerr;
 using std::cout;
 using std::endl;
-using std::stringstream;
+using std::vector;
 
 // constructor if just dimension is given
 Matrix::Matrix(int n) {
@@ -603,11 +603,11 @@ complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
     return (trace);
 }
 
-string Matrix::MatrixToString() {
+std::string Matrix::MatrixToString() {
     int n = this->getNDim();
     Matrix Q(n);
     Q = *this;
-    stringstream output;
+    std::stringstream output;
     output.precision(15);
 
     if (n == 3) {

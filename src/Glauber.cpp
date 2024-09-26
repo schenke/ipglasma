@@ -14,6 +14,7 @@
 
 using std::cout;
 using std::endl;
+using std::string;
 
 void Glauber::FindNucleusData2(
     Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,

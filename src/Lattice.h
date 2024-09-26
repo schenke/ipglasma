@@ -1,13 +1,9 @@
 #ifndef Lattice_h
 #define Lattice_h
 
-#include <complex>
-#include <cstdlib>
-#include <iostream>
 #include <vector>
 
 #include "Cell.h"
-#include "Matrix.h"
 #include "Parameters.h"
 
 // The Lattice class is a level higher than the Cell class
@@ -31,13 +27,13 @@ class Lattice {
     // functions to access values within individual cells
     int getSize() { return size; };
 
-    vector<Cell *> cells;  // the actual array of cells, the "lattice". cells is
-                           // an array of pointers to cell objects
+    std::vector<Cell *> cells;  // the actual array of cells, the "lattice".
+                                // cells is an array of pointers to cell objects
 
-    vector<int> posmX;
-    vector<int> pospX;
-    vector<int> posmY;
-    vector<int> pospY;
+    std::vector<int> posmX;
+    std::vector<int> pospX;
+    std::vector<int> posmY;
+    std::vector<int> pospY;
 };
 
 class BufferLattice {
@@ -52,8 +48,9 @@ class BufferLattice {
     // destructor
     ~BufferLattice();
 
-    vector<SmallCell *> cells;  // the actual array of cells, the "lattice".
-                                // cells is an array of pointers to cell objects
+    std::vector<SmallCell *> cells;
+    // the actual array of cells, the "lattice".
+    // cells is an array of pointers to cell objects
 };
 
 #endif

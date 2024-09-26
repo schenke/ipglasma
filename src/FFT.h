@@ -9,19 +9,12 @@
 #endif
 
 #include <fftw3.h>
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
 
-#include <algorithm>
-#include <cmath>
 #include <complex>
-#include <functional>
-#include <iostream>
 #include <vector>
 
-#include "Matrix.h"
+using std::complex;
+using std::vector;
 
 template <typename T>
 std::vector<T> operator+(const std::vector<T> &a, const std::vector<T> &b) {

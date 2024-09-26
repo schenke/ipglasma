@@ -50,8 +50,18 @@ void GaugeFix::FFTChi(
         for (int i = 0; i < N; i++) {
             for (int j = 0; j < N; j++) {
                 pos = i * N + j;
-                posmX = std::max(0, i - 1) * N + j;
-                posmY = i * N + std::max(0, j - 1);
+
+                // use periodic boundary conditions to have fast convergence
+                if (i == 0) {
+                    posmX = (N - 1) * N + j;
+                } else {
+                    posmX = (i - 1) * N + j;
+                }
+                if (j == 0) {
+                    posmY = i * N + N - 1;
+                } else {
+                    posmY = i * N + j - 1;
+                }
 
                 Ux = UDx = lat->cells[pos]->getUx();
                 Uy = UDy = lat->cells[pos]->getUy();
@@ -161,8 +171,18 @@ void GaugeFix::gaugeTransform(Lattice *lat, Parameters *param, int i, int j) {
     Matrix g(Nc), gdag(Nc);
 
     pos = i * N + j;
-    posmX = std::max(0, i - 1) * N + j;
-    posmY = i * N + std::max(0, j - 1);
+
+    // use periodic boundary conditions to have fast convergence
+    if (i == 0) {
+        posmX = (N - 1) * N + j;
+    } else {
+        posmX = (i - 1) * N + j;
+    }
+    if (j == 0) {
+        posmY = i * N + N - 1;
+    } else {
+        posmY = i * N + j - 1;
+    }
 
     g = gdag = lat->cells[pos]->getg();
     gdag.conjg();

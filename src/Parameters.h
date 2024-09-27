@@ -210,6 +210,8 @@ class Parameters {
     bool rotateReactionPlane_;  // flag to randomly rotate the event reaction
                                 // plane
 
+    bool computeGluonMultiplicity_;  // flag to compute gluonMultiplicity
+
   public:
     // constructor:
     Parameters() {};
@@ -407,10 +409,11 @@ class Parameters {
     double getWSda_np() const { return WSda_np_; }
 
     void setRotateReactionPlane(int iflag) {
-        if (iflag == 0)
+        if (iflag == 0) {
             rotateReactionPlane_ = false;
-        else
+        } else {
             rotateReactionPlane_ = true;
+        }
     }
     bool getRotateReactionPlane() const { return rotateReactionPlane_; }
 
@@ -471,6 +474,17 @@ class Parameters {
     }
     void setMinimumQs2ST(int x) { minimumQs2ST = x; }
     int getMinimumQs2ST() { return minimumQs2ST; }
+
+    void setComputeGluonMultiplicity(int x) {
+        if (x == 0) {
+            computeGluonMultiplicity_ = false;
+        } else {
+            computeGluonMultiplicity_ = true;
+        }
+    }
+    bool getComputeGluonMultiplicity() const {
+        return computeGluonMultiplicity_;
+    }
 
     void loadPosteriorParameterSetsFromFile(
         std::string posteriorFileName,

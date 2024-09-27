@@ -399,13 +399,10 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     // int it2   = static_cast<int>(0.4/(a*dtau) + 0.1);
     // int it3   = static_cast<int>(0.6/(a*dtau) + 0.1);
 
-    cout << "Starting evolution" << endl;
-    cout << "itmax=" << itmax << endl;
+    cout << "Starting evolution: num of time steps=" << itmax << "" << endl;
 
     // do evolution
     for (int it = 1; it <= itmax; it++) {
-        // if (it == 1 || it == it0 || it == it1 || it == it2
-        //     || it == it3 || it == itmax) {
         if (it == itmax) {
             Tmunu(lat, param, it);
             // computes flow velocity and correct energy density
@@ -644,15 +641,15 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         int success = 1;
-        // if (it == 1 || it == it0 || it == it1 || it == it2
-        //     || it == it3 || it == itmax) {
-        if (it == 1 || it == itmax) {
-            eccentricity(lat, param, it, 0.0, 0);
-            // eccentricity(lat, param, it, 0.1, 0);
-            // eccentricity(lat, param, it, 1., 0);
-            // eccentricity(lat, param, it, 10., 0);
+        if (param->getComputeGluonMultiplicity()) {
+            if (it == 1 || it == itmax) {
+                eccentricity(lat, param, it, 0.0, 0);
+                // eccentricity(lat, param, it, 0.1, 0);
+                // eccentricity(lat, param, it, 1., 0);
+                // eccentricity(lat, param, it, 10., 0);
 
-            success = multiplicity(lat, group, param, it);
+                success = multiplicity(lat, group, param, it);
+            }
         }
 
         if (success == 0) break;
@@ -909,23 +906,23 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
 
     for (pos = 0; pos < N * N; pos++) {
         // clean up numerical noise outside the interaction region
-        if (lat->cells[pos]->getg2mu2A() < 1e-12
-            || lat->cells[pos]->getg2mu2B() < 1e-12) {
-            lat->cells[pos]->setEpsilon(0.);
-            lat->cells[pos]->setTtautau(0.);
-            lat->cells[pos]->setTxx(0.);
-            lat->cells[pos]->setTyy(0.);
-            lat->cells[pos]->setTetaeta(0.);
-        } else {
-            lat->cells[pos]->setEpsilon(
-                lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTtautau(
-                lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTxx(lat->cells[pos]->getTxx() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTyy(lat->cells[pos]->getTyy() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTetaeta(
-                lat->cells[pos]->getTetaeta() * 1 / pow(a, 6.));
-        }
+        // if (lat->cells[pos]->getg2mu2A() < 1e-12
+        //    || lat->cells[pos]->getg2mu2B() < 1e-12) {
+        //    lat->cells[pos]->setEpsilon(0.);
+        //    lat->cells[pos]->setTtautau(0.);
+        //    lat->cells[pos]->setTxx(0.);
+        //    lat->cells[pos]->setTyy(0.);
+        //    lat->cells[pos]->setTetaeta(0.);
+        //} else {
+        lat->cells[pos]->setEpsilon(
+            lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTtautau(
+            lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTxx(lat->cells[pos]->getTxx() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTyy(lat->cells[pos]->getTyy() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTetaeta(
+            lat->cells[pos]->getTetaeta() * 1 / pow(a, 6.));
+        //}
     }
 
     // T^\tau x, T^\tau y

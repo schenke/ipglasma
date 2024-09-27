@@ -57,7 +57,9 @@ class Init {
         Glauber *glauber, int READFROMFILE);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     void readNuclearQs(Parameters *param);
+    void solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec);
     void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
+
     double getNuclearQs2(double Qs2atZeroY, double y);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);

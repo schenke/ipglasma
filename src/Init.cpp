@@ -25,7 +25,7 @@ using std::stringstream;
 //**************************************************************************
 // Init class.
 
-void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
+void Init::solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec) {
     gsl_matrix_complex_view m =
         gsl_matrix_complex_view_array(Jab, Nc2m1_, Nc2m1_);
     gsl_vector_complex_view c = gsl_vector_complex_view_array(Fa, Nc2m1_);
@@ -42,6 +42,24 @@ void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
     }
 
     gsl_vector_complex_free(x);
+}
+
+void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
+    gsl_matrix_view m = gsl_matrix_view_array(Jab, Nc2m1_, Nc2m1_);
+    gsl_vector_view c = gsl_vector_view_array(Fa, Nc2m1_);
+    gsl_vector *x = gsl_vector_alloc(Nc2m1_);
+
+    int s;
+    gsl_permutation *p = gsl_permutation_alloc(Nc2m1_);
+    gsl_linalg_LU_decomp(&m.matrix, p, &s);
+    gsl_linalg_LU_solve(&m.matrix, p, &c.vector, x);
+    gsl_permutation_free(p);
+
+    for (int i = 0; i < Nc2m1_; i++) {
+        xvec[i] = gsl_vector_get(x, i);
+    }
+
+    gsl_vector_free(x);
 }
 
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
@@ -3216,8 +3234,8 @@ bool Init::findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol) {
     }
 
     // use raw pointers to interface with gsl
-    double *Jab = new double[2 * Nc2m1_ * Nc2m1_];
-    double *Fa = new double[2 * Nc2m1_];
+    double *Jab = new double[Nc2m1_ * Nc2m1_];
+    double *Fa = new double[Nc2m1_];
 
     double Fzero = 10.;
     double Fprev = 0.;
@@ -3245,11 +3263,8 @@ bool Init::findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol) {
                 Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
             // minus trace if temp gives -F_ai
             auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
-            Fa[2 * ai] = real(traceRes);
-            Fa[2 * ai + 1] = imag(traceRes);
-            Fzero +=
-                0.5
-                * (Fa[2 * ai] * Fa[2 * ai] + Fa[2 * ai + 1] * Fa[2 * ai + 1]);
+            Fa[ai] = imag(traceRes);
+            Fzero += 0.5 * Fa[ai] * Fa[ai];
         }
 
         // compute Jacobian
@@ -3260,8 +3275,7 @@ bool Init::findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol) {
                 complex<double> traceLoc =
                     Mtemp.traceOfProdcutOfMatrix(MtempArr[ai], Mtemp);
                 auto traceRes = -2. * real(traceLoc);
-                Jab[2 * countMe] = 0.;
-                Jab[2 * countMe + 1] = traceRes;
+                Jab[countMe] = traceRes;
             }
         }
 
@@ -3289,11 +3303,8 @@ bool Init::findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol) {
                     Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
                 // minus trace if temp gives -F_ai
                 auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
-                Fa[2 * ai] = real(traceRes);
-                Fa[2 * ai + 1] = imag(traceRes);
-                Fzero += 0.5
-                         * (Fa[2 * ai] * Fa[2 * ai]
-                            + Fa[2 * ai + 1] * Fa[2 * ai + 1]);
+                Fa[ai] = imag(traceRes);
+                Fzero += 0.5 * Fa[ai] * Fa[ai];
             }
 
             if (lambda < 0.1) {
@@ -3350,8 +3361,8 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
     }
 
     // use raw pointers to interface with gsl
-    double *Jab = new double[2 * Nc2m1_ * Nc2m1_];
-    double *Fa = new double[2 * Nc2m1_];
+    double *Jab = new double[Nc2m1_ * Nc2m1_];
+    double *Fa = new double[Nc2m1_];
 
     double Fzero = 10.;
     double FzeroMin = 1e6;
@@ -3377,9 +3388,8 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
                 Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
             // minus trace if temp gives -F_ai
             auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
-            Fa[2 * ai] = real(traceRes);
-            Fa[2 * ai + 1] = imag(traceRes);
-            Fzero += std::abs(Fa[2 * ai]) + std::abs(Fa[2 * ai + 1]);
+            Fa[ai] = imag(traceRes);
+            Fzero += std::abs(Fa[ai]);
         }
 
         // compute Jacobian
@@ -3397,8 +3407,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
                 int countMe = ai * Nc2m1_ + bi;
                 complex<double> traceLoc =
                     Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
-                Jab[2 * countMe] = 0.;
-                Jab[2 * countMe + 1] = 2. * imag(traceLoc) / dalpha_bi;
+                Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
                 Mcheck += std::abs(Jab[2 * countMe + 1]);
                 if (Mcheck < 1e-15) {
                     // avoid matrix to be singular
@@ -3416,8 +3425,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
                     complex<double> traceLoc =
                         Mtemp.traceOfProdcutOfMatrix(MtempArr[ai], Mtemp);
                     auto traceRes = -2. * real(traceLoc);
-                    Jab[2 * countMe] = 0.;
-                    Jab[2 * countMe + 1] = traceRes;
+                    Jab[countMe] = traceRes;
                 }
             }
         }

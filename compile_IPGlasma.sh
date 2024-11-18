@@ -2,6 +2,9 @@
 
 Flag=$1
 
+# format the code base
+bash formatCode.sh
+
 mkdir -p build
 cd build
 rm -fr *
@@ -10,7 +13,7 @@ if [ "$Flag" == "KNL" ]; then
 elif [ "$Flag" == "noMPI" ]; then
     cmake .. -DdisableMPI=ON
 else
-    CXX=/opt/homebrew/bin/g++-13 cmake ..
+    cmake ..
 fi
 
 make -j4

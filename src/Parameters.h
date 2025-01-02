@@ -215,6 +215,14 @@ class Parameters {
     bool simpleLangevin_;
     int which_stage;
     double first_b;
+    int runningCoupling_jimwlk;  // switch to decide if alpha_s should run (0 constant
+                          // alpha_s, 1 running coupling)
+    double m_jimwlk;
+    double mu0_jimwlk;
+    double LambdaQCD_jimwlk;
+    int steps_jimwlk;
+    int measureSteps_jimwlk;
+    double ds_jimwlk;
 
   public:
     // constructor:
@@ -490,15 +498,6 @@ class Parameters {
         return computeGluonMultiplicity_;
     }
 
-    void setSimpleLangevin(int x) {
-        if (x == 0) {
-            simpleLangevin_ = false;
-        } else {
-            simpleLangevin_ = x;
-        }
-    }
-    bool getSimpleLangevin() const { return simpleLangevin_; }
-
     void loadPosteriorParameterSetsFromFile(
         std::string posteriorFileName,
         std::vector<std::vector<float>> &ParamSet);
@@ -508,5 +507,30 @@ class Parameters {
     int getwhich_stage() { return which_stage; }
     void set_firstb(double x) { first_b = x; }
     int get_firstb() { return first_b; }
+    
+    // JIMWLK functions
+    void setRunningCoupling_jimwlk(int x) { runningCoupling_jimwlk = x; };
+    int getRunningCoupling_jimwlk() { return runningCoupling_jimwlk; }
+    void setm_jimwlk(double x) { m_jimwlk = x; };
+    double getm_jimwlk() { return m_jimwlk; }
+    void setMu0_jimwlk(double x) { mu0_jimwlk = x; }
+    double getMu0_jimwlk() { return mu0_jimwlk; }
+    void setSimpleLangevin(int x) {
+        if (x == 0) {
+            simpleLangevin_ = false;
+        } else {
+            simpleLangevin_ = x;
+        }
+    }
+    bool getSimpleLangevin() const { return simpleLangevin_; }
+    void setLambdaQCD_jimwlk(double x) { LambdaQCD_jimwlk = x; }
+    double getLambdaQCD_jimwlk() { return LambdaQCD_jimwlk; }
+    void setSteps_jimwlk(int x) { steps_jimwlk = x; };
+    int getSteps_jimwlk() { return steps_jimwlk; }
+    void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
+    int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
+    void setDs_jimwlk(double x) { ds_jimwlk = x; }
+    double getDs_jimwlk() { return ds_jimwlk; }
+    
 };
 #endif  // Parameters_H

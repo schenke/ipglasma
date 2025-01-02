@@ -74,8 +74,8 @@ void JIMWLK::initializeK() {
         K_[i] = new std::vector<std::complex<double> >;
     }
 
-    double mu0 = param_.getMu0();
-    double Lambda2 = param_.getLambdaQCD() * param_.getLambdaQCD();
+    double mu0 = param_.getMu0_jimwlk();
+    double Lambda2 = param_.getLambdaQCD_jimwlk() * param_.getLambdaQCD_jimwlk();
 
     for (int pos = 0; pos < Ncells_; pos++) {
         double x = pos / Ngrid_ - static_cast<double>(Ngrid_) / 2.;
@@ -113,7 +113,7 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     // if m suppresses long distance tails,
     // K is multiplied by this, which is m*r*K_1(m*r)
     double mass_regulator = 1.0;
-    double m = param_.getm();
+    double m = param_.getm_jimwlk();
     if (m < 1e-16) {
         return mass_regulator;
     }
@@ -144,15 +144,15 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
 
 double JIMWLK::getAlphas(const double x, const double y) const {
     double alphas = 1.0;
-    if (param_.getRunningCoupling() == 0) {
+    if (param_.getRunningCoupling_jimwlk() == 0) {
         return alphas;
     }
 
     const double c = 0.2;
     const int Nf = 3;
     const double length = param_.getL();
-    const double mu0 = param_.getMu0();
-    const double Lambda2 = param_.getLambdaQCD() * param_.getLambdaQCD();
+    const double mu0 = param_.getMu0_jimwlk();
+    const double Lambda2 = param_.getLambdaQCD_jimwlk() * param_.getLambdaQCD_jimwlk();
     double phys_x = x * length;  // in fm
     double phys_y = y * length;
     double phys_r2 = phys_x * phys_x + phys_y * phys_y;
@@ -183,7 +183,7 @@ void JIMWLK::initializeNoise() {
 
 void JIMWLK::evolution() {
     initializeNoise();
-    const int steps = param_.getSteps();
+    const int steps = param_.getSteps_jimwlk();
     std::cout << "Beginning evolution ..." << std::endl;
     for (int ids = 0; ids < steps; ids++) {
         if (ids % 100 == 0) {
@@ -196,7 +196,7 @@ void JIMWLK::evolution() {
 
 void JIMWLK::evolutionStep() {
     const complex<double> I(0., 1.);
-    const double ds_sqrt = std::sqrt(param_.getDs());
+    const double ds_sqrt = std::sqrt(param_.getDs_jimwlk());
 
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y

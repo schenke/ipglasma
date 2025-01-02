@@ -583,6 +583,15 @@ int readInput(
     if (param->getSubNucleonParamType() > 0) {
         param->loadPosteriorParameterSets(param->getSubNucleonParamType());
     }
+    param->setSimpleLangevin(setup->IFind(file_name, "simpleLangevin"));
+    param->setMu0_jimwlk(setup->DFind(file_name, "mu0_jimwlk"));
+    param->setLambdaQCD_jimwlk(setup->DFind(file_name,"Lambda_QCD_jimwlk")); // in units of g^2mu
+    param->setm_jimwlk(setup->DFind(file_name,"m_jimwlk"));
+    param->setRunningCoupling_jimwlk(setup->IFind(file_name,"runningCoupling_jimwlk"));
+    param->setSteps_jimwlk(setup->IFind(file_name,"Steps_jimwlk"));
+    param->setMeasureSteps_jimwlk(setup->IFind(file_name,"MeasureSteps_jimwlk"));
+    param->setDs_jimwlk(setup->DFind(file_name,"Ds_jimwlk"));
+    
     if (rank == 0) cout << "done." << endl;
 
     return 0;

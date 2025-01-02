@@ -14,7 +14,7 @@ SubNucleonParamSet -1
 BG 4.
 BGq 0.3
 BGqVar 0.0
-dqMin 0.0
+dqMin 0.31237462
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
 useConstituentQuarkProton 3
@@ -31,7 +31,7 @@ protonAnisotropy 0
 roots 5020
 usePseudoRapidity 0
 Rapidity 0.
-useFluctuatingx 1
+useFluctuatingx 0
 xFromThisFactorTimesQs 1
 useNucleus 1
 useGaussian 0
@@ -57,11 +57,12 @@ runWithkt 0
 Ny 50
 useSeedList 0
 seed 13
-useTimeForSeed 0
+useTimeForSeed 1
 Projectile Pb
 Target Pb
 bmin 0
-bmax 0
+bmax 20
+computeGluonMultiplicity 0
 rotateReactionPlane 1
 lightNucleusOption 5
 useFixedNpart 0
@@ -83,7 +84,7 @@ writeOutputsToHDF5 0
 mu0_jimwlk 0.28
 simpleLangevin 1
 runningCoupling_jimwlk 1
-Steps_jimwlk 100
+Steps_jimwlk 10
 Ds_jimwlk 0.005
 MeasureSteps_jimwlk 100
 Lambda_QCD_jimwlk 0.040

@@ -12,6 +12,6 @@ int IsFile(std::string);
 std::string stringFind(std::string file_name, std::string st);
 double DFind(std::string file_name, std::string st);
 int IFind(std::string file_name, std::string st);
-} // namespace Util
+}  // namespace Util
 
 #endif

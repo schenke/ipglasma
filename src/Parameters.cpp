@@ -1,11 +1,12 @@
 // Copyright (C) 2023 Chun Shen
 
-#include <string>
-#include <vector>
-#include <sstream>
+#include "Parameters.h"
+
 #include <fstream>
 #include <iostream>
-#include "Parameters.h"
+#include <sstream>
+#include <string>
+#include <vector>
 
 void Parameters::loadPosteriorParameterSetsFromFile(
     std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
@@ -29,23 +30,20 @@ void Parameters::loadPosteriorParameterSetsFromFile(
     posteriorFile.close();
 }
 
-
 void Parameters::loadPosteriorParameterSets(const int itype) {
     if (itype == 1) {
-        loadPosteriorParameterSetsFromFile("tables/posterior.csv",
-                                           posteriorParamSets_);
+        loadPosteriorParameterSetsFromFile(
+            "tables/posterior.csv", posteriorParamSets_);
     } else if (itype == 2) {
-        loadPosteriorParameterSetsFromFile("tables/posterior_Nq3.csv",
-                                           posteriorParamSetsNq3_);
+        loadPosteriorParameterSetsFromFile(
+            "tables/posterior_Nq3.csv", posteriorParamSetsNq3_);
     } else if (itype == 4) {
-        loadPosteriorParameterSetsFromFile("tables/posterior5020_Nq3.csv",
-                                           posteriorParamSetsNq3_);
+        loadPosteriorParameterSetsFromFile(
+            "tables/posterior5020_Nq3.csv", posteriorParamSetsNq3_);
     }
 }
 
-
-void Parameters::setParamsWithPosteriorParameterSet(const int itype,
-                                                    int iset) {
+void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
     if (itype == 1) {
         // variant Nq
         iset = (iset % posteriorParamSets_.size());

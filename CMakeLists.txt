@@ -1,11 +1,11 @@
-cmake_minimum_required(VERSION 3.4)
+cmake_minimum_required(VERSION 3.5)
 project(IPGlasma VERSION 1.0 LANGUAGES CXX)
 
 set(libname "ipglasma_lib")
 set(exename "ipglasma")
 
-# require C++11
-set(CMAKE_CXX_STANDARD 11)
+# require C++17
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -75,19 +75,19 @@ endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     if (KNL)
-       set(CMAKE_CXX_FLAGS "-g -Wall -xMIC-AVX512 -std=c++11 -O3 -fopenmp -finline-functions -march=knl  -DDOCTEST_CONFIG_DISABLE")
-       #set(CMAKE_CXX_FLAGS "-g -vecabi=cmdtarget -debug inline-debug-info -fimf-use-svml -xmic-avx512 -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++11 -fma -align -finline-functions -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+       set(CMAKE_CXX_FLAGS "-g -Wall -xMIC-AVX512 -std=c++17 -O3 -fopenmp -finline-functions -march=knl  -DDOCTEST_CONFIG_DISABLE")
+       #set(CMAKE_CXX_FLAGS "-g -vecabi=cmdtarget -debug inline-debug-info -fimf-use-svml -xmic-avx512 -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fma -align -finline-functions -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
     else ()
-        set(CMAKE_CXX_FLAGS "-g -ipo -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++11 -fimf-use-svml -fma -align -finline-functions -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+        set(CMAKE_CXX_FLAGS "-g -ipo -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fimf-use-svml -fma -align -finline-functions -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
     endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "-g -Ofast ${OpenMP_CXX_FLAGS} -std=c++11 -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+    set(CMAKE_CXX_FLAGS "-g -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(CMAKE_CXX_FLAGS "-g -O3 -std=c++11  -stdlib=libc++ -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+    set(CMAKE_CXX_FLAGS "-g -O3 -std=c++17  -stdlib=libc++ -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
 endif()
 
 if (unittest)
-    set(CMAKE_CXX_FLAGS "-g ${OpenMP_CXX_FLAGS} -std=c++11 -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN")
+    set(CMAKE_CXX_FLAGS "-g ${OpenMP_CXX_FLAGS} -std=c++17 -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN")
 endif()
 
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wredundant-decls -Wshadow -Wundef -Wno-unused")

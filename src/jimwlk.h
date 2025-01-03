@@ -53,6 +53,7 @@ class JIMWLK {
 
     void evolution();
     void evolutionStep();
+    void evolutionStep2();
 };
 
 #endif  // SRC_JIMWLK_H_

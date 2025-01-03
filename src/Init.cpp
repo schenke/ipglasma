@@ -2041,16 +2041,23 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
     double Re[9], Im[9];
     double dummy;
     double bb = param->get_firstb();
-    // Copy the lattce
-    Lattice* Lat_old = new Lattice(*lat);
+    int added_lines = param->get_added_lines();
+                
     int added_lines_d2 = added_lines/2;
-    int N_m_added_lines = N - added_lines;
-    // set V for nucleus A
+    int added_lines_d2_f = 0;
+    int N_m_added_lines_d2 = N - added_lines/2;
+    int N_m_added_lines = N;// - added_lines;
+    
+    Lattice Lat_old(param, param->getNc(), param->getSize());
+    
     for (int i = 0; i < nn[0]; i++) {
         for (int j = 0; j < nn[1]; j++) {
             int pos = i * N + j;
-            lat->cells[pos]->setU(one);
-            lat->cells[pos]->setU2(one);
+            Lat_old.cells[pos]->setU(lat->cells[pos]->getU());
+            Lat_old.cells[pos]->setU2(lat->cells[pos]->getU2());
+            
+            lat->cells[pos]->setU(one_);
+            lat->cells[pos]->setU2(one_);
         }
     }
     
@@ -2066,9 +2073,9 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
                 xtemp = a * i - bb;
             }
             int ix = xtemp / a;
-            if (ix >= 0) {
-                int pos = (ix + added_lines_d2 ) * N + (j + added_lines_d2);
-                temp = Lat_old->cells[pos_old]->getU();
+            if (ix >= added_lines_d2) {
+                int pos = (ix + added_lines_d2_f ) * N + (j + added_lines_d2_f);
+                temp = Lat_old.cells[pos_old]->getU();
                 lat->cells[pos]->setU(temp);
             }
             
@@ -2080,14 +2087,57 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
                 xtemp2 = a * i;
             }
             int ix2 = xtemp2 / a;
-            if (ix2 <= N_m_added_lines) {
-                int pos2 = (ix2 + added_lines_d2 ) * N + (j + added_lines_d2);
-                temp = Lat_old->cells[pos_old]->getU2();
+            if (ix2 <= N_m_added_lines_d2) {
+                int pos2 = (ix2 + added_lines_d2_f ) * N + (j + added_lines_d2_f);
+                temp = Lat_old.cells[pos_old]->getU2();
                 lat->cells[pos2]->setU2(temp);
             }
         }
     }
+    
+   /*
+  // test output_filename
+  stringstream strVOne_names;
+    strVOne_names << "V_second_1.txt";
+    string VOne_names;
+    VOne_names = strVOne_names.str();
 
+    stringstream strVTwo_names;
+    strVTwo_names << "V_second_2.txt";
+    string VTwo_names;
+    VTwo_names = strVTwo_names.str();
+
+      ofstream foutU(VOne_names.c_str(), std::ios::out);
+      foutU.precision(15);
+
+      for (int ix = 0; ix < N; ix++) {
+        for (int iy = 0; iy < N; iy++) // loop over all positions
+        {
+          int pos = ix * N + iy;
+          foutU << ix << " " << iy << " "
+                << (lat->cells[pos]->getU()).MatrixToString() << endl;
+        }
+        foutU << endl;
+      }
+      foutU.close();
+
+      cout << "wrote " << strVOne_names.str() << endl;
+
+      ofstream foutU2(VTwo_names.c_str(), std::ios::out);
+      foutU2.precision(15);
+      for (int ix = 0; ix < N; ix++) {
+        for (int iy = 0; iy < N; iy++) // loop over all positions
+        {
+          int pos = ix * N + iy;
+          foutU2 << ix << " " << iy << " "
+                 << (lat->cells[pos]->getU2()).MatrixToString() << endl;
+        }
+        foutU2 << endl;
+      }
+      foutU2.close();
+      cout << "wrote " << strVTwo_names.str() << endl;
+    */
+    
     messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
     messager.flush("info");
@@ -2476,11 +2526,13 @@ void Init::init(
     // 3DGlasma)
     if (READFROMFILE > 0) {
         //readV(lat, param, READFROMFILE);
+        /*
         double Ltemp = param->getL();
         int Ntemp = param->getSize();
         Ltemp = Ltemp + Ltemp/Ntemp * added_lines * 1.0;
         param->setL(Ltemp);
         param->setSize(Ntemp + added_lines);
+        */
         readV2(lat, param, glauber);
         param->setSuccess(1);
     } else {

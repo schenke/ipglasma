@@ -34,6 +34,7 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
             VxsiVy_[i] = new Matrix(Nc_, 0);
         }
     }
+    evolution();
 }
 
 JIMWLK::~JIMWLK() {
@@ -190,6 +191,7 @@ void JIMWLK::evolution() {
             std::cout << "Step " << ids << std::endl;
         }
         evolutionStep();
+        evolutionStep2();
     }
     std::cout << "Done." << std::endl;
 }
@@ -263,3 +265,74 @@ void JIMWLK::evolutionStep() {
             left.expm() * lat_ptr_->cells[i]->getU() * right.expm());
     }
 }
+
+void JIMWLK::evolutionStep2() {
+    const complex<double> I(0., 1.);
+    const double ds_sqrt = std::sqrt(param_.getDs_jimwlk());
+
+    // generate random Gaussian noise in every cell for Nc^2-1 color
+    // components and 2 spatial components x and y
+    for (int i = 0; i < Ncells_; i++) {
+        for (int n = 0; n < 2 * Nc2m1_; n++) {
+            xi2_[i][n] = std::complex<double>(random_ptr_->Gauss(), 0.);
+        }
+    }
+
+    // the local xi now contains the Fourier transform of xi,
+    // while the original xi is stored in the array xi2
+    fft_ptr_->fftnArray(xi2_, xi_, nn_, 1, 2 * Nc2m1_);
+
+    // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
+    //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))
+    for (int i = 0; i < Ncells_; i++) {
+        for (int n = 0; n < Nc2m1_; n++) {
+            CKxi_[i][n] = (*K_[i]).at(0) * xi_[i][n]
+                          + (*K_[i]).at(1) * xi_[i][n + Nc2m1_];
+            // product of x components + product of y components
+        }
+    }
+
+    // now CKxi contains C(K_i,xi_i^a) - it is a vector with a components
+    fft_ptr_->fftnArray(CKxi_, CKxi_, nn_, -1, Nc2m1_);
+
+    for (int i = 0; i < Ncells_; i++) {
+        *VxsiVx_[i] = zero_;
+        *VxsiVy_[i] = zero_;
+        for (int a = 0; a < Nc2m1_; a++) {
+            Matrix Uconj = lat_ptr_->cells[i]->getU2();
+            Uconj.conjg();
+            *VxsiVx_[i] = (*VxsiVx_[i])
+                          + xi2_[i][a] * lat_ptr_->cells[i]->getU2()
+                                * group_ptr_->getT(a) * Uconj;
+            *VxsiVy_[i] = (*VxsiVy_[i])
+                          + xi2_[i][a + Nc2m1_] * lat_ptr_->cells[i]->getU2()
+                                * group_ptr_->getT(a) * Uconj;
+        }
+    }
+
+    // FFT V xi V
+    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, 1);
+    fft_ptr_->fftn(VxsiVy_, VxsiVy_, nn_, 1);
+
+    for (int i = 0; i < Ncells_; i++) {
+        *VxsiVx_[i] = (*K_[i])[0] * (*VxsiVx_[i]) + (*K_[i])[1] * (*VxsiVy_[i]);
+    }
+
+    // FFT back
+    fft_ptr_->fftn(VxsiVx_, VxsiVx_, nn_, -1);
+
+    // Evolve Matrix
+    for (int i = 0; i < Ncells_; i++) {
+        Matrix left(Nc_, 0.);
+        left = -I * ds_sqrt * (*VxsiVx_[i]);
+        Matrix right(Nc_, 0.);
+
+        for (int a = 0; a < Nc2m1_; a++) {
+            right = right + real(CKxi_[i][a]) * group_ptr_->getT(a);
+        }
+        right = I * ds_sqrt * right;
+        lat_ptr_->cells[i]->setU2(
+            left.expm() * lat_ptr_->cells[i]->getU2() * right.expm());
+    }
+}
+

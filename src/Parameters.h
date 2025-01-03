@@ -506,7 +506,8 @@ class Parameters {
     void setwhich_stage(int x) { which_stage = x; }
     int getwhich_stage() { return which_stage; }
     void set_firstb(double x) { first_b = x; }
-    int get_firstb() { return first_b; }
+    double get_firstb() { return first_b; }
+    int get_added_lines() { return 4; }
     
     // JIMWLK functions
     void setRunningCoupling_jimwlk(int x) { runningCoupling_jimwlk = x; };

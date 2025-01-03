@@ -21,7 +21,6 @@ class Init {
         200;  // updated in March 2019 to a larger T_A range
 
     double const deltaYNuc = 0.25;  // for the new table
-    int const added_lines = 4;
     FFT fft;
     //  Matrix** A;
     //  Glauber *glauber;

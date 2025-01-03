@@ -357,6 +357,7 @@ int main(int argc, char *argv[]) {
             
             messager.info("Start JIMWLK");
             JIMWLK jimwlkSolver(*param, &group, &lat, random);
+            messager.info("Finish JIMWLK");
             
             init.init(
                 &lat, &group, param, random, &glauber,

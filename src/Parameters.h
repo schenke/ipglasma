@@ -529,10 +529,10 @@ class Parameters {
     bool getSimpleLangevin() const { return simpleLangevin_; }
     void setLambdaQCD_jimwlk(double x) { LambdaQCD_jimwlk = x; }
     double getLambdaQCD_jimwlk() { return LambdaQCD_jimwlk; }
-    void SetJimwlk_x1(double x) { jimwlk_x1 = x; }
-    double GetJimwlk_x1() { return jimwlk_x1; }
-    void SetJimwlk_x2(double x) { jimwlk_x2 = x; }
-    double GetJimwlk_x2() { return jimwlk_x2; }
+    void SetJimwlk_x_projectile(double x) { jimwlk_x1 = x; }
+    double GetJimwlk_x_projectile() { return jimwlk_x1; }
+    void SetJimwlk_x_target(double x) { jimwlk_x2 = x; }
+    double GetJimwlk_x_target() { return jimwlk_x2; }
     //void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
     //int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
     void setDs_jimwlk(double x) { ds_jimwlk = x; }

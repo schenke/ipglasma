@@ -590,8 +590,8 @@ int readInput(
     param->setm_jimwlk(setup->DFind(file_name,"m_jimwlk"));
     param->setJimwlk_alphas(setup->IFind(file_name,"alphas_jimwlk"));
     param->setDs_jimwlk(setup->DFind(file_name,"Ds_jimwlk"));
-    param->SetJimwlk_x1(setup->DFind(file_name,"x1_jimwlk"));
-    param->SetJimwlk_x2(setup->DFind(file_name,"x2_jimwlk"));
+    param->SetJimwlk_x_projectile(setup->DFind(file_name,"x_projectile_jimwlk"));
+    param->SetJimwlk_x_target(setup->DFind(file_name,"x_target_jimwlk"));
     param->setJimwlk_x0(setup->DFind(file_name,"jimwlk_ic_x"));
     
     if (rank == 0) cout << "done." << endl;

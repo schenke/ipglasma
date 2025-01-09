@@ -194,13 +194,13 @@ void JIMWLK::evolution() {
         // Fixed coupling
         double as = param_.getJimwlk_alphas();
         
-        steps_1 = static_cast<int>(as * std::log(x0/param_.GetJimwlk_x1()) / (M_PI*M_PI*ds)+0.5);
-        steps_2 = static_cast<int>(as * std::log(x0/param_.GetJimwlk_x2()) / (M_PI*M_PI*ds)+0.5);
+        steps_1 = static_cast<int>(as * std::log(x0/param_.GetJimwlk_x_projectile()) / (M_PI*M_PI*ds)+0.5);
+        steps_2 = static_cast<int>(as * std::log(x0/param_.GetJimwlk_x_target()) / (M_PI*M_PI*ds)+0.5);
     }
     else {
         // Running coupling
-        steps_1 = static_cast<int>(std::log(x0/param_.GetJimwlk_x1()) / (M_PI*M_PI*ds)+0.5);
-        steps_2 = static_cast<int>(std::log(x0/param_.GetJimwlk_x2()) / (M_PI*M_PI*ds)+0.5);
+        steps_1 = static_cast<int>(std::log(x0/param_.GetJimwlk_x_projectile()) / (M_PI*M_PI*ds)+0.5);
+        steps_2 = static_cast<int>(std::log(x0/param_.GetJimwlk_x_target()) / (M_PI*M_PI*ds)+0.5);
 
     }
 

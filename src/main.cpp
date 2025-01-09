@@ -359,6 +359,9 @@ int main(int argc, char *argv[]) {
             JIMWLK jimwlkSolver(*param, &group, &lat, random);
             messager.info("Finish JIMWLK");
             
+            if (param->getWriteInitialWilsonLines())
+                init.WriteInitialWilsonLines("evolved_", &lat, param);
+
             init.init(
                 &lat, &group, param, random, &glauber,
                 2); // Second stage

@@ -12,6 +12,7 @@
 #include "Parameters.h"
 #include "Random.h"
 #include "pretty_ostream.h"
+#include <string>
 
 class Init {
   private:
@@ -66,6 +67,9 @@ class Init {
     void setV(Lattice *lat, Parameters *param, Random *random);
     void readV(Lattice *lat, Parameters *param, int format);
     void readV2(Lattice *lat, Parameters *param, Glauber *glauber);
+
+    void WriteInitialWilsonLines(std::string output_dir, Lattice *lat, Parameters *param);
+
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
     void multiplicity(Lattice *lat, Parameters *param);

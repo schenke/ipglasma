@@ -192,20 +192,22 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             messager << "configuration file for A = " << glauber->nucleusA1()
                      << " is not available, generate the nucleus configuration "
                      << "using Woods-Saxon distribution instead.";
-            messager.flush("info");
+                messager.flush("info");
+            
             generate_nucleus_configuration(
-                random, glauber->nucleusA1(), glauber->nucleusZ1(),
-                glauber->GlauberData.Projectile.a_WS,
-                glauber->GlauberData.Projectile.R_WS,
-                glauber->GlauberData.Projectile.beta2,
-                glauber->GlauberData.Projectile.beta3,
-                glauber->GlauberData.Projectile.beta4,
-                glauber->GlauberData.Projectile.gamma,
-                glauber->GlauberData.Projectile.forceDminFlag,
-                glauber->GlauberData.Projectile.d_min,
-                glauber->GlauberData.Projectile.dR_np,
-                glauber->GlauberData.Projectile.da_np, nucleusA_);
-        }
+                    random, glauber->nucleusA1(), glauber->nucleusZ1(),
+                    glauber->GlauberData.Projectile.a_WS,
+                    glauber->GlauberData.Projectile.R_WS,
+                    glauber->GlauberData.Projectile.beta2,
+                    glauber->GlauberData.Projectile.beta3,
+                    glauber->GlauberData.Projectile.beta4,
+                    glauber->GlauberData.Projectile.gamma,
+                    glauber->GlauberData.Projectile.forceDminFlag,
+                    glauber->GlauberData.Projectile.d_min,
+                    glauber->GlauberData.Projectile.dR_np,
+                    glauber->GlauberData.Projectile.da_np, nucleusA_);
+            }
+        
 
         if (nucleonPosArrB_.size() > 0) {
             double ran2 = random->genrand64_real3();
@@ -245,7 +247,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
                 glauber->GlauberData.Target.dR_np,
                 glauber->GlauberData.Target.da_np, nucleusB_);
         }
-    } else if (param->getNucleonPositionsFromFile() == 2) {
+    }
+    else if (param->getNucleonPositionsFromFile() == 2) {
         // Read in Alvioli's nucleon positions including correlations
         if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
             cerr << "[Init.cpp]: The option 'getNucleonPositionsFromFile == 2' "
@@ -923,45 +926,44 @@ void Init::setColorChargeDensity(
     const int NqFlag = param->getUseConstituentQuarkProton();
     //vector<vector<double>> xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
-
     // set the arrays for the first step of the first stage
     if (param->getwhich_stage() == 0) {
-      xq1.clear(); xq2.clear(); yq1.clear(); yq2.clear(); 
-      BGq1.clear(); BGq2.clear(); gauss1.clear(); gauss2.clear();
-      for (int i = 0; i < A1; i++) {
-        x_array.clear();
-        if (NqFlag > 0) {
-            samplePartonPositions(
-                param, random, x_array, y_array, z_array, BGq_array);
-            // if (param->getShiftConstituentQuarkProtonOrigin())
-            // Move center of mass to the origin
-            // Note that 1607.01711 this is not done, so parameters quoted in
-            // that paper can't be used if this is done
-            xq1.push_back(x_array);
-            yq1.push_back(y_array);
-            BGq1.push_back(BGq_array);
+        xq1.clear(); xq2.clear(); yq1.clear(); yq2.clear(); 
+        BGq1.clear(); BGq2.clear(); gauss1.clear(); gauss2.clear();
+        for (int i = 0; i < A1; i++) {
+            x_array.clear();
+            if (NqFlag > 0) {
+                samplePartonPositions(
+                    param, random, x_array, y_array, z_array, BGq_array);
+                // if (param->getShiftConstituentQuarkProtonOrigin())
+                // Move center of mass to the origin
+                // Note that 1607.01711 this is not done, so parameters quoted in
+                // that paper can't be used if this is done
+                xq1.push_back(x_array);
+                yq1.push_back(y_array);
+                BGq1.push_back(BGq_array);
+            }
+            int Npartons = std::max(1, static_cast<int>(x_array.size()));
+            sampleQsNormalization(random, param, Npartons, gauss_array);
+            gauss1.push_back(gauss_array);
         }
-        int Npartons = std::max(1, static_cast<int>(x_array.size()));
-        sampleQsNormalization(random, param, Npartons, gauss_array);
-        gauss1.push_back(gauss_array);
-      }
 
-      for (int i = 0; i < A2; i++) {
-        x_array.clear();
-        if (NqFlag > 0) {
-            samplePartonPositions(
-                param, random, x_array, y_array, z_array, BGq_array);
-            xq2.push_back(x_array);
-            yq2.push_back(y_array);
-            BGq2.push_back(BGq_array);
+        for (int i = 0; i < A2; i++) {
+            x_array.clear();
+            if (NqFlag > 0) {
+                samplePartonPositions(
+                    param, random, x_array, y_array, z_array, BGq_array);
+                xq2.push_back(x_array);
+                yq2.push_back(y_array);
+                BGq2.push_back(BGq_array);
+            }
+            int Npartons = std::max(1, static_cast<int>(x_array.size()));
+            sampleQsNormalization(random, param, Npartons, gauss_array);
+            gauss2.push_back(gauss_array);
         }
-        int Npartons = std::max(1, static_cast<int>(x_array.size()));
-        sampleQsNormalization(random, param, Npartons, gauss_array);
-        gauss2.push_back(gauss_array);
-      }
     }
 
-    // test what a smmoth Woods-Saxon would give
+    // test what a smooth Woods-Saxon would give
     if (param->getUseSmoothNucleus() == 1) {
         cout << "Using smooth nucleus for test purposes. Does not include "
                 "deformation."
@@ -1029,7 +1031,7 @@ void Init::setColorChargeDensity(
         //   }
         // cout << "normTest=" << normTest << endl;
         param->setSuccess(1);
-    } else {
+    } else { // Non-smooth nucleus
         // add all T_p's (new in version 1.2)
 #pragma omp parallel
         {
@@ -1239,7 +1241,7 @@ void Init::setColorChargeDensity(
             cout << "current Npart = " << Npart << endl;
             return;
         }
-    }
+    } // end of useSmoothNucleus==0
     // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
     {
@@ -1320,7 +1322,7 @@ void Init::setColorChargeDensity(
                         check = 2;
                     }
                 }
-                if (param->getwhich_stage() == 2) check = 2; // Output the whole Wilson line
+
                 double exponent = 5.6;  // see 1212.2974 Eq. (17)
                 if (check == 2) {
                     if (param->getUseFluctuatingx() == 1) {
@@ -1640,37 +1642,33 @@ void Init::setColorChargeDensity(
         && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
         && alphas > 0 && Npart >= 2
         && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
-        // criterion to select effective events
         param->setSuccess(1);
-        if (param->getwhich_stage() == 0) {
-            param->set_firstb(impact_b);
-            stringstream strup_name;
-            strup_name << "usedParameters" << param->getEventId() << ".dat";
-            string up_name;
-            up_name = strup_name.str();
+        stringstream strup_name;
+        strup_name << "usedParameters" << param->getEventId() << ".dat";
+        string up_name;
+        up_name = strup_name.str();
 
-            ofstream fout1(up_name.c_str(), std::ios::app);
-            fout1 << " " << endl;
-            fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
-            fout1 << " " << endl;
-            fout1 << "b = " << impact_b << " fm" << endl;
-            //fout1 << "phiRP = " << phiRP << endl;
-            fout1 << "Npart = " << Npart << endl;
-            fout1 << "Ncoll = " << Ncoll << endl;
-            if (param->getRunningCoupling()) {
-                if (param->getRunWithQs() == 2)
-                    fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
-                else if (param->getRunWithQs() == 1)
-                    fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
-                else if (param->getRunWithQs() == 0)
-                    fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
-                fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
-                      << " <Q_s>) = " << param->getalphas() << endl;
-            } else
-                fout1 << "using fixed coupling alpha_s=" << param->getalphas()
-                      << endl;
-            fout1.close();
-        }
+        ofstream fout1(up_name.c_str(), std::ios::app);
+        fout1 << " " << endl;
+        fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
+        fout1 << " " << endl;
+        fout1 << "b = " << impact_b << " fm" << endl;
+        //fout1 << "phiRP = " << phiRP << endl;
+        fout1 << "Npart = " << Npart << endl;
+        fout1 << "Ncoll = " << Ncoll << endl;
+        if (param->getRunningCoupling()) {
+            if (param->getRunWithQs() == 2)
+                fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
+            else if (param->getRunWithQs() == 1)
+                fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
+            else if (param->getRunWithQs() == 0)
+                fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
+            fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+                  << " <Q_s>) = " << param->getalphas() << endl;
+        } else
+            fout1 << "using fixed coupling alpha_s=" << param->getalphas()
+                  << endl;
+        fout1.close();
     }
     if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST())
         cout << " **** Rejected event - Qsmin^2 S_T="
@@ -1702,10 +1700,15 @@ void Init::setColorChargeDensity(
              << endl;
 
     foutNEst.close();
+    
 }
 
 void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     messager.info("Setting Wilson lines ...");
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+
+    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
     const int N = param->getSize();
     const int Ny = param->getNy();
     const int nn[2] = {N, N};
@@ -1713,6 +1716,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     const double a = L / N;  // lattice spacing in fm
     const double m = param->getm() * a / hbarc;
     double UVdamp = param->getUVdamp();  // GeV^-1
+    int Ncoll=0;
+    int Npart=0;
     UVdamp = UVdamp / a * hbarc;
     complex<double> **rhoACoeff;
     rhoACoeff = new complex<double> *[Nc2m1_];
@@ -1775,7 +1780,104 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
         }
         // compute U
+        stringstream Ncoll_name;
+        Ncoll_name << "NcollList" << param->getEventId() << ".dat";
+        ofstream foutNcoll(Ncoll_name.str().c_str(), std::ios::out);
 
+        if (param->getGaussianWounding() == 0) {
+            for (int i = 0; i < A1; i++) {
+                for (int j = 0; j < A2; j++) {
+                    double dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
+                    double dy = nucleusB_.at(j).y - nucleusA_.at(i).y;
+                    double dij = dx * dx + dy * dy;
+                    if (dij < d2) {
+                        foutNcoll
+                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
+                            << " "
+                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
+                            << endl;
+                        Ncoll++;
+                        nucleusB_.at(j).collided = 1;
+                        nucleusA_.at(i).collided = 1;
+                    }
+                }
+            }
+        } else {
+            double p;
+            double G = 0.92;
+            double ran;
+
+            for (int i = 0; i < A1; i++) {
+                for (int j = 0; j < A2; j++) {
+                    double dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
+                    double dy = nucleusB_.at(j).y - nucleusA_.at(i).y;
+                    double dij = dx * dx + dy * dy;
+
+                    p = G * exp(-G * dij / d2);  // Gaussian profile
+
+                    ran = random->genrand64_real1();
+
+                    if (ran < p) {
+                        foutNcoll
+                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
+                            << " "
+                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
+                            << endl;
+                        Ncoll++;
+                        nucleusB_.at(j).collided = 1;
+                        nucleusA_.at(i).collided = 1;
+                    }
+                }
+            }
+        }
+
+        foutNcoll.close();
+
+        stringstream strNpart_name;
+        strNpart_name << "NpartList" << param->getEventId() << ".dat";
+        string Npart_name;
+        Npart_name = strNpart_name.str();
+
+        ofstream foutNpart(Npart_name.c_str(), std::ios::out);
+
+        for (int i = 0; i < A1; i++) {
+            foutNpart << nucleusA_.at(i).x << " " << nucleusA_.at(i).y << " "
+                      << nucleusA_.at(i).proton << " "
+                      << nucleusA_.at(i).collided << endl;
+        }
+        foutNpart << endl;
+        for (int i = 0; i < A2; i++) {
+            foutNpart << nucleusB_.at(i).x << " " << nucleusB_.at(i).y << " "
+                      << nucleusB_.at(i).proton << " "
+                      << nucleusB_.at(i).collided << endl;
+        }
+        foutNpart.close();
+
+        // in p+p assume that they collided in any case
+        if (A1 == 1 && A2 == 1) {
+            nucleusB_.at(0).collided = 1;
+            nucleusA_.at(0).collided = 1;
+        }
+
+        Npart = 0;
+
+        for (int i = 0; i < A1; i++) {
+            if (nucleusA_.at(i).collided == 1) Npart++;
+        }
+
+        for (int i = 0; i < A2; i++) {
+            if (nucleusB_.at(i).collided == 1) Npart++;
+        }
+
+        param->setNpart(Npart);
+
+        if (param->getUseFixedNpart() != 0
+            && Npart != param->getUseFixedNpart()) {
+            cout << "current Npart = " << Npart << endl;
+            return;
+        }
+    
+    // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
         {
             std::vector<double> in(Nc2m1_, 0.);
@@ -1860,7 +1962,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             Matrix temp(Nc_, 1.);
             Matrix tempNew(Nc_, 0.);
 
-#pragma omp for
+#pragma omp parallel for
             for (int pos = 0; pos < N * N; pos++) {
                 for (int aa = 0; aa < Nc2m1_; aa++) {
                     // expmCoeff will calculate exp(i in[a]t[a]), so
@@ -1883,7 +1985,9 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     }
     delete[] rhoACoeff;
 
-    // // output U
+
+
+    // output U
     if (param->getWriteInitialWilsonLines() > 0) {
         WriteInitialWilsonLines("", lat, param);
     }
@@ -1907,7 +2011,7 @@ void Init::WriteInitialWilsonLines(std::string fileprefix, Lattice *lat, Paramet
 
     stringstream strVOne_name;
     // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
-    strVOne_name << fileprefix <<  "V-"
+    strVOne_name << fileprefix << "V-"
                  << param->getEventId()
                         + 2 * param->getSeed() * param->getMPISize();
     if (param->getWriteInitialWilsonLines() == 1) strVOne_name << ".txt";
@@ -2022,8 +2126,11 @@ void Init::WriteInitialWilsonLines(std::string fileprefix, Lattice *lat, Paramet
             << param->getWriteInitialWilsonLines() << std::endl;
         exit(1);
     }
-}
 
+    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
+             << ". ";
+    messager.flush("info");
+}
 
 void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
     // format 1 = plain text, 2 = binary
@@ -2153,8 +2260,6 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
              << ". ";
     messager.flush("info");
 }
-
-
 
 void Init::readV(Lattice *lat, Parameters *param, int format) {
     // format 1 = plain text, 2 = binary
@@ -2470,6 +2575,8 @@ void Init::readV(Lattice *lat, Parameters *param, int format) {
              << ". ";
     messager.flush("info");
 }
+
+
 
 void Init::init(
     Lattice *lat, Group *group, Parameters *param, Random *random,
@@ -2873,8 +2980,8 @@ void Init::init(
             // reset the Ux1 to be used for other purposes later
             lat->cells[pos]->setUx1(one_);
         }
-    }
-    }
+    } // omp block
+    } // end read Wilso nline 
     // -----------------------------------------------------------------------------
     // finish
     // -----------------------------------------------------------------------------

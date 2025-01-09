@@ -175,7 +175,6 @@ void Evolution::evolvePi(
             lat->cells[pos]->setpi(pi);
         }
     }
-
 }
 
 void Evolution::evolveE(

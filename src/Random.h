@@ -1,9 +1,8 @@
 #ifndef Random_h
 #define Random_h
 
-#include <random>
-
 #include "gsl/gsl_rng.h"
+#include <random>
 
 #define NN 312
 #define MM 156

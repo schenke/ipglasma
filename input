@@ -83,10 +83,11 @@ writeInitialWilsonLines 0
 writeOutputsToHDF5 0
 mu0_jimwlk 0.28
 simpleLangevin 1
-runningCoupling_jimwlk 1
-Steps_jimwlk 100
+alphas_jimwlk 0
+jimwlk_ic_x 0.01
+x1_jimwlk 0.001
+x2_jimwlk 0.001
 Ds_jimwlk 0.005
-MeasureSteps_jimwlk 100
 Lambda_QCD_jimwlk 0.040
 m_jimwlk 0.4
 EndOfFile

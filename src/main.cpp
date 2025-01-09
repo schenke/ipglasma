@@ -588,10 +588,11 @@ int readInput(
     param->setMu0_jimwlk(setup->DFind(file_name, "mu0_jimwlk"));
     param->setLambdaQCD_jimwlk(setup->DFind(file_name,"Lambda_QCD_jimwlk")); // in units of g^2mu
     param->setm_jimwlk(setup->DFind(file_name,"m_jimwlk"));
-    param->setRunningCoupling_jimwlk(setup->IFind(file_name,"runningCoupling_jimwlk"));
-    param->setSteps_jimwlk(setup->IFind(file_name,"Steps_jimwlk"));
-    param->setMeasureSteps_jimwlk(setup->IFind(file_name,"MeasureSteps_jimwlk"));
+    param->setJimwlk_alphas(setup->IFind(file_name,"alphas_jimwlk"));
     param->setDs_jimwlk(setup->DFind(file_name,"Ds_jimwlk"));
+    param->SetJimwlk_x1(setup->DFind(file_name,"x1_jimwlk"));
+    param->SetJimwlk_x2(setup->DFind(file_name,"x2_jimwlk"));
+    param->setJimwlk_x0(setup->DFind(file_name,"jimwlk_ic_x"));
     
     if (rank == 0) cout << "done." << endl;
 

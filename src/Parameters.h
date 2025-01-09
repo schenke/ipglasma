@@ -215,14 +215,19 @@ class Parameters {
     bool simpleLangevin_;
     int which_stage;
     double first_b;
-    int runningCoupling_jimwlk;  // switch to decide if alpha_s should run (0 constant
-                          // alpha_s, 1 running coupling)
+
+    double jimwlk_alphas;  // 0 = running coupling, positive value = fixed
+                           // coupling
     double m_jimwlk;
     double mu0_jimwlk;
     double LambdaQCD_jimwlk;
-    int steps_jimwlk;
-    int measureSteps_jimwlk;
+    //int steps_jimwlk;
+    //int measureSteps_jimwlk;
     double ds_jimwlk;
+    double x0_jimwlk; // Bjorken-x at the initial condition of the JIMLWK evolution
+
+    double jimwlk_x1; // Bjorken x for the nucleus A (projectile)
+    double jimwlk_x2;  // Bjorken x for the nucleus B (target)
 
   public:
     // constructor:
@@ -510,8 +515,6 @@ class Parameters {
     int get_added_lines() { return 4; }
     
     // JIMWLK functions
-    void setRunningCoupling_jimwlk(int x) { runningCoupling_jimwlk = x; };
-    int getRunningCoupling_jimwlk() { return runningCoupling_jimwlk; }
     void setm_jimwlk(double x) { m_jimwlk = x; };
     double getm_jimwlk() { return m_jimwlk; }
     void setMu0_jimwlk(double x) { mu0_jimwlk = x; }
@@ -526,12 +529,19 @@ class Parameters {
     bool getSimpleLangevin() const { return simpleLangevin_; }
     void setLambdaQCD_jimwlk(double x) { LambdaQCD_jimwlk = x; }
     double getLambdaQCD_jimwlk() { return LambdaQCD_jimwlk; }
-    void setSteps_jimwlk(int x) { steps_jimwlk = x; };
-    int getSteps_jimwlk() { return steps_jimwlk; }
-    void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
-    int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
+    void SetJimwlk_x1(double x) { jimwlk_x1 = x; }
+    double GetJimwlk_x1() { return jimwlk_x1; }
+    void SetJimwlk_x2(double x) { jimwlk_x2 = x; }
+    double GetJimwlk_x2() { return jimwlk_x2; }
+    //void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
+    //int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
     void setDs_jimwlk(double x) { ds_jimwlk = x; }
     double getDs_jimwlk() { return ds_jimwlk; }
+    void setJimwlk_alphas(double as) { jimwlk_alphas = as; }
+    double getJimwlk_alphas() { return jimwlk_alphas; }
+    void setJimwlk_x0(double x) { x0_jimwlk = x; }
+    double getJimwlk_x0() { return x0_jimwlk; }
+
     
 };
 #endif  // Parameters_H

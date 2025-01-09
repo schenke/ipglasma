@@ -145,7 +145,7 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
 
 double JIMWLK::getAlphas(const double x, const double y) const {
     double alphas = 1.0;
-    if (param_.getRunningCoupling_jimwlk() == 0) {
+    if (param_.getJimwlk_alphas() > 1e-10) {
         return alphas;
     }
 
@@ -184,13 +184,40 @@ void JIMWLK::initializeNoise() {
 
 void JIMWLK::evolution() {
     initializeNoise();
-    const int steps = param_.getSteps_jimwlk();
-    std::cout << "Beginning evolution ..." << std::endl;
-    for (int ids = 0; ids < steps; ids++) {
-        if (ids % 100 == 0) {
+   
+    // Calculate evolution steps for different nuclei
+    double x0 = param_.getJimwlk_x0();
+    double ds = param_.getDs_jimwlk();
+    int steps_1, steps_2;
+    if (param_.getJimwlk_alphas() > 1e-10)
+    {
+        // Fixed coupling
+        double as = param_.getJimwlk_alphas();
+        
+        steps_1 = static_cast<int>(as * std::log(x0/param_.GetJimwlk_x1()) / (M_PI*M_PI*ds)+0.5);
+        steps_2 = static_cast<int>(as * std::log(x0/param_.GetJimwlk_x2()) / (M_PI*M_PI*ds)+0.5);
+    }
+    else {
+        // Running coupling
+        steps_1 = static_cast<int>(std::log(x0/param_.GetJimwlk_x1()) / (M_PI*M_PI*ds)+0.5);
+        steps_2 = static_cast<int>(std::log(x0/param_.GetJimwlk_x2()) / (M_PI*M_PI*ds)+0.5);
+
+    }
+
+    std::cout << "Evolving projectile, evolution steps " << steps_1  << std::endl;
+    for (int ids = 0; ids < steps_1; ids++) {
+        if (ids % 50 == 0) {
             std::cout << "Step " << ids << std::endl;
         }
         evolutionStep();
+    }
+    std::cout << "Done." << std::endl;
+    
+    std::cout << "Evolving target, evolution steps " << steps_2  << std::endl;
+    for (int ids = 0; ids < steps_2; ids++) {
+        if (ids % 50 == 0) {
+            std::cout << "Step " << ids << std::endl;
+        }
         evolutionStep2();
     }
     std::cout << "Done." << std::endl;

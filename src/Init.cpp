@@ -2721,7 +2721,7 @@ void Init::init(
     }
     
 
-    if (READFROMFILE != 0) {
+    if (READFROMFILE < 0) { // Start CYM evolution on the second round after JIMWLK (in which case READFROMFILE < 0)
         messager.info("Finding fields in forward lightcone...");
         // output Wilson lines (used also for the proton plots)
         double L = param->getL();

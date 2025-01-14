@@ -2005,10 +2005,6 @@ void Init::WriteInitialWilsonLines(std::string fileprefix, Lattice *lat, Paramet
     const double L = param->getL();
     const double a = L / N;  // lattice spacing in fm
 
-    if (std::abs(param->getb()) > 1e-5)
-        messager.warning(
-            "Writing Wilson lines with a non-zero impact parameter b!");
-
     stringstream strVOne_name;
     // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
     strVOne_name << fileprefix << "V-"
@@ -2261,7 +2257,7 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
     messager.flush("info");
 }
 
-void Init::readV(Lattice *lat, Parameters *param, int format) {
+void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     // format 1 = plain text, 2 = binary
 
     if (format > 2 or format < 1) {
@@ -2643,14 +2639,11 @@ void Init::init(
     // to read Wilson lines from file (e.g. after JIMWLK evolution for the
     // 3DGlasma)
     if (READFROMFILE > 0) {
-        //readV(lat, param, READFROMFILE);
-        /*
-        double Ltemp = param->getL();
-        int Ntemp = param->getSize();
-        Ltemp = Ltemp + Ltemp/Ntemp * added_lines * 1.0;
-        param->setL(Ltemp);
-        param->setSize(Ntemp + added_lines);
-        */
+        readVFromFile(lat, param, READFROMFILE);
+        param->setSuccess(1);
+    }
+    else if (READFROMFILE < 0) // Initialize with JIWMLK evolved Wilson lines
+    {
         readV2(lat, param, glauber);
         param->setSuccess(1);
     } else {

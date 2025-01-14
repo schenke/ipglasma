@@ -348,24 +348,28 @@ int main(int argc, char *argv[]) {
             // initialize U-fields on the lattice
             init.init(
                 &lat, &group, param, random, &glauber,
-                0); // First generate the V
+                param->getReadInitialWilsonLines()); // First generate the V
             messager.info("Generate V done.");
 
             if (param->getSuccess() == 0) {
                 continue;
             }
             
-            messager.info("Start JIMWLK");
-            JIMWLK jimwlkSolver(*param, &group, &lat, random);
-            messager.info("Finish JIMWLK");
-            
-            if (param->getWriteInitialWilsonLines())
-                init.WriteInitialWilsonLines("evolved_", &lat, param);
+            if (param->getUseJIMWLK())
+            {
+                messager.info("Start JIMWLK");
+                JIMWLK jimwlkSolver(*param, &group, &lat, random);
+                messager.info("Finish JIMWLK");
+                
+                if (param->getWriteInitialWilsonLines())
+                    init.WriteInitialWilsonLines("evolved_", &lat, param);
 
-            init.init(
-                &lat, &group, param, random, &glauber,
-                2); // Second stage
-            messager.info("Second Stage done.");
+                init.init(
+                    &lat, &group, param, random, &glauber,
+                    -1); // Note: negative value for the last parameter (READFROMFILE) corresponds to 
+                    // 2nd stage in the JIMWLK evolution setup
+                messager.info("2nd stage initialization after JIMWLK done");
+            }
             
 
             messager.info("Start CYM evolution");
@@ -587,6 +591,9 @@ int readInput(
     if (param->getSubNucleonParamType() > 0) {
         param->loadPosteriorParameterSets(param->getSubNucleonParamType());
     }
+
+    // JIMWLK parameters
+    param->setUseJIMWLK(setup->IFind(file_name, "useJIMWLK"));
     param->setSimpleLangevin(setup->IFind(file_name, "simpleLangevin"));
     param->setMu0_jimwlk(setup->DFind(file_name, "mu0_jimwlk"));
     param->setLambdaQCD_jimwlk(setup->DFind(file_name,"Lambda_QCD_jimwlk")); // in units of g^2mu
@@ -596,6 +603,7 @@ int readInput(
     param->SetJimwlk_x_projectile(setup->DFind(file_name,"x_projectile_jimwlk"));
     param->SetJimwlk_x_target(setup->DFind(file_name,"x_target_jimwlk"));
     param->setJimwlk_x0(setup->DFind(file_name,"jimwlk_ic_x"));
+    
     
     if (rank == 0) cout << "done." << endl;
 

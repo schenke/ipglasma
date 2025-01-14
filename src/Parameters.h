@@ -212,6 +212,7 @@ class Parameters {
 
     bool computeGluonMultiplicity_;  // flag to compute gluonMultiplicity
 
+    bool useJIMWLK; // flag to use JIMWLK evolution
     bool simpleLangevin_;
     int which_stage;
     double first_b;
@@ -541,6 +542,14 @@ class Parameters {
     double getJimwlk_alphas() { return jimwlk_alphas; }
     void setJimwlk_x0(double x) { x0_jimwlk = x; }
     double getJimwlk_x0() { return x0_jimwlk; }
+    bool getUseJIMWLK() const { return useJIMWLK; }
+    void setUseJIMWLK(int x) {
+        if (x == 0) {
+            useJIMWLK = false;
+        } else {
+            useJIMWLK = true;
+        }
+    }
 
     
 };

@@ -1323,6 +1323,10 @@ void Init::setColorChargeDensity(
                     }
                 }
 
+                // If this is run after the JIMWLK evolution, it means that in the 1st stage 
+                // triggering has already been done
+                if (param->getwhich_stage() == 2) check = 2; 
+
                 double exponent = 5.6;  // see 1212.2974 Eq. (17)
                 if (check == 2) {
                     if (param->getUseFluctuatingx() == 1) {
@@ -1643,32 +1647,36 @@ void Init::setColorChargeDensity(
         && alphas > 0 && Npart >= 2
         && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
         param->setSuccess(1);
-        stringstream strup_name;
-        strup_name << "usedParameters" << param->getEventId() << ".dat";
-        string up_name;
-        up_name = strup_name.str();
 
-        ofstream fout1(up_name.c_str(), std::ios::app);
-        fout1 << " " << endl;
-        fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
-        fout1 << " " << endl;
-        fout1 << "b = " << impact_b << " fm" << endl;
-        //fout1 << "phiRP = " << phiRP << endl;
-        fout1 << "Npart = " << Npart << endl;
-        fout1 << "Ncoll = " << Ncoll << endl;
-        if (param->getRunningCoupling()) {
-            if (param->getRunWithQs() == 2)
-                fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
-            else if (param->getRunWithQs() == 1)
-                fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
-            else if (param->getRunWithQs() == 0)
-                fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
-            fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
-                  << " <Q_s>) = " << param->getalphas() << endl;
-        } else
-            fout1 << "using fixed coupling alpha_s=" << param->getalphas()
-                  << endl;
-        fout1.close();
+        if (param->getwhich_stage() == 0) {
+            param->set_firstb(impact_b);
+            stringstream strup_name;
+            strup_name << "usedParameters" << param->getEventId() << ".dat";
+            string up_name;
+            up_name = strup_name.str();
+
+            ofstream fout1(up_name.c_str(), std::ios::app);
+            fout1 << " " << endl;
+            fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
+            fout1 << " " << endl;
+            fout1 << "b = " << impact_b << " fm" << endl;
+            //fout1 << "phiRP = " << phiRP << endl;
+            fout1 << "Npart = " << Npart << endl;
+            fout1 << "Ncoll = " << Ncoll << endl;
+            if (param->getRunningCoupling()) {
+                if (param->getRunWithQs() == 2)
+                    fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
+                else if (param->getRunWithQs() == 1)
+                    fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
+                else if (param->getRunWithQs() == 0)
+                    fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
+                fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+                      << " <Q_s>) = " << param->getalphas() << endl;
+            } else
+                fout1 << "using fixed coupling alpha_s=" << param->getalphas()
+                      << endl;
+            fout1.close();
+        }
     }
     if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST())
         cout << " **** Rejected event - Qsmin^2 S_T="
@@ -2129,7 +2137,7 @@ void Init::WriteInitialWilsonLines(std::string fileprefix, Lattice *lat, Paramet
 }
 
 void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
-    // format 1 = plain text, 2 = binary
+    // "Read" Wilson lines from the Lattice object, shift those according to the impact parameter
     int AA1, AA2;
     // int check=0;
     if (param->getNucleonPositionsFromFile() == 0) {
@@ -2713,7 +2721,7 @@ void Init::init(
     }
     
 
-    if (READFROMFILE > 0) {
+    if (READFROMFILE != 0) {
         messager.info("Finding fields in forward lightcone...");
         // output Wilson lines (used also for the proton plots)
         double L = param->getL();

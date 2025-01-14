@@ -215,7 +215,7 @@ class Parameters {
     bool useJIMWLK; // flag to use JIMWLK evolution
     bool simpleLangevin_;
     int which_stage;
-    double first_b;
+    double first_b; // Impact parameter sampled before the JIMWLK evolution is saved here
 
     double jimwlk_alphas;  // 0 = running coupling, positive value = fixed
                            // coupling

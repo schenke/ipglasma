@@ -363,14 +363,14 @@ int main(int argc, char *argv[]) {
                 
                 if (param->getWriteInitialWilsonLines())
                     init.WriteInitialWilsonLines("evolved_", &lat, param);
-
-                init.init(
+            }
+            init.init(
                     &lat, &group, param, random, &glauber,
                     -1); // Note: negative value for the last parameter (READFROMFILE) corresponds to 
                     // 2nd stage in the JIMWLK evolution setup
-                messager.info("2nd stage initialization after JIMWLK done");
-            }
-            
+                    // This is necessary also if the JIMWLK evolution is not done, as only at this point
+                    // one shifts the nuclei based on the sampled impact parameter
+            messager.info("2nd stage initialization after JIMWLK done");
 
             messager.info("Start CYM evolution");
             // do the CYM evolution of the initialized fields using parmeters in

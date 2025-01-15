@@ -1,10 +1,11 @@
 # README 
 
-IP-Glasma iniital condition with JIMWLK evolution
+IP-Glasma initial condition with JIMWLK evolution
 
 References
-* Original IP-Glasma: [Schenke, Tribedy, Venugopalan, PRL 108 (2012) 252301](https://doi.org/10.1103/PhysRevLett.108.252301), [arXiv:1202.6646](https://arxiv.org/abs/1202.6646) and [Schenke, Tribedy, Venugopalan, PRC 86 (2012) 034908], [arXiv:1206.6805](https://arxiv.org/abs/1206.6805)
+* Original IP-Glasma: [Schenke, Tribedy, Venugopalan, PRL 108 (2012) 252301](https://doi.org/10.1103/PhysRevLett.108.252301), [arXiv:1202.6646](https://arxiv.org/abs/1202.6646) and [Schenke, Tribedy, Venugopalan, PRC 86 (2012) 034908](https://doi.org/10.1103/PhysRevC.86.034908), [arXiv:1206.6805](https://arxiv.org/abs/1206.6805)
 * JIMWLK evolution implementation: Mäntysaari, Schenke, Shen, Zhao, in preparation
+* Standalone version of the JIMWLK code: https://github.com/hejajama/jimwlk
 
 
 ### openmp IP-Glasma 
@@ -72,11 +73,12 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
 ### JIMWLK evolution
 Note that when using the JIMWLK evolution, one should use `useFluctuatingx 0` which corresponds to having a fixed $x$ at the initial state of the evoluiton.
 
+- **useJIMWLK**: with JIMWLK (1), or no JIMWLK (0)
 - **jimwlk_ic_x**: Bjorken-x at the initial condition
 - **x_projectile_jimwlk**: Bjorken-$x$ to which the projectile is evolved
 - **x_target_jimwlk**: Bjorken-$x$ to which the target is evolved
-- **m_jimwlk** Infrared regulator in GeV in the JIMWLK kernel, see (21) in [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)
-- **alphas_jimwlk**: Coupling constant in the JIMWLK evolution. 
+- **m_jimwlk**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)
+- **alphas_jimwlk**: Coupling constant in the JIMWLK evolution
   - 0: Use running coupling 
 - **Lambda_QCD_jimwlk** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)
 - **mu0_jimwlk**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)

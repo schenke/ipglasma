@@ -1171,7 +1171,7 @@ void Init::setColorChargeDensity(
             double p;
             double G = 0.92;
             double ran;
-
+            
             for (int i = 0; i < A1; i++) {
                 for (int j = 0; j < A2; j++) {
                     dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
@@ -1841,49 +1841,6 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 
         foutNcoll.close();
 
-        stringstream strNpart_name;
-        strNpart_name << "NpartList" << param->getEventId() << ".dat";
-        string Npart_name;
-        Npart_name = strNpart_name.str();
-
-        ofstream foutNpart(Npart_name.c_str(), std::ios::out);
-
-        for (int i = 0; i < A1; i++) {
-            foutNpart << nucleusA_.at(i).x << " " << nucleusA_.at(i).y << " "
-                      << nucleusA_.at(i).proton << " "
-                      << nucleusA_.at(i).collided << endl;
-        }
-        foutNpart << endl;
-        for (int i = 0; i < A2; i++) {
-            foutNpart << nucleusB_.at(i).x << " " << nucleusB_.at(i).y << " "
-                      << nucleusB_.at(i).proton << " "
-                      << nucleusB_.at(i).collided << endl;
-        }
-        foutNpart.close();
-
-        // in p+p assume that they collided in any case
-        if (A1 == 1 && A2 == 1) {
-            nucleusB_.at(0).collided = 1;
-            nucleusA_.at(0).collided = 1;
-        }
-
-        Npart = 0;
-
-        for (int i = 0; i < A1; i++) {
-            if (nucleusA_.at(i).collided == 1) Npart++;
-        }
-
-        for (int i = 0; i < A2; i++) {
-            if (nucleusB_.at(i).collided == 1) Npart++;
-        }
-
-        param->setNpart(Npart);
-
-        if (param->getUseFixedNpart() != 0
-            && Npart != param->getUseFixedNpart()) {
-            cout << "current Npart = " << Npart << endl;
-            return;
-        }
     
     // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
@@ -2609,7 +2566,13 @@ void Init::init(
         b = 0.;
         messager << "Setting b=0 for constant color charge density case.";
         messager.flush("info");
-    } else {
+    } 
+    else if (READFROMFILE < 0) // After JIMWLK evolution, will use previously sampled b
+    {
+        param->setb(param->get_firstb());
+        cout << "Check: Using previously sampled b=" << param->getb() << " fm." << endl;
+    } 
+    else {
         if (param->getLinearb() == 1) {
             // use a linear probability distribution for b if we are doing
             // nuclei
@@ -2640,9 +2603,7 @@ void Init::init(
         static_cast<int>(glauber->nucleusA2()), param->getlightNucleusOption(),
         nucleonPosArrB_);
 
-    // sample nucleon positions
-    nucleusA_.clear();
-    nucleusB_.clear();
+    
 
     // to read Wilson lines from file (e.g. after JIMWLK evolution for the
     // 3DGlasma)
@@ -2657,14 +2618,14 @@ void Init::init(
     } else {
         // to generate your own Wilson lines
         if (param->getUseNucleus() == 1) {
+            nucleusA_.clear();
+            nucleusB_.clear();
             sampleTA(
                 param, random, glauber);  // populate the lists nucleusA_ and
                                           // nucleusB_ with position data of the
         }
         
         param->setwhich_stage(0); // The first step of the first stage
-        // set color charge densities
-        setColorChargeDensity(lat, param, random, glauber);
 
         // for enforcing a specific Npart:
         if (param->getUseNucleus() == 1 && param->getUseFixedNpart() != 0) {
@@ -2699,25 +2660,24 @@ void Init::init(
                     // populate the lists nucleusA_ and nucleusB_ with position
                     // data
                     sampleTA(param, random, glauber);
-
-                    setColorChargeDensity(lat, param, random, glauber);
                 }
             }
             cout << "Using fixed Npart=" << param->getNpart() << endl;
         }
+         
+        setColorChargeDensity(lat, param, random, glauber);
 
         if (param->getSuccess() == 0) {
             cout << "No collision happened on rank " << param->getMPIRank()
                  << ". Restarting with new random number..." << endl;
             return;
-        }
-        
-        param->setwhich_stage(2); // The step step of the first stage
-        // set color charge densities
-        setColorChargeDensity(lat, param, random, glauber);
-
+        }        
         // sample color charges and find Wilson lines V_A and V_B
         setV(lat, param, random);
+
+        // Next stage will be reading in JIMWLK-evolved Wilson lines
+        param->setwhich_stage(2);
+        
     }
     
 

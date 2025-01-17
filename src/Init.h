@@ -4,6 +4,8 @@
 #ifndef Init_H
 #define Init_H
 
+#include <string>
+
 #include "FFT.h"
 #include "Glauber.h"
 #include "Group.h"
@@ -12,7 +14,13 @@
 #include "Parameters.h"
 #include "Random.h"
 #include "pretty_ostream.h"
-#include <string>
+
+enum Initialization_method {
+    SAMPLE_COLOR_CHARGES,
+    READ_WLINE_TEXT,
+    READ_WLINE_BINARY,
+    INITIALIZE_AFTER_JIMWLK
+};
 
 class Init {
   private:
@@ -55,7 +63,7 @@ class Init {
 
     void init(
         Lattice *lat, Group *group, Parameters *param, Random *random,
-        Glauber *glauber, int READFROMFILE);
+        Glauber *glauber, Initialization_method init_method);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     void readNuclearQs(Parameters *param);
     void solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec);
@@ -64,6 +72,8 @@ class Init {
     double getNuclearQs2(double Qs2atZeroY, double y);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
+    void computeCollisionGeometryQuantities(
+        Lattice *lat, Parameters *param, Random *random);
     void setV(Lattice *lat, Parameters *param, Random *random);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
     void readV2(Lattice *lat, Parameters *param, Glauber *glauber);

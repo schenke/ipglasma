@@ -192,22 +192,21 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             messager << "configuration file for A = " << glauber->nucleusA1()
                      << " is not available, generate the nucleus configuration "
                      << "using Woods-Saxon distribution instead.";
-                messager.flush("info");
-            
+            messager.flush("info");
+
             generate_nucleus_configuration(
-                    random, glauber->nucleusA1(), glauber->nucleusZ1(),
-                    glauber->GlauberData.Projectile.a_WS,
-                    glauber->GlauberData.Projectile.R_WS,
-                    glauber->GlauberData.Projectile.beta2,
-                    glauber->GlauberData.Projectile.beta3,
-                    glauber->GlauberData.Projectile.beta4,
-                    glauber->GlauberData.Projectile.gamma,
-                    glauber->GlauberData.Projectile.forceDminFlag,
-                    glauber->GlauberData.Projectile.d_min,
-                    glauber->GlauberData.Projectile.dR_np,
-                    glauber->GlauberData.Projectile.da_np, nucleusA_);
-            }
-        
+                random, glauber->nucleusA1(), glauber->nucleusZ1(),
+                glauber->GlauberData.Projectile.a_WS,
+                glauber->GlauberData.Projectile.R_WS,
+                glauber->GlauberData.Projectile.beta2,
+                glauber->GlauberData.Projectile.beta3,
+                glauber->GlauberData.Projectile.beta4,
+                glauber->GlauberData.Projectile.gamma,
+                glauber->GlauberData.Projectile.forceDminFlag,
+                glauber->GlauberData.Projectile.d_min,
+                glauber->GlauberData.Projectile.dR_np,
+                glauber->GlauberData.Projectile.da_np, nucleusA_);
+        }
 
         if (nucleonPosArrB_.size() > 0) {
             double ran2 = random->genrand64_real3();
@@ -752,7 +751,10 @@ double Init::getNuclearQs2(double T, double y) {
 }
 
 // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using Q_s(b,y)
-// prop tp g^mu(b,y) also compute N_part using Glauber
+// prop to g^mu(b,y)
+// Also compute N_part using Glauber
+// If param->getwhich_stage() == 2, then here we shift nuclei back to b=0 for
+// JIMLWK evolution (to be shifted back to b after JIMLWK in readV2())
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
     std::cout << "set color charge density ..." << std::endl;
@@ -770,12 +772,15 @@ void Init::setColorChargeDensity(
     //  static_cast<int>(glauber->nucleusA2()) * param->getAverageOverNuclei();
     //}
 
-    int Npart = 0;
-    int Ncoll = 0;
+    if (param->getwhich_stage() != 0 and param->getwhich_stage() != 2) {
+        messager.error(
+            "setColorChargeDensity: which_stage should be 0 or 2. Exiting.");
+    }
+
     double g2mu2A, g2mu2B;
     double impact_b = param->getb();
-    if (param->getwhich_stage() == 2) impact_b = -1.*impact_b; 
-    // shift back; 2: the second step to generate V of the first stage
+    if (param->getwhich_stage() == 2) impact_b = -1. * impact_b;
+    // in stage 2 we shift back to b=0 for JIMWLK evolution
     double r;
     double L = param->getL();
     double P, m;
@@ -802,14 +807,7 @@ void Init::setColorChargeDensity(
 
     double yIn = rapidity;  // param->getRapidity();
     double a = L / N;       // lattice spacing in fm
-    double dx, dy, dij;
-    double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
-    double averageQs = 0.;
-    double averageQs2 = 0.;
-    double averageQs2Avg = 0.;
-    double averageQs2min = 0.;
-    double averageQs2min2 = 0.;
-    int count = 0;
+
     double nucleiInAverage;
     nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
 
@@ -901,7 +899,7 @@ void Init::setColorChargeDensity(
             nucleusB_.at(i).x = nucleusB_.at(i).x + impact_b / 2.; // shift by b here Wenbin
         }
     }
-  
+
 
     double xi = param->getProtonAnisotropy();
 
@@ -924,12 +922,18 @@ void Init::setColorChargeDensity(
     }
 
     const int NqFlag = param->getUseConstituentQuarkProton();
-    //vector<vector<double>> xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
+    // vector<vector<double>> xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
     // set the arrays for the first step of the first stage
     if (param->getwhich_stage() == 0) {
-        xq1.clear(); xq2.clear(); yq1.clear(); yq2.clear(); 
-        BGq1.clear(); BGq2.clear(); gauss1.clear(); gauss2.clear();
+        xq1.clear();
+        xq2.clear();
+        yq1.clear();
+        yq2.clear();
+        BGq1.clear();
+        BGq2.clear();
+        gauss1.clear();
+        gauss2.clear();
         for (int i = 0; i < A1; i++) {
             x_array.clear();
             if (NqFlag > 0) {
@@ -968,7 +972,6 @@ void Init::setColorChargeDensity(
         cout << "Using smooth nucleus for test purposes. Does not include "
                 "deformation."
              << endl;
-        Npart = 2;  // avoid break below
         double xA, xB;
         double y;
         double T;
@@ -1141,107 +1144,6 @@ void Init::setColorChargeDensity(
         }
     }
 
-    if (param->getUseSmoothNucleus() == 0) {
-        stringstream strNcoll_name;
-        strNcoll_name << "NcollList" << param->getEventId() << ".dat";
-        string Ncoll_name;
-        Ncoll_name = strNcoll_name.str();
-
-        ofstream foutNcoll(Ncoll_name.c_str(), std::ios::out);
-
-        if (param->getGaussianWounding() == 0) {
-            for (int i = 0; i < A1; i++) {
-                for (int j = 0; j < A2; j++) {
-                    dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
-                    dy = nucleusB_.at(j).y - nucleusA_.at(i).y;
-                    dij = dx * dx + dy * dy;
-                    if (dij < d2) {
-                        foutNcoll
-                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
-                            << " "
-                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
-                            << endl;
-                        Ncoll++;
-                        nucleusB_.at(j).collided = 1;
-                        nucleusA_.at(i).collided = 1;
-                    }
-                }
-            }
-        } else {
-            double p;
-            double G = 0.92;
-            double ran;
-            
-            for (int i = 0; i < A1; i++) {
-                for (int j = 0; j < A2; j++) {
-                    dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
-                    dy = nucleusB_.at(j).y - nucleusA_.at(i).y;
-                    dij = dx * dx + dy * dy;
-
-                    p = G * exp(-G * dij / d2);  // Gaussian profile
-
-                    ran = random->genrand64_real1();
-
-                    if (ran < p) {
-                        foutNcoll
-                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
-                            << " "
-                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
-                            << endl;
-                        Ncoll++;
-                        nucleusB_.at(j).collided = 1;
-                        nucleusA_.at(i).collided = 1;
-                    }
-                }
-            }
-        }
-
-        foutNcoll.close();
-
-        stringstream strNpart_name;
-        strNpart_name << "NpartList" << param->getEventId() << ".dat";
-        string Npart_name;
-        Npart_name = strNpart_name.str();
-
-        ofstream foutNpart(Npart_name.c_str(), std::ios::out);
-
-        for (int i = 0; i < A1; i++) {
-            foutNpart << nucleusA_.at(i).x << " " << nucleusA_.at(i).y << " "
-                      << nucleusA_.at(i).proton << " "
-                      << nucleusA_.at(i).collided << endl;
-        }
-        foutNpart << endl;
-        for (int i = 0; i < A2; i++) {
-            foutNpart << nucleusB_.at(i).x << " " << nucleusB_.at(i).y << " "
-                      << nucleusB_.at(i).proton << " "
-                      << nucleusB_.at(i).collided << endl;
-        }
-        foutNpart.close();
-
-        // in p+p assume that they collided in any case
-        if (A1 == 1 && A2 == 1) {
-            nucleusB_.at(0).collided = 1;
-            nucleusA_.at(0).collided = 1;
-        }
-
-        Npart = 0;
-
-        for (int i = 0; i < A1; i++) {
-            if (nucleusA_.at(i).collided == 1) Npart++;
-        }
-
-        for (int i = 0; i < A2; i++) {
-            if (nucleusB_.at(i).collided == 1) Npart++;
-        }
-
-        param->setNpart(Npart);
-
-        if (param->getUseFixedNpart() != 0
-            && Npart != param->getUseFixedNpart()) {
-            cout << "current Npart = " << Npart << endl;
-            return;
-        }
-    } // end of useSmoothNucleus==0
     // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
     {
@@ -1323,9 +1225,10 @@ void Init::setColorChargeDensity(
                     }
                 }
 
-                // If this is run after the JIMWLK evolution, it means that in the 1st stage 
-                // triggering has already been done
-                if (param->getwhich_stage() == 2) check = 2; 
+                // If we are here initializing Wilson lines for the JIMWLK
+                // evolution (forcing effectively b=0), triggering has already
+                // been done
+                if (param->getwhich_stage() == 2) check = 2;
 
                 double exponent = 5.6;  // see 1212.2974 Eq. (17)
                 if (check == 2) {
@@ -1450,12 +1353,153 @@ void Init::setColorChargeDensity(
             }
         }
     }
+}
+void Init::computeCollisionGeometryQuantities(
+    Lattice *lat, Parameters *param, Random *random) {
+    // In the 2nd stage, we have already computed Ncoll, Npart, averageQs etc
+    // using the correct impact parameter
+    if (param->getwhich_stage() != 0)  // This should never be true
+    {
+        messager.error(
+            "computeCollisionGeometryQuantities should be only called before "
+            "shifting to b=0 case");
+        exit(1);
+    }
+
+    double dx, dy, dij;
+    double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
+    double averageQs = 0.;
+    double averageQs2 = 0.;
+    double averageQs2Avg = 0.;
+    double averageQs2min = 0.;
+    double averageQs2min2 = 0.;
+    int count = 0;
+    int Npart = 0;
+    int Ncoll = 0;
+
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+    const double L = param->getL();
+    const int N = param->getSize();
+    const double a = L / N;  // lattice spacing in fm
+    int pos, posA, posB;
+
+    // Determine Npart, Ncoll. Do this only during the first stage, as in the
+    // 2nd stage nuclei are shifted to b=0
+    if (param->getUseSmoothNucleus() == 0) {
+        stringstream strNcoll_name;
+        strNcoll_name << "NcollList" << param->getEventId() << ".dat";
+        string Ncoll_name;
+        Ncoll_name = strNcoll_name.str();
+
+        ofstream foutNcoll(Ncoll_name.c_str(), std::ios::out);
+
+        if (param->getGaussianWounding() == 0) {
+            for (int i = 0; i < A1; i++) {
+                for (int j = 0; j < A2; j++) {
+                    dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
+                    dy = nucleusB_.at(j).y - nucleusA_.at(i).y;
+                    dij = dx * dx + dy * dy;
+                    if (dij < d2) {
+                        foutNcoll
+                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
+                            << " "
+                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
+                            << endl;
+                        Ncoll++;
+                        nucleusB_.at(j).collided = 1;
+                        nucleusA_.at(i).collided = 1;
+                    }
+                }
+            }
+        } else {
+            double p;
+            double G = 0.92;
+            double ran;
+
+            for (int i = 0; i < A1; i++) {
+                for (int j = 0; j < A2; j++) {
+                    dx = nucleusB_.at(j).x - nucleusA_.at(i).x;
+                    dy = nucleusB_.at(j).y - nucleusA_.at(i).y;
+                    dij = dx * dx + dy * dy;
+
+                    p = G * exp(-G * dij / d2);  // Gaussian profile
+
+                    ran = random->genrand64_real1();
+
+                    if (ran < p) {
+                        foutNcoll
+                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
+                            << " "
+                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
+                            << endl;
+                        Ncoll++;
+                        nucleusB_.at(j).collided = 1;
+                        nucleusA_.at(i).collided = 1;
+                    }
+                }
+            }
+        }
+
+        foutNcoll.close();
+
+        stringstream strNpart_name;
+        strNpart_name << "NpartList" << param->getEventId() << ".dat";
+        string Npart_name;
+        Npart_name = strNpart_name.str();
+
+        ofstream foutNpart(Npart_name.c_str(), std::ios::out);
+
+        for (int i = 0; i < A1; i++) {
+            foutNpart << nucleusA_.at(i).x << " " << nucleusA_.at(i).y << " "
+                      << nucleusA_.at(i).proton << " "
+                      << nucleusA_.at(i).collided << endl;
+        }
+        foutNpart << endl;
+        for (int i = 0; i < A2; i++) {
+            foutNpart << nucleusB_.at(i).x << " " << nucleusB_.at(i).y << " "
+                      << nucleusB_.at(i).proton << " "
+                      << nucleusB_.at(i).collided << endl;
+        }
+        foutNpart.close();
+
+        // in p+p assume that they collided in any case
+        if (A1 == 1 && A2 == 1) {
+            nucleusB_.at(0).collided = 1;
+            nucleusA_.at(0).collided = 1;
+        }
+
+        Npart = 0;
+
+        for (int i = 0; i < A1; i++) {
+            if (nucleusA_.at(i).collided == 1) Npart++;
+        }
+
+        for (int i = 0; i < A2; i++) {
+            if (nucleusB_.at(i).collided == 1) Npart++;
+        }
+
+        param->setNpart(Npart);
+
+        if (param->getUseFixedNpart() != 0
+            && Npart != param->getUseFixedNpart()) {
+            cout << "current Npart = " << Npart << endl;
+            return;
+        }
+    }  // end of useSmoothNucleus==0
+    else  // Smooth nucleus
+    {
+        Npart = 2;
+        Ncoll = 2;
+        param->setNpart(Npart);
+    }
 
     count = 0;
     double Tpp = 0.;
     double x, xm, y, ym;
     double alphas = 0.;
     int check = 0;
+    double g2mu2A, g2mu2B;
     for (int ix = 0; ix < N; ix++)  // loop over all positions
     {
         for (int iy = 0; iy < N; iy++) {
@@ -1491,7 +1535,7 @@ void Init::setColorChargeDensity(
             for (int i = 0; i < A1; i++) {
                 xm = nucleusA_.at(i).x;
                 ym = nucleusA_.at(i).y;
-                r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
+                double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
                 if (r < sqrt(0.1 * param->getSigmaNN() / M_PI)
                     && nucleusA_.at(i).collided == 1) {
@@ -1502,7 +1546,7 @@ void Init::setColorChargeDensity(
             for (int i = 0; i < A2; i++) {
                 xm = nucleusB_.at(i).x;
                 ym = nucleusB_.at(i).y;
-                r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
+                double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
                 if (r < sqrt(0.1 * param->getSigmaNN() / M_PI)
                     && nucleusB_.at(i).collided == 1 && check == 1)
@@ -1648,35 +1692,33 @@ void Init::setColorChargeDensity(
         && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
         param->setSuccess(1);
 
-        if (param->getwhich_stage() == 0) {
-            param->set_firstb(impact_b);
-            stringstream strup_name;
-            strup_name << "usedParameters" << param->getEventId() << ".dat";
-            string up_name;
-            up_name = strup_name.str();
+        param->set_firstb(param->getb());
+        stringstream strup_name;
+        strup_name << "usedParameters" << param->getEventId() << ".dat";
+        string up_name;
+        up_name = strup_name.str();
 
-            ofstream fout1(up_name.c_str(), std::ios::app);
-            fout1 << " " << endl;
-            fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
-            fout1 << " " << endl;
-            fout1 << "b = " << impact_b << " fm" << endl;
-            //fout1 << "phiRP = " << phiRP << endl;
-            fout1 << "Npart = " << Npart << endl;
-            fout1 << "Ncoll = " << Ncoll << endl;
-            if (param->getRunningCoupling()) {
-                if (param->getRunWithQs() == 2)
-                    fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
-                else if (param->getRunWithQs() == 1)
-                    fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
-                else if (param->getRunWithQs() == 0)
-                    fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
-                fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
-                      << " <Q_s>) = " << param->getalphas() << endl;
-            } else
-                fout1 << "using fixed coupling alpha_s=" << param->getalphas()
-                      << endl;
-            fout1.close();
-        }
+        ofstream fout1(up_name.c_str(), std::ios::app);
+        fout1 << " " << endl;
+        fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
+        fout1 << " " << endl;
+        fout1 << "b = " << param->getb() << " fm" << endl;
+        // fout1 << "phiRP = " << phiRP << endl;
+        fout1 << "Npart = " << Npart << endl;
+        fout1 << "Ncoll = " << Ncoll << endl;
+        if (param->getRunningCoupling()) {
+            if (param->getRunWithQs() == 2)
+                fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
+            else if (param->getRunWithQs() == 1)
+                fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
+            else if (param->getRunWithQs() == 0)
+                fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
+            fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+                  << " <Q_s>) = " << param->getalphas() << endl;
+        } else
+            fout1 << "using fixed coupling alpha_s=" << param->getalphas()
+                  << endl;
+        fout1.close();
     }
     if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST())
         cout << " **** Rejected event - Qsmin^2 S_T="
@@ -1708,7 +1750,6 @@ void Init::setColorChargeDensity(
              << endl;
 
     foutNEst.close();
-    
 }
 
 void Init::setV(Lattice *lat, Parameters *param, Random *random) {
@@ -1724,8 +1765,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     const double a = L / N;  // lattice spacing in fm
     const double m = param->getm() * a / hbarc;
     double UVdamp = param->getUVdamp();  // GeV^-1
-    int Ncoll=0;
-    int Npart=0;
+    int Ncoll = 0;
+    int Npart = 0;
     UVdamp = UVdamp / a * hbarc;
     complex<double> **rhoACoeff;
     rhoACoeff = new complex<double> *[Nc2m1_];
@@ -1841,8 +1882,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 
         foutNcoll.close();
 
-    
-    // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+
+        // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel
         {
             std::vector<double> in(Nc2m1_, 0.);
@@ -2084,7 +2125,7 @@ void Init::WriteInitialWilsonLines(std::string fileprefix, Lattice *lat, Paramet
     else {
         std::cerr
             << "# Unknwon option param->getWriteInitialWilsonLines()=="
-            << param->getWriteInitialWilsonLines() << std::endl;
+                  << param->getWriteInitialWilsonLines() << std::endl;
         exit(1);
     }
 
@@ -2104,7 +2145,7 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
         AA1 = param->getA1FromFile();
         AA2 = param->getA2FromFile();
     }
-    
+
     const Matrix one(Nc_, 1.);
     int N = param->getSize();
 
@@ -2121,25 +2162,25 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
     double dummy;
     double bb = param->get_firstb();
     int added_lines = param->get_added_lines();
-                
+
     int added_lines_d2 = added_lines/2;
     int added_lines_d2_f = 0;
     int N_m_added_lines_d2 = N - added_lines/2;
     int N_m_added_lines = N;// - added_lines;
-    
+
     Lattice Lat_old(param, param->getNc(), param->getSize());
-    
+
     for (int i = 0; i < nn[0]; i++) {
         for (int j = 0; j < nn[1]; j++) {
             int pos = i * N + j;
             Lat_old.cells[pos]->setU(lat->cells[pos]->getU());
             Lat_old.cells[pos]->setU2(lat->cells[pos]->getU2());
-            
+
             lat->cells[pos]->setU(one_);
             lat->cells[pos]->setU2(one_);
         }
     }
-    
+
     for (int i = 0; i < N_m_added_lines; i++) {
         for (int j = 0; j < N_m_added_lines; j++) {
             
@@ -2157,8 +2198,8 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
                 temp = Lat_old.cells[pos_old]->getU();
                 lat->cells[pos]->setU(temp);
             }
-            
-            // U2 
+
+            // U2
             double xtemp2 = a * i + bb / 2.;
             if (AA1 < 4 && AA2 > 1) {
                 xtemp2 = a * i + bb;
@@ -2173,50 +2214,50 @@ void Init::readV2(Lattice *lat, Parameters *param,  Glauber *glauber) {
             }
         }
     }
-    
-   /*
-  // test output_filename
-  stringstream strVOne_names;
-    strVOne_names << "V_second_1.txt";
-    string VOne_names;
-    VOne_names = strVOne_names.str();
 
-    stringstream strVTwo_names;
-    strVTwo_names << "V_second_2.txt";
-    string VTwo_names;
-    VTwo_names = strVTwo_names.str();
+    /*
+   // test output_filename
+   stringstream strVOne_names;
+     strVOne_names << "V_second_1.txt";
+     string VOne_names;
+     VOne_names = strVOne_names.str();
 
-      ofstream foutU(VOne_names.c_str(), std::ios::out);
-      foutU.precision(15);
+     stringstream strVTwo_names;
+     strVTwo_names << "V_second_2.txt";
+     string VTwo_names;
+     VTwo_names = strVTwo_names.str();
 
-      for (int ix = 0; ix < N; ix++) {
-        for (int iy = 0; iy < N; iy++) // loop over all positions
-        {
-          int pos = ix * N + iy;
-          foutU << ix << " " << iy << " "
-                << (lat->cells[pos]->getU()).MatrixToString() << endl;
-        }
-        foutU << endl;
-      }
-      foutU.close();
+       ofstream foutU(VOne_names.c_str(), std::ios::out);
+       foutU.precision(15);
 
-      cout << "wrote " << strVOne_names.str() << endl;
+       for (int ix = 0; ix < N; ix++) {
+         for (int iy = 0; iy < N; iy++) // loop over all positions
+         {
+           int pos = ix * N + iy;
+           foutU << ix << " " << iy << " "
+                 << (lat->cells[pos]->getU()).MatrixToString() << endl;
+         }
+         foutU << endl;
+       }
+       foutU.close();
 
-      ofstream foutU2(VTwo_names.c_str(), std::ios::out);
-      foutU2.precision(15);
-      for (int ix = 0; ix < N; ix++) {
-        for (int iy = 0; iy < N; iy++) // loop over all positions
-        {
-          int pos = ix * N + iy;
-          foutU2 << ix << " " << iy << " "
-                 << (lat->cells[pos]->getU2()).MatrixToString() << endl;
-        }
-        foutU2 << endl;
-      }
-      foutU2.close();
-      cout << "wrote " << strVTwo_names.str() << endl;
-    */
-    
+       cout << "wrote " << strVOne_names.str() << endl;
+
+       ofstream foutU2(VTwo_names.c_str(), std::ios::out);
+       foutU2.precision(15);
+       for (int ix = 0; ix < N; ix++) {
+         for (int iy = 0; iy < N; iy++) // loop over all positions
+         {
+           int pos = ix * N + iy;
+           foutU2 << ix << " " << iy << " "
+                  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
+         }
+         foutU2 << endl;
+       }
+       foutU2.close();
+       cout << "wrote " << strVTwo_names.str() << endl;
+     */
+
     messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
     messager.flush("info");
@@ -2541,7 +2582,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
 void Init::init(
     Lattice *lat, Group *group, Parameters *param, Random *random,
-    Glauber *glauber, int READFROMFILE) {
+    Glauber *glauber, Initialization_method init_method) {
     const int maxIterations = 100000;
     const int N = param->getSize();
     Nc_ = param->getNc();
@@ -2566,33 +2607,34 @@ void Init::init(
         b = 0.;
         messager << "Setting b=0 for constant color charge density case.";
         messager.flush("info");
-    } 
-    else if (READFROMFILE < 0) // After JIMWLK evolution, will use previously sampled b
-    {
-        param->setb(param->get_firstb());
-        cout << "Check: Using previously sampled b=" << param->getb() << " fm." << endl;
-    } 
-    else {
-        if (param->getLinearb() == 1) {
-            // use a linear probability distribution for b if we are doing
-            // nuclei
-            messager << "Sampling linearly distributed b between " << bmin
-                     << " and " << bmax << "fm. Found ";
-            b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
+    } else {
+        if (init_method == INITIALIZE_AFTER_JIMWLK) {
+            // Use a previously sampled b used in triggering if we are
+            // initializing after JIMWLK evolution
+            param->setb(param->get_firstb());
+            b = param->get_firstb();
         } else {
-            // use a uniform distribution instead
-            messager << "Sampling uniformly distributed b between " << bmin
-                     << " and " << bmax << "fm. Found ";
-            b = (bmax - bmin) * xb + bmin;
+            if (param->getLinearb() == 1) {
+                // use a linear probability distribution for b if we are doing
+                // nuclei
+                messager << "Sampling linearly distributed b between " << bmin
+                         << " and " << bmax << "fm. Found ";
+                b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
+            } else {
+                // use a uniform distribution instead
+                messager << "Sampling uniformly distributed b between " << bmin
+                         << " and " << bmax << "fm. Found ";
+                b = (bmax - bmin) * xb + bmin;
+            }
         }
+        param->setb(b);
     }
-
-    param->setb(b);
     messager << "b=" << b << " fm.";
     messager.flush("info");
 
     // read Q_s^2 from file
-    if (param->getUseNucleus() == 1) {
+    if (param->getUseNucleus() == 1
+        and init_method != INITIALIZE_AFTER_JIMWLK) {
         readNuclearQs(param);
     }
 
@@ -2603,19 +2645,18 @@ void Init::init(
         static_cast<int>(glauber->nucleusA2()), param->getlightNucleusOption(),
         nucleonPosArrB_);
 
-    
-
     // to read Wilson lines from file (e.g. after JIMWLK evolution for the
     // 3DGlasma)
-    if (READFROMFILE > 0) {
-        readVFromFile(lat, param, READFROMFILE);
+    if (init_method == READ_WLINE_BINARY or init_method == READ_WLINE_TEXT) {
+        readVFromFile(lat, param, (init_method == READ_WLINE_BINARY) ? 2 : 1);
         param->setSuccess(1);
-    }
-    else if (READFROMFILE < 0) // Initialize with JIWMLK evolved Wilson lines
+    } else if (init_method == INITIALIZE_AFTER_JIMWLK)  // Initialize with
+                                                        // JIWMLK evolved Wilson
+                                                        // lines
     {
         readV2(lat, param, glauber);
         param->setSuccess(1);
-    } else {
+    } else {  // init_method == SAMPLE_COLOR_CHARGES
         // to generate your own Wilson lines
         if (param->getUseNucleus() == 1) {
             nucleusA_.clear();
@@ -2624,8 +2665,8 @@ void Init::init(
                 param, random, glauber);  // populate the lists nucleusA_ and
                                           // nucleusB_ with position data of the
         }
-        
-        param->setwhich_stage(0); // The first step of the first stage
+
+        param->setwhich_stage(0);  // The first step of the first stage
 
         // for enforcing a specific Npart:
         if (param->getUseNucleus() == 1 && param->getUseFixedNpart() != 0) {
@@ -2660,28 +2701,34 @@ void Init::init(
                     // populate the lists nucleusA_ and nucleusB_ with position
                     // data
                     sampleTA(param, random, glauber);
+                    setColorChargeDensity(
+                        lat, param, random, glauber);  // computes also Npart
                 }
             }
             cout << "Using fixed Npart=" << param->getNpart() << endl;
-        }
-         
-        setColorChargeDensity(lat, param, random, glauber);
+        } else
+            setColorChargeDensity(lat, param, random, glauber);
+
+        // Compute Npart, Ncoll,etc, and check if there was a collision
+        computeCollisionGeometryQuantities(lat, param, random);
 
         if (param->getSuccess() == 0) {
             cout << "No collision happened on rank " << param->getMPIRank()
                  << ". Restarting with new random number..." << endl;
             return;
         }        
+
+        // Shift nuclei back to b=0 before computing Wilson lines for JIMWLK
+        // evolution, shifting back to correct b after JIMWLK
+        param->setwhich_stage(2);
+        setColorChargeDensity(lat, param, random, glauber);
+
         // sample color charges and find Wilson lines V_A and V_B
         setV(lat, param, random);
-
-        // Next stage will be reading in JIMWLK-evolved Wilson lines
-        param->setwhich_stage(2);
-        
     }
-    
 
-    if (READFROMFILE < 0) { // Start CYM evolution on the second round after JIMWLK (in which case READFROMFILE < 0)
+    if (init_method == INITIALIZE_AFTER_JIMWLK) {  // Start CYM evolution on the
+                                                   // second round after JIMWLK
         messager.info("Finding fields in forward lightcone...");
         // output Wilson lines (used also for the proton plots)
         double L = param->getL();
@@ -2942,7 +2989,7 @@ void Init::init(
             lat->cells[pos]->setUx1(one_);
         }
     } // omp block
-    } // end read Wilso nline 
+    } // end INITIALIZE_AFTER_JIMWLK 
     // -----------------------------------------------------------------------------
     // finish
     // -----------------------------------------------------------------------------

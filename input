@@ -48,7 +48,7 @@ dR_np 0.0
 da_np 0.0
 nucleonPositionsFromFile 0
 NucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_200.in
-QsmuRatio 0.8
+QsmuRatio 0.643
 samplebFromLinearDistribution 1
 runWith0Min1Avg2MaxQs 2
 runWithThisFactorTimesQs 0.5

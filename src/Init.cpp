@@ -3408,7 +3408,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
                 complex<double> traceLoc =
                     Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
                 Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
-                Mcheck += std::abs(Jab[2 * countMe + 1]);
+                Mcheck += std::abs(Jab[countMe]);
                 if (Mcheck < 1e-15) {
                     // avoid matrix to be singular
                     JabGood = false;

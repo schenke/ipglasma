@@ -77,11 +77,13 @@ if [[ $clean -eq 1 ]]; then
     rm -rf "$BUILD_DIR"
 fi
 
+
 cmake -S "$ROOT" -B "$BUILD_DIR" \
     -DdisableMPI=ON \
     -DCMAKE_BUILD_TYPE=Release \
     -DCMAKE_C_COMPILER="$CC_BIN" \
-    -DCMAKE_CXX_COMPILER="$CXX_BIN"
+    -DCMAKE_CXX_COMPILER="$CXX_BIN" \
+    -DCMAKE_CXX_FLAGS="-DIPGLASMA_DETERMINISTIC_FFT"
 
 # CMake's OpenMP package/project logic should select -fopenmp with GNU GCC.
 # Verify that OpenMP was detected/configured before building.

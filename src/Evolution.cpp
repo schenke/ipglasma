@@ -60,31 +60,86 @@ struct EvolvePhiScratch {
 };
 
 struct EvolvePiScratch {
-    explicit EvolvePiScratch(int Nc)
-        : Ux(Nc),
-          Uy(Nc),
-          UxXm1(Nc),
-          UyYm1(Nc),
-          phi(Nc),
-          phiX(Nc),
-          phiY(Nc),
-          phimX(Nc),
-          phimY(Nc),
-          bracket(Nc),
-          pi(Nc) {}
+    explicit EvolvePiScratch(int Nc) { (void)Nc; }
 
-    Matrix Ux;
-    Matrix Uy;
-    Matrix UxXm1;
-    Matrix UyYm1;
-    Matrix phi;
-    Matrix phiX;
-    Matrix phiY;
-    Matrix phimX;
-    Matrix phimY;
-    Matrix bracket;
-    Matrix pi;
+    complex<double> temp[9];
+    complex<double> transported[9];
+    complex<double> bracket[9];
 };
+
+inline void multiplySU3Raw(
+    const complex<double> *A, const complex<double> *B,
+    complex<double> *C) {
+    C[0] = A[0] * B[0] + A[1] * B[3] + A[2] * B[6];
+    C[1] = A[0] * B[1] + A[1] * B[4] + A[2] * B[7];
+    C[2] = A[0] * B[2] + A[1] * B[5] + A[2] * B[8];
+    C[3] = A[3] * B[0] + A[4] * B[3] + A[5] * B[6];
+    C[4] = A[3] * B[1] + A[4] * B[4] + A[5] * B[7];
+    C[5] = A[3] * B[2] + A[4] * B[5] + A[5] * B[8];
+    C[6] = A[6] * B[0] + A[7] * B[3] + A[8] * B[6];
+    C[7] = A[6] * B[1] + A[7] * B[4] + A[8] * B[7];
+    C[8] = A[6] * B[2] + A[7] * B[5] + A[8] * B[8];
+}
+
+inline void multiplySU3ABdaggerRaw(
+    const complex<double> *A, const complex<double> *B,
+    complex<double> *C) {
+    C[0] = A[0] * std::conj(B[0]) + A[1] * std::conj(B[1])
+           + A[2] * std::conj(B[2]);
+    C[1] = A[0] * std::conj(B[3]) + A[1] * std::conj(B[4])
+           + A[2] * std::conj(B[5]);
+    C[2] = A[0] * std::conj(B[6]) + A[1] * std::conj(B[7])
+           + A[2] * std::conj(B[8]);
+    C[3] = A[3] * std::conj(B[0]) + A[4] * std::conj(B[1])
+           + A[5] * std::conj(B[2]);
+    C[4] = A[3] * std::conj(B[3]) + A[4] * std::conj(B[4])
+           + A[5] * std::conj(B[5]);
+    C[5] = A[3] * std::conj(B[6]) + A[4] * std::conj(B[7])
+           + A[5] * std::conj(B[8]);
+    C[6] = A[6] * std::conj(B[0]) + A[7] * std::conj(B[1])
+           + A[8] * std::conj(B[2]);
+    C[7] = A[6] * std::conj(B[3]) + A[7] * std::conj(B[4])
+           + A[8] * std::conj(B[5]);
+    C[8] = A[6] * std::conj(B[6]) + A[7] * std::conj(B[7])
+           + A[8] * std::conj(B[8]);
+}
+
+inline void multiplySU3AdaggerBRaw(
+    const complex<double> *A, const complex<double> *B,
+    complex<double> *C) {
+    C[0] = std::conj(A[0]) * B[0] + std::conj(A[3]) * B[3]
+           + std::conj(A[6]) * B[6];
+    C[1] = std::conj(A[0]) * B[1] + std::conj(A[3]) * B[4]
+           + std::conj(A[6]) * B[7];
+    C[2] = std::conj(A[0]) * B[2] + std::conj(A[3]) * B[5]
+           + std::conj(A[6]) * B[8];
+    C[3] = std::conj(A[1]) * B[0] + std::conj(A[4]) * B[3]
+           + std::conj(A[7]) * B[6];
+    C[4] = std::conj(A[1]) * B[1] + std::conj(A[4]) * B[4]
+           + std::conj(A[7]) * B[7];
+    C[5] = std::conj(A[1]) * B[2] + std::conj(A[4]) * B[5]
+           + std::conj(A[7]) * B[8];
+    C[6] = std::conj(A[2]) * B[0] + std::conj(A[5]) * B[3]
+           + std::conj(A[8]) * B[6];
+    C[7] = std::conj(A[2]) * B[1] + std::conj(A[5]) * B[4]
+           + std::conj(A[8]) * B[7];
+    C[8] = std::conj(A[2]) * B[2] + std::conj(A[5]) * B[5]
+           + std::conj(A[8]) * B[8];
+}
+
+inline void transportForwardSU3(
+    const Matrix &U, const Matrix &phi, EvolvePiScratch &scratch) {
+    // Preserve the historical grouping U * (phi * U^dagger).
+    multiplySU3ABdaggerRaw(phi.data(), U.data(), scratch.temp);
+    multiplySU3Raw(U.data(), scratch.temp, scratch.transported);
+}
+
+inline void transportBackwardSU3(
+    const Matrix &U, const Matrix &phi, EvolvePiScratch &scratch) {
+    // Preserve the historical grouping (U^dagger * phi) * U.
+    multiplySU3AdaggerBRaw(U.data(), phi.data(), scratch.temp);
+    multiplySU3Raw(scratch.temp, U.data(), scratch.transported);
+}
 
 struct EvolveEScratch {
     explicit EvolveEScratch(int Nc)
@@ -204,40 +259,45 @@ void evolvePhiTeam(
 void evolvePiTeam(
     Lattice *lat, int N, double dtau, double tau,
     EvolvePiScratch &scratch) {
+    const double coeff = dtau / tau;
+
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
-        scratch.Ux = lat->Ux[pos];
-        scratch.Uy = lat->Uy[pos];
-        scratch.pi = lat->Ux2[pos];
-        scratch.phi = lat->Uy2[pos];
+        const Matrix &Ux = lat->Ux[pos];
+        const Matrix &Uy = lat->Uy[pos];
+        const Matrix &phi = lat->Uy2[pos];
+        Matrix &pi = lat->Ux2[pos];
 
-        scratch.phiX =
-            scratch.Ux
-            * scratch.Ux.prodABconj(
-                lat->Uy2[lat->pospX[pos]], scratch.Ux);
-        scratch.phiY =
-            scratch.Uy
-            * scratch.Uy.prodABconj(
-                lat->Uy2[lat->pospY[pos]], scratch.Uy);
+        // Build the covariant transverse Laplacian with fixed-size SU(3)
+        // arithmetic.  Keep the historical operation order
+        // phiX + phimX + phiY + phimY - 4*phi to minimize roundoff drift.
+        transportForwardSU3(
+            Ux, lat->Uy2[lat->pospX[pos]], scratch);
+        for (int i = 0; i < 9; ++i)
+            scratch.bracket[i] = scratch.transported[i];
 
-        scratch.UxXm1 = lat->Ux[lat->posmX[pos]];
-        scratch.UyYm1 = lat->Uy[lat->posmY[pos]];
+        const Matrix &UxXm1 = lat->Ux[lat->posmX[pos]];
+        transportBackwardSU3(
+            UxXm1, lat->Uy2[lat->posmX[pos]], scratch);
+        for (int i = 0; i < 9; ++i)
+            scratch.bracket[i] += scratch.transported[i];
 
-        scratch.phimX =
-            scratch.Ux.prodAconjB(
-                scratch.UxXm1, lat->Uy2[lat->posmX[pos]])
-            * scratch.UxXm1;
-        scratch.phimY =
-            scratch.Ux.prodAconjB(
-                scratch.UyYm1, lat->Uy2[lat->posmY[pos]])
-            * scratch.UyYm1;
+        transportForwardSU3(
+            Uy, lat->Uy2[lat->pospY[pos]], scratch);
+        for (int i = 0; i < 9; ++i)
+            scratch.bracket[i] += scratch.transported[i];
 
-        scratch.bracket = scratch.phiX + scratch.phimX + scratch.phiY
-                          + scratch.phimY - 4. * scratch.phi;
+        const Matrix &UyYm1 = lat->Uy[lat->posmY[pos]];
+        transportBackwardSU3(
+            UyYm1, lat->Uy2[lat->posmY[pos]], scratch);
 
-        scratch.pi += dtau / (tau)*scratch.bracket;
-
-        lat->Ux2[pos] = (scratch.pi);
+        complex<double> *P = pi.data();
+        const complex<double> *Phi = phi.data();
+        for (int i = 0; i < 9; ++i) {
+            scratch.bracket[i] += scratch.transported[i];
+            scratch.bracket[i] -= Phi[i] * 4.;
+            P[i] += scratch.bracket[i] * coeff;
+        }
     }
 }
 

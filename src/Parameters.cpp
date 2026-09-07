@@ -8,6 +8,8 @@
 #include <string>
 #include <vector>
 
+#include "Lattice.h"
+
 void Parameters::loadPosteriorParameterSetsFromFile(
     std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
     std::ifstream posteriorFile(posteriorFileName.c_str());
@@ -67,4 +69,30 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         setQsmuRatio(posteriorParamSetsNq3_[iset][4]);
         setDqmin(posteriorParamSetsNq3_[iset][5]);
     }
+}
+
+bool Parameters::ValidParameters() {
+    // Check if the parameters are valid. Return true if they are, false
+    // otherwise. This function can be used to validate the parameters before
+    // running the simulation.
+    if (size_ <= 0) {
+        std::cerr << "[Parameters] Invalid lattice size " << size_ << "."
+                  << std::endl;
+        return false;
+    }
+    if (getWriteWilsonLines() != 0
+        and !Lattice::IsValidWilsonLineDataFormat(getWriteWilsonLines())) {
+        std::cerr << "[Parameters] Invalid Wilson line data format "
+                  << getWriteWilsonLines() << std::endl;
+        return false;
+    }
+    if (getSaveSnapshots() and getWriteWilsonLines() == 0) {
+        std::cerr << "[Parameters] Cannot save snapshots (saveSnapshots = "
+                  << getSaveSnapshots() << ") "
+                  << "without writing Wilson lines (writeWilsonLines = "
+                  << getWriteWilsonLines() << ")." << std::endl;
+        return false;
+    }
+
+    return true;
 }

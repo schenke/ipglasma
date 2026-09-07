@@ -524,5 +524,12 @@ class Parameters {
             saveSnapshots_ = true;
     }
     bool getSaveSnapshots() { return saveSnapshots_; }
+
+    /*
+     * Checks if the parameters are valid. Returns true if they are, false
+     * otherwise. This function can be used to validate the parameters before
+     * running the simulation.
+     */
+    bool ValidParameters();
 };
 #endif  // SRC_PARAMETERS_H_

@@ -53,6 +53,16 @@ class Lattice {
     void writeSU3Matrices(std::string fileprefix, Parameters *param);
     std::vector<int> posmXpY;
     std::vector<int> pospXmY;
+
+    /*
+     * Check if the given Wilson line data format value is valid.
+     * The valid values are 1 (text) and 2 (binary).
+     * WriteWilsonLines() determines the output format based on
+     * param->getWriteWilsonLines()
+     */
+    static bool IsValidWilsonLineDataFormat(const int format) {
+        return format == 1 || format == 2;
+    }
 };
 
 class BufferLattice {

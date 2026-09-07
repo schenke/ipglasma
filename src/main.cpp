@@ -76,6 +76,13 @@ int main(int argc, char *argv[]) {
     // read parameters from file
     readInput(&setup, param, argc, argv, rank);
 
+    // Validate parameters before proceeding
+    if (!param->ValidParameters()) {
+        messager << "Error: Invalid parameters detected. Exiting.";
+        messager.flush("error");
+        return 1;
+    }
+
     // initialize random generator using time and seed from input file
     Random *random = new Random();
     unsigned long long int rnum;

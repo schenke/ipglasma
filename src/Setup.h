@@ -13,6 +13,8 @@ class Setup {
     Setup() {}
 
     std::string stringFind(std::string file_name, std::string st);
+    std::string stringFindOptional(
+        std::string file_name, std::string st, std::string defaultValue);
     int iFind(std::string file_name, std::string st);
     int iFindOptional(std::string file_name, std::string st, int defaultValue);
     unsigned long long int uLLIFind(std::string file_name, std::string st);

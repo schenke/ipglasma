@@ -190,6 +190,7 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         # snapshot is written on; keep it equal to the evolution grid here.
         "sizeOutput": size,
         "NucleusQsTableFileName": qs_table_path,
+        "nuclearConfigurationsPath": ipglasma_path + "/nucleusConfigurations/",
         "writeOutputsToHDF5": 0,
         "writeWilsonLines": 0,
         "writeInitialWilsonLines": 0,
@@ -400,8 +401,8 @@ def validate_environment(ipglasma_path, ipglasma_binary, template_path,
 
 
 # Stray output files IP-Glasma writes relative to its process cwd (see
-# Init.cpp / Evolution.cpp) using "<name><eventId>.<ext>" -- eventId is
-# usually 0, but is not guaranteed to be, hence the glob. Each event's run
+# Init.cpp / Evolution.cpp) using "<name><eventId>.<ext>" 
+#  Each event's run
 # is launched with cwd=worker_dir, so these normally land inside that
 # event's own working directory and are removed along with it; this is a
 # safety net for the current working directory the script itself was
@@ -440,9 +441,7 @@ def main():
     parser.add_argument("--input-template", default="input",
                          help="IP-Glasma input file to use as a template ")
     parser.add_argument("--size", type=int, default=128,
-                         help="lattice size override (evolution + output), "
-                              "smaller than the physics-quality default of "
-                              "256/512 to keep this test fast")
+                         help="lattice size override, default 256")                       
     parser.add_argument("--L", type=float, default=None,
                          help="transverse box size override in fm "
                               "(default: keep the template's value)")
@@ -506,8 +505,8 @@ def main():
     else:
         max_workers = args.max_workers or min(cpu_count(), args.maxevents)
         print("Running {0} IP-Glasma events across up to {1} parallel workers "
-              "(size={2}, jimwlk={3}) ...".format(
-                  args.maxevents, max_workers, args.size, args.jimwlk))
+              "(size={2}, jimwlk={3}), lattice N={4}, L={5} fm ...".format(
+                  args.maxevents, max_workers, args.size, args.jimwlk, args.size, args.L))
 
         results = []
         with ProcessPoolExecutor(max_workers=max_workers) as executor:
@@ -588,15 +587,14 @@ def main():
               "physics is correct.".format(args.reference_file))
 
     if not args.keep_logs and not args.plot_only:
-        for r in successes:
-            shutil.rmtree(r["worker_dir"], ignore_errors=True)
-        # failed events' working directories (containing run.log) are
-        # always kept for debugging, regardless of --keep-logs.
-        # In --plot-only mode the working directories are the input to
-        # this run (not freshly produced by it), so they are left alone
-        # regardless of --keep-logs -- otherwise --plot-only would delete
-        # the very data it was asked to replot.
-        cleanup_stray_output_files(os.getcwd())
+            for seed in range(args.maxevents):
+                worker_dir = os.path.join(datadir, f"seed_{seed}")
+                if os.path.exists(worker_dir):
+                    cleanup_stray_output_files(worker_dir)
+                    print(f"Removed temporary files for seed {seed} from {worker_dir}", flush=True)
+
+    
+
 
     sys.exit(exit_code)
 

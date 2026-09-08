@@ -272,9 +272,8 @@ void JIMWLK::evolution() {
 
 void JIMWLK::evolutionStep(NucleusRole nucleus) {
     const bool evolveProjectile = (nucleus == NucleusRole::Projectile);
-    Matrix &(Cell::*getWL)() const = evolveProjectile ? &Cell::getU : &Cell::getU2;
-    void (Cell::*setWL)(const Matrix &) =
-        evolveProjectile ? &Cell::setU : &Cell::setU2;
+    std::vector<Matrix> &wilsonLines =
+        evolveProjectile ? lat_ptr_->U : lat_ptr_->U2;
 
     const complex<double> I(0., 1.);
     const double ds_sqrt = std::sqrt(param_.getDs_jimwlk());
@@ -299,8 +298,8 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
 #pragma omp parallel for
     for (int i = 0; i < Ncells_; i++) {
         for (int n = 0; n < Nc2m1_; n++) {
-            CKxi_[i][n] = (*K_[i])[0] * xi_[i][n]
-                          + (*K_[i])[1] * xi_[i][n + Nc2m1_];
+            CKxi_[i][n] =
+                (*K_[i])[0] * xi_[i][n] + (*K_[i])[1] * xi_[i][n + Nc2m1_];
             // product of x components + product of y components
         }
     }
@@ -312,7 +311,7 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
     for (int i = 0; i < Ncells_; i++) {
         *VxsiVx_[i] = zero_;
         *VxsiVy_[i] = zero_;
-        const Matrix &U = (lat_ptr_->cells[i]->*getWL)();
+        const Matrix &U = wilsonLines[i];
         for (int a = 0; a < Nc2m1_; a++) {
             Matrix UTa = U * group_ptr_->getT(a);
             // UTa * U^dagger, folding in the conjugate transpose of U
@@ -349,7 +348,6 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
             }
         }
         right *= posI_dssqrt;
-        Cell *cell = lat_ptr_->cells[i];
-        (cell->*setWL)(left.expm() * (cell->*getWL)() * right.expm());
+        wilsonLines[i] = left.expm() * wilsonLines[i] * right.expm();
     }
 }

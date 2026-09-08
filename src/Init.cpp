@@ -3,14 +3,18 @@
 
 #include "Init.h"
 
-#include <cmath>
+#include <cstdint>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <limits>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
+#include <vector>
 
+#include "Instrumentation.h"
 #include "Phys_consts.h"
 #include "gsl/gsl_linalg.h"
 
@@ -22,6 +26,54 @@ using std::ifstream;
 using std::ofstream;
 using std::string;
 using std::stringstream;
+
+namespace {
+
+// SplitMix64 finalizer/counter step.  This is used only to construct a
+// deterministic, stateless retry stream for the forward-light-cone solver.
+inline std::uint64_t splitmix64(std::uint64_t x) {
+    x += 0x9E3779B97F4A7C15ULL;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+    return x ^ (x >> 31);
+}
+
+inline std::uint64_t forwardLightconeRetrySeed(
+    std::uint64_t runSeed, int eventId, int pos, int direction) {
+    std::uint64_t key = splitmix64(runSeed);
+    key = splitmix64(
+        key
+        ^ (static_cast<std::uint64_t>(static_cast<std::uint32_t>(eventId))
+           + 0xD1B54A32D192ED03ULL));
+    key = splitmix64(
+        key
+        ^ (static_cast<std::uint64_t>(static_cast<std::uint32_t>(pos))
+           + 0x94D049BB133111EBULL));
+    key = splitmix64(
+        key
+        ^ (static_cast<std::uint64_t>(static_cast<std::uint32_t>(direction))
+           + 0xBF58476D1CE4E5B9ULL));
+    return key;
+}
+
+inline double deterministicRetryGaussian(
+    std::uint64_t seed, std::uint64_t drawIndex) {
+    // Build two open-interval uniform doubles from independent SplitMix64
+    // counters, then use Box-Muller.  No shared RNG state is touched.
+    const std::uint64_t counter = 2ULL * drawIndex;
+    const std::uint64_t r1 =
+        splitmix64(seed + 0x9E3779B97F4A7C15ULL * (counter + 1ULL));
+    const std::uint64_t r2 =
+        splitmix64(seed + 0x9E3779B97F4A7C15ULL * (counter + 2ULL));
+
+    constexpr double invTwo53 = 1.0 / 9007199254740992.0;
+    const double u1 = (static_cast<double>(r1 >> 11) + 0.5) * invTwo53;
+    const double u2 = (static_cast<double>(r2 >> 11) + 0.5) * invTwo53;
+    constexpr double twoPi = 6.283185307179586476925286766559;
+    return std::sqrt(-2.0 * std::log(u1)) * std::cos(twoPi * u2);
+}
+
+}  // namespace
 
 //**************************************************************************
 // Init class.
@@ -66,8 +118,9 @@ void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
 // This function samples the nucleon positions inside the projectile and
 // target nuclei. Both nuclei are centered at the origin.
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
-    messager.info("Sampling nucleon positions ... ");
+    IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     ReturnValue rv, rv2;
+    messager.info("Sampling nucleon positions ... ");
 
     if (param->getNucleonPositionsFromFile() == 0) {
         if (param->getAverageOverNuclei() > 1) {
@@ -457,6 +510,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 }
 
 void Init::readNuclearQs(Parameters *param) {
+    IPG_PROFILE_SCOPE("initialization.read_qs_table");
     // steps in qs0 and Y in the file
     // double y[iymaxNuc];
     // double qs0[ibmax];
@@ -818,15 +872,17 @@ double Init::getNuclearQs2(double T, double y) {
 // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
 // Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber If
 // param->getwhich_stage() == 2, then here we shift nuclei back to b=0 for
-// JIMLWK evolution (to be shifted back to b after JIMLWK in readV2())
+// JIMLWK evolution (to be shifted back to b after JIMLWK)
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
+    IPG_PROFILE_SCOPE("initialization.color_charge_density");
     messager.info("set color charge density ...");
 
     const int N = param->getSize();
     const double L = param->getL();
     const double a = L / N;  // lattice spacing in fm
 
+    int pos, posA, posB;
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
@@ -1734,7 +1790,102 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     foutNEst.close();
 }
 
-void Init::setV(Lattice *lat, Parameters *param) {
+namespace {
+void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
+    const int N = param->getSize();
+    const int Nc = param->getNc();
+    const double L = param->getL();
+    const double a = L / static_cast<double>(N);
+
+    // Payload: [beam, real_or_imag, x, y, row, col], C-order.
+    constexpr int nBeams = 2;
+    const std::size_t matrixElements =
+        static_cast<std::size_t>(N) * N * Nc * Nc;
+    std::vector<float> payload(
+        static_cast<std::size_t>(nBeams) * 2 * matrixElements);
+
+    for (int beam = 0; beam < nBeams; ++beam) {
+        const std::size_t realOffset =
+            static_cast<std::size_t>(2 * beam) * matrixElements;
+        const std::size_t imagOffset = realOffset + matrixElements;
+        for (int x = 0; x < N; ++x) {
+            for (int y = 0; y < N; ++y) {
+                const int pos = x * N + y;
+                const Matrix &matrix = (beam == 0) ? lat->U[pos] : lat->U2[pos];
+                const std::complex<double> *elements = matrix.data();
+                const std::size_t siteOffset =
+                    static_cast<std::size_t>(pos) * Nc * Nc;
+                for (int row = 0; row < Nc; ++row) {
+                    for (int col = 0; col < Nc; ++col) {
+                        const std::size_t element =
+                            static_cast<std::size_t>(row) * Nc + col;
+                        payload[realOffset + siteOffset + element] =
+                            static_cast<float>(elements[element].real());
+                        payload[imagOffset + siteOffset + element] =
+                            static_cast<float>(elements[element].imag());
+                    }
+                }
+            }
+        }
+    }
+
+    const std::uint16_t endianProbe = 1;
+    if (*reinterpret_cast<const unsigned char *>(&endianProbe) != 1) {
+        throw std::runtime_error(
+            "writeInitialWilsonTrainingData requires a little-endian host");
+    }
+
+    std::stringstream metadata;
+    metadata << std::setprecision(17)
+             << "{\"format\":\"ipglasma-initial-wilson-lines\","
+             << "\"version\":1,"
+             << "\"dtype\":\"<f4\","
+             << "\"shape\":[2,2," << N << "," << N << "," << Nc << "," << Nc
+             << "],"
+             << "\"axis_order\":[\"beam\",\"complex_part\",\"x\",\"y\","
+                "\"row\",\"col\"],"
+             << "\"fields\":[\"VA\",\"VB\"],"
+             << "\"complex_part\":[\"real\",\"imag\"],"
+             << "\"native_site_index\":\"pos=x*N+y\","
+             << "\"event_id\":" << param->getEventId() << ","
+             << "\"N\":" << N << ","
+             << "\"Nc\":" << Nc << ","
+             << "\"L_fm\":" << L << ","
+             << "\"a_fm\":" << a << ","
+             << "\"rapidity\":" << param->getRapidity() << "}";
+    const std::string metadataString = metadata.str();
+
+    std::stringstream filename;
+    filename << "initialWilsonLines" << param->getEventId() << ".ipgw";
+    std::ofstream output(
+        filename.str().c_str(),
+        std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!output) {
+        throw std::runtime_error(
+            "could not open initial-Wilson snapshot " + filename.str());
+    }
+    const char magic[8] = {'I', 'P', 'G', 'W', 'I', 'L', '1', '\0'};
+    const std::uint64_t metadataBytes =
+        static_cast<std::uint64_t>(metadataString.size());
+    output.write(magic, sizeof(magic));
+    output.write(
+        reinterpret_cast<const char *>(&metadataBytes), sizeof(metadataBytes));
+    output.write(metadataString.data(), metadataString.size());
+    output.write(
+        reinterpret_cast<const char *>(payload.data()),
+        static_cast<std::streamsize>(payload.size() * sizeof(float)));
+    output.close();
+    if (!output) {
+        throw std::runtime_error(
+            "failed while writing initial-Wilson snapshot " + filename.str());
+    }
+    std::cout << "Wrote incoming Wilson lines to " << filename.str()
+              << std::endl;
+}
+}  // namespace
+
+void Init::setV(Lattice *lat, Parameters *param, Random *random) {
+    IPG_PROFILE_SCOPE("initialization.wilson_lines");
     messager.info("Setting Wilson lines ...");
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
@@ -1742,176 +1893,195 @@ void Init::setV(Lattice *lat, Parameters *param) {
     const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
     const int N = param->getSize();
     const int Ny = param->getNy();
+    const int sites = N * N;
     const int nn[2] = {N, N};
     const double L = param->getL();
     const double a = L / N;  // lattice spacing in fm
     const double m = param->getm() * a / hbarc;
+    const double g = param->getg();
+    const double invNy = 1. / static_cast<double>(Ny);
     double UVdamp = param->getUVdamp();  // GeV^-1
     UVdamp = UVdamp / a * hbarc;
-    complex<double> **rhoACoeff;
-    rhoACoeff = new complex<double> *[Nc2m1_];
-    for (int i = 0; i < Nc2m1_; i++) {
-        rhoACoeff[i] = new complex<double>[N * N];
+
+    // The lattice Poisson/UV kernel depends only on transverse momentum and
+    // run parameters.  The historical implementation recomputed the same
+    // sin/sqrt/exp expressions for every longitudinal sheet of both nuclei.
+    std::vector<double> momentumKernel(static_cast<std::size_t>(sites));
+#pragma omp parallel for
+    for (int pos = 0; pos < sites; ++pos) {
+        const int i = pos / N;
+        const int j = pos - i * N;
+        const double kx =
+            2. * M_PI
+            * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
+        const double ky =
+            2. * M_PI
+            * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
+        const double sx = sin(kx / 2.);
+        const double sy = sin(ky / 2.);
+        const double kt2 = 4. * (sx * sx + sy * sy);
+
+        if (m == 0.) {
+            momentumKernel[static_cast<std::size_t>(pos)] =
+                (kt2 != 0.) ? 1. / kt2 : 0.;
+        } else {
+            momentumKernel[static_cast<std::size_t>(pos)] =
+                (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
+        }
     }
 
-    // loop over longitudinal direction
-    for (int k = 0; k < Ny; k++) {
-        double g2muA;
-        for (int pos = 0; pos < N * N; pos++) {
-            for (int n = 0; n < Nc2m1_; n++) {
-                g2muA =
-                    param->getg()
-                    * sqrt(
-                        lat->cells[pos]->getg2mu2A() / static_cast<double>(Ny));
-                rhoACoeff[n][pos] = g2muA * random_ptr_->Gauss();
+    complex<double> **rhoACoeff = new complex<double> *[Nc2m1_];
+    for (int i = 0; i < Nc2m1_; i++) {
+        rhoACoeff[i] = new complex<double>[sites];
+    }
+
+    auto applyMomentumKernel = [&]() {
+#pragma omp parallel for
+        for (int n = 0; n < Nc2m1_; ++n) {
+            complex<double> *rho = rhoACoeff[n];
+            for (int pos = 0; pos < sites; ++pos) {
+                rho[pos] *= momentumKernel[static_cast<std::size_t>(pos)];
             }
+        }
+    };
+
+    // Reuse the bulk Gaussian buffers for every longitudinal sheet.  The
+    // linear ordering matches the historical pos-major/color-minor Gauss()
+    // call sequence exactly.
+    std::vector<double> gaussianField(
+        static_cast<std::size_t>(sites) * static_cast<std::size_t>(Nc2m1_));
+    std::vector<double> gaussianScratch;
+    gaussianScratch.reserve(5 * ((gaussianField.size() + 1) / 2));
+
+    // g2mu2 and Ny are fixed throughout Wilson-line construction.  Cache the
+    // color-independent site scale once for each nucleus instead of repeating
+    // the same sqrt in every longitudinal sheet.
+    std::vector<double> colorChargeScaleA(static_cast<std::size_t>(sites));
+    std::vector<double> colorChargeScaleB(static_cast<std::size_t>(sites));
+#pragma omp parallel for
+    for (int pos = 0; pos < sites; ++pos) {
+        colorChargeScaleA[static_cast<std::size_t>(pos)] =
+            g * sqrt(lat->cells[pos]->getg2mu2A() * invNy);
+        colorChargeScaleB[static_cast<std::size_t>(pos)] =
+            g * sqrt(lat->cells[pos]->getg2mu2B() * invNy);
+    }
+
+    auto fillColorCharge = [&](const std::vector<double> &scale) {
+        {
+            IPG_PROFILE_SCOPE("initialization.wilson_random.gauss");
+            random->GaussBulk(
+                gaussianField.data(), gaussianField.size(), gaussianScratch);
+        }
+        {
+            IPG_PROFILE_SCOPE("initialization.wilson_random.scale");
+#pragma omp parallel for
+            for (int pos = 0; pos < sites; ++pos) {
+                const double localScale = scale[static_cast<std::size_t>(pos)];
+                const std::size_t base = static_cast<std::size_t>(pos)
+                                         * static_cast<std::size_t>(Nc2m1_);
+                for (int n = 0; n < Nc2m1_; ++n) {
+                    rhoACoeff[n][pos] =
+                        localScale
+                        * gaussianField[base + static_cast<std::size_t>(n)];
+                }
+            }
+        }
+    };
+
+    // loop over longitudinal direction for nucleus A
+    for (int k = 0; k < Ny; k++) {
+        {
+            IPG_PROFILE_SCOPE("initialization.wilson_random");
+            fillColorCharge(colorChargeScaleA);
         }
 
         for (int n = 0; n < Nc2m1_; n++) {
             fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
         }
 
-        // compute A^+
-#pragma omp parallel for
-        for (int localpos = 0; localpos < N * N; localpos++) {
-            int i = localpos / N;
-            int j = localpos % N;
-            double kt2, kx, ky;  // lattice momentum
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
-            if (m == 0) {
-                if (kt2 != 0) {
-                    for (int n = 0; n < Nc2m1_; n++) {
-                        rhoACoeff[n][localpos] =
-                            rhoACoeff[n][localpos] * (1. / (kt2));
-                    }
-                } else {
-                    for (int n = 0; n < Nc2m1_; n++) {
-                        rhoACoeff[n][localpos] = 0.;
-                    }
-                }
-            } else {
-                for (int n = 0; n < Nc2m1_; n++) {
-                    rhoACoeff[n][localpos] *=
-                        (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
-                }
-            }
+        {
+            IPG_PROFILE_SCOPE("initialization.wilson_poisson");
+            applyMomentumKernel();
         }
 
-        // Fourier transform back A^+
         for (int n = 0; n < Nc2m1_; n++) {
             fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
         }
-        // compute U
 
-        // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
-#pragma omp parallel
         {
-            std::vector<double> in(Nc2m1_, 0.);
-            Matrix temp(Nc_, 1.);
-            Matrix tempNew(Nc_, 0.);
+            IPG_PROFILE_SCOPE("initialization.wilson_exponent");
+#pragma omp parallel
+            {
+                std::vector<double> in(Nc2m1_, 0.);
+                Matrix temp(Nc_, 1.);
+                Matrix tempNew(Nc_, 0.);
 
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                for (int aa = 0; aa < Nc2m1_; aa++) {
-                    // expmCoeff will calculate exp(i in[a]t[a]),
-                    // so just multiply by -1 (not -i)
-                    in[aa] = -(rhoACoeff[aa][pos]).real();
+                for (int pos = 0; pos < sites; pos++) {
+                    for (int aa = 0; aa < Nc2m1_; aa++) {
+                        // expmCoeff calculates exp(i in[a] t[a]), so multiply
+                        // by -1 (not -i).
+                        in[aa] = -(rhoACoeff[aa][pos]).real();
+                    }
+                    tempNew = getUfromExponent(in);
+                    temp = tempNew * lat->U[pos];
+                    lat->U[pos] = temp;
                 }
-                tempNew = getUfromExponent(in);
-                temp = tempNew * lat->cells[pos]->getU();
-                // set U
-                lat->cells[pos]->setU(temp);
             }
         }
+    }
 
-    }  // Ny loop
-
-    // loop over longitudinal direction
+    // loop over longitudinal direction for nucleus B
     for (int k = 0; k < Ny; k++) {
-        double g2muB;
-        for (int pos = 0; pos < N * N; pos++) {
-            for (int n = 0; n < Nc2m1_; n++) {
-                g2muB =
-                    param->getg()
-                    * sqrt(
-                        lat->cells[pos]->getg2mu2B() / static_cast<double>(Ny));
-                rhoACoeff[n][pos] = g2muB * random_ptr_->Gauss();
-            }
+        {
+            IPG_PROFILE_SCOPE("initialization.wilson_random");
+            fillColorCharge(colorChargeScaleB);
         }
 
         for (int n = 0; n < Nc2m1_; n++) {
             fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
         }
 
-        // compute A^+
-#pragma omp parallel for
-        for (int localpos = 0; localpos < N * N; localpos++) {
-            int i = localpos / N;
-            int j = localpos % N;
-            double kt2, kx, ky;  // lattice momentum
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
-            if (m == 0) {
-                if (kt2 != 0) {
-                    for (int n = 0; n < Nc2m1_; n++) {
-                        rhoACoeff[n][localpos] =
-                            rhoACoeff[n][localpos] * (1. / (kt2));
-                    }
-                } else {
-                    for (int n = 0; n < Nc2m1_; n++) {
-                        rhoACoeff[n][localpos] = 0.;
-                    }
-                }
-            } else {
-                for (int n = 0; n < Nc2m1_; n++) {
-                    rhoACoeff[n][localpos] *=
-                        (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
-                }
-            }
+        {
+            IPG_PROFILE_SCOPE("initialization.wilson_poisson");
+            applyMomentumKernel();
         }
 
-        // Fourier transform back A^+
         for (int n = 0; n < Nc2m1_; n++) {
             fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
         }
-        // compute U
 
-#pragma omp parallel
+        // The old nucleus-B block had its omp parallel directive commented
+        // out, leaving this expensive exponential/multiply pass effectively
+        // serial.  Match the nucleus-A implementation.
         {
-            std::vector<double> in(Nc2m1_, 0.);
-            Matrix temp(Nc_, 1.);
-            Matrix tempNew(Nc_, 0.);
+            IPG_PROFILE_SCOPE("initialization.wilson_exponent");
+#pragma omp parallel
+            {
+                std::vector<double> in(Nc2m1_, 0.);
+                Matrix temp(Nc_, 1.);
+                Matrix tempNew(Nc_, 0.);
 
 #pragma omp for
-            for (int pos = 0; pos < N * N; pos++) {
-                for (int aa = 0; aa < Nc2m1_; aa++) {
-                    // expmCoeff will calculate exp(i in[a]t[a]), so
-                    // just multiply by -1 (not -i)
-                    in[aa] = -(rhoACoeff[aa][pos]).real();
+                for (int pos = 0; pos < sites; pos++) {
+                    for (int aa = 0; aa < Nc2m1_; aa++) {
+                        in[aa] = -(rhoACoeff[aa][pos]).real();
+                    }
+                    tempNew = getUfromExponent(in);
+                    temp = tempNew * lat->U2[pos];
+                    lat->U2[pos] = temp;
                 }
-                tempNew = getUfromExponent(in);
-                temp = tempNew * lat->cells[pos]->getU2();
-
-                // set U
-                lat->cells[pos]->setU2(temp);
             }
         }
-
-    }  // Ny loop
+    }
 
     for (int ic = 0; ic < Nc2m1_; ic++) {
         delete[] rhoACoeff[ic];
     }
     delete[] rhoACoeff;
+    if (param->getWriteOutputs() == 5) {
+        writeInitialWilsonTrainingData(lat, param);
+    }
 
     // output U
     if (param->getWriteWilsonLines() > 0 && param->getSaveSnapshots()) {
@@ -1932,139 +2102,8 @@ void Init::setV(Lattice *lat, Parameters *param) {
     messager.flush("info");
 }
 
-void Init::readV2(Lattice *lat, Parameters *param, Glauber *glauber) {
-    // "Read" Wilson lines from the Lattice object, shift those according to
-    // the impact parameter
-    int AA1, AA2;
-    // int check=0;
-    if (param->getNucleonPositionsFromFile() == 0) {
-        AA1 = static_cast<int>(glauber->nucleusA1())
-              * param->getAverageOverNuclei();
-        AA2 = static_cast<int>(glauber->nucleusA2())
-              * param->getAverageOverNuclei();
-    } else {
-        AA1 = param->getA1FromFile();
-        AA2 = param->getA2FromFile();
-    }
-
-    const Matrix one(Nc_, 1.);
-    int N = param->getSize();
-
-    double L = param->getL();
-    double a = L / static_cast<double>(N);
-
-    int nn[2];
-    nn[0] = N;
-    nn[1] = N;
-
-    Matrix temp(Nc_, 1.);
-
-    double Re[9], Im[9];
-    double dummy;
-    double bb = param->get_firstb();
-    int added_lines = param->get_added_lines();
-
-    int added_lines_d2 = added_lines / 2;
-    int added_lines_d2_f = 0;
-    int N_m_added_lines_d2 = N - added_lines / 2;
-    int N_m_added_lines = N;  // - added_lines;
-
-    Lattice Lat_old(param, param->getNc(), param->getSize());
-
-    for (int i = 0; i < nn[0]; i++) {
-        for (int j = 0; j < nn[1]; j++) {
-            int pos = i * N + j;
-            Lat_old.cells[pos]->setU(lat->cells[pos]->getU());
-            Lat_old.cells[pos]->setU2(lat->cells[pos]->getU2());
-
-            lat->cells[pos]->setU(one_);
-            lat->cells[pos]->setU2(one_);
-        }
-    }
-
-    for (int i = 0; i < N_m_added_lines; i++) {
-        for (int j = 0; j < N_m_added_lines; j++) {
-            int pos_old = i * N_m_added_lines + j;
-            // U1
-            double xtemp = a * i - bb / 2.;
-            if (AA1 < 4 && AA2 > 1) {
-                xtemp = a * i;
-            } else if (AA2 < 4 && AA1 > 1) {
-                xtemp = a * i - bb;
-            }
-            int ix = xtemp / a;
-            if (ix >= added_lines_d2) {
-                int pos = (ix + added_lines_d2_f) * N + (j + added_lines_d2_f);
-                temp = Lat_old.cells[pos_old]->getU();
-                lat->cells[pos]->setU(temp);
-            }
-
-            // U2
-            double xtemp2 = a * i + bb / 2.;
-            if (AA1 < 4 && AA2 > 1) {
-                xtemp2 = a * i + bb;
-            } else if (AA2 < 4 && AA1 > 1) {
-                xtemp2 = a * i;
-            }
-            int ix2 = xtemp2 / a;
-            if (ix2 <= N_m_added_lines_d2) {
-                int pos2 =
-                    (ix2 + added_lines_d2_f) * N + (j + added_lines_d2_f);
-                temp = Lat_old.cells[pos_old]->getU2();
-                lat->cells[pos2]->setU2(temp);
-            }
-        }
-    }
-
-    /*
-   // test output_filename
-   stringstream strVOne_names;
-     strVOne_names << "V_second_1.txt";
-     string VOne_names;
-     VOne_names = strVOne_names.str();
-
-     stringstream strVTwo_names;
-     strVTwo_names << "V_second_2.txt";
-     string VTwo_names;
-     VTwo_names = strVTwo_names.str();
-
-       ofstream foutU(VOne_names.c_str(), std::ios::out);
-       foutU.precision(15);
-
-       for (int ix = 0; ix < N; ix++) {
-         for (int iy = 0; iy < N; iy++) // loop over all positions
-         {
-           int pos = ix * N + iy;
-           foutU << ix << " " << iy << " "
-                 << (lat->cells[pos]->getU()).MatrixToString() << endl;
-         }
-         foutU << endl;
-       }
-       foutU.close();
-
-       cout << "wrote " << strVOne_names.str() << endl;
-
-       ofstream foutU2(VTwo_names.c_str(), std::ios::out);
-       foutU2.precision(15);
-       for (int ix = 0; ix < N; ix++) {
-         for (int iy = 0; iy < N; iy++) // loop over all positions
-         {
-           int pos = ix * N + iy;
-           foutU2 << ix << " " << iy << " "
-                  << (lat->cells[pos]->getU2()).MatrixToString() << endl;
-         }
-         foutU2 << endl;
-       }
-       foutU2.close();
-       cout << "wrote " << strVTwo_names.str() << endl;
-     */
-
-    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
-             << ". ";
-    messager.flush("info");
-}
-
 void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
+    IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
     // format 1 = plain text, 2 = binary
 
     if (format > 2 or format < 1) {
@@ -2149,7 +2188,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 if (ix < 0) continue;
 
                 int pos = ix * N + j;
-                lat->cells[pos]->setU(temp);
+                lat->U[pos] = (temp);
             }
         }
 
@@ -2191,7 +2230,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 if (ix >= N) continue;
 
                 int pos = ix * N + j;
-                lat->cells[pos]->setU2(temp);
+                lat->U2[pos] = (temp);
             }
         }
 
@@ -2280,7 +2319,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                         INPUT_CTR++;
                         continue;
                     }
-                    lat->cells[indx]->getU().set(j, k, complex<double>(re, im));
+                    lat->U[indx].set(j, k, complex<double>(re, im));
                 }
                 INPUT_CTR++;
             }
@@ -2364,8 +2403,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                             INPUT_CTR++;
                             continue;
                         }
-                        lat->cells[indx]->getU2().set(
-                            j, k, complex<double>(re, im));
+                        lat->U2[indx].set(j, k, complex<double>(re, im));
                         // if (indx > 65000) cout << "Save ok" << endl;
                     }
                     INPUT_CTR++;
@@ -2457,7 +2495,7 @@ void Init::init(
             sampleTA(param, random, glauber);
             setColorChargeDensity(lat, param, random, glauber);
             // sample color charges and find Wilson lines V_A and V_B
-            setV(lat, param);
+            setV(lat, param, random);
         }
     }
 }
@@ -2472,8 +2510,8 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
     const int N = param->getSize();
     BufferLattice lat_tmp(param->getNc(), param->getSize());
     for (int ipos = 0; ipos < N * N; ipos++) {
-        lat_tmp.cells[ipos]->setbuffer1(lat->cells[ipos]->getU());
-        lat_tmp.cells[ipos]->setbuffer2(lat->cells[ipos]->getU2());
+        lat_tmp.buffer1[ipos] = lat->U[ipos];
+        lat_tmp.buffer2[ipos] = lat->U2[ipos];
     }
 
     const double L = param->getL();
@@ -2495,16 +2533,16 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
         int iyB = static_cast<int>((yB + L / 2.) / a);
 
         if (ixA < 0 || ixA >= N || iyA < 0 || iyA >= N) {
-            lat->cells[ipos]->setU(one_);
+            lat->U[ipos] = one_;
         } else {
             int posA = ixA * N + iyA;
-            lat->cells[ipos]->setU(lat_tmp.cells[posA]->getbuffer1());
+            lat->U[ipos] = lat_tmp.buffer1[posA];
         }
         if (ixB < 0 || ixB >= N || iyB < 0 || iyB >= N) {
-            lat->cells[ipos]->setU2(one_);
+            lat->U2[ipos] = one_;
         } else {
             int posB = ixB * N + iyB;
-            lat->cells[ipos]->setU2(lat_tmp.cells[posB]->getbuffer2());
+            lat->U2[ipos] = lat_tmp.buffer2[posB];
         }
     }
 }
@@ -2541,35 +2579,35 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 #pragma omp for
         for (int pos = 0; pos < N2; pos++) {
             // loops over all cells
-            auto checkU = lat->cells[pos]->getU().trace();
+            auto checkU = lat->U[pos].trace();
             if (checkU != checkU) {
-                lat->cells[pos]->setU(one_);
+                lat->U[pos] = (one_);
             }
 
-            checkU = lat->cells[pos]->getU2().trace();
+            checkU = lat->U2[pos].trace();
             if (checkU != checkU) {
-                lat->cells[pos]->setU2(one_);
+                lat->U2[pos] = (one_);
             }
         }
 
 #pragma omp for
         for (int pos = 0; pos < N2; pos++) {
             // loops over all cells
-            UDx = lat->cells[lat->pospX[pos]]->getU();
+            UDx = lat->U[lat->pospX[pos]];
             UDx.conjg();
-            lat->cells[pos]->setUx1(lat->cells[pos]->getU() * UDx);
+            lat->Ux1[pos] = (lat->U[pos] * UDx);
 
-            UDy = lat->cells[lat->pospY[pos]]->getU();
+            UDy = lat->U[lat->pospY[pos]];
             UDy.conjg();
-            lat->cells[pos]->setUy1(lat->cells[pos]->getU() * UDy);
+            lat->Uy1[pos] = (lat->U[pos] * UDy);
 
-            UDx = lat->cells[lat->pospX[pos]]->getU2();
+            UDx = lat->U2[lat->pospX[pos]];
             UDx.conjg();
-            lat->cells[pos]->setUx2(lat->cells[pos]->getU2() * UDx);
+            lat->Ux2[pos] = (lat->U2[pos] * UDx);
 
-            UDy = lat->cells[lat->pospY[pos]]->getU2();
+            UDy = lat->U2[lat->pospY[pos]];
             UDy.conjg();
-            lat->cells[pos]->setUy2(lat->cells[pos]->getU2() * UDy);
+            lat->Uy2[pos] = (lat->U2[pos] * UDy);
         }
         // -----------------------------------------------------------------
         // from Ux(1,2) and Uy(1,2) compute Ux(3) and Uy(3):
@@ -2577,22 +2615,26 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 #pragma omp for
         for (int pos = 0; pos < N2; pos++) {
             // loops over all cells
-            UDx1 = lat->cells[pos]->getUx1();
-            UDx2 = lat->cells[pos]->getUx2();
-            // bool status = findUInForwardLightconeBjoern(UDx1, UDx2,
-            // temp2);
-            bool status = findUInForwardLightconeChun(UDx1, UDx2, temp2);
-            lat->cells[pos]->setUx(temp2);
+            UDx1 = lat->Ux1[pos];
+            UDx2 = lat->Ux2[pos];
+            // bool status = findUInForwardLightconeBjoern(UDx1, UDx2, temp2);
+            const std::uint64_t retrySeedX = forwardLightconeRetrySeed(
+                param->getRandomSeed(), param->getEventId(), pos, 0);
+            bool status =
+                findUInForwardLightconeChun(UDx1, UDx2, temp2, retrySeedX);
+            lat->Ux[pos] = (temp2);
             if (!status) {
                 cout << "pos x = " << pos / param->getSize()
                      << " y = " << pos % param->getSize() << endl;
             }
 
-            UDy1 = lat->cells[pos]->getUy1();
-            UDy2 = lat->cells[pos]->getUy2();
+            UDy1 = lat->Uy1[pos];
+            UDy2 = lat->Uy2[pos];
             // status = findUInForwardLightconeBjoern(UDy1, UDy2, temp2);
-            status = findUInForwardLightconeChun(UDy1, UDy2, temp2);
-            lat->cells[pos]->setUy(temp2);
+            const std::uint64_t retrySeedY = forwardLightconeRetrySeed(
+                param->getRandomSeed(), param->getEventId(), pos, 1);
+            status = findUInForwardLightconeChun(UDy1, UDy2, temp2, retrySeedY);
+            lat->Uy[pos] = (temp2);
             if (!status) {
                 cout << "pos x = " << pos / param->getSize()
                      << " y = " << pos % param->getSize() << endl;
@@ -2604,22 +2646,27 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 #pragma omp for
         for (int pos = 0; pos < N2; pos++) {
             // x part in sum:
-            Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
-            UDx1mUDx2 = Ux1mUx2;
-            UDx1mUDx2.conjg();
+            Ux1mUx2 = lat->Ux1[pos] - lat->Ux2[pos];
+            UDx1 = lat->Ux1[pos];
+            UDx1.conjg();
+            UDx2 = lat->Ux2[pos];
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
-            Ux = lat->cells[pos]->getUx();
+            Ux = lat->Ux[pos];
             UDx = Ux;
             UDx.conjg();
 
             temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
 
-            Ux1mUx2 = lat->cells[lat->posmX[pos]]->getUx1()
-                      - lat->cells[lat->posmX[pos]]->getUx2();
-            UDx1mUDx2 = Ux1mUx2;
-            UDx1mUDx2.conjg();
+            Ux1mUx2 = lat->Ux1[lat->posmX[pos]] - lat->Ux2[lat->posmX[pos]];
+            UDx1 = lat->Ux1[lat->posmX[pos]];
+            UDx1.conjg();
+            UDx2 = lat->Ux2[lat->posmX[pos]];
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
-            Ux = lat->cells[lat->posmX[pos]]->getUx();
+            Ux = lat->Ux[lat->posmX[pos]];
             UDx = Ux;
             UDx.conjg();
 
@@ -2627,11 +2674,14 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
                 temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
 
             // y part in sum
-            Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
-            UDy1mUDy2 = Uy1mUy2;
-            UDy1mUDy2.conjg();
+            Uy1mUy2 = lat->Uy1[pos] - lat->Uy2[pos];
+            UDy1 = lat->Uy1[pos];
+            UDy1.conjg();
+            UDy2 = lat->Uy2[pos];
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
 
-            Uy = lat->cells[pos]->getUy();
+            Uy = lat->Uy[pos];
             UDy = Uy;
             UDy.conjg();
 
@@ -2639,129 +2689,125 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
             temp2 =
                 temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
 
-            Uy1mUy2 = lat->cells[lat->posmY[pos]]->getUy1()
-                      - lat->cells[lat->posmY[pos]]->getUy2();
-            UDy1mUDy2 = Uy1mUy2;
-            UDy1mUDy2.conjg();
+            Uy1mUy2 = lat->Uy1[lat->posmY[pos]] - lat->Uy2[lat->posmY[pos]];
+            UDy1 = lat->Uy1[lat->posmY[pos]];
+            UDy1.conjg();
+            UDy2 = lat->Uy2[lat->posmY[pos]];
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
 
-            Uy = lat->cells[lat->posmY[pos]]->getUy();
+            Uy = lat->Uy[lat->posmY[pos]];
             UDy = Uy;
             UDy.conjg();
 
             temp2 =
                 temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
 
-            lat->cells[pos]->setE1((1. / 8.) * temp2);
+            lat->U[pos] = ((1. / 8.) * temp2);
         }
 
-//// with plus ax, ay
-// #pragma omp for
-//         for (int pos = 0; pos < N2; pos++) {
-//             // x part in sum:
-//             Ux1mUx2 = lat->cells[pos]->getUx1() - lat->cells[pos]->getUx2();
-//             UDx1 = lat->cells[pos]->getUx1();
-//             UDx1.conjg();
-//             UDx2 = lat->cells[pos]->getUx2();
-//             UDx2.conjg();
-//             UDx1mUDx2 = UDx1 - UDx2;
-//
-//             Ux = lat->cells[pos]->getUx();
-//             UDx = Ux;
-//             UDx.conjg();
-//
-//             temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
-//
-//             Ux1mUx2 = lat->cells[lat->pospX[pos]]->getUx1()
-//                       - lat->cells[lat->pospX[pos]]->getUx2();
-//             UDx1 = lat->cells[lat->pospX[pos]]->getUx1();
-//             UDx1.conjg();
-//             UDx2 = lat->cells[lat->pospX[pos]]->getUx2();
-//             UDx2.conjg();
-//             UDx1mUDx2 = UDx1 - UDx2;
-//
-//             Ux = lat->cells[lat->pospX[pos]]->getUx();
-//             UDx = Ux;
-//             UDx.conjg();
-//
-//             temp2 =
-//                 temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
-//
-//             // y part in sum
-//             Uy1mUy2 = lat->cells[pos]->getUy1() - lat->cells[pos]->getUy2();
-//             UDy1 = lat->cells[pos]->getUy1();
-//             UDy1.conjg();
-//             UDy2 = lat->cells[pos]->getUy2();
-//             UDy2.conjg();
-//             UDy1mUDy2 = UDy1 - UDy2;
-//
-//             Uy = lat->cells[pos]->getUy();
-//             UDy = Uy;
-//             UDy.conjg();
-//
-//             // y part of the sum:
-//             temp2 =
-//                 temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
-//
-//             Uy1mUy2 = lat->cells[lat->pospY[pos]]->getUy1()
-//                       - lat->cells[lat->pospY[pos]]->getUy2();
-//             UDy1 = lat->cells[lat->pospY[pos]]->getUy1();
-//             UDy1.conjg();
-//             UDy2 = lat->cells[lat->pospY[pos]]->getUy2();
-//             UDy2.conjg();
-//             UDy1mUDy2 = UDy1 - UDy2;
-//
-//             Uy = lat->cells[lat->pospY[pos]]->getUy();
-//             UDy = Uy;
-//             UDy.conjg();
-//
-//             temp2 =
-//                 temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
-//
-//             lat->cells[pos]->setE2((1. / 8.) * temp2);
-//         }
+        // with plus ax, ay
+#pragma omp for
+        for (int pos = 0; pos < N * N; pos++) {
+            // x part in sum:
+            Ux1mUx2 = lat->Ux1[pos] - lat->Ux2[pos];
+            UDx1 = lat->Ux1[pos];
+            UDx1.conjg();
+            UDx2 = lat->Ux2[pos];
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
 
+            Ux = lat->Ux[pos];
+            UDx = Ux;
+            UDx.conjg();
+
+            temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
+
+            Ux1mUx2 = lat->Ux1[lat->pospX[pos]] - lat->Ux2[lat->pospX[pos]];
+            UDx1 = lat->Ux1[lat->pospX[pos]];
+            UDx1.conjg();
+            UDx2 = lat->Ux2[lat->pospX[pos]];
+            UDx2.conjg();
+            UDx1mUDx2 = UDx1 - UDx2;
+
+            Ux = lat->Ux[lat->pospX[pos]];
+            UDx = Ux;
+            UDx.conjg();
+
+            temp2 =
+                temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
+
+            // y part in sum
+            Uy1mUy2 = lat->Uy1[pos] - lat->Uy2[pos];
+            UDy1 = lat->Uy1[pos];
+            UDy1.conjg();
+            UDy2 = lat->Uy2[pos];
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
+
+            Uy = lat->Uy[pos];
+            UDy = Uy;
+            UDy.conjg();
+
+            // y part of the sum:
+            temp2 =
+                temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
+
+            Uy1mUy2 = lat->Uy1[lat->pospY[pos]] - lat->Uy2[lat->pospY[pos]];
+            UDy1 = lat->Uy1[lat->pospY[pos]];
+            UDy1.conjg();
+            UDy2 = lat->Uy2[lat->pospY[pos]];
+            UDy2.conjg();
+            UDy1mUDy2 = UDy1 - UDy2;
+
+            Uy = lat->Uy[lat->pospY[pos]];
+            UDy = Uy;
+            UDy.conjg();
+
+            temp2 =
+                temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
+
+            lat->U2[pos] = ((1. / 8.) * temp2);
+        }
 // compute the plaquette
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            UDx = lat->cells[lat->pospY[pos]]->getUx();
-            UDy = lat->cells[pos]->getUy();
+        for (int pos = 0; pos < N * N; pos++) {
+            UDx = lat->Ux[lat->pospY[pos]];
+            UDy = lat->Uy[pos];
+
             UDx.conjg();
             UDy.conjg();
 
-            Uplaq = lat->cells[pos]->getUx()
-                    * (lat->cells[lat->pospX[pos]]->getUy() * (UDx * UDy));
-            lat->cells[pos]->setUplaq(Uplaq);
+            Uplaq = lat->Ux[pos] * (lat->Uy[lat->pospX[pos]] * (UDx * UDy));
+            lat->Uy1[pos] = (Uplaq);
         }
 
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            // AM = (lat->cells[pos]->getE1());
-            // //+lat->cells[pos]->getAetaP()); AP =
-            // (lat->cells[pos]->getE2()); //+lat->cells[pos]->getAetaP());
+        for (int pos = 0; pos < N * N; pos++) {
+            // AM = (lat->U[pos]); //+lat->cells[pos]->getAetaP());
+            // AP = (lat->U2[pos]); //+lat->cells[pos]->getAetaP());
 
-            // this is pi in lattice units as needed for the evolution.
-            // (later, the a^4 gives the right units for the energy density
-            lat->cells[pos]->setpi(
-                complex<double>(0., -2. / param->getg())
-                * (lat->cells[pos]->getE1()));
+            // this is pi in lattice units as needed for the evolution. (later,
+            // the a^4 gives the right units for the energy density
+            lat->Ux2[pos] =
+                (complex<double>(0., -2. / param->getg()) * (lat->U[pos]));
             // factor -2 because I have A^eta (note the 1/8 before)
             // but want \pi (E^z).
 
-            // lat->cells[pos]->setpi(complex<double>(0.,-1./param->getg())*(AM+AP));
-            // // factor -2 because I have A^eta (note the 1/8 before) but
-            // want
+            // lat->Ux2[pos] = (complex<double>(0.,-1./param->getg())*(AM+AP));
+            // // factor -2 because I have A^eta (note the 1/8 before) but want
             // \pi (E^z).
         }
 
         const Matrix zero(Nc_, 0.);
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            lat->cells[pos]->setE1(zero);
-            lat->cells[pos]->setE2(zero);
-            lat->cells[pos]->setphi(zero);
+        for (int pos = 0; pos < N * N; pos++) {
+            lat->U[pos] = (zero);
+            lat->U2[pos] = (zero);
+            lat->Uy2[pos] = (zero);
 
             // reset the Ux1 to be used for other purposes later
-            // lat->cells[pos]->setUx1(one_);
+            lat->Ux1[pos] = (one_);
         }
     }  // omp block
 }
@@ -3433,7 +3479,8 @@ bool Init::findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol) {
     return (success);
 }
 
-bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
+bool Init::findUInForwardLightconeChun(
+    Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed) {
     const int maxIterations = 2000;
     const int maxRetrys = 200;
 
@@ -3469,6 +3516,10 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
 
     int iter = 0;
     int nRestart = 0;
+    std::uint64_t retryDraw = 0;
+    auto nextRetryGaussian = [&]() {
+        return deterministicRetryGaussian(retrySeed, retryDraw++);
+    };
     while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
         iter++;
 
@@ -3537,7 +3588,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
             }
         } else {
             for (int ai = 0; ai < Nc2m1_; ai++) {
-                alpha[ai] = random_ptr_->Gauss();
+                alpha[ai] = nextRetryGaussian();
             }
         }
         Usol = getUfromExponent(alpha) * U0;
@@ -3550,7 +3601,7 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
         }
         if (iter == maxIterations) {
             for (int ai = 0; ai < Nc2m1_; ai++) {
-                alpha[ai] = random_ptr_->Gauss();
+                alpha[ai] = nextRetryGaussian();
             }
             Usol = getUfromExponent(alpha) * U0;
             Usoldagger = Usol;
@@ -3573,19 +3624,30 @@ bool Init::findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol) {
 }
 
 Matrix Init::getUfromExponent(std::vector<double> &in) {
-    Matrix tempM(Nc_, 0.);
+    Matrix tempM(Nc_, Matrix::noInit);
+    complex<double> U[9];
 
-    // expmCoeff wil calculate exp(i in[a]t[a])
-    auto U = tempM.expmCoeff(in, Nc_);
+    // expmCoeff calculates the coefficients of exp(i in[a] t[a]).  Build
+    // the 3x3 matrix directly from the fixed SU(3) generators instead of
+    // allocating a coefficient vector and materializing eight scaled Matrix
+    // temporaries plus the chained sums.
+    tempM.expmCoeff(in.data(), U);
     if (std::abs(U[0].real()) < 1e-15) {
         tempM = one_;
     } else {
-        tempM =
-            (U[0] * one_ + U[1] * group_ptr_->getT(0)
-             + U[2] * group_ptr_->getT(1) + U[3] * group_ptr_->getT(2)
-             + U[4] * group_ptr_->getT(3) + U[5] * group_ptr_->getT(4)
-             + U[6] * group_ptr_->getT(5) + U[7] * group_ptr_->getT(6)
-             + U[8] * group_ptr_->getT(7));
+        const complex<double> I(0., 1.);
+        const double invSqrt3 = 1. / std::sqrt(3.);
+
+        tempM.set(0, 0, U[0] + 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
+        tempM.set(1, 1, U[0] - 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
+        tempM.set(2, 2, U[0] - invSqrt3 * U[8]);
+
+        tempM.set(0, 1, 0.5 * (U[1] - I * U[2]));
+        tempM.set(1, 0, 0.5 * (U[1] + I * U[2]));
+        tempM.set(0, 2, 0.5 * (U[4] - I * U[5]));
+        tempM.set(2, 0, 0.5 * (U[4] + I * U[5]));
+        tempM.set(1, 2, 0.5 * (U[6] - I * U[7]));
+        tempM.set(2, 1, 0.5 * (U[6] + I * U[7]));
     }
-    return (tempM);
+    return tempM;
 }

@@ -1,44 +1,41 @@
-
 #include "Cell.h"
 
-Cell::Cell(const int Nc, const int mode) {
-    mode_ = mode;
-    U = new Matrix(Nc, 1.);
-    U2 = new Matrix(Nc, 1.);
-    if (mode_ == 1) {
-        Ux = new Matrix(Nc, 1.);
-        Uy = new Matrix(Nc, 1.);
-        Ux1 = new Matrix(Nc, 1.);
-        Uy1 = new Matrix(Nc, 1.);
-        Ux2 = new Matrix(Nc, 1.);
-        Uy2 = new Matrix(Nc, 1.);
+#include <cstdlib>
+#include <iostream>
 
-        Tmunu.resize(10, 0);
-        umu.resize(4, 0);
-        umu[0] = 1.0;
-        pimunu.resize(10, 0);
+Cell::Cell(int Nc)
+    : epsilon(0.),
+      g2mu2A(0.),
+      TpA(0.),
+      g2mu2B(0.),
+      TpB(0.),
+      Ttautau(0.),
+      Txx(0.),
+      Tyy(0.),
+      Txy(0.),
+      Tetaeta(0.),
+      Ttaux(0.),
+      Ttauy(0.),
+      Ttaueta(0.),
+      Txeta(0.),
+      Tyeta(0.),
+      pitautau(0.),
+      pixx(0.),
+      piyy(0.),
+      pixy(0.),
+      pietaeta(0.),
+      pitaux(0.),
+      pitauy(0.),
+      pitaueta(0.),
+      pixeta(0.),
+      piyeta(0.),
+      utau(0.),
+      ux(0.),
+      uy(0.),
+      ueta(0.) {
+    if (Nc != 3) {
+        std::cerr << "Error: Cell storage is SU(3)-only; received Nc=" << Nc
+                  << ". Exiting." << std::endl;
+        std::exit(1);
     }
-}
-
-Cell::~Cell() {
-    delete U;
-    delete U2;
-    if (mode_ == 1) {
-        delete Ux;
-        delete Uy;
-        delete Ux1;
-        delete Ux2;
-        delete Uy1;
-        delete Uy2;
-    }
-}
-
-SmallCell::SmallCell(const int Nc) {
-    buffer1 = new Matrix(Nc, 1.);
-    buffer2 = new Matrix(Nc, 1.);
-}
-
-SmallCell::~SmallCell() {
-    delete buffer1;
-    delete buffer2;
 }

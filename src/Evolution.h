@@ -35,8 +35,16 @@ class Evolution {
     void eccentricity(
         Lattice *lat, Parameters *param, int it, double cutoff, int doAniso);
     void Tmunu(Lattice *lat, Parameters *param, int it);
+    void writeEvolvedFields(Lattice *lat, Parameters *param, int it);
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
+
+    void writeGluonMultiplicityTarget(
+        Parameters *param, int it, double a, double dtau, double dNPrimary,
+        double dNBinned, double dEPrimary, double dEBinned, double dNCut3,
+        double dECut3, double dNCut6, double dECut6, const double *spectrumN,
+        const double *spectrumE, const int *spectrumCounts, int bins,
+        double dkt);
     int multiplicitynkxky(
         Lattice *lat, Group *group, Parameters *param, int it);
     int correlations(Lattice *lat, Group *group, Parameters *param, int it);

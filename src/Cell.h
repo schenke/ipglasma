@@ -1,174 +1,111 @@
 #ifndef Cell_h
 #define Cell_h
 
-#include <complex>
-#include <cstdlib>
-#include <iostream>
-#include <vector>
-
-#include "Matrix.h"
-
+// Scalar per-site state. Fundamental SU(3) matrices are intentionally not
+// stored here; they live in contiguous structure-of-arrays fields on Lattice.
 class Cell {
   private:
-    int mode_;
-    double epsilon;  // energy density after collision
+    double epsilon;
 
-    // nucleus A
-    double g2mu2A;  // color charge density of nucleus A
-    double TpA;     // sum over the proton T(b) in this cell for nucleus A
-    Matrix *U;  // U is in the fundamental rep. (Nc*Nc matrix) // duobles as x
-                // component of electric field
+    double g2mu2A;
+    double TpA;
+    double g2mu2B;
+    double TpB;
 
-    // nucleus B
-    double g2mu2B;  // color charge density of nucleus B
-    double TpB;     // sum over the proton T(b) in this cell for nucleus B
-    Matrix *U2;  // Ui is the initial U in the fundamental rep. (Nc*Nc matrix)
-                 // // doubles as y component of electric field
+    double Ttautau;
+    double Txx;
+    double Tyy;
+    double Txy;
+    double Tetaeta;
+    double Ttaux;
+    double Ttauy;
+    double Ttaueta;
+    double Txeta;
+    double Tyeta;
 
-    Matrix *Ux;  // U is in the fundamental rep. (Nc*Nc matrix)
-    Matrix *Uy;  // U is in the fundamental rep. (Nc*Nc matrix)
+    double pitautau;
+    double pixx;
+    double piyy;
+    double pixy;
+    double pietaeta;
+    double pitaux;
+    double pitauy;
+    double pitaueta;
+    double pixeta;
+    double piyeta;
 
-    Matrix *Ux1;  // U is in the fundamental rep. (Nc*Nc matrix) nucleus 1 (also
-                  // room to save g, the gauge fixing matrix)
-    Matrix *Uy1;  // U is in the fundamental rep. (Nc*Nc matrix) nucleus 1 (also
-                  // room to save Uplaq, the plaquette)
-
-    Matrix *Ux2;  // U is in the fundamental rep. (Nc*Nc matrix) nucleus 2
-                  // (doubles as longitudinal electric field pi)
-    Matrix *Uy2;  // U is in the fundamental rep. (Nc*Nc matrix) nucleus 2
-                  // (doubles as scalar field (longitudinal) )
-
-    //  bool parity; // Parity of the cell (needed for Gauge fixing)
-
-    std::vector<double> Tmunu;
-
-    std::vector<double> pimunu;
-
-    std::vector<double> umu;
+    double utau;
+    double ux;
+    double uy;
+    double ueta;
 
   public:
-    Cell(const int Nc, const int mode);
-    ~Cell();
+    explicit Cell(int Nc);
+    ~Cell() = default;
 
-    //  void setParity(bool in) { parity = in; };
-    //  bool getParity() { return parity; };
+    void setg2mu2A(double in) { g2mu2A = in; }
+    void setg2mu2B(double in) { g2mu2B = in; }
+    double getg2mu2A() const { return g2mu2A; }
+    double getg2mu2B() const { return g2mu2B; }
 
-    void setg2mu2A(double in) { g2mu2A = in; };
-    void setg2mu2B(double in) { g2mu2B = in; };
+    void setTpA(double in) { TpA = in; }
+    void setTpB(double in) { TpB = in; }
+    double getTpA() const { return TpA; }
+    double getTpB() const { return TpB; }
 
-    double getg2mu2A() { return g2mu2A; };
-    double getg2mu2B() { return g2mu2B; };
+    void setEpsilon(double in) { epsilon = in; }
+    double getEpsilon() const { return epsilon; }
 
-    void setTpA(double in) { TpA = in; };
-    void setTpB(double in) { TpB = in; };
+    void setTtautau(double in) { Ttautau = in; }
+    double getTtautau() const { return Ttautau; }
+    void setTxx(double in) { Txx = in; }
+    double getTxx() const { return Txx; }
+    void setTyy(double in) { Tyy = in; }
+    double getTyy() const { return Tyy; }
+    void setTxy(double in) { Txy = in; }
+    double getTxy() const { return Txy; }
+    void setTetaeta(double in) { Tetaeta = in; }
+    double getTetaeta() const { return Tetaeta; }
+    void setTtaux(double in) { Ttaux = in; }
+    double getTtaux() const { return Ttaux; }
+    void setTtauy(double in) { Ttauy = in; }
+    double getTtauy() const { return Ttauy; }
+    void setTtaueta(double in) { Ttaueta = in; }
+    double getTtaueta() const { return Ttaueta; }
+    void setTxeta(double in) { Txeta = in; }
+    double getTxeta() const { return Txeta; }
+    void setTyeta(double in) { Tyeta = in; }
+    double getTyeta() const { return Tyeta; }
 
-    double getTpA() { return TpA; };
-    double getTpB() { return TpB; };
+    void setpitautau(double in) { pitautau = in; }
+    double getpitautau() const { return pitautau; }
+    void setpixx(double in) { pixx = in; }
+    double getpixx() const { return pixx; }
+    void setpiyy(double in) { piyy = in; }
+    double getpiyy() const { return piyy; }
+    void setpixy(double in) { pixy = in; }
+    double getpixy() const { return pixy; }
+    void setpietaeta(double in) { pietaeta = in; }
+    double getpietaeta() const { return pietaeta; }
+    void setpitaux(double in) { pitaux = in; }
+    double getpitaux() const { return pitaux; }
+    void setpitauy(double in) { pitauy = in; }
+    double getpitauy() const { return pitauy; }
+    void setpitaueta(double in) { pitaueta = in; }
+    double getpitaueta() const { return pitaueta; }
+    void setpixeta(double in) { pixeta = in; }
+    double getpixeta() const { return pixeta; }
+    void setpiyeta(double in) { piyeta = in; }
+    double getpiyeta() const { return piyeta; }
 
-    void setU(const Matrix &x) { *U = x; };
-    void setU2(const Matrix &x) { *U2 = x; };
-    void setUplaq(const Matrix &x) {
-        *Uy1 = x;
-    };  // using unused Uy1 to store Uplaq
-
-    void setUx(const Matrix &x) { *Ux = x; };
-    void setUy(const Matrix &x) { *Uy = x; };
-    void setUx1(const Matrix &x) { *Ux1 = x; };
-    void setUy1(const Matrix &x) { *Uy1 = x; };
-    void setUx2(const Matrix &x) { *Ux2 = x; };
-    void setUy2(const Matrix &x) { *Uy2 = x; };
-
-    void setEpsilon(const double in) { epsilon = in; };
-    double getEpsilon() { return epsilon; };
-
-    void setTtautau(const double in) { Tmunu[0] = in; };
-    double getTtautau() { return Tmunu[0]; };
-    void setTxx(const double in) { Tmunu[4] = in; };
-    double getTxx() { return Tmunu[4]; };
-    void setTyy(const double in) { Tmunu[7] = in; };
-    double getTyy() { return Tmunu[7]; };
-    void setTxy(const double in) { Tmunu[5] = in; };
-    double getTxy() { return Tmunu[5]; };
-    void setTetaeta(const double in) { Tmunu[9] = in; };
-    double getTetaeta() { return Tmunu[9]; };
-    void setTtaux(const double in) { Tmunu[1] = in; };
-    double getTtaux() { return Tmunu[1]; };
-    void setTtauy(const double in) { Tmunu[2] = in; };
-    double getTtauy() { return Tmunu[2]; };
-    void setTtaueta(const double in) { Tmunu[3] = in; };
-    double getTtaueta() { return Tmunu[3]; };
-    void setTxeta(const double in) { Tmunu[6] = in; };
-    double getTxeta() { return Tmunu[6]; };
-    void setTyeta(const double in) { Tmunu[8] = in; };
-    double getTyeta() { return Tmunu[8]; };
-
-    void setpitautau(const double in) { pimunu[0] = in; };
-    double getpitautau() { return pimunu[0]; };
-    void setpixx(const double in) { pimunu[4] = in; };
-    double getpixx() { return pimunu[4]; };
-    void setpiyy(const double in) { pimunu[7] = in; };
-    double getpiyy() { return pimunu[7]; };
-    void setpixy(const double in) { pimunu[5] = in; };
-    double getpixy() { return pimunu[5]; };
-    void setpietaeta(const double in) { pimunu[9] = in; };
-    double getpietaeta() { return pimunu[9]; };
-    void setpitaux(const double in) { pimunu[1] = in; };
-    double getpitaux() { return pimunu[1]; };
-    void setpitauy(const double in) { pimunu[2] = in; };
-    double getpitauy() { return pimunu[2]; };
-    void setpitaueta(const double in) { pimunu[3] = in; };
-    double getpitaueta() { return pimunu[3]; };
-    void setpixeta(const double in) { pimunu[6] = in; };
-    double getpixeta() { return pimunu[6]; };
-    void setpiyeta(const double in) { pimunu[8] = in; };
-    double getpiyeta() { return pimunu[8]; };
-
-    void setutau(const double in) { umu[0] = in; };
-    double getutau() { return umu[0]; };
-    void setux(const double in) { umu[1] = in; };
-    double getux() { return umu[1]; };
-    void setuy(const double in) { umu[2] = in; };
-    double getuy() { return umu[2]; };
-    void setueta(const double in) { umu[3] = in; };
-    double getueta() { return umu[3]; };
-
-    Matrix &getg() const { return *Ux1; };  // use unused Ux1 to store g
-    Matrix &getU() const { return *U; };
-    Matrix &getUx() const { return *Ux; };
-    Matrix &getUy() const { return *Uy; };
-    Matrix &getU2() const { return *U2; };
-    Matrix &getUx1() const { return *Ux1; };
-    Matrix &getUy1() const { return *Uy1; };
-    Matrix &getUx2() const { return *Ux2; };
-    Matrix &getUy2() const { return *Uy2; };
-    Matrix &getUplaq() const { return *Uy1; };  // use unused Uy1 to store Uplaq
-
-    void setE1(const Matrix &x) { *U = x; };  // use unused U to store E1
-    Matrix &getE1() const { return *U; };
-    void setE2(const Matrix &x) { *U2 = x; };  // use unused U2 to store E2
-    Matrix &getE2() const { return *U2; };
-    void setphi(const Matrix &x) { *Uy2 = x; };  // use unused Uy2 to store phi
-    Matrix &getphi() const { return *Uy2; };
-    void setpi(const Matrix &x) { *Ux2 = x; };  // use unused Ux2 to store pi
-    Matrix &getpi() const { return *Ux2; };
-    void setg(const Matrix &x) { *Ux1 = x; };  // using unused Ux1 to store g
-
-    //  void computeAdjointU();
-};
-
-class SmallCell {
-  private:
-    Matrix *buffer1;
-    Matrix *buffer2;
-
-  public:
-    SmallCell(const int Nc);
-    ~SmallCell();
-
-    Matrix &getbuffer1() const { return *buffer1; };
-    void setbuffer1(const Matrix &x) { *buffer1 = x; };
-    Matrix &getbuffer2() const { return *buffer2; };
-    void setbuffer2(const Matrix &x) { *buffer2 = x; };
+    void setutau(double in) { utau = in; }
+    double getutau() const { return utau; }
+    void setux(double in) { ux = in; }
+    double getux() const { return ux; }
+    void setuy(double in) { uy = in; }
+    double getuy() const { return uy; }
+    void setueta(double in) { ueta = in; }
+    double getueta() const { return ueta; }
 };
 
 #endif

@@ -118,6 +118,26 @@ int Setup::IFind(string file_name, string st) {
     return static_cast<int>(f);
 } /* IFind */
 
+int Setup::IFindOptional(string file_name, string st, int defaultValue) {
+    ifstream input(file_name.c_str());
+    if (!input.is_open()) {
+        cerr << "The input file named " << file_name << " is absent. Exiting."
+             << endl;
+        exit(1);
+    }
+
+    string key;
+    string value;
+    while (input >> key) {
+        if (key == "EndOfFile") break;
+        if (!(input >> value)) break;
+        if (key == st) {
+            return static_cast<int>(::atof(value.c_str()));
+        }
+    }
+    return defaultValue;
+}
+
 // reads an integer using stringfind:
 unsigned long long int Setup::ULLIFind(string file_name, string st) {
     double f;

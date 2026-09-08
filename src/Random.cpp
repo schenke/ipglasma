@@ -4,8 +4,10 @@
 #include <gsl/gsl_sf_gamma.h>
 
 #include <cmath>
+#include <cstring>
 #include <iostream>
 
+#include "Instrumentation.h"
 #include "gsl/gsl_randist.h"
 
 // This file contains the random generator, which is
@@ -110,6 +112,43 @@ void Random::init_by_array64(
     mt[0] = 1ULL << 63; /* MSB is 1; assuring non-zero initial array */
 }
 
+void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
+    static const unsigned long long mag01[2] = {0ULL, MATRIX_A};
+    std::size_t produced = 0;
+
+    while (produced < count) {
+        if (mti >= NN) {
+            if (mti == NN + 1) init_genrand64(5489ULL);
+
+            int i = 0;
+            unsigned long long x;
+            for (; i < NN - MM; ++i) {
+                x = (mt[i] & UM) | (mt[i + 1] & LM);
+                mt[i] =
+                    mt[i + MM] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+            }
+            for (; i < NN - 1; ++i) {
+                x = (mt[i] & UM) | (mt[i + 1] & LM);
+                mt[i] = mt[i + (MM - NN)] ^ (x >> 1)
+                        ^ mag01[static_cast<int>(x & 1ULL)];
+            }
+            x = (mt[NN - 1] & UM) | (mt[0] & LM);
+            mt[NN - 1] =
+                mt[MM - 1] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+            mti = 0;
+        }
+
+        const std::size_t available = static_cast<std::size_t>(NN - mti);
+        const std::size_t remaining = count - produced;
+        const std::size_t take =
+            (remaining < available) ? remaining : available;
+        std::memcpy(
+            out + produced, mt + mti, take * sizeof(unsigned long long));
+        mti += static_cast<int>(take);
+        produced += take;
+    }
+}
+
 /* generates a random number on [0, 2^64-1]-interval */
 unsigned long long Random::genrand64_int64(void) {
     int i;
@@ -202,6 +241,108 @@ double Random::Gauss(double mean, double width) {
     } else {
         iset = 0;
         return mean + width * gset;
+    }
+}
+
+void Random::GaussBulk(
+    double *out, std::size_t count, std::vector<double> &scratch) {
+    if (count == 0) return;
+
+    // Preserve the exact scalar Gauss() stream, including the cached partner
+    // in gset/iset. Generate candidate polar pairs in ordered rejection rounds:
+    // if R accepted pairs are still required, draw exactly R candidates.  If
+    // some are rejected, the next round draws exactly the number still needed.
+    // Consequently no MT word is consumed beyond the scalar stopping point.
+    std::size_t outOffset = 0;
+    if (iset != 0) {
+        out[outOffset++] = gset;
+        iset = 0;
+        if (outOffset == count) return;
+    }
+
+    const std::size_t remaining = count - outOffset;
+    const std::size_t pairCount = (remaining + 1) / 2;
+
+    // First 3*pairCount doubles hold accepted (v1,v2,rsq) triples.  The final
+    // 2*pairCount doubles are temporary converted uniforms for one rejection
+    // round.  Raw MT words live in a reusable Random-owned buffer.
+    scratch.resize(5 * pairCount);
+    double *accepted = scratch.data();
+    double *uniforms = scratch.data() + 3 * pairCount;
+    bulkRawScratch_.resize(2 * pairCount);
+
+    const bool profile = ipg::Profiler::instance().enabled();
+    double phaseStart = profile ? ipg::wallSeconds() : 0.0;
+
+    std::size_t acceptedPairs = 0;
+    while (acceptedPairs < pairCount) {
+        const std::size_t needed = pairCount - acceptedPairs;
+        const std::size_t uniformCount = 2 * needed;
+
+        // Advance the MT state exactly as the scalar generator would, but copy
+        // the untempered state words out in bulk. Tempering is independent for
+        // every word and can therefore use the existing OpenMP team safely.
+        genrand64RawBulk(bulkRawScratch_.data(), uniformCount);
+
+#pragma omp parallel for
+        for (std::size_t q = 0; q < uniformCount; ++q) {
+            unsigned long long x = bulkRawScratch_[q];
+            x ^= (x >> 29) & 0x5555555555555555ULL;
+            x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
+            x ^= (x << 37) & 0xFFF7EEE000000000ULL;
+            x ^= (x >> 43);
+            uniforms[q] = ((x >> 12) + 0.5) * (1.0 / 4503599627370496.0);
+        }
+
+        // Scan candidates serially in original RNG order.  This preserves the
+        // precise rejection decisions and accepted-pair ordering of Gauss().
+        for (std::size_t pair = 0; pair < needed; ++pair) {
+            const double v1 = 2.0 * uniforms[2 * pair] - 1.0;
+            const double v2 = 2.0 * uniforms[2 * pair + 1] - 1.0;
+            const double rsq = v1 * v1 + v2 * v2;
+            if (rsq <= 1.0 && rsq != 0.0) {
+                const std::size_t base = 3 * acceptedPairs++;
+                accepted[base] = v1;
+                accepted[base + 1] = v2;
+                accepted[base + 2] = rsq;
+            }
+        }
+    }
+
+    if (profile) {
+        ipg::Profiler::instance().add(
+            "random.gauss_bulk.generate", ipg::wallSeconds() - phaseStart);
+        phaseStart = ipg::wallSeconds();
+    }
+
+    const std::size_t fullPairs = remaining / 2;
+#pragma omp parallel for
+    for (std::size_t pair = 0; pair < fullPairs; ++pair) {
+        const std::size_t base = 3 * pair;
+        const double v1 = accepted[base];
+        const double v2 = accepted[base + 1];
+        const double rsq = accepted[base + 2];
+        const double fac = sqrt(-2.0 * log(rsq) / rsq);
+        const std::size_t outBase = outOffset + 2 * pair;
+        out[outBase] = v2 * fac;
+        out[outBase + 1] = v1 * fac;
+    }
+
+    if ((remaining & 1U) != 0U) {
+        const std::size_t pair = pairCount - 1;
+        const std::size_t base = 3 * pair;
+        const double v1 = accepted[base];
+        const double v2 = accepted[base + 1];
+        const double rsq = accepted[base + 2];
+        const double fac = sqrt(-2.0 * log(rsq) / rsq);
+        out[count - 1] = v2 * fac;
+        gset = v1 * fac;
+        iset = 1;
+    }
+
+    if (profile) {
+        ipg::Profiler::instance().add(
+            "random.gauss_bulk.transform", ipg::wallSeconds() - phaseStart);
     }
 }
 

@@ -53,6 +53,17 @@ std::vector<T> operator/(const std::vector<T> &a, const double b) {
     return result;
 }
 
+// FFTW planner flag. FFTW_MEASURE (default) benchmarks candidate algorithms
+// at plan time and is typically fastest, but the chosen plan -- and hence the
+// last-bit rounding of FFT results -- varies run to run, making event output
+// non-reproducible at fixed seed. Compile -DIPGLASMA_DETERMINISTIC_FFT for
+// bit-reproducible runs.
+#ifdef IPGLASMA_DETERMINISTIC_FFT
+#define IPG_FFTW_PLAN_FLAG FFTW_ESTIMATE
+#else
+#define IPG_FFTW_PLAN_FLAG FFTW_MEASURE
+#endif
+
 class FFT {
   private:
     fftw_complex *input, *output;
@@ -70,19 +81,19 @@ class FFT {
         output =
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
         p = fftw_plan_dft_2d(
-            nn[0], nn[1], input, output, FFTW_FORWARD, FFTW_MEASURE);
+            nn[0], nn[1], input, output, FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
         pback = fftw_plan_dft_2d(
-            nn[0], nn[1], input, output, FFTW_BACKWARD, FFTW_MEASURE);
+            nn[0], nn[1], input, output, FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
         inputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
         outputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
         pmany = fftw_plan_many_dft(
             2, nn, 9, input, nn, 1, nn[0] * nn[1], output, nn, 1, nn[0] * nn[1],
-            FFTW_FORWARD, FFTW_MEASURE);
+            FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
         pmanyback = fftw_plan_many_dft(
             2, nn, 9, input, nn, 1, nn[0] * nn[1], output, nn, 1, nn[0] * nn[1],
-            FFTW_BACKWARD, FFTW_MEASURE);
+            FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
     };
     // Destructor
     ~FFT() {

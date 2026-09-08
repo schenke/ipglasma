@@ -14,6 +14,7 @@ class Setup {
 
     std::string StringFind(std::string file_name, std::string st);
     int IFind(std::string file_name, std::string st);
+    int IFindOptional(std::string file_name, std::string st, int defaultValue);
     unsigned long long int ULLIFind(std::string file_name, std::string st);
     double DFind(std::string file_name, std::string st);
     int IsFile(std::string file_name);

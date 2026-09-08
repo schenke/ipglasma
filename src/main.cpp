@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 
 #include <cmath>
@@ -19,6 +18,7 @@
 #include "Evolution.h"
 #include "FFT.h"
 #include "Init.h"
+#include "Instrumentation.h"
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
@@ -63,6 +63,8 @@ int main(int argc, char *argv[]) {
     rank = 0;
     size = 1;
 #endif
+
+    ipg::Profiler::instance().initialize(rank);
 
     int h5Flag = 0;
     pretty_ostream messager;
@@ -129,6 +131,9 @@ int main(int argc, char *argv[]) {
 
     // event loop starts ...
     for (int iev = 0; iev < nev; iev++) {
+        const int profiler_event_id = rank + iev * size;
+        ipg::Profiler::instance().beginEvent(profiler_event_id);
+
         messager << "Generating event " << iev + 1 << " out of " << nev
                  << " ...";
         messager.flush("info");
@@ -136,6 +141,7 @@ int main(int argc, char *argv[]) {
         if (rank == 0) display_logo();
 
         if (param->getSubNucleonParamType() > 0) {
+            IPG_PROFILE_SCOPE("initialization.subnucleon_parameters");
             // sample the sub-nucleon parameters from the posterior distribution
             int iSubNucleonParamSet = param->getSubNucleonParamSet();
             if (iSubNucleonParamSet == -1) {
@@ -150,7 +156,10 @@ int main(int argc, char *argv[]) {
         param->setEventId(rank + iev * size);
         param->setSuccess(0);
 
-        writeparams(param);
+        {
+            IPG_PROFILE_SCOPE("parameters.write");
+            writeparams(param);
+        }
 
         int nn[2];
         nn[0] = param->getSize();
@@ -175,12 +184,16 @@ int main(int argc, char *argv[]) {
         messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
         messager.flush("info");
         Glauber glauber;
-        glauber.initGlauber(
-            param->getSigmaNN(), param->getTarget(), param->getProjectile(),
-            param->getb(), param->getSetWSDeformParams(), param->getR_WS(),
-            param->getA_WS(), param->getBeta2(), param->getBeta3(),
-            param->getBeta4(), param->getGamma(), param->getForceDmin(),
-            param->getDmin(), param->getWSdR_np(), param->getWSda_np(), 100);
+        {
+            IPG_PROFILE_SCOPE("glauber.initialize");
+            glauber.initGlauber(
+                param->getSigmaNN(), param->getTarget(), param->getProjectile(),
+                param->getb(), param->getSetWSDeformParams(), param->getR_WS(),
+                param->getA_WS(), param->getBeta2(), param->getBeta3(),
+                param->getBeta4(), param->getGamma(), param->getForceDmin(),
+                param->getDmin(), param->getWSdR_np(), param->getWSda_np(),
+                100);
+        }
 
         // measure and output eccentricity, triangularity
         // init.eccentricity(lat, &group, param, random, glauber);
@@ -334,77 +347,95 @@ int main(int argc, char *argv[]) {
             // foutmult4(mult4_name.c_str(),ios::out); foutmult4.close();
         }
 
-        // allocate lattice
-        Lattice lat(param, param->getNc(), param->getSize());
-        messager.info("Lattice generated.");
+        // Keep the lattice lifetime inside this block so destruction is timed
+        // before the per-event profile is written.
+        {
+            // allocate lattice
+            Lattice lat(param, param->getNc(), param->getSize());
+            messager.info("Lattice generated.");
 
-        param->setSuccess(0);
+            param->setSuccess(0);
 
-        // initialize U-fields on the lattice
-        Initialization_method init_method;
-        if (param->getReadInitialWilsonLines() == 0) {
-            init_method = SAMPLE_COLOR_CHARGES;
-        } else {
-            init_method = (param->getReadInitialWilsonLines() == 1)
-                              ? READ_WLINE_TEXT
-                              : READ_WLINE_BINARY;
-        }
-        // First generate the V
-        init.init(&lat, &group, param, random, &glauber, init_method);
-
-        if (param->getUseJIMWLK()) {
-            messager.info("Start JIMWLK");
-            JIMWLK jimwlkSolver(*param, &group, &lat, random);
-            jimwlkSolver.evolution();
-            messager.info("Finish JIMWLK");
-
-            if (param->getWriteWilsonLines() > 0) {
-                std::stringstream s1;
-                s1 << "Final_x_"
-                   << std::to_string(param->getJimwlk_x_projectile()) << "_";
-                lat.WriteWilsonLines(s1.str(), param, 1);  // nucleus A
-                std::stringstream s2;
-                s2 << "Final_x_" << std::to_string(param->getJimwlk_x_target())
-                   << "_";
-                lat.WriteWilsonLines(s2.str(), param, 2);  // nucleus B
+            // initialize U-fields on the lattice
+            Initialization_method init_method;
+            if (param->getReadInitialWilsonLines() == 0) {
+                init_method = SAMPLE_COLOR_CHARGES;
+            } else {
+                init_method = (param->getReadInitialWilsonLines() == 1)
+                                  ? READ_WLINE_TEXT
+                                  : READ_WLINE_BINARY;
             }
-        }
+            // First generate the V
+            init.init(&lat, &group, param, random, &glauber, init_method);
 
-        if (param->getMode() == 1) {
-            while (param->getSuccess() == 0) {
-                // sample collision impact parameter
-                // and compute Npart, Ncoll,etc, and check if there was a
-                // collision
-                init.sampleImpactParameter(param);
-                init.computeCollisionGeometryQuantities(&lat, param);
+            if (param->getUseJIMWLK()) {
+                messager.info("Start JIMWLK");
+                JIMWLK jimwlkSolver(*param, &group, &lat, random);
+                jimwlkSolver.evolution();
+                messager.info("Finish JIMWLK");
+
+                if (param->getWriteWilsonLines() > 0) {
+                    std::stringstream s1;
+                    s1 << "Final_x_"
+                       << std::to_string(param->getJimwlk_x_projectile())
+                       << "_";
+                    lat.WriteWilsonLines(s1.str(), param, 1);  // nucleus A
+                    std::stringstream s2;
+                    s2 << "Final_x_"
+                       << std::to_string(param->getJimwlk_x_target()) << "_";
+                    lat.WriteWilsonLines(s2.str(), param, 2);  // nucleus B
+                }
             }
-            init.shiftFieldsWithImpactParameter(&lat, param);
-            init.initializeForwardLightCone(&lat, param);
-            messager.info("Start CYM evolution");
-            // do the CYM evolution of the initialized fields using parmeters in
-            // param
-            evolution.run(&lat, &group, param);
-        }
-    }
+
+            if (param->getMode() == 1) {
+                while (param->getSuccess() == 0) {
+                    // sample collision impact parameter
+                    // and compute Npart, Ncoll,etc, and check if there was a
+                    // collision
+                    init.sampleImpactParameter(param);
+                    init.computeCollisionGeometryQuantities(&lat, param);
+                }
+                init.shiftFieldsWithImpactParameter(&lat, param);
+                init.initializeForwardLightCone(&lat, param);
+                messager.info("Start CYM evolution");
+                // do the CYM evolution of the initialized fields using
+                // parmeters in param
+                evolution.run(&lat, &group, param);
+            }
 
 #ifndef DISABLEMPI
-    MPI_Barrier(MPI_COMM_WORLD);
+            {
+                IPG_PROFILE_SCOPE("mpi.barrier");
+                MPI_Barrier(MPI_COMM_WORLD);
+            }
 #endif
 
-    messager.info("One event finished");
-    if (param->getWriteOutputsToHDF5() == 1) {
-        int status = 0;
-        stringstream h5output_filename;
-        h5output_filename << "RESULTS_rank" << rank;
-        stringstream collect_command;
-        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
-                        << " --output_filename " << h5output_filename.str()
-                        << " --event_id " << param->getEventId();
-        status = system(collect_command.str().c_str());
-        messager << "finished system call to python script with status: "
-                 << status;
-        messager.flush("info");
-        h5Flag = 1;
+            messager.info("One event finished");
+            if (param->getWriteOutputsToHDF5() == 1) {
+                IPG_PROFILE_SCOPE("output.hdf5_collect_event");
+                int status = 0;
+                stringstream h5output_filename;
+                h5output_filename << "RESULTS_rank" << rank;
+                stringstream collect_command;
+                collect_command
+                    << "python3 utilities/combine_events_into_hdf5.py ."
+                    << " --output_filename " << h5output_filename.str()
+                    << " --event_id " << param->getEventId();
+                status = system(collect_command.str().c_str());
+                messager
+                    << "finished system call to python script with status: "
+                    << status;
+                messager.flush("info");
+                h5Flag = 1;
+            }
+
+            {
+                IPG_PROFILE_SCOPE("correctness.fingerprint");
+                ipg::writeLatticeFingerprint(&lat, rank, param->getEventId());
+            }
+        }  // lattice lifetime
+
+        ipg::Profiler::instance().endEvent();
     }
 
     delete random;
@@ -426,49 +457,65 @@ int main(int argc, char *argv[]) {
     MPI_Finalize();
 #endif
 
-    return 1;
+    return 0;
 }
 
 void display_logo() {
     cout << endl;
-    cout << "------------------------------------------------------------------"
+    cout << "--------------------------------------------------------------"
+            "----"
             "--"
             "---------"
          << endl;
     cout << "| Classical Yang-Mills evolution with IP-Glasma initial "
-            "configurations v1.4 |"
+            "configurations      |"
          << endl;
-    cout << "------------------------------------------------------------------"
+    cout << "--------------------------------------------------------------"
+            "----"
             "--"
             "---------"
          << endl;
-    cout << "| References:                                                     "
+    cout << "| References:                                                 "
+            "    "
             "  "
             "        |"
          << endl;
-    cout << "| B. Schenke, P. Tribedy, R. Venugopalan                          "
+    cout << "| B. Schenke, P. Tribedy, R. Venugopalan                      "
+            "    "
             "  "
             "        |"
          << endl;
-    cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, 034908 "
+    cout << "| Phys. Rev. Lett. 108, 252301 (2012) and Phys. Rev. C86, "
+            "034908 "
             "(2012)     |"
          << endl;
-    cout << "------------------------------------------------------------------"
+    cout << "| H. Mäntysaari, B. Schenke, C. Shen and W. Zhao "
+            "           "
+            "        "
+            "        |"
+         << endl;
+    cout << "| Phys. Rev. Lett. 135, 022302 (2025)                             "
+            "          |"
+         << endl;
+    cout << "--------------------------------------------------------------"
+            "----"
             "--"
             "---------"
          << endl;
 
-    cout << "This version uses Qs as obtained from IP-Sat using the sum over "
+    cout << "This version uses Qs as obtained from IP-Sat using the sum "
+            "over "
             "proton T_p(b)"
          << endl;
-    cout << "This is a simple MPI version that runs many events in one job. No "
+    cout << "This is a simple MPI version that runs many events in one "
+            "job. No "
             "communication."
          << endl;
 
-    cout
-        << "Run using large lattices to improve convergence of the root finder "
-           "in initial condition. "
-        << "Recommended: 600x600 using L=30fm" << endl;
+    cout << "Run using large lattices to improve convergence of the root "
+            "finder "
+            "in initial condition. "
+         << "Recommended: 600x600 using L=30fm" << endl;
     cout << endl;
 }
 
@@ -515,6 +562,14 @@ int readInput(
     param->setDetaOutput(setup->DFind(file_name, "detaOutput"));
     param->setUseFluctuatingx(setup->IFind(file_name, "useFluctuatingx"));
     param->setNc(setup->IFind(file_name, "Nc"));
+    if (param->getNc() != 3) {
+        if (rank == 0) {
+            cerr << "Error: IP-Glasma supports SU(3) only; input Nc must "
+                    "be 3 "
+                 << "(received Nc=" << param->getNc() << "). Exiting." << endl;
+        }
+        exit(1);
+    }
     param->setInverseQsForMaxTime(
         setup->IFind(file_name, "inverseQsForMaxTime"));
     param->setSeed(setup->ULLIFind(file_name, "seed"));
@@ -570,7 +625,9 @@ int readInput(
     param->setMaxtime(setup->DFind(file_name, "maxtime"));
     double lattice_a = param->getL() / static_cast<double>(param->getSize());
     // param->setdtau(setup->DFind(file_name, "dtau"));
-    int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a) + 1;
+    //   int iTimeSteps = static_cast<int>(10 * param->getMaxtime() /
+    //   lattice_a) + 1;
+    int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a);
     param->setdtau(param->getMaxtime() / (iTimeSteps * lattice_a));
     // param->setxExponent(setup->DFind(file_name,"xExponent")); //  is now
     // obsolete
@@ -583,6 +640,10 @@ int readInput(
         setup->DFind(file_name, "xFromThisFactorTimesQs"));
     param->setLinearb(setup->IFind(file_name, "samplebFromLinearDistribution"));
     param->setWriteOutputs(setup->IFind(file_name, "writeOutputs"));
+    param->setWriteEpsilonUHydro(
+        setup->IFindOptional(file_name, "writeEpsilonUHydro", 1));
+    param->setWriteTmunuBinary(
+        setup->IFindOptional(file_name, "writeTmunuBinary", 1));
     param->setWriteOutputsToHDF5(setup->IFind(file_name, "writeOutputsToHDF5"));
     param->setWriteEvolution(setup->IFind(file_name, "writeEvolution"));
     param->setWriteWilsonLines(setup->IFind(file_name, "writeWilsonLines"));
@@ -681,6 +742,7 @@ void writeparams(Parameters *param) {
     fout1 << "m " << param->getm() << endl;
     fout1 << "rmax " << param->getRmax() << endl;
     fout1 << "UVdamp " << param->getUVdamp() << endl;
+    fout1 << "writeTmunuBinary " << param->getWriteTmunuBinary() << endl;
     if (param->getSetWSDeformParams()) {
         fout1 << "setWSDeformParams " << param->getSetWSDeformParams() << endl;
         fout1 << "R_WS " << param->getR_WS() << endl;

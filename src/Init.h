@@ -87,7 +87,7 @@ class Init {
     void readInNucleusConfigs(
         const int nucleusA, const int lightNucleusOption,
         const int polarizationFlag, const double polJz,
-        vector<vector<float>> &nucleonPosArr);
+        vector<vector<float>> &nucleonPosArr, Parameters *param);
     void generateNucleusConfiguration(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
         double beta3, double beta4, double gamma, bool forceDminFlag,

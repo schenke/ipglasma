@@ -602,9 +602,9 @@ void Init::readNuclearQs(Parameters *param) {
 void Init::readInNucleusConfigs(
     const int nucleusA, const int lightNucleusOption,
     const int polarizationFlag, const double polJz,
-    vector<vector<float>> &nucleonPosArr) {
+    vector<vector<float>> &nucleonPosArr, Parameters *param) {
     if (nucleonPosArr.size() > 0) return;
-    std::string path = "nucleusConfigurations/";
+    std::string path = param->getNuclearConfigurationsPath() + "/";
     std::string fileName;
     bool readFlag = true;
     if (nucleusA == 2) {
@@ -2455,11 +2455,11 @@ void Init::init(
     readInNucleusConfigs(
         static_cast<int>(glauber->nucleusA1()), param->getlightNucleusOption(),
         param->getPolarizationProjectile(),
-        param->getPolarizationProjectileJz(), nucleonPosArrA_);
+        param->getPolarizationProjectileJz(), nucleonPosArrA_, param);
     readInNucleusConfigs(
         static_cast<int>(glauber->nucleusA2()), param->getlightNucleusOption(),
         param->getPolarizationTarget(), param->getPolarizationTargetJz(),
-        nucleonPosArrB_);
+        nucleonPosArrB_, param);
 
     if (init_method == InitializationMethod::ReadWlineBinary
         or init_method == InitializationMethod::ReadWlineText) {

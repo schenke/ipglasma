@@ -151,6 +151,8 @@ class Parameters {
     int nucleonPositionsFromFile_;  // switch to determine whether to sample
                                     // nucleon positions (0) or read them from a
                                     // file (1)
+    std::string
+        nuclearConfigurationsPath_;  // path to the nuclear configurations
     int useFixedNpart_;  // if 0 do not demand a given N_part, if >1 sample the
                          // initial configuration until the given N_part is
                          // reached
@@ -436,6 +438,12 @@ class Parameters {
     int getReadInitialWilsonLines() { return readInitialWilsonLines_; }
     void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile_ = x; }
     int getNucleonPositionsFromFile() { return nucleonPositionsFromFile_; }
+    void setNuclearConfigurationsPath(std::string x) {
+        nuclearConfigurationsPath_ = x;
+    }
+    std::string getNuclearConfigurationsPath() {
+        return nuclearConfigurationsPath_;
+    }
     void setInverseQsForMaxTime(int x) { inverseQsForMaxTime_ = x; };
     int getInverseQsForMaxTime() { return inverseQsForMaxTime_; }
     void setSmearQs(int x) { smearQs_ = x; }

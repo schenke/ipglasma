@@ -68,10 +68,10 @@ class Glauber {
     Glauber() {};
     ~Glauber() { remove("tmp.dat"); }
 
-    double nucleusA1() const { return currentA1; }
-    double nucleusA2() const { return currentA2; }
-    double nucleusZ1() const { return currentZ1; }
-    double nucleusZ2() const { return currentZ2; }
+    int nucleusA1() const { return static_cast<int>(currentA1); }
+    int nucleusA2() const { return static_cast<int>(currentA2); }
+    int nucleusZ1() const { return static_cast<int>(currentZ1); }
+    int nucleusZ2() const { return static_cast<int>(currentZ2); }
     int IsFile(char *file_name);
     void FindNucleusData(
         Nucleus *nucleus, std::string target, std::string file_name, int rank);

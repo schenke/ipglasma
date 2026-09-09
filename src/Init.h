@@ -4,6 +4,8 @@
 #ifndef Init_H
 #define Init_H
 
+#include <cstdint>
+
 #include "FFT.h"
 #include "Glauber.h"
 #include "Group.h"
@@ -13,6 +15,13 @@
 #include "Random.h"
 #include "pretty_ostream.h"
 
+enum Initialization_method {
+    SAMPLE_COLOR_CHARGES,
+    READ_WLINE_TEXT,
+    READ_WLINE_BINARY,
+    INITIALIZE_AFTER_JIMWLK
+};
+
 class Init {
   private:
     int const static iymaxNuc = 44;  // for the Tp-y table
@@ -21,7 +30,6 @@ class Init {
         200;  // updated in March 2019 to a larger T_A range
 
     double const deltaYNuc = 0.25;  // for the new table
-
     FFT fft;
     //  Matrix** A;
     //  Glauber *glauber;
@@ -30,8 +38,8 @@ class Init {
 
     double As[1];
 
-    std::vector<vector<float> > nucleonPosArrA_;
-    std::vector<vector<float> > nucleonPosArrB_;
+    std::vector<vector<float>> nucleonPosArrA_;
+    std::vector<vector<float>> nucleonPosArrB_;
 
     // list of x and y coordinates of nucleons in nucleus A
     std::vector<ReturnValue> nucleusA_;
@@ -45,16 +53,24 @@ class Init {
     Random *random_ptr_;
 
     Matrix one_;
+    vector<vector<double>> xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
 
   public:
     // Constructor.
-    Init(const int nn[]) : fft(nn) {};
+    Init(const int nn[], const int Nc) : fft(nn) {
+        Nc_ = Nc;
+        Nc2m1_ = Nc_ * Nc_ - 1;
+        one_ = Matrix(Nc_, 1.);
+    };
 
     ~Init() {};
 
     void init(
         Lattice *lat, Group *group, Parameters *param, Random *random,
-        Glauber *glauber, int READFROMFILE);
+        Glauber *glauber, Initialization_method init_method);
+    void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
+    void initializeForwardLightCone(Lattice *lat, Parameters *param);
+    void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     void readNuclearQs(Parameters *param);
     void solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec);
@@ -63,20 +79,23 @@ class Init {
     double getNuclearQs2(double Qs2atZeroY, double y);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
+    void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
     void setV(Lattice *lat, Parameters *param, Random *random);
-    void readV(Lattice *lat, Parameters *param, int format);
+    void readVFromFile(Lattice *lat, Parameters *param, int format);
+
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
     void multiplicity(Lattice *lat, Parameters *param);
 
     Matrix getUfromExponent(std::vector<double> &in);
     bool findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol);
-    bool findUInForwardLightconeChun(Matrix &U1, Matrix &U2, Matrix &Usol);
+    bool findUInForwardLightconeChun(
+        Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
 
     void readInNucleusConfigs(
         const int nucleusA, const int lightNucleusOption,
         const int polarizationFlag, const double polJz,
-        vector<vector<float> > &nucleonPosArr);
+        vector<vector<float>> &nucleonPosArr);
     void generate_nucleus_configuration(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
         double beta3, double beta4, double gamma, bool force_dmin_flag,

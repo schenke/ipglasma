@@ -69,6 +69,29 @@ string Setup::StringFind(string file_name, string st) {
     return (0);
 } /* StringFind */
 
+std::vector<double> Setup::ListFind(string fileName, string paramName) {
+    std::vector<double> varlist;
+    if (!IsFile(fileName)) {
+        cerr << "The input file named " << fileName << " is absent. Exiting."
+             << endl;
+        exit(1);
+    }
+    ifstream input(fileName.c_str());
+
+    string line;
+    while (std::getline(input, line)) {
+        if (line.find(paramName) != string::npos) {
+            std::stringstream lineStream(line);
+            std::string cell;
+            lineStream >> cell;
+            while (std::getline(lineStream, cell, ',')) {
+                varlist.push_back(std::stod(cell));
+            }
+        }
+    }
+    return varlist;
+}
+
 // reads a double using stringfind:
 double Setup::DFind(string file_name, string st) {
     // cout << "ccheck1" << endl;
@@ -94,6 +117,26 @@ int Setup::IFind(string file_name, string st) {
     // return (int)(f + 0.5);
     return static_cast<int>(f);
 } /* IFind */
+
+int Setup::IFindOptional(string file_name, string st, int defaultValue) {
+    ifstream input(file_name.c_str());
+    if (!input.is_open()) {
+        cerr << "The input file named " << file_name << " is absent. Exiting."
+             << endl;
+        exit(1);
+    }
+
+    string key;
+    string value;
+    while (input >> key) {
+        if (key == "EndOfFile") break;
+        if (!(input >> value)) break;
+        if (key == st) {
+            return static_cast<int>(::atof(value.c_str()));
+        }
+    }
+    return defaultValue;
+}
 
 // reads an integer using stringfind:
 unsigned long long int Setup::ULLIFind(string file_name, string st) {

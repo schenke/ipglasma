@@ -120,6 +120,17 @@ void Glauber::FindNucleusData2(
         nucleus->beta3 = 0.;
         nucleus->beta4 = 0.0;
         nucleus->gamma = 0.;
+    } else if (name.compare("Ne22") == 0) {
+        nucleus->A = 22;
+        nucleus->Z = 10;
+        densityFunction = "3Fermi";
+        nucleus->R_WS = 2.782;
+        nucleus->w_WS = 0.0;
+        nucleus->a_WS = 0.549;
+        nucleus->beta2 = 0.0;
+        nucleus->beta3 = 0.;
+        nucleus->beta4 = 0.0;
+        nucleus->gamma = 0.;
     } else if (name.compare("S") == 0) {
         nucleus->A = 32;
         nucleus->Z = 16;

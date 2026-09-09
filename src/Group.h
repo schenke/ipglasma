@@ -1,20 +1,19 @@
 #ifndef Group_h
 #define Group_h
 
+#include <array>
+
 #include "Matrix.h"
 
 class Group {
   private:
-    Matrix **t;   // generators of the group
-    Matrix **tA;  // adjoint representation of generators of the group
-    int Nc;       // number of colors
+    std::array<Matrix, 8> t;
 
   public:
-    // constructor(s)
-    Group(int N);
-    ~Group();
+    explicit Group(int N);
+    ~Group() = default;
 
-    Matrix &getT(int i) const { return *t[i]; };
-    Matrix &getTA(int i) const { return *tA[i]; };
+    Matrix &getT(int i) { return t[static_cast<std::size_t>(i)]; }
+    const Matrix &getT(int i) const { return t[static_cast<std::size_t>(i)]; }
 };
 #endif

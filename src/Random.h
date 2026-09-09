@@ -1,6 +1,10 @@
 #ifndef Random_h
 #define Random_h
 
+#include <cstddef>
+#include <random>
+#include <vector>
+
 #include "gsl/gsl_rng.h"
 
 #define NN 312
@@ -15,15 +19,22 @@ class Random {
     double gset;
 
     unsigned long long mt[NN];
+    std::vector<unsigned long long> bulkRawScratch_;
     /* mti==NN+1 means mt[NN] is not initialized */
     int mti;
 
     gsl_rng *gslRandom;
 
+    std::vector<double> gammaIncCDF_;
+    std::vector<double> gammaIncCDFx_;
+
+    void genrand64RawBulk(unsigned long long *out, std::size_t count);
+
   public:
     Random() {
         iset = 0;
         gslRandom = gsl_rng_alloc(gsl_rng_taus);
+
     };  // constructor
 
     ~Random() { gsl_rng_free(gslRandom); };  // destructor
@@ -41,7 +52,12 @@ class Random {
     double NBD(double nbar, double k);
     int Poisson(const double mean);
     double Gauss(double mean = 0., double width = 1.);
+    void GaussBulk(
+        double *out, std::size_t count, std::vector<double> &scratch);
     double Gauss2(double mean, double sigma);
+
+    void setGammaIncCDF(const double omega);
+    double sampleGammaInc();
 };
 
 #endif

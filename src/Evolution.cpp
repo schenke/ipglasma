@@ -454,6 +454,136 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     cout << "Gauss violation=" << largest << endl;
 }
 
+void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
+    IPG_PROFILE_SCOPE("output.evolved_fields");
+    const int N = param->getSize();
+    constexpr int Nc = 3;
+    const double a = param->getL() / static_cast<double>(N);
+    const double dtau = param->getdtau();
+    const double tauLattice = static_cast<double>(it) * dtau;
+    const double tauFm = a * tauLattice;
+    const double momentumTauFm =
+        (it == 0) ? 0.0 : a * (static_cast<double>(it) - 0.5) * dtau;
+
+    // The payload layout is [field, real_or_imag, x, y, row, col], C-order.
+    // Full matrices are stored so that no color information is discarded.
+    constexpr int nFields = 6;
+    const std::size_t matrixElements =
+        static_cast<std::size_t>(N) * N * Nc * Nc;
+    const std::size_t payloadElements =
+        static_cast<std::size_t>(nFields) * 2 * matrixElements;
+    std::vector<float> payload(payloadElements);
+
+    auto matrixAt = [lat](const int field, const int pos) -> const Matrix & {
+        switch (field) {
+            case 0:
+                return lat->Uy2[pos];
+            case 1:
+                return lat->Ux2[pos];
+            case 2:
+                return lat->U[pos];
+            case 3:
+                return lat->U2[pos];
+            case 4:
+                return lat->Ux[pos];
+            case 5:
+                return lat->Uy[pos];
+            default:
+                throw std::runtime_error("invalid evolved-field index");
+        }
+    };
+
+    for (int field = 0; field < nFields; ++field) {
+        const std::size_t realOffset =
+            static_cast<std::size_t>(2 * field) * matrixElements;
+        const std::size_t imagOffset = realOffset + matrixElements;
+        for (int x = 0; x < N; ++x) {
+            for (int y = 0; y < N; ++y) {
+                const int pos = x * N + y;
+                const Matrix &matrix = matrixAt(field, pos);
+                const std::complex<double> *elements = matrix.data();
+                const std::size_t siteOffset =
+                    static_cast<std::size_t>(pos) * Nc * Nc;
+                for (int row = 0; row < Nc; ++row) {
+                    for (int col = 0; col < Nc; ++col) {
+                        const std::size_t element =
+                            static_cast<std::size_t>(row) * Nc + col;
+                        payload[realOffset + siteOffset + element] =
+                            static_cast<float>(elements[element].real());
+                        payload[imagOffset + siteOffset + element] =
+                            static_cast<float>(elements[element].imag());
+                    }
+                }
+            }
+        }
+    }
+
+    // This binary format is explicitly little-endian. IP-Glasma production
+    // platforms are normally little-endian; fail loudly rather than emit an
+    // ambiguous file on another architecture.
+    const std::uint16_t endianProbe = 1;
+    if (*reinterpret_cast<const unsigned char *>(&endianProbe) != 1) {
+        throw std::runtime_error(
+            "writeEvolvedFields currently requires a little-endian host");
+    }
+
+    std::stringstream metadata;
+    metadata << std::setprecision(17)
+             << "{\"format\":\"ipglasma-evolved-fields\","
+             << "\"version\":1,"
+             << "\"dtype\":\"<f4\","
+             << "\"shape\":[6,2," << N << "," << N << "," << Nc << "," << Nc
+             << "],"
+             << "\"axis_order\":[\"field\",\"complex_part\",\"x\",\"y\","
+                "\"row\",\"col\"],"
+             << "\"fields\":[\"phi\",\"pi\",\"E1\",\"E2\",\"Ux\","
+                "\"Uy\"],"
+             << "\"complex_part\":[\"real\",\"imag\"],"
+             << "\"native_site_index\":\"pos=x*N+y\","
+             << "\"event_id\":" << param->getEventId() << ","
+             << "\"step\":" << it << ","
+             << "\"tau_lattice\":" << tauLattice << ","
+             << "\"tau_fm\":" << tauFm << ","
+             << "\"momentum_tau_fm\":" << momentumTauFm << ","
+             << "\"a_fm\":" << a << ","
+             << "\"dtau_lattice\":" << dtau << ","
+             << "\"staggering\":\"Ux,Uy,phi at tau; E1,E2,pi at tau-dtau/2 "
+                "for step>0; all variables are the initialized tau=0+ values "
+                "for step=0\"}";
+    const std::string metadataString = metadata.str();
+
+    stringstream filename;
+    filename << "evolvedFields" << param->getEventId() << "_it" << std::setw(8)
+             << std::setfill('0') << it << ".ipgf";
+
+    ofstream output(
+        filename.str().c_str(),
+        std::ios::out | std::ios::binary | std::ios::trunc);
+    if (!output) {
+        throw std::runtime_error(
+            "could not open evolved-field snapshot " + filename.str());
+    }
+
+    const char magic[8] = {'I', 'P', 'G', 'F', 'L', 'D', '1', '\0'};
+    const std::uint64_t metadataBytes =
+        static_cast<std::uint64_t>(metadataString.size());
+    output.write(magic, sizeof(magic));
+    output.write(
+        reinterpret_cast<const char *>(&metadataBytes), sizeof(metadataBytes));
+    output.write(metadataString.data(), metadataString.size());
+    output.write(
+        reinterpret_cast<const char *>(payload.data()),
+        static_cast<std::streamsize>(payload.size() * sizeof(float)));
+    output.close();
+
+    if (!output) {
+        throw std::runtime_error(
+            "failed while writing evolved-field snapshot " + filename.str());
+    }
+    cout << "Wrote evolved fields at tau=" << tauFm << " fm/c to "
+         << filename.str() << endl;
+}
+
 void Evolution::writeGluonMultiplicityTarget(
     Parameters *param, int it, double a, double dtau, double dNPrimary,
     double dNBinned, double dEPrimary, double dEBinned, double dNCut3,

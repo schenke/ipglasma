@@ -129,7 +129,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         } else if (A1 == 2) {
             // deuteron
             rv = glauber->SampleTARejection(random, 1);
-            param->setRnp(sqrt(rv.x * rv.x + rv.y * rv.y));
             // we sample the neutron proton distance, so distance to the center
             // needs to be divided by 2
             rv.x = rv.x / 2.;
@@ -171,7 +170,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             rv = glauber->SampleTARejection(random, 2);
             // we sample the neutron proton distance, so distance to the center
             // needs to be divided by 2
-            param->setRnp(sqrt(rv.x * rv.x + rv.y * rv.y));
 
             rv.x = rv.x / 2.;
             rv.y = rv.y / 2.;
@@ -449,9 +447,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         // Assign proton/neutron labels
         assignProtons(random, nucleusA_, glauber->nucleusZ1());
         assignProtons(random, nucleusB_, glauber->nucleusZ2());
-
-        param->setA1FromFile(A);
-        param->setA2FromFile(A2);
     } else {
         cerr << "NucleonPositionsFromFile can be 0 (sample nucleons) or 1 or 2 "
                 "(read from files) - you chose "
@@ -851,9 +846,7 @@ double Init::getNuclearQs2(double T, double y) {
 }
 
 // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
-// Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber If
-// param->getwhich_stage() == 2, then here we shift nuclei back to b=0 for
-// JIMLWK evolution (to be shifted back to b after JIMLWK)
+// Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.color_charge_density");

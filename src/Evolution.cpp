@@ -2115,7 +2115,6 @@ void Evolution::eccentricity(
     avySq /= toteps;
     avrSq /= toteps;
     Rbar = 1. / sqrt(1. / avxSq + 1. / avySq);
-    param->setEccentricity2(eccentricity2);
     if (it == 1) param->setPsi(Psi2);
 
     if (doAniso == 0) {

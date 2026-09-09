@@ -617,8 +617,6 @@ int readInput(
     //   lattice_a) + 1;
     int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a);
     param->setdtau(param->getMaxtime() / (iTimeSteps * lattice_a));
-    // param->setxExponent(setup->DFind(file_name,"xExponent")); //  is now
-    // obsolete
     param->setRunWithQs(setup->IFind(file_name, "runWith0Min1Avg2MaxQs"));
     param->setRunWithkt(setup->IFind(file_name, "runWithkt"));
     param->setRunWithLocalQs(setup->IFind(file_name, "runWithLocalQs"));

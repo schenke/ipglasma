@@ -13,13 +13,10 @@ class Parameters {
     int subNucleonParamSet_;
     std::vector<std::vector<float>> posteriorParamSets_;
     std::vector<std::vector<float>> posteriorParamSetsNq3_;
-    // switches:
-    int initMethod;
 
     double myPI;
     double myhbarc;
 
-    int A;           // number of nucleons;
     int size;        // the length of the lattice (make it 2^n, with n integer)
     int sizeOutput;  // the length of the lattice for the output data
                      // (sizeOutput
@@ -29,7 +26,6 @@ class Parameters {
     double detaOutput;  // step size in rapidity for the output data
     int runningCoupling;  // switch to decide if alpha_s should run (0 constant
                           // alpha_s, 1 running coupling)
-    double R;
     int useTimeForSeed;  // decide if the system time should be used to generate
                          // a seed (1) or not (0)
     int useSeedList;     // read random seeds from a file if set to (1) - this
@@ -38,12 +34,8 @@ class Parameters {
         seed;   // random seed that's added to the current time
                 // to generate the full seed (or the full seed,
                 // depending on the value of getUseTimeforSeed())
-    double ds;  // 'time' step
     int Ny;     // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
     double g2mu;       // g^2 mu [in lattice units]
-    double Qs;         // Q_s, to be dynamically determined
-    int steps;         // number of rapidity steps
-    int measureSteps;  // number of steps in interval between measurements
     int mode;  // mode: (1) run the evolution, (2) analysis with files from disk
     int runWithQs;  // set whether alpha_s should run with the maximum(2),
                     // average (1) or minimum(0) of Q_s from nucleus A and B
@@ -54,12 +46,7 @@ class Parameters {
                          // use settings from runWithQs
     double runWithThisFactorTimesQs;  // set the factor in front of Q_s under
                                       // the log in alpha_s
-    double mu0;        // cutoff to avoid the Landau pole in the 1-loop running
-                       // coupling expression
-    double LambdaQCD;  // LambdaQCD in units of g^2mu
     double g;  // coupling g needed in the initU3 where g^2mu does not scale out
-    double kappa4Factor;  // factor that multiplies the ratio of kappa4/(g^2
-                          // mu^2)^3
     double m;  // mass term in GeV to cut off the Coulomb tail - should be of
                // the order of \Lambda_QCD = 0.2 GeV
     double Jacobianm;   // mass term in GeV in the Jacobian going from y to eta
@@ -82,8 +69,6 @@ class Parameters {
                           // as scale for running coupling
     double
         alphas;  // the alpha_s computed at the scale given by the average Q_s
-    double xExponent;  // - exponent with which Q_s grows with x (usually 0.31
-                       // in IP-Sat for nuclei)
     int writeOutputs;  // decide whether to write (1) or not write (0) large
                        // output files (like hydro input data)
     int writeEpsilonUHydro;  // run the flow-velocity/hydro-output calculation
@@ -128,8 +113,6 @@ class Parameters {
                               // use the manually entered maximal evolution time
                               // (0)
     double area;  // area of the initial interaction region
-    double eccentricity2;  // save the computed ellipticity to output together
-                           // with S_T and dN/dy in the end
     double Psi;  // the initial angle Psi_2 that determines the event-plane
                  // (geometric/spatial one)
     // Glauber parameters:
@@ -167,13 +150,9 @@ class Parameters {
     int nucleonPositionsFromFile;  // switch to determine whether to sample
                                    // nucleon positions (0) or read them from a
                                    // file (1)
-    int A1FromFile;     // if nuclei are read from file, store A value here
-    int A2FromFile;     // if nuclei are read from file, store A value here
     int useFixedNpart;  // if 0 do not demand a given N_part, if >1 sample the
                         // initial configuration until the given N_part is
                         // reached
-    double rnp = 0.;    // distance between proton and neutron in the transverse
-                        // projection of the deuteron
     int smearQs;  // decide whether to smear Q_s using a Poisson distribution
                   // around its mean at every x_T (1) or not (0)
     double smearingWidth;  // width of the Gaussian smearing around the mean
@@ -222,9 +201,6 @@ class Parameters {
 
     bool useJIMWLK;  // flag to use JIMWLK evolution
     bool simpleLangevin_;
-    int which_stage;
-    double first_b;  // Impact parameter sampled before the JIMWLK evolution is
-                     // saved here
 
     double jimwlk_alphas;  // 0 = running coupling, positive value = fixed
                            // coupling
@@ -255,8 +231,6 @@ class Parameters {
     int getSubNucleonParamSet() const { return (subNucleonParamSet_); }
     void setSeed(unsigned long long int x) { seed = x; }
     unsigned long long int getSeed() { return seed; }
-    void setA(int x) { A = x; }
-    int getA() { return A; }
     void setNy(int x) { Ny = x; }
     int getNy() { return Ny; }
     void setSize(int x) { size = x; }
@@ -273,30 +247,14 @@ class Parameters {
 
     void setAverageOverNuclei(int x) { averageOverNuclei = x; }
     int getAverageOverNuclei() { return averageOverNuclei; }
-    void setR(double x) { R = x; }
-    double getR() { return R; }
-    void setDs(double x) { ds = x; }
-    double getDs() { return ds; }
     void setg2mu(double x) { g2mu = x; }
     double getg2mu() { return g2mu; }
-    void setQs(double x) { Qs = x; }
-    double getQs() { return Qs; }
-    void setSteps(int x) { steps = x; };
-    int getSteps() { return steps; }
-    void setMeasureSteps(int x) { measureSteps = x; };
-    int getMeasureSteps() { return measureSteps; }
     void setMode(int x) { mode = x; };
     int getMode() { return mode; }
     void setRunningCoupling(int x) { runningCoupling = x; };
     int getRunningCoupling() { return runningCoupling; }
-    void setMu0(double x) { mu0 = x; }
-    double getMu0() { return mu0; }
     void setg(double x) { g = x; }
     double getg() { return g; }
-    void setLambdaQCD(double x) { LambdaQCD = x; }
-    double getLambdaQCD() { return LambdaQCD; }
-    void setkappa4Factor(double x) { kappa4Factor = x; }
-    double getkappa4Factor() { return kappa4Factor; }
     void setSigmaNN(double x) { SigmaNN = x; }
     double getSigmaNN() { return SigmaNN; }
     void setb(double x) { b = x; }
@@ -342,8 +300,6 @@ class Parameters {
     double getAverageQsmin() { return averageQsmin; }
     void setalphas(double x) { alphas = x; }
     double getalphas() { return alphas; }
-    void setxExponent(double x) { xExponent = x; }
-    double getxExponent() { return xExponent; }
     void setRandomSeed(unsigned long long int x) { randomSeed = x; };
     unsigned long long int getRandomSeed() { return randomSeed; }
     void setUseTimeForSeed(int x) { useTimeForSeed = x; };
@@ -354,10 +310,6 @@ class Parameters {
         NucleusQsTableFileName = x;
     }
     std::string getNucleusQsTableFileName() { return NucleusQsTableFileName; }
-    void setA1FromFile(int x) { A1FromFile = x; }
-    int getA1FromFile() { return A1FromFile; }
-    void setA2FromFile(int x) { A2FromFile = x; }
-    int getA2FromFile() { return A2FromFile; }
     void setBG(double x) { BG = x; }
     double getBG() { return BG; }
     void setBGq(double x) { BGq_ = x; }
@@ -388,10 +340,6 @@ class Parameters {
     int getUseFixedNpart() { return useFixedNpart; }
     void setArea(double x) { area = x; }
     double getArea() { return area; }
-    void setEccentricity2(double x) { eccentricity2 = x; }
-    double getEccentricity2() { return eccentricity2; }
-    void setRnp(double x) { rnp = x; }
-    double getRnp() { return rnp; }
     void setPsi(double x) { Psi = x; }
     double getPsi() { return Psi; }
     void setSmearingWidth(double x) { smearingWidth = x; }
@@ -451,8 +399,6 @@ class Parameters {
     bool getRotateReactionPlane() const { return rotateReactionPlane_; }
 
     // switches:
-    void setInitMethod(int x) { initMethod = x; }
-    int getInitMethod() { return initMethod; }
     void setUseNucleus(int x) { useNucleus = x; };
     int getUseNucleus() { return useNucleus; }
     void setUseGaussian(int x) { useGaussian = x; };
@@ -532,11 +478,6 @@ class Parameters {
         std::vector<std::vector<float>> &ParamSet);
     void loadPosteriorParameterSets(const int itype);
     void setParamsWithPosteriorParameterSet(const int itype, int iset);
-    void setwhich_stage(int x) { which_stage = x; }
-    int getwhich_stage() { return which_stage; }
-    void set_firstb(double x) { first_b = x; }
-    double get_firstb() { return first_b; }
-    int get_added_lines() { return 4; }
 
     // JIMWLK functions
     void setm_jimwlk(double x) { m_jimwlk = x; };

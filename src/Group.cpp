@@ -1,20 +1,13 @@
 #include "Group.h"
 
 #include <complex>
-#include <cstdlib>
 #include <iostream>
 
 using std::complex;
 using std::cout;
 using std::endl;
 
-Group::Group(int N) {
-    if (N != 3) {
-        std::cerr << "Error: IP-Glasma Group is SU(3)-only; received SU(" << N
-                  << "). Exiting." << endl;
-        std::exit(1);
-    }
-
+Group::Group() {
     cout << "Initializing group SU(3) ... ";
     // fundamental rep.
     t[0].set(0, 0, 0.);

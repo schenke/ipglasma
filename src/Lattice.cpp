@@ -8,22 +8,8 @@
 
 #include "Instrumentation.h"
 
-namespace {
-
-inline void requireSU3Lattice(int Nc) {
-    if (Nc != 3) {
-        std::cerr << "Error: lattice matrix storage is SU(3)-only; received Nc="
-                  << Nc << ". Exiting." << std::endl;
-        std::exit(1);
-    }
-}
-
-}  // namespace
-
-Lattice::Lattice(Parameters *param, int N, int length) {
+Lattice::Lattice(Parameters *param, int length) {
     IPG_PROFILE_SCOPE("lattice.allocate");
-    Nc = N;
-    requireSU3Lattice(Nc);
     size = length * length;
     const double a = param->getL() / static_cast<double>(length);
 
@@ -32,7 +18,7 @@ Lattice::Lattice(Parameters *param, int N, int length) {
 
     // Each vector is one contiguous field of fixed 3x3 matrices.  Preserve the
     // original Cell constructor semantics: all eight matrices start as I_3.
-    const Matrix identity(3, 1.0);
+    const Matrix identity(1.0);
     U.assign(size, identity);
     U2.assign(size, identity);
     Ux.assign(size, identity);
@@ -44,7 +30,7 @@ Lattice::Lattice(Parameters *param, int N, int length) {
 
     cellStorage.reserve(size);
     cells.reserve(size);
-    for (int i = 0; i < size; ++i) cellStorage.emplace_back(Nc);
+    for (int i = 0; i < size; ++i) cellStorage.emplace_back();
     for (int i = 0; i < size; ++i) cells.push_back(&cellStorage[i]);
 
     posmX.reserve(size);
@@ -209,11 +195,10 @@ void Lattice::WriteWilsonLines(
 }
 
 // constructor
-BufferLattice::BufferLattice(int N, int length) {
-    Nc = N;
+BufferLattice::BufferLattice(int length) {
     size = length * length;
 
-    const Matrix identity(3, 1.0);
+    const Matrix identity(1.0);
     buffer1.assign(size, identity);
     buffer2.assign(size, identity);
 }

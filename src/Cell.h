@@ -40,7 +40,7 @@ class Cell {
     double ueta;
 
   public:
-    explicit Cell(int Nc);
+    Cell();
     ~Cell() = default;
 
     void setg2mu2A(double in) { g2mu2A = in; }

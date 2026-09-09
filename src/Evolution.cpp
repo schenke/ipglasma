@@ -42,8 +42,7 @@ using std::stringstream;
 namespace {
 
 struct EvolveUScratch {
-    explicit EvolveUScratch(int Nc)
-        : E1(Nc), E2(Nc), temp1(Nc), temp2(Nc), one(Nc, 1.) {}
+    EvolveUScratch() : one(1.) {}
 
     Matrix E1;
     Matrix E2;
@@ -53,26 +52,11 @@ struct EvolveUScratch {
 };
 
 struct EvolvePhiScratch {
-    explicit EvolvePhiScratch(int Nc) : phi(Nc), pi(Nc) {}
-
     Matrix phi;
     Matrix pi;
 };
 
 struct EvolvePiScratch {
-    explicit EvolvePiScratch(int Nc)
-        : Ux(Nc),
-          Uy(Nc),
-          UxXm1(Nc),
-          UyYm1(Nc),
-          phi(Nc),
-          phiX(Nc),
-          phiY(Nc),
-          phimX(Nc),
-          phimY(Nc),
-          bracket(Nc),
-          pi(Nc) {}
-
     Matrix Ux;
     Matrix Uy;
     Matrix UxXm1;
@@ -87,18 +71,6 @@ struct EvolvePiScratch {
 };
 
 struct EvolveEScratch {
-    explicit EvolveEScratch(int Nc)
-        : Ux(Nc),
-          Uy(Nc),
-          temp1(Nc),
-          temp2(Nc),
-          En(Nc),
-          phi(Nc),
-          phiN(Nc),
-          U12(Nc),
-          U1m2(Nc),
-          U2m1(Nc) {}
-
     Matrix Ux;
     Matrix Uy;
     Matrix temp1;
@@ -236,9 +208,8 @@ void evolvePiTeam(
 }
 
 void evolveETeam(
-    Lattice *lat, int N, int Nc, double g, double dtau, double tau,
+    Lattice *lat, int N, double g, double dtau, double tau,
     EvolveEScratch &scratch) {
-    (void)Nc;
     const complex<double> coeffPlaq =
         complex<double>(0., 1.) * tau * dtau / (2. * g * g);
     const complex<double> coeffComm = complex<double>(0., 1.) * dtau / tau;
@@ -308,17 +279,16 @@ void evolveStepPersistent(
     Lattice *lat, Parameters *param, double dtau, double tau,
     bool updateCoordinates) {
     IPG_PROFILE_SCOPE("evolution.parallel_step");
-    const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
     double phaseStart = 0.0;
 
 #pragma omp parallel shared(phaseStart)
     {
-        EvolveUScratch uScratch(Nc);
-        EvolvePhiScratch phiScratch(Nc);
-        EvolvePiScratch piScratch(Nc);
-        EvolveEScratch eScratch(Nc);
+        EvolveUScratch uScratch;
+        EvolvePhiScratch phiScratch;
+        EvolvePiScratch piScratch;
+        EvolveEScratch eScratch;
 
 #pragma omp single
         {
@@ -331,7 +301,7 @@ void evolveStepPersistent(
             phaseStart = ipg::wallSeconds();
         }
 
-        evolveETeam(lat, N, Nc, g, dtau, tau, eScratch);
+        evolveETeam(lat, N, g, dtau, tau, eScratch);
 #pragma omp single
         {
             addTeamPhase("evolution.evolveE", phaseStart);
@@ -356,10 +326,9 @@ void evolveStepPersistent(
 }
 
 inline void makeTmunuTracelessDifference(
-    const Matrix &lhs, const Matrix &rhs, const Matrix &one, int Nc,
-    Matrix &out) {
+    const Matrix &lhs, const Matrix &rhs, const Matrix &one, Matrix &out) {
     out = lhs - rhs;
-    out -= (out.trace() / static_cast<double>(Nc)) * one;
+    out -= (out.trace() / 3.0) * one;
 }
 
 }  // namespace
@@ -367,13 +336,12 @@ inline void makeTmunuTracelessDifference(
 void Evolution::evolveU(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolveU");
-    const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
 
 #pragma omp parallel
     {
-        EvolveUScratch scratch(Nc);
+        EvolveUScratch scratch;
         evolveUTeam(lat, N, g, dtau, tau, scratch);
     }
 }
@@ -381,12 +349,11 @@ void Evolution::evolveU(
 void Evolution::evolvePhi(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolvePhi");
-    const int Nc = param->getNc();
     const int N = param->getSize();
 
 #pragma omp parallel
     {
-        EvolvePhiScratch scratch(Nc);
+        EvolvePhiScratch scratch;
         evolvePhiTeam(lat, N, dtau, tau, scratch);
     }
 }
@@ -394,12 +361,11 @@ void Evolution::evolvePhi(
 void Evolution::evolvePi(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolvePi");
-    const int Nc = param->getNc();
     const int N = param->getSize();
 
 #pragma omp parallel
     {
-        EvolvePiScratch scratch(Nc);
+        EvolvePiScratch scratch;
         evolvePiTeam(lat, N, dtau, tau, scratch);
     }
 }
@@ -407,46 +373,44 @@ void Evolution::evolvePi(
 void Evolution::evolveE(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolveE");
-    const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
 
 #pragma omp parallel
     {
-        EvolveEScratch scratch(Nc);
-        evolveETeam(lat, N, Nc, g, dtau, tau, scratch);
+        EvolveEScratch scratch;
+        evolveETeam(lat, N, g, dtau, tau, scratch);
     }
 }
 
 void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     IPG_PROFILE_SCOPE("diagnostics.gauss_law");
-    const int Nc = param->getNc();
     const int N = param->getSize();
 
-    Matrix Ux(Nc);
-    Matrix UxXm1(Nc);
-    Matrix UxYm1(Nc);
+    Matrix Ux;
+    Matrix UxXm1;
+    Matrix UxYm1;
 
-    Matrix Uy(Nc);
-    Matrix UyXm1(Nc);
-    Matrix UyYm1(Nc);
+    Matrix Uy;
+    Matrix UyXm1;
+    Matrix UyYm1;
 
-    Matrix UxDag(Nc);
-    Matrix UxXm1Dag(Nc);
-    Matrix UxYm1Dag(Nc);
+    Matrix UxDag;
+    Matrix UxXm1Dag;
+    Matrix UxYm1Dag;
 
-    Matrix UyDag(Nc);
-    Matrix UyXm1Dag(Nc);
-    Matrix UyYm1Dag(Nc);
+    Matrix UyDag;
+    Matrix UyXm1Dag;
+    Matrix UyYm1Dag;
 
-    Matrix E1(Nc);
-    Matrix E2(Nc);
-    Matrix E1mX(Nc);
-    Matrix E2mY(Nc);
-    Matrix phi(Nc);
-    Matrix pi(Nc);
+    Matrix E1;
+    Matrix E2;
+    Matrix E1mX;
+    Matrix E2mY;
+    Matrix phi;
+    Matrix pi;
 
-    Matrix Gauss(Nc);
+    Matrix Gauss;
     double largest = 0;
 
     for (int pos = 0; pos < N * N; pos++) {
@@ -493,7 +457,7 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
 void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("output.evolved_fields");
     const int N = param->getSize();
-    const int Nc = param->getNc();
+    constexpr int Nc = 3;
     const double a = param->getL() / static_cast<double>(N);
     const double dtau = param->getdtau();
     const double tauLattice = static_cast<double>(it) * dtau;
@@ -1066,96 +1030,95 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
     double averageTxx = 0.;
 
     int N = param->getSize();
-    int Nc = param->getNc();
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
     double g = param->getg();
     double dtau = param->getdtau();
-    Matrix one(Nc, 1.);
+    Matrix one(1.);
 
 #pragma omp parallel
     {
         int pos, posX, posY, posmX, posmY, posXY, posmXpY, pospXmY, pos2X,
             pos2Y, posX2Y, pos2XY;
-        Matrix Ux(Nc);
-        Matrix Uy(Nc);
-        Matrix UxmX(Nc);
-        Matrix UymY(Nc);
-        Matrix UDx(Nc);
-        Matrix UDy(Nc);
-        Matrix UDxmX(Nc);
-        Matrix UDymY(Nc);
-        Matrix UDxmXpY(Nc);
-        Matrix UDxpXpY(Nc);
-        Matrix UxpX(Nc);
-        Matrix UxpY(Nc);
-        Matrix UDxpY(Nc);
-        Matrix UxpXpY(Nc);
-        Matrix UDypXmY(Nc);
-        Matrix UypY(Nc);
-        Matrix UypX(Nc);
-        Matrix UDypX(Nc);
-        Matrix UypXpY(Nc);
-        Matrix UDypXpY(Nc);
-        Matrix UymX(Nc);
-        Matrix UxmXpY(Nc);
-        Matrix UxmY(Nc);
-        Matrix UDxmY(Nc);
-        Matrix UypXmY(Nc);
-        Matrix UDyp2X(Nc);
-        Matrix Uyp2X(Nc);
-        Matrix UDxpX(Nc);
-        Matrix Uxp2Y(Nc);
-        Matrix UDxp2Y(Nc);
-        Matrix UDypY(Nc);
-        Matrix UDymX(Nc);
-        Matrix Uplaq(Nc), UplaqD(Nc), Uplaq1(Nc), Uplaq1D(Nc), Uplaq2(Nc);
-        Matrix E1(Nc);
-        Matrix E2(Nc);
-        Matrix E1p(Nc);
-        Matrix E2p(Nc);
-        Matrix pi(Nc);
-        Matrix piX(Nc);
-        Matrix piY(Nc);
-        Matrix piXY(Nc);
-        Matrix phi(Nc);
-        Matrix phiX(Nc);
-        Matrix phiY(Nc);
-        Matrix phiXY(Nc);
-        Matrix phimX(Nc);
-        Matrix phimY(Nc);
-        Matrix phi2XY(Nc);
-        Matrix phiX2Y(Nc);
-        Matrix phi2X(Nc);
-        Matrix phi2Y(Nc);
-        Matrix phimXpY(Nc);
-        Matrix phipXmY(Nc);
-        Matrix phiTildeX(Nc);
-        Matrix phiTildeY(Nc);
-        Matrix phiTildeXY1(Nc);
-        Matrix phiTildeXY2(Nc);
-        Matrix chainA(Nc);
-        Matrix chainB(Nc);
-        Matrix xMinus0(Nc);
-        Matrix xMinusM(Nc);
-        Matrix xMinusP(Nc);
-        Matrix xMinusT(Nc);
-        Matrix xMinusSum0(Nc);
-        Matrix xMinusSum1(Nc);
-        Matrix yPlus0(Nc);
-        Matrix yPlusM(Nc);
-        Matrix yPlusP(Nc);
-        Matrix yPlusT(Nc);
-        Matrix yPlusSum0(Nc);
-        Matrix yPlusSum1(Nc);
-        Matrix covGradX0(Nc);
-        Matrix covGradY0(Nc);
-        Matrix gradXAtY(Nc);
-        Matrix gradYAtX(Nc);
-        Matrix gradXAtYToPos(Nc);
-        Matrix gradYAtXToPos(Nc);
-        Matrix E1AtYToPos(Nc);
-        Matrix E2AtXToPos(Nc);
+        Matrix Ux;
+        Matrix Uy;
+        Matrix UxmX;
+        Matrix UymY;
+        Matrix UDx;
+        Matrix UDy;
+        Matrix UDxmX;
+        Matrix UDymY;
+        Matrix UDxmXpY;
+        Matrix UDxpXpY;
+        Matrix UxpX;
+        Matrix UxpY;
+        Matrix UDxpY;
+        Matrix UxpXpY;
+        Matrix UDypXmY;
+        Matrix UypY;
+        Matrix UypX;
+        Matrix UDypX;
+        Matrix UypXpY;
+        Matrix UDypXpY;
+        Matrix UymX;
+        Matrix UxmXpY;
+        Matrix UxmY;
+        Matrix UDxmY;
+        Matrix UypXmY;
+        Matrix UDyp2X;
+        Matrix Uyp2X;
+        Matrix UDxpX;
+        Matrix Uxp2Y;
+        Matrix UDxp2Y;
+        Matrix UDypY;
+        Matrix UDymX;
+        Matrix Uplaq, UplaqD, Uplaq1, Uplaq1D, Uplaq2;
+        Matrix E1;
+        Matrix E2;
+        Matrix E1p;
+        Matrix E2p;
+        Matrix pi;
+        Matrix piX;
+        Matrix piY;
+        Matrix piXY;
+        Matrix phi;
+        Matrix phiX;
+        Matrix phiY;
+        Matrix phiXY;
+        Matrix phimX;
+        Matrix phimY;
+        Matrix phi2XY;
+        Matrix phiX2Y;
+        Matrix phi2X;
+        Matrix phi2Y;
+        Matrix phimXpY;
+        Matrix phipXmY;
+        Matrix phiTildeX;
+        Matrix phiTildeY;
+        Matrix phiTildeXY1;
+        Matrix phiTildeXY2;
+        Matrix chainA;
+        Matrix chainB;
+        Matrix xMinus0;
+        Matrix xMinusM;
+        Matrix xMinusP;
+        Matrix xMinusT;
+        Matrix xMinusSum0;
+        Matrix xMinusSum1;
+        Matrix yPlus0;
+        Matrix yPlusM;
+        Matrix yPlusP;
+        Matrix yPlusT;
+        Matrix yPlusSum0;
+        Matrix yPlusSum1;
+        Matrix covGradX0;
+        Matrix covGradY0;
+        Matrix gradXAtY;
+        Matrix gradYAtX;
+        Matrix gradXAtYToPos;
+        Matrix gradYAtXToPos;
+        Matrix E1AtYToPos;
+        Matrix E2AtXToPos;
 
         // set plaquette in every cell
 #pragma omp for
@@ -1304,7 +1267,7 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
                     0.5 / (it * dtau) / (it * dtau);
                 const double plaquetteEnergy =
                     2. / pow(g, 2.)
-                    * (static_cast<double>(Nc) - su3::trace(Uplaq).real());
+                    * (3.0 - su3::trace(Uplaq).real());
 
                 lat->cells[pos]->setTtautau(
                     lat->cells[pos]->getTtautau() + plaquetteEnergy
@@ -1486,19 +1449,19 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
                 // below.
                 chainA = Uy * UxpY * UDypX * UDx;
                 chainB = Ux * UypX * UDxpY * UDy;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinus0);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinus0);
 
                 chainA = UDxmX * UymX * UxmXpY * UDy;
                 chainB = Uy * UDxmXpY * UDymX * UxmX;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinusM);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinusM);
 
                 chainA = UypX * UxpXpY * UDyp2X * UDxpX;
                 chainB = UxpX * Uyp2X * UDxpXpY * UDypX;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinusP);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinusP);
 
                 chainA = UDx * Uy * UxpY * UDypX;
                 chainB = UypX * UDxpY * UDy * Ux;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinusT);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinusT);
 
                 xMinusSum0 = xMinus0 + xMinusM;
                 xMinusSum1 = xMinusP + xMinusT;
@@ -1509,15 +1472,15 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
 
                 chainA = UDymY * UxmY * UypXmY * UDx;
                 chainB = Ux * UDypXmY * UDxmY * UymY;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, yPlusM);
+                makeTmunuTracelessDifference(chainA, chainB, one, yPlusM);
 
                 chainA = UxpY * UypXpY * UDxp2Y * UDypY;
                 chainB = UypY * Uxp2Y * UDypXpY * UDxpY;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, yPlusP);
+                makeTmunuTracelessDifference(chainA, chainB, one, yPlusP);
 
                 chainA = UDy * Ux * UypX * UDxpY;
                 chainB = UxpY * UDypX * UDx * Uy;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, yPlusT);
+                makeTmunuTracelessDifference(chainA, chainB, one, yPlusT);
 
                 yPlusSum0 = yPlus0 + yPlusM;
                 yPlusSum1 = yPlusP + yPlusT;
@@ -2672,7 +2635,6 @@ int Evolution::multiplicity(
     Lattice *lat, Group *group, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.gluon_multiplicity");
     int N = param->getSize();
-    int Nc = param->getNc();
     int npos, pos;
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
@@ -2728,7 +2690,7 @@ int Evolution::multiplicity(
     E1 = new Matrix *[N * N];
 
     for (int i = 0; i < N * N; i++) {
-        E1[i] = new Matrix(Nc, 0.);
+        E1[i] = new Matrix(0.);
     }
     addPhaseAndRestart(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
@@ -3635,7 +3597,6 @@ int Evolution::multiplicity(
 int Evolution::multiplicitynkxky(
     Lattice *lat, Group *group, Parameters *param, int it) {
     const int N = param->getSize();
-    const int Nc = param->getNc();
     int npos, pos;
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
@@ -3714,7 +3675,7 @@ int Evolution::multiplicitynkxky(
     E1 = new Matrix *[N * N];
 
     for (int i = 0; i < N * N; i++) {
-        E1[i] = new Matrix(Nc, 0.);
+        E1[i] = new Matrix(0.);
     }
 
     double g2mu2A, g2mu2B, gfactor, alphas = 0., Qs = 0.;
@@ -4658,7 +4619,6 @@ int Evolution::multiplicitynkxky(
 int Evolution::correlations(
     Lattice *lat, Group *group, Parameters *param, int it) {
     const int N = param->getSize();
-    const int Nc = param->getNc();
     int npos, pos;
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
@@ -4728,10 +4688,10 @@ int Evolution::correlations(
     gaugefix.FFTChi(fft, lat, group, param, 4000);
     // gauge is fixed
 
-    Matrix U1(Nc, 1.);
-    Matrix U2(Nc, 1.);
-    Matrix U1dag(Nc, 1.);
-    Matrix U2dag(Nc, 1.);
+    Matrix U1(1.);
+    Matrix U2(1.);
+    Matrix U1dag(1.);
+    Matrix U2dag(1.);
 
     Matrix **A1;
     A1 = new Matrix *[N * N];
@@ -4748,12 +4708,12 @@ int Evolution::correlations(
     pi = new Matrix *[N * N];
 
     for (int i = 0; i < N * N; i++) {
-        A1[i] = new Matrix(Nc, 0.);
-        A2[i] = new Matrix(Nc, 0.);
-        E1[i] = new Matrix(Nc, 0.);
-        E2[i] = new Matrix(Nc, 0.);
-        pi[i] = new Matrix(Nc, 0.);
-        phi[i] = new Matrix(Nc, 0.);
+        A1[i] = new Matrix(0.);
+        A2[i] = new Matrix(0.);
+        E1[i] = new Matrix(0.);
+        E2[i] = new Matrix(0.);
+        pi[i] = new Matrix(0.);
+        phi[i] = new Matrix(0.);
     }
 
     // version that determines the exact log of U1 and U2:

@@ -3,7 +3,6 @@ minimumQs2ST 0
 readMultFromFile 0
 size 512
 L 3.5
-Nc 3
 m 0.4
 rmax 10000000.
 UVdamp 0.

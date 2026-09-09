@@ -15,10 +15,10 @@
 class Lattice {
   private:
     int size;
-    int Nc;
+    static constexpr int Nc = 3;
 
   public:
-    Lattice(Parameters *param, int N, int length);
+    Lattice(Parameters *param, int length);
     ~Lattice() = default;
     Lattice(const Lattice &) = delete;
     Lattice &operator=(const Lattice &) = delete;
@@ -54,10 +54,9 @@ class Lattice {
 class BufferLattice {
   private:
     int size;
-    int Nc;
 
   public:
-    BufferLattice(int N, int length);
+    explicit BufferLattice(int length);
     ~BufferLattice() = default;
     BufferLattice(const BufferLattice &) = delete;
     BufferLattice &operator=(const BufferLattice &) = delete;

@@ -11,8 +11,6 @@
 
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
-      Nc_(param.getNc()),
-      Nc2m1_(param.getNc() * param.getNc() - 1),
       Ngrid_(param.getSize()),
       Ncells_(param.getSize() * param.getSize()) {
     nn_[0] = param_.getSize();
@@ -30,8 +28,8 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
         VxsiVx_ = new Matrix *[Ncells_];
         VxsiVy_ = new Matrix *[Ncells_];
         for (int i = 0; i < Ncells_; i++) {
-            VxsiVx_[i] = new Matrix(Nc_, 0);
-            VxsiVy_[i] = new Matrix(Nc_, 0);
+            VxsiVx_[i] = new Matrix(0.);
+            VxsiVy_[i] = new Matrix(0.);
         }
     }
 }
@@ -338,7 +336,7 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
 #pragma omp parallel for
     for (int i = 0; i < Ncells_; i++) {
         Matrix left = negI_dssqrt * (*VxsiVx_[i]);
-        Matrix right(Nc_, 0.);
+        Matrix right(0.);
 
         for (int a = 0; a < Nc2m1_; a++) {
             const Matrix &Ta = group_ptr_->getT(a);

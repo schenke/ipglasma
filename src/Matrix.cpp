@@ -17,45 +17,27 @@ static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
     "Matrix must remain an exact contiguous complex<double>[9]");
 
-namespace {
-
-inline void requireSU3Dimension(int n) {
-    if (n != 3) {
-        std::cerr << "Error: fixed Matrix is SU(3)-only; requested " << n << "x"
-                  << n << " matrix. Exiting." << std::endl;
-        std::exit(1);
-    }
-}
-
-}  // namespace
-
 Matrix::Matrix() {
     for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
 }
 
-Matrix::Matrix(int n) {
-    requireSU3Dimension(n);
-    for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
-}
-
-Matrix::Matrix(int n, double a) {
-    requireSU3Dimension(n);
+Matrix::Matrix(double a) {
     for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
     e[0] = complex<double>(a, 0.0);
     e[4] = complex<double>(a, 0.0);
     e[8] = complex<double>(a, 0.0);
 }
 
-Matrix::Matrix(int n, NoInitTag) { requireSU3Dimension(n); }
+Matrix::Matrix(NoInitTag) {}
 
 // MaxTr version of reunitarization
 void Matrix::reu2() {
-    Matrix A1(3, 0.);
-    Matrix A2(3, 0.);
-    Matrix A3(3, 0.);
+    Matrix A1(0.);
+    Matrix A2(0.);
+    Matrix A3(0.);
 
-    Matrix G(3);
-    Matrix E(3);
+    Matrix G;
+    Matrix E;
 
     for (int i = 0; i < 10; i++) {
         E = *this;
@@ -109,7 +91,7 @@ void Matrix::reu2() {
 // operators:
 
 Matrix operator*(const Matrix &a, const Matrix &b) {
-    Matrix c(3, Matrix::noInit);
+    Matrix c(Matrix::noInit);
     const complex<double> *A = a.data();
     const complex<double> *B = b.data();
     complex<double> *C = c.data();
@@ -127,28 +109,28 @@ Matrix operator*(const Matrix &a, const Matrix &b) {
 
 //-
 Matrix operator-(const Matrix &a, const Matrix &b) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) - b(i));
     return aa;
 }
 
 //+
 Matrix operator+(const Matrix &a, const Matrix &b) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) + b(i));
     return aa;
 }
 
 //* multiply by a real scalar
 Matrix operator*(const Matrix &a, const double s) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) {
         aa.set(i, a(i) * s);
     }
     return aa;
 }
 Matrix operator*(const double s, const Matrix &a) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) {
         aa.set(i, a(i) * s);
     }
@@ -157,7 +139,7 @@ Matrix operator*(const double s, const Matrix &a) {
 
 //* multiply by a complex number
 Matrix operator*(const complex<double> s, const Matrix &a) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) {
         aa.set(i, a(i) * s);
     }
@@ -166,7 +148,7 @@ Matrix operator*(const complex<double> s, const Matrix &a) {
 
 // / division by scalar
 Matrix operator/(const Matrix &a, const double s) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) / s);
     return aa;
 }
@@ -188,7 +170,7 @@ Matrix &Matrix::conjg() {
 }
 
 Matrix Matrix::prodABconj(const Matrix &a, const Matrix &b) {
-    Matrix c(3, Matrix::noInit);
+    Matrix c(Matrix::noInit);
     c.set(
         0, 0,
         a(0, 0) * conj(b(0, 0)) + a(0, 1) * conj(b(0, 1))
@@ -229,7 +211,7 @@ Matrix Matrix::prodABconj(const Matrix &a, const Matrix &b) {
 }
 
 Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
-    Matrix c(3, Matrix::noInit);
+    Matrix c(Matrix::noInit);
     c.set(
         0, 0,
         conj(a(0, 0)) * b(0, 0) + conj(a(1, 0)) * b(1, 0)
@@ -396,8 +378,7 @@ void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
     }
 }
 
-vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
-    requireSU3Dimension(Nc);
+vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q) {
     complex<double> coeff[9];
     expmCoeff(Q.data(), coeff);
     return vector<complex<double>>(coeff, coeff + 9);
@@ -408,8 +389,8 @@ vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
 // the Pade approximant (default: p=6)
 Matrix &Matrix::expm(double t, const int p) {
     const int n = this->getNDim();
-    const Matrix I(n, 1.);
-    Matrix U(n), H2(n), P(n), Q(n);
+    const Matrix I(1.);
+    Matrix U, H2, P, Q;
     double norm = 0.0;
     // Calculate Pade coefficients
     if (p < 6) {
@@ -582,7 +563,7 @@ double Matrix::OneNorm() {
 
 Matrix &Matrix::inv() {
     Matrix Q = *this;
-    Matrix H2(3, Matrix::noInit);
+    Matrix H2(Matrix::noInit);
     H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
     H2.set(0, 1, (Q(0, 2) * Q(2, 1) - Q(0, 1) * Q(2, 2)));
     H2.set(0, 2, (Q(0, 1) * Q(1, 2) - Q(0, 2) * Q(1, 1)));
@@ -599,13 +580,12 @@ Matrix &Matrix::inv() {
 
 // Pade approximant of log(I+A) (I is unit matrix). good for A\sim I
 Matrix &Matrix::logm_pade(const int m) {
-    const int n = this->getNDim();
-    Matrix S(n, 0.);
-    Matrix A(n);
+    Matrix S(0.);
+    Matrix A;
     A = *this;
-    Matrix I(n, 1.);
-    Matrix D(n);     // denominator
-    Matrix invD(n);  // denominator
+    Matrix I(1.);
+    Matrix D;     // denominator
+    Matrix invD;  // denominator
     double xi;
     double wi;
     gsl_integration_glfixed_table *table;
@@ -639,13 +619,13 @@ Matrix &Matrix::sqrtm(const int scale) {
     double g;
     double Mres;
     double reldiff;
-    Matrix X(n);
-    Matrix Xold(n);
-    Matrix M(n);
-    Matrix invM(n);
-    Matrix I(n, 1.);
-    Matrix Mr(n);
-    Matrix XmXo(n);
+    Matrix X;
+    Matrix Xold;
+    Matrix M;
+    Matrix invM;
+    Matrix I(1.);
+    Matrix Mr;
+    Matrix XmXo;
 
     X = *this;
     M = *this;
@@ -687,14 +667,13 @@ Matrix &Matrix::sqrtm(const int scale) {
 // algorithms for the matrix logarithm, MIMS eprint 2011.83 this is not the
 // improved one, just standard.
 Matrix &Matrix::logm() {
-    const int n = this->getNDim();
-    const Matrix I(n, 1.);
-    Matrix X(n);
-    Matrix L(n);
+    const Matrix I(1.);
+    Matrix X;
+    Matrix L;
     int k, p, itk;
     double normdiff;
     int j1, j2 = 0.;
-    Matrix M(n);
+    Matrix M;
     int m;
 
     double xvals[16] = {

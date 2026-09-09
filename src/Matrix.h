@@ -27,9 +27,8 @@ class Matrix {
     static constexpr NoInitTag noInit {};
 
     Matrix();
-    explicit Matrix(int n);
-    Matrix(int n, double a);
-    Matrix(int n, NoInitTag);
+    explicit Matrix(double a);
+    explicit Matrix(NoInitTag);
 
     Matrix(const Matrix &) = default;
     Matrix &operator=(const Matrix &) = default;
@@ -75,7 +74,7 @@ class Matrix {
     // the eight SU(3) fundamental generators as input.
     // Allocation-free SU(3) exponential coefficients for hot paths.
     void expmCoeff(const double *Q, complex<double> out[9]) const;
-    std::vector<complex<double>> expmCoeff(std::vector<double> &Q, int n);
+    std::vector<complex<double>> expmCoeff(std::vector<double> &Q);
 
     complex<double> det();
     complex<double> trace() const;

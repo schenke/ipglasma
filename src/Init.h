@@ -48,7 +48,8 @@ class Init {
 
     pretty_ostream messager;
 
-    int Nc_, Nc2m1_;
+    static constexpr int Nc_ = 3;
+    static constexpr int Nc2m1_ = Nc_ * Nc_ - 1;
     Group *group_ptr_;
     Random *random_ptr_;
 
@@ -57,11 +58,7 @@ class Init {
 
   public:
     // Constructor.
-    Init(const int nn[], const int Nc) : fft(nn) {
-        Nc_ = Nc;
-        Nc2m1_ = Nc_ * Nc_ - 1;
-        one_ = Matrix(Nc_, 1.);
-    };
+    explicit Init(const int nn[]) : fft(nn), one_(1.) {};
 
     ~Init() {};
 

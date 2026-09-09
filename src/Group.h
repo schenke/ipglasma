@@ -10,7 +10,7 @@ class Group {
     std::array<Matrix, 8> t;
 
   public:
-    explicit Group(int N);
+    Group();
     ~Group() = default;
 
     Matrix &getT(int i) { return t[static_cast<std::size_t>(i)]; }

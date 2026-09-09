@@ -1,9 +1,6 @@
 #include "Cell.h"
 
-#include <cstdlib>
-#include <iostream>
-
-Cell::Cell(int Nc)
+Cell::Cell()
     : epsilon(0.),
       g2mu2A(0.),
       TpA(0.),
@@ -32,10 +29,4 @@ Cell::Cell(int Nc)
       utau(0.),
       ux(0.),
       uy(0.),
-      ueta(0.) {
-    if (Nc != 3) {
-        std::cerr << "Error: Cell storage is SU(3)-only; received Nc=" << Nc
-                  << ". Exiting." << std::endl;
-        std::exit(1);
-    }
-}
+      ueta(0.) {}

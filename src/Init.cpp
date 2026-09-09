@@ -1793,7 +1793,7 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 namespace {
 void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
     const int N = param->getSize();
-    const int Nc = param->getNc();
+    constexpr int Nc = 3;
     const double L = param->getL();
     const double a = L / static_cast<double>(N);
 
@@ -2013,8 +2013,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 #pragma omp parallel
             {
                 std::vector<double> in(Nc2m1_, 0.);
-                Matrix temp(Nc_, 1.);
-                Matrix tempNew(Nc_, 0.);
+                Matrix temp(1.);
+                Matrix tempNew(0.);
 
 #pragma omp for
                 for (int pos = 0; pos < sites; pos++) {
@@ -2059,8 +2059,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 #pragma omp parallel
             {
                 std::vector<double> in(Nc2m1_, 0.);
-                Matrix temp(Nc_, 1.);
-                Matrix tempNew(Nc_, 0.);
+                Matrix temp(1.);
+                Matrix tempNew(0.);
 
 #pragma omp for
                 for (int pos = 0; pos < sites; pos++) {
@@ -2146,7 +2146,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         nn[0] = N;
         nn[1] = N;
 
-        Matrix temp(Nc_, 1.);
+        Matrix temp(1.);
 
         double Re[9], Im[9];
         double dummy;
@@ -2240,9 +2240,10 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         InStream.precision(15);
         InStream.open(VOne_name.c_str(), std::ios::in | std::ios::binary);
         int N;
+        int NcInFile;
         double L, a, temp;
 
-        Matrix tempM(Nc_, 1.);
+        Matrix tempM(1.);
 
         if (!InStream.good()) {
             messager << "File " << VOne_name.c_str() << " does not exist!";
@@ -2253,7 +2254,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         if (InStream.is_open()) {
             // READING IN PARAMETERS
             InStream.read(reinterpret_cast<char *>(&N), sizeof(int));
-            InStream.read(reinterpret_cast<char *>(&Nc_), sizeof(int));
+            InStream.read(reinterpret_cast<char *>(&NcInFile), sizeof(int));
             InStream.read(reinterpret_cast<char *>(&L), sizeof(double));
             InStream.read(reinterpret_cast<char *>(&a), sizeof(double));
             InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
@@ -2339,7 +2340,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             if (InStream2.is_open()) {
                 // READING IN PARAMETERS
                 InStream2.read(reinterpret_cast<char *>(&N), sizeof(int));
-                InStream2.read(reinterpret_cast<char *>(&Nc_), sizeof(int));
+                InStream2.read(reinterpret_cast<char *>(&NcInFile), sizeof(int));
                 InStream2.read(reinterpret_cast<char *>(&L), sizeof(double));
                 InStream2.read(reinterpret_cast<char *>(&a), sizeof(double));
                 InStream2.read(reinterpret_cast<char *>(&temp), sizeof(double));
@@ -2508,7 +2509,7 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
     messager.flush("info");
 
     const int N = param->getSize();
-    BufferLattice lat_tmp(param->getNc(), param->getSize());
+    BufferLattice lat_tmp(param->getSize());
     for (int ipos = 0; ipos < N * N; ipos++) {
         lat_tmp.buffer1[ipos] = lat->U[ipos];
         lat_tmp.buffer2[ipos] = lat->U2[ipos];
@@ -2557,23 +2558,23 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
     double x, y;
 #pragma omp parallel
     {
-        Matrix temp2(Nc_, 1);
-        Matrix Ux(Nc_, 1);
-        Matrix Uy(Nc_, 1);
-        Matrix UDx(Nc_, 1);
-        Matrix UDy(Nc_, 1);
-        Matrix UDx1(Nc_, 1);
-        Matrix UDy1(Nc_, 1);
+        Matrix temp2(1);
+        Matrix Ux(1);
+        Matrix Uy(1);
+        Matrix UDx(1);
+        Matrix UDy(1);
+        Matrix UDx1(1);
+        Matrix UDy1(1);
 
-        Matrix Uplaq(Nc_, 1);
+        Matrix Uplaq(1);
 
-        Matrix UDx2(Nc_, 1);
-        Matrix UDy2(Nc_, 1);
+        Matrix UDx2(1);
+        Matrix UDy2(1);
 
-        Matrix Ux1mUx2(Nc_, 1);
-        Matrix UDx1mUDx2(Nc_, 1);
-        Matrix Uy1mUy2(Nc_, 1);
-        Matrix UDy1mUDy2(Nc_, 1);
+        Matrix Ux1mUx2(1);
+        Matrix UDx1mUDx2(1);
+        Matrix Uy1mUy2(1);
+        Matrix UDy1mUDy2(1);
 
 // compute Ux(3) Uy(3) after the collision
 #pragma omp for
@@ -2799,7 +2800,7 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
             // \pi (E^z).
         }
 
-        const Matrix zero(Nc_, 0.);
+        const Matrix zero(0.);
 #pragma omp for
         for (int pos = 0; pos < N * N; pos++) {
             lat->U[pos] = (zero);
@@ -3361,7 +3362,7 @@ bool Init::findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol) {
     Matrix U1pU2dagger = U1pU2;
     U1pU2dagger.conjg();
 
-    Matrix Mtemp(Nc_, 0.);
+    Matrix Mtemp(0.);
     std::vector<Matrix> MtempArr;
     MtempArr.resize(Nc2m1_);
     std::vector<complex<double>> traceCache(Nc2m1_, 0.);
@@ -3489,7 +3490,7 @@ bool Init::findUInForwardLightconeChun(
     Matrix U1pU2dagger = U1pU2;
     U1pU2dagger.conjg();
 
-    Matrix Mtemp(Nc_, 0.);
+    Matrix Mtemp(0.);
     std::vector<Matrix> MtempArr;
     MtempArr.resize(Nc2m1_);
     std::vector<complex<double>> traceCache(Nc2m1_, 0.);
@@ -3505,7 +3506,7 @@ bool Init::findUInForwardLightconeChun(
 
     double Fzero = 10.;
     double FzeroMin = 1e6;
-    Matrix UsolBestEst(Nc_, 1.);
+    Matrix UsolBestEst(1.);
 
     // set up initial guess
     std::vector<double> alpha(Nc2m1_, 0.);  // solution
@@ -3624,7 +3625,7 @@ bool Init::findUInForwardLightconeChun(
 }
 
 Matrix Init::getUfromExponent(std::vector<double> &in) {
-    Matrix tempM(Nc_, Matrix::noInit);
+    Matrix tempM(Matrix::noInit);
     complex<double> U[9];
 
     // expmCoeff calculates the coefficients of exp(i in[a] t[a]).  Build

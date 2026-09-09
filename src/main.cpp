@@ -175,10 +175,10 @@ int main(int argc, char *argv[]) {
         fout1.close();
 
         // initialize init object
-        Init init(nn, param->getNc());
+        Init init(nn);
 
         // initialize group
-        Group group(param->getNc());
+        Group group;
 
         // initialize Glauber class
         messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
@@ -351,7 +351,7 @@ int main(int argc, char *argv[]) {
         // before the per-event profile is written.
         {
             // allocate lattice
-            Lattice lat(param, param->getNc(), param->getSize());
+            Lattice lat(param, param->getSize());
             messager.info("Lattice generated.");
 
             param->setSuccess(0);
@@ -561,15 +561,6 @@ int readInput(
     param->setEtaSizeOutput(setup->IFind(file_name, "etaSizeOutput"));
     param->setDetaOutput(setup->DFind(file_name, "detaOutput"));
     param->setUseFluctuatingx(setup->IFind(file_name, "useFluctuatingx"));
-    param->setNc(setup->IFind(file_name, "Nc"));
-    if (param->getNc() != 3) {
-        if (rank == 0) {
-            cerr << "Error: IP-Glasma supports SU(3) only; input Nc must "
-                    "be 3 "
-                 << "(received Nc=" << param->getNc() << "). Exiting." << endl;
-        }
-        exit(1);
-    }
     param->setInverseQsForMaxTime(
         setup->IFind(file_name, "inverseQsForMaxTime"));
     param->setSeed(setup->ULLIFind(file_name, "seed"));
@@ -713,7 +704,7 @@ void writeparams(Parameters *param) {
     fout1 << " Output by readInput in main.cpp: " << endl;
     fout1 << " " << endl;
     fout1 << "Program run in mode " << param->getMode() << endl;
-    fout1 << "Nc " << param->getNc() << endl;
+    fout1 << "Nc 3" << endl;
     fout1 << "size " << param->getSize() << endl;
     fout1 << "lattice spacing a "
           << param->getL() / static_cast<double>(param->getSize()) << " fm "

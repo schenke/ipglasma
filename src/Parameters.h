@@ -20,7 +20,6 @@ class Parameters {
     double myhbarc;
 
     int A;           // number of nucleons;
-    int Nc;          // number of colors (SU(Nc))
     int size;        // the length of the lattice (make it 2^n, with n integer)
     int sizeOutput;  // the length of the lattice for the output data
                      // (sizeOutput
@@ -265,8 +264,6 @@ class Parameters {
     unsigned long long int getSeed() { return seed; }
     void setA(int x) { A = x; }
     int getA() { return A; }
-    void setNc(int x) { Nc = x; }
-    int getNc() { return Nc; }
     void setNy(int x) { Ny = x; }
     int getNy() { return Ny; }
     void setSize(int x) { size = x; }

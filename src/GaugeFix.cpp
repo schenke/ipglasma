@@ -117,10 +117,9 @@ void GaugeFix::FFTChi(
     int nn[2];
     nn[0] = N;
     nn[1] = N;
-    int Nc = param->getNc();
     (void)group;
 
-    Matrix one(Nc, 1.);
+    Matrix one(1.);
 
     const int max_gfiter = steps;
 
@@ -134,7 +133,7 @@ void GaugeFix::FFTChi(
         chi = new Matrix *[N * N];
 
         for (int i = 0; i < N * N; i++) {
-            chi[i] = new Matrix(Nc, 0.);
+            chi[i] = new Matrix(0.);
         }
     }
 
@@ -232,7 +231,7 @@ void GaugeFix::FFTChi(
                 "observables.gluon_multiplicity.gauge_fix.exponentiate");
 #pragma omp parallel
             {
-                Matrix localg(Nc);
+                Matrix localg;
 #pragma omp for
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < N; j++) {
@@ -266,7 +265,7 @@ void GaugeFix::FFTChi(
             // the same link.
 #pragma omp parallel
             {
-                Matrix g(Nc), gdag(Nc), gdagX(Nc), gdagY(Nc);
+                Matrix g, gdag, gdagX, gdagY;
 
 #pragma omp for collapse(2)
                 for (int i = 0; i < N; i++) {
@@ -327,8 +326,7 @@ void GaugeFix::FFTChi(
 void GaugeFix::gaugeTransform(Lattice *lat, Parameters *param, int i, int j) {
     int N = param->getSize();
     int pos, posmX, posmY;
-    int Nc = param->getNc();
-    Matrix g(Nc), gdag(Nc);
+    Matrix g, gdag;
 
     pos = i * N + j;
 

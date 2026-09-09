@@ -567,8 +567,6 @@ int readInput(
     param->setUseSeedList(setup->IFind(file_name, "useSeedList"));
     param->setNy(setup->IFind(file_name, "Ny"));
     param->setRoots(setup->DFind(file_name, "roots"));
-    param->setNu(setup->DFind(file_name, "tDistNu"));
-    param->setUseFatTails(setup->IFind(file_name, "useFatTails"));
     param->setg(setup->DFind(file_name, "g"));
     param->setm(setup->DFind(file_name, "m"));
     param->setJacobianm(setup->DFind(file_name, "Jacobianm"));
@@ -636,7 +634,6 @@ int readInput(
     param->setWriteTmunuBinary(
         setup->IFindOptional(file_name, "writeTmunuBinary", 1));
     param->setWriteOutputsToHDF5(setup->IFind(file_name, "writeOutputsToHDF5"));
-    param->setWriteEvolution(setup->IFind(file_name, "writeEvolution"));
     param->setWriteWilsonLines(setup->IFind(file_name, "writeWilsonLines"));
     param->setReadInitialWilsonLines(
         setup->IFind(file_name, "readInitialWilsonLines"));
@@ -746,7 +743,5 @@ void writeparams(Parameters *param) {
     if (param->getSmearQs() == 1) {
         fout1 << "smearing width " << param->getSmearingWidth() << endl;
     }
-    fout1 << "Using fat tailed distribution " << param->getUseFatTails()
-          << endl;
     fout1.close();
 }

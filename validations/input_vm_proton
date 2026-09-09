@@ -23,8 +23,6 @@ runningCoupling 0
 muZero 0.3
 c 0.2
 g2mu 0.1
-useFatTails 0
-tDistNu 3
 smearQs 1
 smearingWidth 0.7
 protonAnisotropy 0
@@ -82,7 +80,6 @@ sizeOutput 340
 etaSizeOutput 1
 detaOutput 0
 writeOutputs 1
-writeEvolution 0
 readInitialWilsonLines 0
 writeWilsonLines 2
 writeOutputsToHDF5 0

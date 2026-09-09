@@ -92,8 +92,6 @@ class Parameters {
                              // formatted text .dat (0)
     int writeOutputsToHDF5;  // decide whether to write (1) or not write (0)
                              // output files to one hdf5 file
-    int writeEvolution;    // decide whether to write (1) or not write (0) time
-                           // dependent quantities like the anisotropy
     int writeWilsonLines;  // decide whether to write (1) in text or (2)
                            // in binary format or not write (0) generated
                            // Wilson lines (before any evolution)
@@ -129,11 +127,6 @@ class Parameters {
     int inverseQsForMaxTime;  // use 1/Q_s as the maximal evolution time (1) or
                               // use the manually entered maximal evolution time
                               // (0)
-    int useFatTails;  // if 1 use the student's t distribution instead of a
-                      // Gaussian (0) to sample the rho's (standard deviation is
-                      // still g2mu)
-    double nu;    // nu in the student's t distribution (used to produce fatter
-                  // tails than the Gaussian)
     double area;  // area of the initial interaction region
     double eccentricity2;  // save the computed ellipticity to output together
                            // with S_T and dN/dy in the end
@@ -391,8 +384,6 @@ class Parameters {
     double getxFromThisFactorTimesQs() { return xFromThisFactorTimesQs; }
     void setTpp(double x) { Tpp = x; }
     double getTpp() { return Tpp; }
-    void setNu(double x) { nu = x; }
-    double getNu() { return nu; }
     void setUseFixedNpart(int x) { useFixedNpart = x; }
     int getUseFixedNpart() { return useFixedNpart; }
     void setArea(double x) { area = x; }
@@ -492,8 +483,6 @@ class Parameters {
     int getWriteTmunuBinary() { return writeTmunuBinary; }
     void setWriteOutputsToHDF5(int x) { writeOutputsToHDF5 = x; };
     int getWriteOutputsToHDF5() { return writeOutputsToHDF5; }
-    void setWriteEvolution(int x) { writeEvolution = x; };
-    int getWriteEvolution() { return writeEvolution; }
     void setWriteWilsonLines(int x) { writeWilsonLines = x; }
     int getWriteWilsonLines() { return writeWilsonLines; }
     void setReadInitialWilsonLines(int x) { readInitialWilsonLines = x; }
@@ -502,8 +491,6 @@ class Parameters {
     int getNucleonPositionsFromFile() { return nucleonPositionsFromFile; }
     void setInverseQsForMaxTime(int x) { inverseQsForMaxTime = x; };
     int getInverseQsForMaxTime() { return inverseQsForMaxTime; }
-    void setUseFatTails(int x) { useFatTails = x; }
-    int getUseFatTails() { return useFatTails; }
     void setSmearQs(int x) { smearQs = x; }
     int getSmearQs() { return smearQs; }
     void setReadMultFromFile(int x) { readMultFromFile = x; }

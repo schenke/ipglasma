@@ -26,8 +26,6 @@ class Evolution {
 
     void run(Lattice *lat, Group *group, Parameters *param);
     void evolveU(Lattice *lat, Parameters *param, double dtau, double tau);
-    void evolveUfast(
-        Lattice *lat, Group *group, Parameters *param, double dtau, double tau);
     void evolvePhi(Lattice *lat, Parameters *param, double dtau, double tau);
     void evolvePi(Lattice *lat, Parameters *param, double dtau, double tau);
     void evolveE(Lattice *lat, Parameters *param, double dtau, double tau);
@@ -35,7 +33,6 @@ class Evolution {
     void eccentricity(
         Lattice *lat, Parameters *param, int it, double cutoff, int doAniso);
     void Tmunu(Lattice *lat, Parameters *param, int it);
-    void writeEvolvedFields(Lattice *lat, Parameters *param, int it);
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
 
@@ -45,10 +42,6 @@ class Evolution {
         double dECut3, double dNCut6, double dECut6, const double *spectrumN,
         const double *spectrumE, const int *spectrumCounts, int bins,
         double dkt);
-    int multiplicitynkxky(
-        Lattice *lat, Group *group, Parameters *param, int it);
-    int correlations(Lattice *lat, Group *group, Parameters *param, int it);
-    void anisotropy(Lattice *lat, Parameters *param, int it);
     void readNkt(Parameters *param);
 };
 

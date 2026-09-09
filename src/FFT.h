@@ -1,8 +1,8 @@
 // FFT.h is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 
-#ifndef FFT_H
-#define FFT_H
+#ifndef SRC_FFT_H_
+#define SRC_FFT_H_
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -114,4 +114,4 @@ class FFT {
         const int isign);
 };
 
-#endif  // FFT_H
+#endif  // SRC_FFT_H_

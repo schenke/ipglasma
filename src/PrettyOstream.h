@@ -12,19 +12,19 @@
 #define WHITE "\033[37m"    // White
 #define RESET "\033[0m"     // reset
 
-#ifndef PRETTY_OSTREAM_H_
-#define PRETTY_OSTREAM_H_
+#ifndef SRC_PRETTYOSTREAM_H_
+#define SRC_PRETTYOSTREAM_H_
 
 #include <sstream>
 #include <string>
 
-class pretty_ostream {
+class PrettyOstream {
   private:
     std::ostringstream message_stream;
 
   public:
-    pretty_ostream();
-    ~pretty_ostream();
+    PrettyOstream();
+    ~PrettyOstream();
 
     void flush(std::string type);
 
@@ -46,10 +46,10 @@ class pretty_ostream {
 
     //! reload the << operator
     template <typename T>
-    pretty_ostream &operator<<(T const &value) {
+    PrettyOstream &operator<<(T const &value) {
         message_stream << value;
         return (*this);
     }
 };
 
-#endif  // PRETTY_OSTREAM_H_
+#endif  // SRC_PRETTYOSTREAM_H_

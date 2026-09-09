@@ -48,9 +48,13 @@ Date: 2026-XX-XX
 * Change the nucleus/impact-parameter sampling order and initialization to a two-step field-shifting procedure.
 * Update the default `QsmuRatio` to 0.643, following arXiv:2207.03712.
 * Rename several input parameters and internal variables for clarity (e.g. add an enum class for `NucleusRole`).
-* `setWriteEpsilonUHydro` now uses `IFindOptional`, so older input files without this key still work.
+* `setWriteEpsilonUHydro` now uses `iFindOptional`, so older input files without this key still work.
 * Make the MPI dependency optional at compile time.
 * Reformat the whole codebase to a consistent style.
+* Standardize header include guards to a single `SRC_<FILE>_H_` style across all headers.
+* Rename `jimwlk.cpp`/`.h` to `JIMWLK.cpp`/`.h` and the `pretty_ostream` class/files to `PrettyOstream`, to match their class names.
+* Rename `utilities/read_test.cc`/`save_to_binary.cc` to `.cpp`, matching the rest of the codebase.
+* Rename `Setup`/`Util`/`Glauber`'s `PascalCase` functions (`IFind`, `PrintGlauberData`, `ReadInVx`, ...) and `Init`'s `snake_case` nucleus-generation functions to `camelCase`, for a single consistent naming convention.
 
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.

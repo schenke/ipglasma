@@ -16,7 +16,7 @@ using std::cout;
 using std::endl;
 using std::string;
 
-void Glauber::FindNucleusData2(
+void Glauber::findNucleusData2(
     Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,
     double a_WS, double beta2, double beta3, double beta4, double gamma,
     bool force_dmin, double d_min, double dR_np, double da_np) {
@@ -286,21 +286,21 @@ void Glauber::FindNucleusData2(
     nucleus->d_min = d_min;
 
     if (densityFunction.compare("2HO") == 0) {
-        nucleus->AnumFunc = 1;           // Anum2HO;
-        nucleus->AnumFuncIntegrand = 1;  // Anum2HOInt;
-        nucleus->DensityFunc = 1;        // NuInt2HO;
+        nucleus->AnumFunc = 1;           // anum2HO;
+        nucleus->AnumFuncIntegrand = 1;  // anum2HOInt;
+        nucleus->DensityFunc = 1;        // nuInt2HO;
     } else if (densityFunction.compare("3Gauss") == 0) {
-        nucleus->AnumFunc = 2;           // Anum3Gauss;
-        nucleus->AnumFuncIntegrand = 2;  // Anum3GaussInt;
-        nucleus->DensityFunc = 2;        // NuInt3Gauss;
+        nucleus->AnumFunc = 2;           // anum3Gauss;
+        nucleus->AnumFuncIntegrand = 2;  // anum3GaussInt;
+        nucleus->DensityFunc = 2;        // nuInt3Gauss;
     } else if (densityFunction.compare("3Fermi") == 0) {
-        nucleus->AnumFunc = 3;           // Anum3Fermi;
-        nucleus->AnumFuncIntegrand = 3;  // Anum3FermiInt;
-        nucleus->DensityFunc = 3;        // NuInt3Fermi;
+        nucleus->AnumFunc = 3;           // anum3Fermi;
+        nucleus->AnumFuncIntegrand = 3;  // anum3FermiInt;
+        nucleus->DensityFunc = 3;        // nuInt3Fermi;
     } else if (densityFunction.compare("Hulthen") == 0) {
-        nucleus->AnumFunc = 8;           // AnumHulthen;
+        nucleus->AnumFunc = 8;           // anumHulthen;
         nucleus->AnumFuncIntegrand = 8;  // AnumHulthenInt;
-        nucleus->DensityFunc = 8;        // NuIntHulthen;
+        nucleus->DensityFunc = 8;        // nuIntHulthen;
     } else if (densityFunction.compare("readFromFile") == 0) {
         nucleus->AnumFunc = 1;
         nucleus->AnumFuncIntegrand = 1;
@@ -308,13 +308,13 @@ void Glauber::FindNucleusData2(
     }
 }
 
-void Glauber::PrintGlauberData() {
+void Glauber::printGlauberData() {
     fprintf(stderr, "GlauberData.SigmaNN = %e\n", GlauberData.SigmaNN);
     fprintf(stderr, "GlauberData.InterMax = %d\n", GlauberData.InterMax);
     fprintf(stderr, "GlauberData.SCutOff = %f\n", GlauberData.SCutOff);
 }
 
-void Glauber::PrintNucleusData(Nucleus *nucleus) {
+void Glauber::printNucleusData(Nucleus *nucleus) {
     cout << "Nucleus Name: " << nucleus->name << endl;
     cout << " Nucleus.A = " << nucleus->A << endl;
     cout << " Nucleus.Z = " << nucleus->Z << endl;
@@ -323,7 +323,7 @@ void Glauber::PrintNucleusData(Nucleus *nucleus) {
     cout << " Nucleus.R_WS = " << nucleus->R_WS << endl;
 }
 
-int Glauber::LinearFindXorg(double x, double *Vx, int ymax) {
+int Glauber::linearFindXorg(double x, double *Vx, int ymax) {
     /* finds the first of the 4 points, x is between the second and the third */
 
     int x_org;
@@ -343,14 +343,14 @@ int Glauber::LinearFindXorg(double x, double *Vx, int ymax) {
 
 } /* Linear Find Xorg */
 
-double Glauber::FourPtInterpolate(
+double Glauber::fourPtInterpolate(
     double x, double *Vx, double *Vy, double h, int x_org) {
     /* interpolating points are x_org, x_org+1, x_org+2, x_org+3 */
     /* cubic polynomial approximation */
 
     double a, bb, c, d, f;
 
-    MakeCoeff(&a, &bb, &c, &d, Vy, h, x_org);
+    makeCoeff(&a, &bb, &c, &d, Vy, h, x_org);
 
     f = a * pow(x - Vx[x_org], 3.);
     f += bb * pow(x - Vx[x_org], 2.);
@@ -360,7 +360,7 @@ double Glauber::FourPtInterpolate(
     return f;
 }
 
-void Glauber::MakeCoeff(
+void Glauber::makeCoeff(
     double *a, double *bb, double *c, double *d, double *Vy, double h,
     int x_org) {
     double f0, f1, f2, f3;
@@ -379,13 +379,13 @@ void Glauber::MakeCoeff(
     *d = f0;
 }
 
-double Glauber::VInterpolate(double x, double *Vx, double *Vy, int ymax) {
+double Glauber::vInterpolate(double x, double *Vx, double *Vy, int ymax) {
     int x_org;
     double h;
 
     if ((x < Vx[0]) || (x > Vx[ymax])) {
         fprintf(
-            stderr, "VInterpolate: x = %le is outside the range (%le, %le).\n",
+            stderr, "vInterpolate: x = %le is outside the range (%le, %le).\n",
             x, Vx[0], Vx[ymax]);
         fprintf(stderr, "This can't happen.  Exiting...\n");
         exit(0);
@@ -394,15 +394,15 @@ double Glauber::VInterpolate(double x, double *Vx, double *Vy, int ymax) {
     /* we only deal with evenly spaced Vx */
     /* x_org is the first of the 4 points */
 
-    x_org = LinearFindXorg(x, Vx, ymax);
+    x_org = linearFindXorg(x, Vx, ymax);
 
     h = (Vx[ymax] - Vx[0]) / ymax;
 
-    return FourPtInterpolate(x, Vx, Vy, h, x_org);
+    return fourPtInterpolate(x, Vx, Vy, h, x_org);
 
-} /* VInterpolate */
+} /* vInterpolate */
 
-double *Glauber::MakeVx(double down, double up, int maxi_num) {
+double *Glauber::makeVx(double down, double up, int maxi_num) {
     static double dx, *vx;
     int i;
 
@@ -413,9 +413,9 @@ double *Glauber::MakeVx(double down, double up, int maxi_num) {
     }
     return vx;
 
-} /* MakeVx */
+} /* makeVx */
 
-double *Glauber::MakeVy(double *vx, int maxi_num) {
+double *Glauber::makeVy(double *vx, int maxi_num) {
     int i;
     static double *vy;
 
@@ -429,7 +429,7 @@ double *Glauber::MakeVy(double *vx, int maxi_num) {
     // data_file << "EndOfData" << endl;
 
     for (i = 0; i <= maxi_num; i++) {
-        vy[i] = NuInS(vx[i]);
+        vy[i] = nuInS(vx[i]);
         //   if(i % di == 0)
         //     {
         //       cerr << st << "[" << i << "] = " << vy[i] << endl;
@@ -440,9 +440,9 @@ double *Glauber::MakeVy(double *vx, int maxi_num) {
     // data_file.close();
 
     return vy;
-} /* MakeVy */
+} /* makeVy */
 
-double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet) {
+double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
     static double x, *vx;
     int i;
     FILE *input;
@@ -475,9 +475,9 @@ double *Glauber::ReadInVx(char *file_name, int maxi_num, int quiet) {
     Util::char_free(s);
     return vx;
 
-} /* ReadInVx */
+} /* readInVx */
 
-double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet) {
+double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
     static double y, *vy;
     int i;
     FILE *input;
@@ -509,11 +509,11 @@ double *Glauber::ReadInVy(char *file_name, int maxi_num, int quiet) {
     Util::char_free(s);
     Util::char_free(sy);
     return vy;
-} /* ReadInVy */
+} /* readInVy */
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 
-double Glauber::InterNuPInSP(double s) {
+double Glauber::interNuPInSP(double s) {
     double y;
     static int ind = 0;
     static double up, down;
@@ -524,27 +524,27 @@ double Glauber::InterNuPInSP(double s) {
     if (GlauberData.Projectile.A == 1.0) return 0.0;
 
     if (ind == 1) {
-        CalcRho(&(GlauberData.Projectile));
+        calcRho(&(GlauberData.Projectile));
         up = 2.0 * GlauberData.SCutOff;
         down = 0.0;
         maxi_num = GlauberData.InterMax;
-        vx = MakeVx(down, up, maxi_num);
-        vy = MakeVy(vx, maxi_num);
+        vx = makeVx(down, up, maxi_num);
+        vy = makeVy(vx, maxi_num);
     } /* if ind */
 
     if (s > up)
         return 0.0;
     else {
-        y = VInterpolate(s, vx, vy, maxi_num);
+        y = vInterpolate(s, vx, vy, maxi_num);
         if (y < 0.0)
             return 0.0;
         else {
             return y;
         }
     }
-} /* InterNuPInSP */
+} /* interNuPInSP */
 
-double Glauber::InterNuTInST(double s) {
+double Glauber::interNuTInST(double s) {
     double y;
     static int ind = 0;
     static double up, down;
@@ -555,14 +555,14 @@ double Glauber::InterNuTInST(double s) {
     if (GlauberData.Target.A == 1.0) return 0.0;
 
     if (ind == 1) {
-        CalcRho(&(GlauberData.Target));
+        calcRho(&(GlauberData.Target));
 
         up = 2.0 * GlauberData.SCutOff;
         down = 0.0;
         maxi_num = GlauberData.InterMax;
 
-        vx = MakeVx(down, up, maxi_num);
-        vy = MakeVy(vx, maxi_num);
+        vx = makeVx(down, up, maxi_num);
+        vy = makeVy(vx, maxi_num);
     } /* if ind */
 
     // cout << *vx << " " << *vy << endl;
@@ -570,15 +570,15 @@ double Glauber::InterNuTInST(double s) {
     if (s > up)
         return 0.0;
     else {
-        y = VInterpolate(s, vx, vy, maxi_num);
+        y = vInterpolate(s, vx, vy, maxi_num);
         if (y < 0.0)
             return 0.0;
         else
             return y;
     }
-} /* InterNuTInST */
+} /* interNuTInST */
 
-void Glauber::CalcRho(Nucleus *nucleus) {
+void Glauber::calcRho(Nucleus *nucleus) {
     double f, R_WS;
     /* to pass to AnumIntegrand */
 
@@ -587,23 +587,23 @@ void Glauber::CalcRho(Nucleus *nucleus) {
     R_WS = nucleus->R_WS;
 
     if (nucleus->AnumFunc == 1)
-        f = Anum2HO() / (nucleus->rho_WS);
+        f = anum2HO() / (nucleus->rho_WS);
     else if (nucleus->AnumFunc == 2)
-        f = Anum3Gauss(R_WS) / (nucleus->rho_WS);
+        f = anum3Gauss(R_WS) / (nucleus->rho_WS);
     else if (nucleus->AnumFunc == 3)
-        f = Anum3Fermi(R_WS) / (nucleus->rho_WS);
+        f = anum3Fermi(R_WS) / (nucleus->rho_WS);
     else if (nucleus->AnumFunc == 8)
-        f = AnumHulthen() / (nucleus->rho_WS);
+        f = anumHulthen() / (nucleus->rho_WS);
     else
-        f = Anum3Fermi(R_WS) / (nucleus->rho_WS);
+        f = anum3Fermi(R_WS) / (nucleus->rho_WS);
 
     nucleus->rho_WS = (nucleus->A) / f;
     // cout << " nucleus->rho_WS=" << nucleus->rho_WS << endl;
-} /* CalcRho */
+} /* calcRho */
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 
-double Glauber::NuInS(double s) {
+double Glauber::nuInS(double s) {
     double y;
     int count;
     int id;
@@ -620,7 +620,7 @@ double Glauber::NuInS(double s) {
     return y;
 }
 
-double Glauber::Anum3Fermi(double R_WS) {
+double Glauber::anum3Fermi(double R_WS) {
     int count = 0;
     double up, down, a_WS, rho, f;
 
@@ -638,9 +638,9 @@ double Glauber::Anum3Fermi(double R_WS) {
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
-} /* Anum3Fermi */
+} /* anum3Fermi */
 
-double Glauber::Anum3FermiInt(double xi) {
+double Glauber::anum3FermiInt(double xi) {
     double f;
     double r;
     double R_WS, w_WS;
@@ -659,9 +659,9 @@ double Glauber::Anum3FermiInt(double xi) {
     f /= (xi + exp(-R_WS));
 
     return f;
-} /* Anum3FermiInt */
+} /* anum3FermiInt */
 
-double Glauber::NuInt3Fermi(double xi) {
+double Glauber::nuInt3Fermi(double xi) {
     double f;
     double c;
     double z, r, s;
@@ -691,11 +691,11 @@ double Glauber::NuInt3Fermi(double xi) {
     f /= xi + c * exp(s * s / (r + z));
 
     return f;
-} /* NuInt3Fermi */
+} /* nuInt3Fermi */
 
 /* %%%%%%% 3 Parameter Gauss %%%%%%%%%%%% */
 
-double Glauber::Anum3Gauss(double R_WS) {
+double Glauber::anum3Gauss(double R_WS) {
     int count = 0;
     double up, down, a_WS, rho, f;
 
@@ -713,9 +713,9 @@ double Glauber::Anum3Gauss(double R_WS) {
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
-} /* Anum3Gauss */
+} /* anum3Gauss */
 
-double Glauber::Anum3GaussInt(double xi) {
+double Glauber::anum3GaussInt(double xi) {
     double y;
     double r_sqr;
     double R_WS, w_WS;
@@ -740,9 +740,9 @@ double Glauber::Anum3GaussInt(double xi) {
     y /= 2.0 * (xi + exp(-R_WS * R_WS));
 
     return y;
-} /* Anum3GaussInt */
+} /* anum3GaussInt */
 
-double Glauber::NuInt3Gauss(double xi) {
+double Glauber::nuInt3Gauss(double xi) {
     double f;
     double c;
     double z_sqr, r_sqr, s;
@@ -772,10 +772,10 @@ double Glauber::NuInt3Gauss(double xi) {
     f /= sqrt(z_sqr) * (xi + c * exp(s * s));
 
     return f;
-} /* NuInt3Gauss */
+} /* nuInt3Gauss */
 
 /* %%%%%%% 2 Parameter HO %%%%%%%%%%%% */
-double Glauber::Anum2HO() {
+double Glauber::anum2HO() {
     int count = 0;
     double up, down, a_WS, rho, f;
 
@@ -790,9 +790,9 @@ double Glauber::Anum2HO() {
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
-} /* Anum2HO */
+} /* anum2HO */
 
-double Glauber::Anum2HOInt(double xi) {
+double Glauber::anum2HOInt(double xi) {
     double y;
     double r_sqr, r;
     double w_WS;
@@ -814,9 +814,9 @@ double Glauber::Anum2HOInt(double xi) {
     y /= 2.0;
 
     return y;
-} /* Anum2HOInt */
+} /* anum2HOInt */
 
-double Glauber::NuInt2HO(double xi) {
+double Glauber::nuInt2HO(double xi) {
     double f;
     double z_sqr, r_sqr, s;
     double w_WS, a_WS, rho;
@@ -845,11 +845,11 @@ double Glauber::NuInt2HO(double xi) {
     f *= (1.0 + w_WS * r_sqr) * exp(-s * s) / sqrt(z_sqr);
 
     return f;
-} /* NuInt2HO */
+} /* nuInt2HO */
 
 /* %%%%%%% Hulthen %%%%%%%%%%%% */
 
-double Glauber::AnumHulthen() {
+double Glauber::anumHulthen() {
     double a_WS, b_WS, rho, f;
 
     a_WS = Nuc_WS->a_WS;
@@ -865,11 +865,11 @@ double Glauber::AnumHulthen() {
 
     f *= rho;
 
-    /* so we return f*rho  CalcRho will do f/rho and rho = A/f */
+    /* so we return f*rho  calcRho will do f/rho and rho = A/f */
     return f;
-} /* AnumHulthen */
+} /* anumHulthen */
 
-double Glauber::NuIntHulthen(double xi) {
+double Glauber::nuIntHulthen(double xi) {
     double f, g;
     double z, r, s;
     double b_WS, a_WS, rho;
@@ -898,7 +898,7 @@ double Glauber::NuIntHulthen(double xi) {
 
     //   fprintf(stderr, "%e\n", f);
     return f;
-} /* NuIntHulthen */
+} /* nuIntHulthen */
 
 double Glauber::integral(
     int id, double down, double up, double tol, int *count) {
@@ -911,21 +911,21 @@ double Glauber::integral(
         dx = (up - down) / 6.0;
         for (i = 0; i < 7; i++) {
             if (id == 1)
-                g1[i] = NuInt2HO(down + i * dx);
+                g1[i] = nuInt2HO(down + i * dx);
             else if (id == 2)
-                g1[i] = NuInt3Gauss(down + i * dx);
+                g1[i] = nuInt3Gauss(down + i * dx);
             else if (id == 3)
-                g1[i] = NuInt3Fermi(down + i * dx);
+                g1[i] = nuInt3Fermi(down + i * dx);
             else if (id == 4)
-                g1[i] = Anum3FermiInt(down + i * dx);
+                g1[i] = anum3FermiInt(down + i * dx);
             else if (id == 5)
-                g1[i] = Anum3GaussInt(down + i * dx);
+                g1[i] = anum3GaussInt(down + i * dx);
             else if (id == 6)
-                g1[i] = Anum2HOInt(down + i * dx);
+                g1[i] = anum2HOInt(down + i * dx);
             else if (id == 7)
-                g1[i] = OLSIntegrand(down + i * dx);
+                g1[i] = oLSIntegrand(down + i * dx);
             else if (id == 8)
-                g1[i] = NuIntHulthen(down + i * dx);
+                g1[i] = nuIntHulthen(down + i * dx);
             //
             // cout << *count << " " << id << " " << down << " " << up << ",
             // g1[" << i
@@ -961,37 +961,37 @@ double Glauber::qnc7(
       */
 
     if (id == 1) {
-        fl[1] = NuInt2HO(down + dx);
-        fl[3] = NuInt2HO(down + 3.0 * dx);
-        fl[5] = NuInt2HO(down + 5.0 * dx);
+        fl[1] = nuInt2HO(down + dx);
+        fl[3] = nuInt2HO(down + 3.0 * dx);
+        fl[5] = nuInt2HO(down + 5.0 * dx);
     } else if (id == 2) {
-        fl[1] = NuInt3Gauss(down + dx);
-        fl[3] = NuInt3Gauss(down + 3.0 * dx);
-        fl[5] = NuInt3Gauss(down + 5.0 * dx);
+        fl[1] = nuInt3Gauss(down + dx);
+        fl[3] = nuInt3Gauss(down + 3.0 * dx);
+        fl[5] = nuInt3Gauss(down + 5.0 * dx);
     } else if (id == 3) {
-        fl[1] = NuInt3Fermi(down + dx);
-        fl[3] = NuInt3Fermi(down + 3.0 * dx);
-        fl[5] = NuInt3Fermi(down + 5.0 * dx);
+        fl[1] = nuInt3Fermi(down + dx);
+        fl[3] = nuInt3Fermi(down + 3.0 * dx);
+        fl[5] = nuInt3Fermi(down + 5.0 * dx);
     } else if (id == 4) {
-        fl[1] = Anum3FermiInt(down + dx);
-        fl[3] = Anum3FermiInt(down + 3.0 * dx);
-        fl[5] = Anum3FermiInt(down + 5.0 * dx);
+        fl[1] = anum3FermiInt(down + dx);
+        fl[3] = anum3FermiInt(down + 3.0 * dx);
+        fl[5] = anum3FermiInt(down + 5.0 * dx);
     } else if (id == 5) {
-        fl[1] = Anum3GaussInt(down + dx);
-        fl[3] = Anum3GaussInt(down + 3.0 * dx);
-        fl[5] = Anum3GaussInt(down + 5.0 * dx);
+        fl[1] = anum3GaussInt(down + dx);
+        fl[3] = anum3GaussInt(down + 3.0 * dx);
+        fl[5] = anum3GaussInt(down + 5.0 * dx);
     } else if (id == 6) {
-        fl[1] = Anum2HOInt(down + dx);
-        fl[3] = Anum2HOInt(down + 3.0 * dx);
-        fl[5] = Anum2HOInt(down + 5.0 * dx);
+        fl[1] = anum2HOInt(down + dx);
+        fl[3] = anum2HOInt(down + 3.0 * dx);
+        fl[5] = anum2HOInt(down + 5.0 * dx);
     } else if (id == 7) {
-        fl[1] = OLSIntegrand(down + dx);
-        fl[3] = OLSIntegrand(down + 3.0 * dx);
-        fl[5] = OLSIntegrand(down + 5.0 * dx);
+        fl[1] = oLSIntegrand(down + dx);
+        fl[3] = oLSIntegrand(down + 3.0 * dx);
+        fl[5] = oLSIntegrand(down + 5.0 * dx);
     } else if (id == 8) {
-        fl[1] = NuIntHulthen(down + dx);
-        fl[3] = NuIntHulthen(down + 3.0 * dx);
-        fl[5] = NuIntHulthen(down + 5.0 * dx);
+        fl[1] = nuIntHulthen(down + dx);
+        fl[3] = nuIntHulthen(down + 3.0 * dx);
+        fl[5] = nuIntHulthen(down + 5.0 * dx);
     }
 
     fl[0] = f_of[0];
@@ -1012,37 +1012,37 @@ double Glauber::qnc7(
       */
 
     if (id == 1) {
-        fr[1] = NuInt2HO(down + 7.0 * dx);
-        fr[3] = NuInt2HO(down + 9.0 * dx);
-        fr[5] = NuInt2HO(down + 11.0 * dx);
+        fr[1] = nuInt2HO(down + 7.0 * dx);
+        fr[3] = nuInt2HO(down + 9.0 * dx);
+        fr[5] = nuInt2HO(down + 11.0 * dx);
     } else if (id == 2) {
-        fr[1] = NuInt3Gauss(down + 7.0 * dx);
-        fr[3] = NuInt3Gauss(down + 9.0 * dx);
-        fr[5] = NuInt3Gauss(down + 11.0 * dx);
+        fr[1] = nuInt3Gauss(down + 7.0 * dx);
+        fr[3] = nuInt3Gauss(down + 9.0 * dx);
+        fr[5] = nuInt3Gauss(down + 11.0 * dx);
     } else if (id == 3) {
-        fr[1] = NuInt3Fermi(down + 7.0 * dx);
-        fr[3] = NuInt3Fermi(down + 9.0 * dx);
-        fr[5] = NuInt3Fermi(down + 11.0 * dx);
+        fr[1] = nuInt3Fermi(down + 7.0 * dx);
+        fr[3] = nuInt3Fermi(down + 9.0 * dx);
+        fr[5] = nuInt3Fermi(down + 11.0 * dx);
     } else if (id == 4) {
-        fr[1] = Anum3FermiInt(down + 7.0 * dx);
-        fr[3] = Anum3FermiInt(down + 9.0 * dx);
-        fr[5] = Anum3FermiInt(down + 11.0 * dx);
+        fr[1] = anum3FermiInt(down + 7.0 * dx);
+        fr[3] = anum3FermiInt(down + 9.0 * dx);
+        fr[5] = anum3FermiInt(down + 11.0 * dx);
     } else if (id == 5) {
-        fr[1] = Anum3GaussInt(down + 7.0 * dx);
-        fr[3] = Anum3GaussInt(down + 9.0 * dx);
-        fr[5] = Anum3GaussInt(down + 11.0 * dx);
+        fr[1] = anum3GaussInt(down + 7.0 * dx);
+        fr[3] = anum3GaussInt(down + 9.0 * dx);
+        fr[5] = anum3GaussInt(down + 11.0 * dx);
     } else if (id == 6) {
-        fr[1] = Anum2HOInt(down + 7.0 * dx);
-        fr[3] = Anum2HOInt(down + 9.0 * dx);
-        fr[5] = Anum2HOInt(down + 11.0 * dx);
+        fr[1] = anum2HOInt(down + 7.0 * dx);
+        fr[3] = anum2HOInt(down + 9.0 * dx);
+        fr[5] = anum2HOInt(down + 11.0 * dx);
     } else if (id == 7) {
-        fr[1] = OLSIntegrand(down + 7.0 * dx);
-        fr[3] = OLSIntegrand(down + 9.0 * dx);
-        fr[5] = OLSIntegrand(down + 11.0 * dx);
+        fr[1] = oLSIntegrand(down + 7.0 * dx);
+        fr[3] = oLSIntegrand(down + 9.0 * dx);
+        fr[5] = oLSIntegrand(down + 11.0 * dx);
     } else if (id == 8) {
-        fr[1] = NuIntHulthen(down + 7.0 * dx);
-        fr[3] = NuIntHulthen(down + 9.0 * dx);
-        fr[5] = NuIntHulthen(down + 11.0 * dx);
+        fr[1] = nuIntHulthen(down + 7.0 * dx);
+        fr[3] = nuIntHulthen(down + 9.0 * dx);
+        fr[5] = nuIntHulthen(down + 11.0 * dx);
     }
 
     fr[0] = f_of[3];
@@ -1093,7 +1093,7 @@ double Glauber::qnc7(
     return ans;
 } /* end of qnc */
 
-double Glauber::OLSIntegrand(double s) {
+double Glauber::oLSIntegrand(double s) {
     double sum, arg, x, r;
     int k, m;
     m = 20;
@@ -1102,26 +1102,26 @@ double Glauber::OLSIntegrand(double s) {
         arg = M_PI * (2.0 * k - 1.0) / (2.0 * m);
         x = cos(arg);
         r = sqrt(s * s + b * b + 2.0 * s * b * x);
-        sum += InterNuTInST(r);
+        sum += interNuTInST(r);
     } /* k */
 
-    return s * sum * M_PI / (1.0 * m) * InterNuPInSP(s);
+    return s * sum * M_PI / (1.0 * m) * interNuPInSP(s);
 
-} /* OLSIntegrand */
+} /* oLSIntegrand */
 
-double Glauber::TAB() {
+double Glauber::tAB() {
     double f;
     int count = 0;
     f = integral(
         7, 0.0, GlauberData.SCutOff, TOL,
-        &count);                       // integrate OLSIntegrand(s)
-    f *= 2.0 / (GlauberData.SigmaNN);  // here TAB is the number of binary
+        &count);                       // integrate oLSIntegrand(s)
+    f *= 2.0 / (GlauberData.SigmaNN);  // here tAB is the number of binary
                                        // collisions, dimensionless (1/fm^4
                                        // integrated over dr_T^2 (gets rid
                                        // of 1/fm^2), divided by sigma (gets rid
                                        // of the other))
     return f;
-} /* TAB */
+} /* tAB */
 
 void Glauber::initGlauber(
     double SigmaNN, string Target, string Projectile, double inb,
@@ -1151,10 +1151,10 @@ void Glauber::initGlauber(
     string paf;
     paf = p_name;
 
-    FindNucleusData2(
+    findNucleusData2(
         &(GlauberData.Target), Target_Name, setWSDeformParams, R_WS, a_WS,
         beta2, beta3, beta4, gamma, force_dmin, d_min, dR_np, da_np);
-    FindNucleusData2(
+    findNucleusData2(
         &(GlauberData.Projectile), Projectile_Name, setWSDeformParams, R_WS,
         a_WS, beta2, beta3, beta4, gamma, force_dmin, d_min, dR_np, da_np);
 
@@ -1176,7 +1176,7 @@ double Glauber::areaTA(double x, double A) {
     return f;
 }
 
-ReturnValue Glauber::SampleTARejection(Random *random, int PorT) {
+ReturnValue Glauber::sampleTARejection(Random *random, int PorT) {
     ReturnValue returnVec;
 
     double r, x, y, tmp;
@@ -1200,11 +1200,11 @@ ReturnValue Glauber::SampleTARejection(Random *random, int PorT) {
             tmp = random->genrand64_real1();
 
             // x is uniform on [0,1]
-            if (r * InterNuPInSP(r) > A * r * 11. * exp(-r * r / 40.))
+            if (r * interNuPInSP(r) > A * r * 11. * exp(-r * r / 40.))
                 cout << "WARNING: TA>envelope: "
-                     << "TA=" << r * InterNuPInSP(r)
+                     << "TA=" << r * interNuPInSP(r)
                      << ", f=" << A * r * 11. * exp(-r * r / 40.) << endl;
-        } while (tmp > r * InterNuPInSP(r) / (A * r * 11. * exp(-r * r / 40.)));
+        } while (tmp > r * interNuPInSP(r) / (A * r * 11. * exp(-r * r / 40.)));
     } else {
         do {
             phi = 2. * M_PI * random->genrand64_real1();
@@ -1217,11 +1217,11 @@ ReturnValue Glauber::SampleTARejection(Random *random, int PorT) {
             // is a uniform random number on [0, area under f(x)]
             tmp = random->genrand64_real1();
             // x is uniform on [0,1]
-            if (r * InterNuTInST(r) > A * r * 11. * exp(-r * r / 40.))
+            if (r * interNuTInST(r) > A * r * 11. * exp(-r * r / 40.))
                 cout << "WARNING: TA>envelope: "
-                     << "TA=" << r * InterNuTInST(r)
+                     << "TA=" << r * interNuTInST(r)
                      << ", f=" << A * r * 11. * exp(-r * r / 40.) << endl;
-        } while (tmp > r * InterNuTInST(r) / (A * r * 11. * exp(-r * r / 40.)));
+        } while (tmp > r * interNuTInST(r) / (A * r * 11. * exp(-r * r / 40.)));
     }
     // reject if tmp is larger than the ratio p(y)/f(y),
     // f(y)=A*r*11.*exp(-r*r/40.))

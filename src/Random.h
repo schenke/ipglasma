@@ -1,5 +1,5 @@
-#ifndef Random_h
-#define Random_h
+#ifndef SRC_RANDOM_H_
+#define SRC_RANDOM_H_
 
 #include <cstddef>
 #include <random>
@@ -55,4 +55,4 @@ class Random {
     double sampleGammaInc();
 };
 
-#endif
+#endif  // SRC_RANDOM_H_

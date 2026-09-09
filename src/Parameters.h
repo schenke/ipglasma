@@ -1,8 +1,8 @@
 // Parameters.h is part of the JIMWLK solver.
 // Copyright (C) 2011 Bjoern Schenke.
 
-#ifndef Parameters_H
-#define Parameters_H
+#ifndef SRC_PARAMETERS_H_
+#define SRC_PARAMETERS_H_
 
 #include <string>
 #include <vector>
@@ -524,4 +524,4 @@ class Parameters {
     }
     bool getSaveSnapshots() { return saveSnapshots_; }
 };
-#endif  // Parameters_H
+#endif  // SRC_PARAMETERS_H_

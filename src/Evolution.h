@@ -1,8 +1,8 @@
 // Init.h is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 
-#ifndef Evolution_H
-#define Evolution_H
+#ifndef SRC_EVOLUTION_H_
+#define SRC_EVOLUTION_H_
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -46,4 +46,4 @@ class Evolution {
     void readNkt(Parameters *param);
 };
 
-#endif  // Evolution_H
+#endif  // SRC_EVOLUTION_H_

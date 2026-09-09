@@ -1,5 +1,5 @@
-#ifndef Matrix_h
-#define Matrix_h
+#ifndef SRC_MATRIX_H_
+#define SRC_MATRIX_H_
 
 #include <complex>
 #include <string>
@@ -146,4 +146,4 @@ Matrix operator*(const std::complex<double> a, const Matrix &b);
 Matrix operator*(const Matrix &a, const double b);
 Matrix operator*(const Matrix &a, const Matrix &b);
 
-#endif
+#endif  // SRC_MATRIX_H_

@@ -128,7 +128,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusA_.push_back(rv);
         } else if (A1 == 2) {
             // deuteron
-            rv = glauber->SampleTARejection(random, 1);
+            rv = glauber->sampleTARejection(random, 1);
             // we sample the neutron proton distance, so distance to the center
             // needs to be divided by 2
             rv.x = rv.x / 2.;
@@ -145,7 +145,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             rv.collided = 0;
             nucleusA_.push_back(rv);
         } else {
-            generate_nucleus_configuration(
+            generateNucleusConfiguration(
                 random, A1, Z1, glauber->GlauberData.Projectile.a_WS,
                 glauber->GlauberData.Projectile.R_WS,
                 glauber->GlauberData.Projectile.beta2,
@@ -167,7 +167,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusB_.push_back(rv2);
         } else if (A2 == 2) {
             // deuteron
-            rv = glauber->SampleTARejection(random, 2);
+            rv = glauber->sampleTARejection(random, 2);
             // we sample the neutron proton distance, so distance to the center
             // needs to be divided by 2
 
@@ -186,7 +186,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             rv.collided = 0;
             nucleusB_.push_back(rv);
         } else {
-            generate_nucleus_configuration(
+            generateNucleusConfiguration(
                 random, A2, Z2, glauber->GlauberData.Target.a_WS,
                 glauber->GlauberData.Target.R_WS,
                 glauber->GlauberData.Target.beta2,
@@ -212,7 +212,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
                 nucleusA_.push_back(rv);
             }
             assignProtons(random, nucleusA_, glauber->nucleusZ1());
-            recenter_nucleus(nucleusA_);
+            recenterNucleus(nucleusA_);
         } else {
             // no configurations, sample with Woods-Saxon
             messager << "configuration file for A = " << glauber->nucleusA1()
@@ -220,7 +220,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
                      << "using Woods-Saxon distribution instead.";
             messager.flush("info");
 
-            generate_nucleus_configuration(
+            generateNucleusConfiguration(
                 random, glauber->nucleusA1(), glauber->nucleusZ1(),
                 glauber->GlauberData.Projectile.a_WS,
                 glauber->GlauberData.Projectile.R_WS,
@@ -247,14 +247,14 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
                 nucleusB_.push_back(rv);
             }
             assignProtons(random, nucleusB_, glauber->nucleusZ2());
-            recenter_nucleus(nucleusB_);
+            recenterNucleus(nucleusB_);
         } else {
             // no configurations, sample with Woods-Saxon
             messager << "configuration file for A = " << glauber->nucleusA2()
                      << " is not available, generate the nucleus configuration "
                      << "using Woods-Saxon distribution instead.";
             messager.flush("info");
-            generate_nucleus_configuration(
+            generateNucleusConfiguration(
                 random, glauber->nucleusA2(), glauber->nucleusZ2(),
                 glauber->GlauberData.Target.a_WS,
                 glauber->GlauberData.Target.R_WS,
@@ -457,31 +457,31 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
     // global rotation of the nucleus
     if (param->getPolarizationProjectile() == 0) {
-        rotate_nucleus_3D(random, nucleusA_);
+        rotateNucleus3D(random, nucleusA_);
     } else if (param->getPolarizationProjectile() == 1) {
         // longitudinal polarization only rotates phi randomly
         double phi = 2. * M_PI * random->genrand64_real3();
         double theta = 0;
-        rotate_nucleus(phi, theta, nucleusA_);
+        rotateNucleus(phi, theta, nucleusA_);
     } else if (param->getPolarizationProjectile() == 2) {
         // transverse polarization rotates J to +y axis
         double phi = M_PI / 2;
         double theta = M_PI / 2;
-        rotate_nucleus(phi, theta, nucleusA_);
+        rotateNucleus(phi, theta, nucleusA_);
     }
 
     if (param->getPolarizationTarget() == 0) {
-        rotate_nucleus_3D(random, nucleusB_);
+        rotateNucleus3D(random, nucleusB_);
     } else if (param->getPolarizationTarget() == 1) {
         // longitudinal polarization only rotates phi randomly
         double phi = 2. * M_PI * random->genrand64_real3();
         double theta = 0;
-        rotate_nucleus(phi, theta, nucleusB_);
+        rotateNucleus(phi, theta, nucleusB_);
     } else if (param->getPolarizationTarget() == 2) {
         // transverse polarization rotates J to +y axis
         double phi = M_PI / 2;
         double theta = M_PI / 2;
-        rotate_nucleus(phi, theta, nucleusB_);
+        rotateNucleus(phi, theta, nucleusB_);
     }
 }
 
@@ -1031,14 +1031,14 @@ void Init::setColorChargeDensity(
 
                 // nucleus A
                 r = sqrt(xA * xA + y * y);
-                T = glauber->InterNuTInST(r);
+                T = glauber->interNuTInST(r);
                 lat->cells[localpos]->setTpA(T);
 
                 normA += T * a * a;
 
                 // nucleus B
                 r = sqrt(xB * xB + y * y);
-                T = glauber->InterNuPInSP(r);
+                T = glauber->interNuPInSP(r);
                 lat->cells[localpos]->setTpB(T);
 
                 normB += T * a * a;
@@ -2790,27 +2790,27 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
     }  // omp block
 }
 
-void Init::generate_nucleus_configuration(
+void Init::generateNucleusConfiguration(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, bool force_dmin_flag,
     double d_min, double dR_np, double da_np,
     std::vector<ReturnValue> &nucleus) {
     if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
         && std::abs(beta3) < 1e-15 && std::abs(gamma) < 1e-15) {
-        generate_nucleus_configuration_with_woods_saxon(
+        generateNucleusConfigurationWithWoodsSaxon(
             random, A, Z, a_WS, R_WS, d_min, dR_np, da_np, nucleus);
     } else {
         if (force_dmin_flag) {
-            generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
+            generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
                 random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, d_min,
                 dR_np, da_np, nucleus);
         } else {
             if (std::abs(gamma) > 1e-15) {
-                generate_nucleus_configuration_with_deformed_woods_saxon2(
+                generateNucleusConfigurationWithDeformedWoodsSaxon2(
                     random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, dR_np,
                     da_np, nucleus);
             } else {
-                generate_nucleus_configuration_with_deformed_woods_saxon(
+                generateNucleusConfigurationWithDeformedWoodsSaxon(
                     random, A, Z, a_WS, R_WS, beta2, beta3, beta4, d_min, dR_np,
                     da_np, nucleus);
             }
@@ -2818,18 +2818,18 @@ void Init::generate_nucleus_configuration(
     }
 }
 
-void Init::generate_nucleus_configuration_with_woods_saxon(
+void Init::generateNucleusConfigurationWithWoodsSaxon(
     Random *random, int A, int Z, double a_WS, double R_WS, double d_min,
     double dR_np, double da_np, std::vector<ReturnValue> &nucleus) {
     std::vector<double> r_array(A, 0.);
     std::vector<int> idx_array(A, 0);
     for (int i = 0; i < Z; i++) {
-        r_array[i] = sample_r_from_woods_saxon(random, a_WS, R_WS);
+        r_array[i] = sampleRFromWoodsSaxon(random, a_WS, R_WS);
         idx_array[i] = i;
     }
     for (int i = Z; i < A; i++) {
         r_array[i] =
-            sample_r_from_woods_saxon(random, a_WS + da_np, R_WS + dR_np);
+            sampleRFromWoodsSaxon(random, a_WS + da_np, R_WS + dR_np);
         idx_array[i] = i;
     }
     std::stable_sort(
@@ -2869,7 +2869,7 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
         z_array[i] = z_i;
     }
 
-    recenter_nucleus(x_array, y_array, z_array);
+    recenterNucleus(x_array, y_array, z_array);
 
     for (int i = 0; i < A; i++) {
         ReturnValue rv;
@@ -2887,22 +2887,22 @@ void Init::generate_nucleus_configuration_with_woods_saxon(
     }
 }
 
-double Init::sample_r_from_woods_saxon(
+double Init::sampleRFromWoodsSaxon(
     Random *random, double a_WS, double R_WS) const {
     double rmaxCut = R_WS + 10. * a_WS;
     double r = 0.;
     do {
         r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);
-    } while (random->genrand64_real3() > fermi_distribution(r, R_WS, a_WS));
+    } while (random->genrand64_real3() > fermiDistribution(r, R_WS, a_WS));
     return (r);
 }
 
-double Init::fermi_distribution(double r, double R_WS, double a_WS) const {
+double Init::fermiDistribution(double r, double R_WS, double a_WS) const {
     double f = 1. / (1. + exp((r - R_WS) / a_WS));
     return (f);
 }
 
-void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
+void Init::generateNucleusConfigurationWithDeformedWoodsSaxon(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double d_min, double dR_np, double da_np,
     std::vector<ReturnValue> &nucleus) {
@@ -2910,13 +2910,13 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     std::vector<double> costheta_array(A, 0.);
     std::vector<int> idx_array(A, 0);
     for (int i = 0; i < Z; i++) {
-        sample_r_and_costheta_from_deformed_woods_saxon(
+        sampleRAndCosthetaFromDeformedWoodsSaxon(
             random, a_WS, R_WS, beta2, beta3, beta4, r_array[i],
             costheta_array[i]);
         idx_array[i] = i;
     }
     for (int i = Z; i < A; i++) {
-        sample_r_and_costheta_from_deformed_woods_saxon(
+        sampleRAndCosthetaFromDeformedWoodsSaxon(
             random, a_WS + da_np, R_WS + dR_np, beta2, beta3, beta4, r_array[i],
             costheta_array[i]);
         idx_array[i] = i;
@@ -2957,7 +2957,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
         y_array[i] = y_i;
         z_array[i] = z_i;
     }
-    recenter_nucleus(x_array, y_array, z_array);
+    recenterNucleus(x_array, y_array, z_array);
 
     for (unsigned int i = 0; i < r_array.size(); i++) {
         ReturnValue rv;
@@ -2975,7 +2975,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon(
     }
 }
 
-void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
+void Init::generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, double d_min, double dR_np,
     double da_np, std::vector<ReturnValue> &nucleus) {
@@ -3004,16 +3004,16 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
                 r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);
                 costheta = 1.0 - 2.0 * random->genrand64_real3();
                 phi = 2. * M_PI * random->genrand64_real3();
-                double y20 = spherical_harmonics(2, costheta);
-                double y30 = spherical_harmonics(3, costheta);
-                double y40 = spherical_harmonics(4, costheta);
-                double y22 = spherical_harmonics_Y22(costheta, phi);
+                double y20 = sphericalHarmonics(2, costheta);
+                double y30 = sphericalHarmonics(3, costheta);
+                double y40 = sphericalHarmonics(4, costheta);
+                double y22 = sphericalHarmonicsY22(costheta, phi);
                 R_WS_theta =
                     R_WS_i
                     * (1.0 + beta2 * (cos(gamma) * y20 + sin(gamma) * y22)
                        + beta3 * y30 + beta4 * y40);
             } while (random->genrand64_real3()
-                     > fermi_distribution(r, R_WS_theta, a_WS_i));
+                     > fermiDistribution(r, R_WS_theta, a_WS_i));
             double sintheta = sqrt(1. - costheta * costheta);
             x_i = r * sintheta * cos(phi);
             y_i = r * sintheta * sin(phi);
@@ -3035,7 +3035,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
         z_array[i] = z_i;
     }
 
-    recenter_nucleus(x_array, y_array, z_array);
+    recenterNucleus(x_array, y_array, z_array);
 
     for (int i = 0; i < A; i++) {
         ReturnValue rv;
@@ -3053,7 +3053,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
     }
 }
 
-void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
+void Init::generateNucleusConfigurationWithDeformedWoodsSaxon2(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, double dR_np, double da_np,
     std::vector<ReturnValue> &nucleus) {
@@ -3075,22 +3075,22 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
             r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);
             costheta = 1.0 - 2.0 * random->genrand64_real3();
             phi = 2. * M_PI * random->genrand64_real3();
-            double y20 = spherical_harmonics(2, costheta);
-            double y30 = spherical_harmonics(3, costheta);
-            double y40 = spherical_harmonics(4, costheta);
-            double y22 = spherical_harmonics_Y22(costheta, phi);
+            double y20 = sphericalHarmonics(2, costheta);
+            double y30 = sphericalHarmonics(3, costheta);
+            double y40 = sphericalHarmonics(4, costheta);
+            double y22 = sphericalHarmonicsY22(costheta, phi);
             R_WS_theta = R_WS_i
                          * (1.0 + beta2 * (cos(gamma) * y20 + sin(gamma) * y22)
                             + beta3 * y30 + beta4 * y40);
         } while (random->genrand64_real3()
-                 > fermi_distribution(r, R_WS_theta, a_WS_i));
+                 > fermiDistribution(r, R_WS_theta, a_WS_i));
         double sintheta = sqrt(1. - costheta * costheta);
         x_array[i] = r * sintheta * cos(phi);
         y_array[i] = r * sintheta * sin(phi);
         z_array[i] = r * costheta;
     }
 
-    recenter_nucleus(x_array, y_array, z_array);
+    recenterNucleus(x_array, y_array, z_array);
 
     for (int i = 0; i < A; i++) {
         ReturnValue rv;
@@ -3108,7 +3108,7 @@ void Init::generate_nucleus_configuration_with_deformed_woods_saxon2(
     }
 }
 
-void Init::sample_r_and_costheta_from_deformed_woods_saxon(
+void Init::sampleRAndCosthetaFromDeformedWoodsSaxon(
     Random *random, double a_WS, double R_WS, double beta2, double beta3,
     double beta4, double &r, double &costheta) const {
     double rmaxCut = R_WS + 10. * a_WS;
@@ -3116,15 +3116,15 @@ void Init::sample_r_and_costheta_from_deformed_woods_saxon(
     do {
         r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);
         costheta = 1.0 - 2.0 * random->genrand64_real3();
-        auto y20 = spherical_harmonics(2, costheta);
-        auto y30 = spherical_harmonics(3, costheta);
-        auto y40 = spherical_harmonics(4, costheta);
+        auto y20 = sphericalHarmonics(2, costheta);
+        auto y30 = sphericalHarmonics(3, costheta);
+        auto y40 = sphericalHarmonics(4, costheta);
         R_WS_theta = R_WS * (1.0 + beta2 * y20 + beta3 * y30 + beta4 * y40);
     } while (random->genrand64_real3()
-             > fermi_distribution(r, R_WS_theta, a_WS));
+             > fermiDistribution(r, R_WS_theta, a_WS));
 }
 
-double Init::spherical_harmonics(int l, double ct) const {
+double Init::sphericalHarmonics(int l, double ct) const {
     // Currently assuming m=0 and available for Y_{20} and Y_{40}
     // "ct" is cos(theta)
     double ylm = 0.0;
@@ -3144,7 +3144,7 @@ double Init::spherical_harmonics(int l, double ct) const {
     return (ylm);
 }
 
-double Init::spherical_harmonics_Y22(double ct, double phi) const {
+double Init::sphericalHarmonicsY22(double ct, double phi) const {
     // Y2,2
     double ylm = 0.0;
     ylm = 1.0 - ct * ct;
@@ -3153,7 +3153,7 @@ double Init::spherical_harmonics_Y22(double ct, double phi) const {
     return (ylm);
 }
 
-void Init::recenter_nucleus(
+void Init::recenterNucleus(
     std::vector<double> &x, std::vector<double> &y, std::vector<double> &z) {
     // compute the center of mass position and shift it to (0, 0, 0)
     double meanx = 0., meany = 0., meanz = 0.;
@@ -3174,7 +3174,7 @@ void Init::recenter_nucleus(
     }
 }
 
-void Init::recenter_nucleus(std::vector<ReturnValue> &nucleus) {
+void Init::recenterNucleus(std::vector<ReturnValue> &nucleus) {
     // compute the center of mass position and shift it to (0, 0, 0)
     double meanx = 0., meany = 0., meanz = 0.;
     for (auto &n_i : nucleus) {
@@ -3211,7 +3211,7 @@ void Init::assignProtons(
     }
 }
 
-void Init::rotate_nucleus(
+void Init::rotateNucleus(
     double phi_global, double theta_global, std::vector<ReturnValue> &nucleus) {
     auto cth = cos(theta_global);
     auto sth = sin(theta_global);
@@ -3227,7 +3227,7 @@ void Init::rotate_nucleus(
     }
 }
 
-void Init::rotate_nucleus_3D(
+void Init::rotateNucleus3D(
     Random *random, std::vector<ReturnValue> &nucleus) {
     // rotate the nucleus with the full three solid angles
     // required for tri-axial deformed nuclei

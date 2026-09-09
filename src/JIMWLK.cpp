@@ -1,4 +1,4 @@
-#include "jimwlk.h"
+#include "JIMWLK.h"
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_sf_bessel.h>

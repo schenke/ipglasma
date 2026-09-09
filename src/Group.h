@@ -1,5 +1,5 @@
-#ifndef Group_h
-#define Group_h
+#ifndef SRC_GROUP_H_
+#define SRC_GROUP_H_
 
 #include <array>
 
@@ -16,4 +16,4 @@ class Group {
     Matrix &getT(int i) { return t[static_cast<std::size_t>(i)]; }
     const Matrix &getT(int i) const { return t[static_cast<std::size_t>(i)]; }
 };
-#endif
+#endif  // SRC_GROUP_H_

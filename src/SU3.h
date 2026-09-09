@@ -1,5 +1,5 @@
-#ifndef SU3_h
-#define SU3_h
+#ifndef SRC_SU3_H_
+#define SRC_SU3_H_
 
 #include <complex>
 
@@ -169,4 +169,4 @@ inline Complex traceABCD(
 
 }  // namespace su3
 
-#endif
+#endif  // SRC_SU3_H_

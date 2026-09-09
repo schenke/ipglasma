@@ -1,5 +1,5 @@
-#ifndef PHYS_CONSTS_H
-#define PHYS_CONSTS_H
+#ifndef SRC_PHYS_CONSTS_H_
+#define SRC_PHYS_CONSTS_H_
 
 namespace PhysConst {
 const double small_eps = 1e-16;
@@ -9,4 +9,4 @@ const double m_kaon = 0.493667;
 const double m_proton = 0.938272;
 }  // namespace PhysConst
 
-#endif
+#endif  // SRC_PHYS_CONSTS_H_

@@ -1,5 +1,5 @@
-#ifndef Cell_h
-#define Cell_h
+#ifndef SRC_CELL_H_
+#define SRC_CELL_H_
 
 // Scalar per-site state. Fundamental SU(3) matrices are intentionally not
 // stored here; they live in contiguous structure-of-arrays fields on Lattice.
@@ -108,4 +108,4 @@ class Cell {
     double getueta() const { return ueta; }
 };
 
-#endif
+#endif  // SRC_CELL_H_

@@ -1,5 +1,5 @@
-#ifndef Lattice_h
-#define Lattice_h
+#ifndef SRC_LATTICE_H_
+#define SRC_LATTICE_H_
 
 #include <string>
 #include <vector>
@@ -65,4 +65,4 @@ class BufferLattice {
     std::vector<Matrix> buffer2;
 };
 
-#endif
+#endif  // SRC_LATTICE_H_

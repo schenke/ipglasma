@@ -21,7 +21,7 @@ using std::stringstream;
 // Parameter I/O
 
 // reads a string
-string Setup::StringFind(string file_name, string st) {
+string Setup::stringFind(string file_name, string st) {
     string inputname = file_name;
     string tmpfilename;
     string str = st;
@@ -34,7 +34,7 @@ string Setup::StringFind(string file_name, string st) {
     int ind;
     static int flag = 0;
     if (flag == 0) {
-        if (!IsFile(file_name)) {
+        if (!isFile(file_name)) {
             cerr << "The input file named " << file_name
                  << " is absent. Exiting." << endl;
             exit(1);
@@ -67,11 +67,11 @@ string Setup::StringFind(string file_name, string st) {
         exit(1);
     }
     return (0);
-} /* StringFind */
+} /* stringFind */
 
-std::vector<double> Setup::ListFind(string fileName, string paramName) {
+std::vector<double> Setup::listFind(string fileName, string paramName) {
     std::vector<double> varlist;
-    if (!IsFile(fileName)) {
+    if (!isFile(fileName)) {
         cerr << "The input file named " << fileName << " is absent. Exiting."
              << endl;
         exit(1);
@@ -93,12 +93,12 @@ std::vector<double> Setup::ListFind(string fileName, string paramName) {
 }
 
 // reads a double using stringfind:
-double Setup::DFind(string file_name, string st) {
+double Setup::dFind(string file_name, string st) {
     // cout << "ccheck1" << endl;
     string s, s2;
     double x;
     stringstream stm;
-    s = StringFind(file_name, st);
+    s = stringFind(file_name, st);
     // cout << "ccheck2" << endl;
     stm << s;
     s2 = stm.str();
@@ -107,18 +107,18 @@ double Setup::DFind(string file_name, string st) {
     // x << stm;
     // cout << "ccheck4" << endl;
     return x;
-} /* DFind */
+} /* dFind */
 
 // reads an integer using stringfind:
-int Setup::IFind(string file_name, string st) {
+int Setup::iFind(string file_name, string st) {
     double f;
-    f = DFind(file_name, st);
+    f = dFind(file_name, st);
 
     // return (int)(f + 0.5);
     return static_cast<int>(f);
-} /* IFind */
+} /* iFind */
 
-int Setup::IFindOptional(string file_name, string st, int defaultValue) {
+int Setup::iFindOptional(string file_name, string st, int defaultValue) {
     ifstream input(file_name.c_str());
     if (!input.is_open()) {
         cerr << "The input file named " << file_name << " is absent. Exiting."
@@ -139,14 +139,14 @@ int Setup::IFindOptional(string file_name, string st, int defaultValue) {
 }
 
 // reads an integer using stringfind:
-unsigned long long int Setup::ULLIFind(string file_name, string st) {
+unsigned long long int Setup::uLLIFind(string file_name, string st) {
     double f;
-    f = DFind(file_name, st);
+    f = dFind(file_name, st);
 
     return (unsigned long long int)(f + 0.5);
-} /* IFind */
+} /* iFind */
 
-int Setup::IsFile(string file_name) {
+int Setup::isFile(string file_name) {
     FILE *temp;
 
     if ((temp = fopen(file_name.c_str(), "r")) == NULL)
@@ -155,4 +155,4 @@ int Setup::IsFile(string file_name) {
         fclose(temp);
         return 1;
     }
-} /* IsFile */
+} /* isFile */

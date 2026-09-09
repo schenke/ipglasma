@@ -88,7 +88,6 @@ class Glauber {
         double *a, double *b, double *c, double *d, double *Vy, double h,
         int x_org);
     double VInterpolate(double x, double *Vx, double *Vy, int ymax);
-    int FindXorg(double x, double *Vx, int ymax);
     double *MakeVx(double down, double up, int maxi_num);
     double *MakeVy(double *vx, int maxi_num);
     double *ReadInVx(char *, int maxi_num, int quiet);
@@ -109,7 +108,6 @@ class Glauber {
     double Anum2HOInt(double xi);
     double NuInt2HO(double xi);
     double AnumHulthen();
-    double AnumHulthenInt();
     double NuIntHulthen(double xi);
 
     double integral(int id, double down, double up, double tol, int *count);
@@ -118,7 +116,6 @@ class Glauber {
         double pre_sum, double area, int *count);
     double OLSIntegrand(double s);
     double TAB();
-    double PAB(double x, double y);
     void initGlauber(
         double SigmaNN, std::string Target, std::string Projectile, double inb,
         bool setWSDeformParams, double R_WS, double a_WS, double beta2,

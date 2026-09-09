@@ -379,25 +379,6 @@ void Glauber::MakeCoeff(
     *d = f0;
 }
 
-int Glauber::FindXorg(double x, double *Vx, int ymax) {
-    int i, x_org;
-
-    i = 0;
-    while (Vx[i] < x) i++;
-
-    x_org = i - 2;
-
-    if (x_org <= 1)
-        return 1;
-    else if (x_org >= ymax - 3)
-        return ymax - 3;
-    else
-        return x_org;
-
-} /* Find Xorg */
-
-/* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
-
 double Glauber::VInterpolate(double x, double *Vx, double *Vy, int ymax) {
     int x_org;
     double h;
@@ -888,11 +869,6 @@ double Glauber::AnumHulthen() {
     return f;
 } /* AnumHulthen */
 
-double Glauber::AnumHulthenInt() {
-    /* this is dummy */
-    return 0.0;
-} /* AnumHulthenInt */
-
 double Glauber::NuIntHulthen(double xi) {
     double f, g;
     double z, r, s;
@@ -1146,13 +1122,6 @@ double Glauber::TAB() {
                                        // of the other))
     return f;
 } /* TAB */
-
-double Glauber::PAB(double x, double y) {
-    double s1 = sqrt(pow(x + b / 2., 2.) + y * y);
-    double s2 = sqrt(pow(x - b / 2., 2.) + y * y);
-    return InterNuPInSP(s1) * InterNuTInST(s2)
-           / (currentTAB * GlauberData.SigmaNN);
-}
 
 void Glauber::initGlauber(
     double SigmaNN, string Target, string Projectile, double inb,

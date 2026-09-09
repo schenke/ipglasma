@@ -76,42 +76,6 @@ void Random::init_genrand64(unsigned long long seed) {
              + mti);
 }
 
-/* initialize by an array with array-length */
-/* init_key is the array for initializing keys */
-/* key_length is its length */
-void Random::init_by_array64(
-    unsigned long long init_key[], unsigned long long key_length) {
-    unsigned long long i, j, k;
-    init_genrand64(19650218ULL);
-    i = 1;
-    j = 0;
-    k = (NN > key_length ? NN : key_length);
-    for (; k; k--) {
-        mt[i] =
-            (mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >> 62)) * 3935559000370003845ULL))
-            + init_key[j] + j; /* non linear */
-        i++;
-        j++;
-        if (i >= NN) {
-            mt[0] = mt[NN - 1];
-            i = 1;
-        }
-        if (j >= key_length) j = 0;
-    }
-    for (k = NN - 1; k; k--) {
-        mt[i] =
-            (mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >> 62)) * 2862933555777941757ULL))
-            - i; /* non linear */
-        i++;
-        if (i >= NN) {
-            mt[0] = mt[NN - 1];
-            i = 1;
-        }
-    }
-
-    mt[0] = 1ULL << 63; /* MSB is 1; assuring non-zero initial array */
-}
-
 void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
     static const unsigned long long mag01[2] = {0ULL, MATRIX_A};
     std::size_t produced = 0;
@@ -203,17 +167,6 @@ double Random::genrand64_real2(void) {
 /* generates a random number on (0,1)-real-interval */
 double Random::genrand64_real3(void) {
     return ((genrand64_int64() >> 12) + 0.5) * (1.0 / 4503599627370496.0);
-}
-
-double Random::Gauss2(double mean, double sigma) {
-    double x, y, z, result;
-    do {
-        y = genrand64_real3();
-    } while (!y);
-    z = genrand64_real3();
-    x = z * 6.283185;
-    result = mean + sigma * sin(x) * sqrt(-2. * log(y));
-    return result;
 }
 
 double Random::Gauss(double mean, double width) {
@@ -388,33 +341,6 @@ void Random::gslRandomInit(unsigned long long seed) {
     gsl_rng_set(gslRandom, seed);
 }
 
-double Random::NBD(double nbar, double k) {
-    double p = k / (nbar + k);
-    double n = k;
-
-    return gsl_ran_negative_binomial(gslRandom, p, n);
-}
-
 int Random::Poisson(const double mean) {
     return (gsl_ran_poisson(gslRandom, mean));
-}
-
-double Random::tdist(double nu) {
-    // produces random numbers with distribution
-    // p(x) dx = {\Gamma((\nu + 1)/2) \over \sqrt{\pi \nu} \Gamma(\nu/2)}
-    //           (1 + x^2/\nu)^{-(\nu + 1)/2} dx
-    // with mean 0 and variance nu/(nu-2)
-    // however, I take care of that variance when returning the value, so that
-    // variance is always 1
-
-    if (nu <= 2) {
-        std::cerr << "nu has to be > 2. Exiting." << std::endl;
-        exit(1);
-    }
-
-    double f;
-
-    f = sqrt((nu - 2.) / nu) * gsl_ran_tdist(gslRandom, nu);
-
-    return f;
 }

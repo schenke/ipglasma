@@ -39,8 +39,6 @@ class Random {
 
     ~Random() { gsl_rng_free(gslRandom); };  // destructor
     void init_genrand64(unsigned long long seed);
-    void init_by_array64(
-        unsigned long long init_key[], unsigned long long key_length);
     unsigned long long genrand64_int64(void);
     long long genrand64_int63(void);
     double genrand64_real1(void);
@@ -48,13 +46,10 @@ class Random {
     double genrand64_real3(void);
 
     void gslRandomInit(unsigned long long seed);
-    double tdist(double nu);
-    double NBD(double nbar, double k);
     int Poisson(const double mean);
     double Gauss(double mean = 0., double width = 1.);
     void GaussBulk(
         double *out, std::size_t count, std::vector<double> &scratch);
-    double Gauss2(double mean, double sigma);
 
     void setGammaIncCDF(const double omega);
     double sampleGammaInc();

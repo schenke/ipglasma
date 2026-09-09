@@ -606,7 +606,7 @@ int readInput(
         setup->IFind(file_name, "polarizationProjectileJz"));
     param->setPolarizationTargetJz(
         setup->IFind(file_name, "polarizationTargetJz"));
-    if (param->getPolarizationTarget() != 0
+    if (param->getPolarizationProjectile() != 0
         || param->getPolarizationTarget() != 0) {
         param->setNucleonPositionsFromFile(1);
     }
@@ -668,7 +668,7 @@ int readInput(
     param->setLambdaQCD_jimwlk(
         setup->DFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu
     param->setm_jimwlk(setup->DFind(file_name, "m_jimwlk"));
-    param->setJimwlk_alphas(setup->IFind(file_name, "alphas_jimwlk"));
+    param->setJimwlk_alphas(setup->DFind(file_name, "alphas_jimwlk"));
     param->setDs_jimwlk(setup->DFind(file_name, "Ds_jimwlk"));
     param->setJimwlk_x_projectile(
         setup->DFind(file_name, "x_projectile_jimwlk"));

@@ -2469,6 +2469,11 @@ void Init::init(
     messager.info("Initializing fields ... ");
 
     if (param->getUseNucleus() == 0) {
+        // No real collision geometry in the constant-g^2mu case: skip
+        // sampleImpactParameter() entirely, but still give b/phi_RP the
+        // same defaults it would have produced.
+        param->setb(0.);
+        param->setPhiRP(0.);
         param->setSuccess(1);
     } else {
         readNuclearQs(param);

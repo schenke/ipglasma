@@ -143,8 +143,8 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
 }
 
 double JIMWLK::getAlphas(const double x, const double y) const {
-    double alphas = 1.0;
-    if (param_.getJimwlk_alphas() > 1e-10) {
+    double alphas = param_.getJimwlk_alphas();
+    if (alphas > 1e-10) {
         return alphas;
     }
 

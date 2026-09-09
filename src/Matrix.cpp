@@ -11,7 +11,6 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 using std::cerr;
 using std::cout;
 using std::endl;
-using std::vector;
 
 static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
@@ -29,64 +28,6 @@ Matrix::Matrix(double a) {
 }
 
 Matrix::Matrix(NoInitTag) {}
-
-// MaxTr version of reunitarization
-void Matrix::reu2() {
-    Matrix A1(0.);
-    Matrix A2(0.);
-    Matrix A3(0.);
-
-    Matrix G;
-    Matrix E;
-
-    for (int i = 0; i < 10; i++) {
-        E = *this;
-        complex<double> N1 = sqrt(
-            (conj(e[0]) + e[4]) * conj(conj(e[0]) + e[4])
-            + (conj(e[3]) - e[1]) * conj(conj(e[3]) - e[1]));
-        complex<double> N2 = sqrt(
-            (conj(e[0]) + e[8]) * conj(conj(e[0]) + e[8])
-            + (conj(e[6]) - e[2]) * conj(conj(e[6]) - e[2]));
-        complex<double> N3 = sqrt(
-            (conj(e[4]) + e[8]) * conj(conj(e[4]) + e[8])
-            + (conj(e[7]) - e[5]) * conj(conj(e[7]) - e[5]));
-
-        G = (1. / N1) * E;
-        A1.set(0, 0, conj(G(0)) + G(4));
-        A1.set(0, 1, -G(1) + conj(G(3)));
-        A1.set(0, 2, 0.);
-        A1.set(1, 0, conj(G(1)) - G(3));
-        A1.set(1, 1, G(0) + conj(G(4)));
-        A1.set(1, 2, 0.);
-        A1.set(2, 0, 0.);
-        A1.set(2, 1, 0.);
-        A1.set(2, 2, 1.);
-
-        G = (1. / N2) * E;
-        A2.set(0, 0, conj(G(0)) + G(8));
-        A2.set(0, 1, 0.);
-        A2.set(0, 2, -G(2) + conj(G(6)));
-        A2.set(1, 0, 0.);
-        A2.set(1, 1, 1.);
-        A2.set(1, 2, 0.);
-        A2.set(2, 0, conj(G(2)) - G(6));
-        A2.set(2, 1, 0.);
-        A2.set(2, 2, G(0) + conj(G(8)));
-
-        G = (1. / N3) * E;
-        A3.set(0, 0, 1.);
-        A3.set(0, 1, 0.);
-        A3.set(0, 2, 0.);
-        A3.set(1, 0, 0.);
-        A3.set(1, 1, conj(G(4)) + G(8));
-        A3.set(1, 2, -G(5) + conj(G(7)));
-        A3.set(2, 0, 0.);
-        A3.set(2, 1, conj(G(5)) - G(7));
-        A3.set(2, 2, G(4) + conj(G(8)));
-
-        *this = A1 * A2 * A3;
-    }
-}
 
 // operators:
 
@@ -251,13 +192,6 @@ Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
     return c;
 }
 
-Matrix &Matrix::imag() {
-    Matrix dagger = *this;
-    dagger.conjg();
-    *this -= dagger;
-    return *this;
-}
-
 // matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
 // Q^a of generators t^a as argument. Dimension is Nc
 void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
@@ -376,12 +310,6 @@ void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
             result[i] = 0;
         }
     }
-}
-
-vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q) {
-    complex<double> coeff[9];
-    expmCoeff(Q.data(), coeff);
-    return vector<complex<double>>(coeff, coeff + 9);
 }
 
 // matrix exponential using Pade approximant

@@ -13,7 +13,6 @@ set (SOURCES
     Util.cpp
     Evolution.cpp
     GaugeFix.cpp
-    Spinor.cpp
     MyEigen.cpp
     pretty_ostream.cpp
     Parameters.cpp

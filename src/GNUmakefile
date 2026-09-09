@@ -27,9 +27,9 @@ ifeq "$(MAIN)" ""
 MAIN		=	ipglasma
 endif
 
-SRC		=	main.cpp Fragmentation.cpp FFT.cpp Matrix.cpp Setup.cpp Init.cpp Random.cpp Group.cpp Lattice.cpp Cell.cpp Glauber.cpp Util.cpp Evolution.cpp GaugeFix.cpp Spinor.cpp MyEigen.cpp
+SRC		=	main.cpp Fragmentation.cpp FFT.cpp Matrix.cpp Setup.cpp Init.cpp Random.cpp Group.cpp Lattice.cpp Cell.cpp Glauber.cpp Util.cpp Evolution.cpp GaugeFix.cpp MyEigen.cpp
 
-INC		= 	Fragmentation.h FFT.h Matrix.h Setup.h Init.h Random.h Group.h Lattice.h Cell.h Glauber.h Util.h Evolution.h GaugeFix.h Spinor.h MyEigen.h
+INC		= 	Fragmentation.h FFT.h Matrix.h Setup.h Init.h Random.h Group.h Lattice.h Cell.h Glauber.h Util.h Evolution.h GaugeFix.h MyEigen.h
 
 # -------------------------------------------------
 

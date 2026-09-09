@@ -24,7 +24,6 @@
 #include "Parameters.h"
 #include "Random.h"
 #include "Setup.h"
-#include "Spinor.h"
 #include "jimwlk.h"
 #include "pretty_ostream.h"
 

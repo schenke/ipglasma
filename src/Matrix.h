@@ -5,8 +5,6 @@
 #include <string>
 #include <vector>
 
-#include "Spinor.h"
-
 using std::complex;
 using std::ostream;
 
@@ -74,35 +72,9 @@ class Matrix {
     // the eight SU(3) fundamental generators as input.
     // Allocation-free SU(3) exponential coefficients for hot paths.
     void expmCoeff(const double *Q, complex<double> out[9]) const;
-    std::vector<complex<double>> expmCoeff(std::vector<double> &Q);
 
     complex<double> det();
     complex<double> trace() const;
-
-    void reu() {
-        Spinor e1(kN);
-        Spinor e2(kN);
-        Spinor e3(kN);
-
-        Spinor a1(kN, e[0], e[1], e[2]);
-        Spinor a2(kN, e[3], e[4], e[5]);
-
-        e1 = a1.normalize();
-        e2 = a2.GramSchmidt(e1);
-        e3 = (e1 % e2).normalize();
-
-        e[0] = e1(0);
-        e[1] = e1(1);
-        e[2] = e1(2);
-        e[3] = e2(0);
-        e[4] = e2(1);
-        e[5] = e2(2);
-        e[6] = e3(0);
-        e[7] = e3(1);
-        e[8] = e3(2);
-    }
-
-    void reu2();
 
     std::complex<double> operator()(const int i) const { return e[i]; }
     std::complex<double> operator()(const int i, const int j) const {
@@ -148,8 +120,6 @@ class Matrix {
         }
         return 0.5 * tr;
     }
-
-    Matrix &imag();
 
     Matrix &conjg();
     Matrix prodABconj(const Matrix &a, const Matrix &b);

@@ -68,7 +68,7 @@ class FFT {
   private:
     fftw_complex *input, *output;
     fftw_complex *inputMany, *outputMany;
-    fftw_plan p, pback, pmany, pmanyback;
+    fftw_plan p, pback;
 
   public:
     // Constructor.
@@ -88,17 +88,9 @@ class FFT {
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
         outputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
-        pmany = fftw_plan_many_dft(
-            2, nn, 9, input, nn, 1, nn[0] * nn[1], output, nn, 1, nn[0] * nn[1],
-            FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
-        pmanyback = fftw_plan_many_dft(
-            2, nn, 9, input, nn, 1, nn[0] * nn[1], output, nn, 1, nn[0] * nn[1],
-            FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
     };
     // Destructor
     ~FFT() {
-        fftw_destroy_plan(pmany);
-        fftw_destroy_plan(pmanyback);
         fftw_destroy_plan(p);
         fftw_destroy_plan(pback);
         fftw_free(input);
@@ -116,8 +108,6 @@ class FFT {
 
     template <class T>
     void fftn(T **data, T **outdata, const int nn[], const int isign);
-    template <class T>
-    void fftnMany(T **data, T **outdata, const int nn[], const int isign);
 
     void fftnComplex(
         complex<double> *data, complex<double> *outdata, const int nn[],

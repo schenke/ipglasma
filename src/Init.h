@@ -70,7 +70,6 @@ class Init {
     void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     void readNuclearQs(Parameters *param);
-    void solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec);
     void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
 
     double getNuclearQs2(double Qs2atZeroY, double y);
@@ -82,10 +81,8 @@ class Init {
 
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
-    void multiplicity(Lattice *lat, Parameters *param);
 
     Matrix getUfromExponent(std::vector<double> &in);
-    bool findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol);
     bool findUInForwardLightconeChun(
         Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
 
@@ -126,7 +123,6 @@ class Init {
     void recenter_nucleus(std::vector<ReturnValue> &nucleus);
     void assignProtons(
         Random *random, std::vector<ReturnValue> &nucleus, const int Z);
-    void rotate_nucleus(Random *random, std::vector<ReturnValue> &nucleus);
     void rotate_nucleus(
         double phi_global, double theta_global,
         std::vector<ReturnValue> &nucleus);

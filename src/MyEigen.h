@@ -14,7 +14,6 @@ class MyEigen {
     MyEigen() {};
 
     ~MyEigen() {};
-    void test();
     void flowVelocity4D(
         Lattice *lat, Parameters *param, int it, bool finalFlag);
     void writeTmunu4D(Lattice *lat, Parameters *param, int it);

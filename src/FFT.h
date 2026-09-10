@@ -80,6 +80,11 @@ class FFT {
     fftw_plan p_, pback_;
 
   public:
+    // Largest number of planes any batched transform (fftn's 9 Matrix
+    // components, fftnArray's up to 2*(Nc^2-1)=16 noise components) packs
+    // into inputMany/outputMany at once.
+    static constexpr int kMaxBatchDim = 16;
+
     // Constructor.
     FFT(const int nn[]) {
         //      if(fftw_init_threads()==0)
@@ -118,9 +123,9 @@ class FFT {
         }
 #endif
         inputMany = (fftw_complex *)fftw_malloc(
-            sizeof(fftw_complex) * nn[0] * nn[1] * 9);
+            sizeof(fftw_complex) * nn[0] * nn[1] * kMaxBatchDim);
         outputMany = (fftw_complex *)fftw_malloc(
-            sizeof(fftw_complex) * nn[0] * nn[1] * 9);
+            sizeof(fftw_complex) * nn[0] * nn[1] * kMaxBatchDim);
     };
     // Destructor
     ~FFT() {

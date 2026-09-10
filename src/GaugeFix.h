@@ -1,8 +1,8 @@
 // GaugeFix.h is part of the CYM solver.
 // Copyright (C) 2012 Bjoern Schenke.
 
-#ifndef GaugeFix_H
-#define GaugeFix_H
+#ifndef SRC_GAUGEFIX_H_
+#define SRC_GAUGEFIX_H_
 
 #include "FFT.h"
 #include "Group.h"
@@ -18,9 +18,8 @@ class GaugeFix {
     // Destructor.
     ~GaugeFix() {};
 
-    void gaugeTransform(Lattice *lat, Parameters *param, int i, int j);
-    void FFTChi(
+    void fftChi(
         FFT *fft, Lattice *lat, Group *group, Parameters *param, int steps);
 };
 
-#endif  // GaugeFix_H
+#endif  // SRC_GAUGEFIX_H_

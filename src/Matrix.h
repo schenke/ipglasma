@@ -1,11 +1,9 @@
-#ifndef Matrix_h
-#define Matrix_h
+#ifndef SRC_MATRIX_H_
+#define SRC_MATRIX_H_
 
 #include <complex>
 #include <string>
 #include <vector>
-
-#include "Spinor.h"
 
 using std::complex;
 using std::ostream;
@@ -20,49 +18,48 @@ class Matrix {
   private:
     static constexpr int kN = 3;
     static constexpr int kNN = 9;
-    complex<double> e[kNN];
+    complex<double> e_[kNN];
 
   public:
     struct NoInitTag {};
     static constexpr NoInitTag noInit {};
 
     Matrix();
-    explicit Matrix(int n);
-    Matrix(int n, double a);
-    Matrix(int n, NoInitTag);
+    explicit Matrix(double a);
+    explicit Matrix(NoInitTag);
 
     Matrix(const Matrix &) = default;
     Matrix &operator=(const Matrix &) = default;
     ~Matrix() = default;
 
-    complex<double> *data() { return e; }
-    const complex<double> *data() const { return e; }
+    complex<double> *data() { return e_; }
+    const complex<double> *data() const { return e_; }
 
     Matrix &inv();
-    Matrix &logm_pade(const int m);
+    Matrix &logmPade(const int m);
     Matrix &sqrtm(const int scale = 1);
-    double OneNorm();
-    double FrobeniusNorm();
+    double oneNorm();
+    double frobeniusNorm();
 
     Matrix &logm();
 
-    void setRe(int i, double a) { e[i] = complex<double>(a, e[i].imag()); }
+    void setRe(int i, double a) { e_[i] = complex<double>(a, e_[i].imag()); }
     void setRe(int i, int j, double a) {
-        e[j + kN * i] = complex<double>(a, e[j + kN * i].imag());
+        e_[j + kN * i] = complex<double>(a, e_[j + kN * i].imag());
     }
-    void setIm(int i, double a) { e[i] = complex<double>(e[i].real(), a); }
+    void setIm(int i, double a) { e_[i] = complex<double>(e_[i].real(), a); }
     void setIm(int i, int j, double a) {
-        e[j + kN * i] = complex<double>(e[j + kN * i].real(), a);
+        e_[j + kN * i] = complex<double>(e_[j + kN * i].real(), a);
     }
 
-    void set(int i, complex<double> a) { e[i] = a; }
-    void set(int i, int j, complex<double> a) { e[j + kN * i] = a; }
+    void set(int i, complex<double> a) { e_[i] = a; }
+    void set(int i, int j, complex<double> a) { e_[j + kN * i] = a; }
 
-    complex<double> get(int i) const { return e[i]; }
-    complex<double> get(int i, int j) const { return e[j + kN * i]; }
+    complex<double> get(int i) const { return e_[i]; }
+    complex<double> get(int i, int j) const { return e_[j + kN * i]; }
 
-    double getRe(int i) const { return e[i].real(); }
-    double getIm(int i) const { return e[i].imag(); }
+    double getRe(int i) const { return e_[i].real(); }
+    double getIm(int i) const { return e_[i].imag(); }
 
     int getNDim() const { return kN; }
     int getNN() const { return kNN; }
@@ -75,88 +72,60 @@ class Matrix {
     // the eight SU(3) fundamental generators as input.
     // Allocation-free SU(3) exponential coefficients for hot paths.
     void expmCoeff(const double *Q, complex<double> out[9]) const;
-    std::vector<complex<double>> expmCoeff(std::vector<double> &Q, int n);
 
     complex<double> det();
     complex<double> trace() const;
 
-    void reu() {
-        Spinor e1(kN);
-        Spinor e2(kN);
-        Spinor e3(kN);
-
-        Spinor a1(kN, e[0], e[1], e[2]);
-        Spinor a2(kN, e[3], e[4], e[5]);
-
-        e1 = a1.normalize();
-        e2 = a2.GramSchmidt(e1);
-        e3 = (e1 % e2).normalize();
-
-        e[0] = e1(0);
-        e[1] = e1(1);
-        e[2] = e1(2);
-        e[3] = e2(0);
-        e[4] = e2(1);
-        e[5] = e2(2);
-        e[6] = e3(0);
-        e[7] = e3(1);
-        e[8] = e3(2);
-    }
-
-    void reu2();
-
-    std::complex<double> operator()(const int i) const { return e[i]; }
+    std::complex<double> operator()(const int i) const { return e_[i]; }
     std::complex<double> operator()(const int i, const int j) const {
-        return e[j + kN * i];
+        return e_[j + kN * i];
     }
 
     bool operator==(const Matrix &p) const {
         for (int i = 0; i < kNN; ++i)
-            if (e[i] != p.e[i]) return false;
+            if (e_[i] != p.e_[i]) return false;
         return true;
     }
 
     bool operator!=(const Matrix &p) const {
         for (int i = 0; i < kNN; ++i)
-            if (e[i] != p.e[i]) return true;
+            if (e_[i] != p.e_[i]) return true;
         return false;
     }
 
     Matrix &operator+=(const Matrix &a) {
-        for (int i = 0; i < kNN; ++i) e[i] += a.e[i];
+        for (int i = 0; i < kNN; ++i) e_[i] += a.e_[i];
         return *this;
     }
 
     Matrix &operator-=(const Matrix &a) {
-        for (int i = 0; i < kNN; ++i) e[i] -= a.e[i];
+        for (int i = 0; i < kNN; ++i) e_[i] -= a.e_[i];
         return *this;
     }
 
     Matrix &operator*=(const complex<double> a) {
-        for (int i = 0; i < kNN; ++i) e[i] *= a;
+        for (int i = 0; i < kNN; ++i) e_[i] *= a;
         return *this;
     }
 
     Matrix &operator/=(const complex<double> a) {
-        for (int i = 0; i < kNN; ++i) e[i] /= a;
+        for (int i = 0; i < kNN; ++i) e_[i] /= a;
         return *this;
     }
 
     double square() const {
         double tr = 0.0;
         for (int i = 0; i < kNN; ++i) {
-            tr += e[i].real() * e[i].real() + e[i].imag() * e[i].imag();
+            tr += e_[i].real() * e_[i].real() + e_[i].imag() * e_[i].imag();
         }
         return 0.5 * tr;
     }
-
-    Matrix &imag();
 
     Matrix &conjg();
     Matrix prodABconj(const Matrix &a, const Matrix &b);
     Matrix prodAconjB(const Matrix &a, const Matrix &b);
 
-    complex<double> traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const;
+    complex<double> traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const;
 
     friend ostream &operator<<(ostream &os, const Matrix &p) {
         for (int i = 0; i < kN; ++i) {
@@ -177,4 +146,4 @@ Matrix operator*(const std::complex<double> a, const Matrix &b);
 Matrix operator*(const Matrix &a, const double b);
 Matrix operator*(const Matrix &a, const Matrix &b);
 
-#endif
+#endif  // SRC_MATRIX_H_

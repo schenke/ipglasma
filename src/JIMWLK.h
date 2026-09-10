@@ -6,12 +6,11 @@
 #include <vector>
 
 #include "FFT.h"
+#include "Glauber.h"
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
 #include "Random.h"
-
-enum class NucleusRole { Projectile, Target };
 
 class JIMWLK {
   private:
@@ -21,8 +20,8 @@ class JIMWLK {
 
     const double fmgev = 5.068;
 
-    const int Nc_;
-    const int Nc2m1_;
+    static constexpr int Nc_ = 3;
+    static constexpr int Nc2m1_ = Nc_ * Nc_ - 1;
     const int Ngrid_;
     const int Ncells_;
 
@@ -48,7 +47,7 @@ class JIMWLK {
 
     Matrix **VxsiVx_;
     Matrix **VxsiVy_;
-    Matrix zero_ = Matrix(Nc_, 0);
+    Matrix zero_ = Matrix(0.);
 
   public:
     JIMWLK() = delete;

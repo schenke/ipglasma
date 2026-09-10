@@ -1,5 +1,5 @@
-#ifndef Lattice_h
-#define Lattice_h
+#ifndef SRC_LATTICE_H_
+#define SRC_LATTICE_H_
 
 #include <string>
 #include <vector>
@@ -7,6 +7,9 @@
 #include "Cell.h"
 #include "Matrix.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
+
+enum class NucleusRole;
 
 // Lattice matrix state is stored structure-of-arrays: every fundamental SU(3)
 // field is one contiguous std::vector<Matrix>, and Matrix itself is exactly
@@ -14,16 +17,17 @@
 // paths access these field arrays directly, without Cell pointer chasing.
 class Lattice {
   private:
-    int size;
-    int Nc;
+    int size_;
+    static constexpr int Nc_ = 3;
+    PrettyOstream messager_;
 
   public:
-    Lattice(Parameters *param, int N, int length);
+    Lattice(Parameters *param, int length);
     ~Lattice() = default;
     Lattice(const Lattice &) = delete;
     Lattice &operator=(const Lattice &) = delete;
 
-    int getSize() const { return size; }
+    int getSize() const { return size_; }
 
     // Fundamental matrix lattice fields. Logical aliases are:
     // U/E1, U2/E2, Ux1/g, Uy1/Uplaq, Ux2/pi, Uy2/phi.
@@ -44,20 +48,19 @@ class Lattice {
     std::vector<int> posmY;
     std::vector<int> pospY;
 
-    void WriteWilsonLines(
-        std::string fileprefix, Parameters *param, const int iA);
-    void WriteSU3Matricies(std::string fileprefix, Parameters *param);
+    void writeWilsonLines(
+        std::string fileprefix, Parameters *param, NucleusRole nucleus);
+    void writeSU3Matrices(std::string fileprefix, Parameters *param);
     std::vector<int> posmXpY;
     std::vector<int> pospXmY;
 };
 
 class BufferLattice {
   private:
-    int size;
-    int Nc;
+    int size_;
 
   public:
-    BufferLattice(int N, int length);
+    explicit BufferLattice(int length);
     ~BufferLattice() = default;
     BufferLattice(const BufferLattice &) = delete;
     BufferLattice &operator=(const BufferLattice &) = delete;
@@ -66,4 +69,4 @@ class BufferLattice {
     std::vector<Matrix> buffer2;
 };
 
-#endif
+#endif  // SRC_LATTICE_H_

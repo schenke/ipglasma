@@ -19,14 +19,13 @@
 #include "FFT.h"
 #include "Init.h"
 #include "Instrumentation.h"
+#include "JIMWLK.h"
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 #include "Random.h"
 #include "Setup.h"
-#include "Spinor.h"
-#include "jimwlk.h"
-#include "pretty_ostream.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
@@ -67,7 +66,7 @@ int main(int argc, char *argv[]) {
     ipg::Profiler::instance().initialize(rank);
 
     int h5Flag = 0;
-    pretty_ostream messager;
+    PrettyOstream messager;
 
     Parameters *param = new Parameters();
     param->setMPIRank(rank);
@@ -175,10 +174,10 @@ int main(int argc, char *argv[]) {
         fout1.close();
 
         // initialize init object
-        Init init(nn, param->getNc());
+        Init init(nn);
 
         // initialize group
-        Group group(param->getNc());
+        Group group;
 
         // initialize Glauber class
         messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
@@ -351,19 +350,19 @@ int main(int argc, char *argv[]) {
         // before the per-event profile is written.
         {
             // allocate lattice
-            Lattice lat(param, param->getNc(), param->getSize());
+            Lattice lat(param, param->getSize());
             messager.info("Lattice generated.");
 
             param->setSuccess(0);
 
             // initialize U-fields on the lattice
-            Initialization_method init_method;
+            InitializationMethod init_method;
             if (param->getReadInitialWilsonLines() == 0) {
-                init_method = SAMPLE_COLOR_CHARGES;
+                init_method = InitializationMethod::SampleColorCharges;
             } else {
                 init_method = (param->getReadInitialWilsonLines() == 1)
-                                  ? READ_WLINE_TEXT
-                                  : READ_WLINE_BINARY;
+                                  ? InitializationMethod::ReadWlineText
+                                  : InitializationMethod::ReadWlineBinary;
             }
             // First generate the V
             init.init(&lat, &group, param, random, &glauber, init_method);
@@ -379,11 +378,13 @@ int main(int argc, char *argv[]) {
                     s1 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_projectile())
                        << "_";
-                    lat.WriteWilsonLines(s1.str(), param, 1);  // nucleus A
+                    lat.writeWilsonLines(
+                        s1.str(), param, NucleusRole::Projectile);
                     std::stringstream s2;
                     s2 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_target()) << "_";
-                    lat.WriteWilsonLines(s2.str(), param, 2);  // nucleus B
+                    lat.writeWilsonLines(
+                        s2.str(), param, NucleusRole::Target);
                 }
             }
 
@@ -540,154 +541,140 @@ int readInput(
     // "Parameters"
     if (rank == 0) cout << "Reading parameters from file ... ";
     param->setNucleusQsTableFileName(
-        setup->StringFind(file_name, "NucleusQsTableFileName"));
+        setup->stringFind(file_name, "NucleusQsTableFileName"));
     param->setNucleonPositionsFromFile(
-        setup->IFind(file_name, "nucleonPositionsFromFile"));
-    param->setTarget(setup->StringFind(file_name, "Target"));
-    param->setProjectile(setup->StringFind(file_name, "Projectile"));
-    param->setMode(setup->IFind(file_name, "mode"));
-    param->setRunningCoupling(setup->IFind(file_name, "runningCoupling"));
-    param->setL(setup->DFind(file_name, "L"));
-    param->setLOutput(setup->DFind(file_name, "LOutput"));
-    param->setBG(setup->DFind(file_name, "BG"));
-    param->setBGq(setup->DFind(file_name, "BGq"));
-    param->setBGqVar(setup->DFind(file_name, "BGqVar"));
-    param->setDqmin(setup->DFind(file_name, "dqMin"));
-    param->setOmega(setup->DFind(file_name, "omega"));
-    param->setMuZero(setup->DFind(file_name, "muZero"));
-    param->setc(setup->DFind(file_name, "c"));
-    param->setSize(setup->IFind(file_name, "size"));
-    param->setSizeOutput(setup->IFind(file_name, "sizeOutput"));
-    param->setEtaSizeOutput(setup->IFind(file_name, "etaSizeOutput"));
-    param->setDetaOutput(setup->DFind(file_name, "detaOutput"));
-    param->setUseFluctuatingx(setup->IFind(file_name, "useFluctuatingx"));
-    param->setNc(setup->IFind(file_name, "Nc"));
-    if (param->getNc() != 3) {
-        if (rank == 0) {
-            cerr << "Error: IP-Glasma supports SU(3) only; input Nc must "
-                    "be 3 "
-                 << "(received Nc=" << param->getNc() << "). Exiting." << endl;
-        }
-        exit(1);
-    }
+        setup->iFind(file_name, "nucleonPositionsFromFile"));
+    param->setTarget(setup->stringFind(file_name, "Target"));
+    param->setProjectile(setup->stringFind(file_name, "Projectile"));
+    param->setMode(setup->iFind(file_name, "mode"));
+    param->setRunningCoupling(setup->iFind(file_name, "runningCoupling"));
+    param->setL(setup->dFind(file_name, "L"));
+    param->setLOutput(setup->dFind(file_name, "LOutput"));
+    param->setBG(setup->dFind(file_name, "BG"));
+    param->setBGq(setup->dFind(file_name, "BGq"));
+    param->setBGqVar(setup->dFind(file_name, "BGqVar"));
+    param->setDqmin(setup->dFind(file_name, "dqMin"));
+    param->setOmega(setup->dFind(file_name, "omega"));
+    param->setMuZero(setup->dFind(file_name, "muZero"));
+    param->setc(setup->dFind(file_name, "c"));
+    param->setSize(setup->iFind(file_name, "size"));
+    param->setSizeOutput(setup->iFind(file_name, "sizeOutput"));
+    param->setEtaSizeOutput(setup->iFind(file_name, "etaSizeOutput"));
+    param->setDetaOutput(setup->dFind(file_name, "detaOutput"));
+    param->setUseFluctuatingx(setup->iFind(file_name, "useFluctuatingx"));
     param->setInverseQsForMaxTime(
-        setup->IFind(file_name, "inverseQsForMaxTime"));
-    param->setSeed(setup->ULLIFind(file_name, "seed"));
-    param->setUseSeedList(setup->IFind(file_name, "useSeedList"));
-    param->setNy(setup->IFind(file_name, "Ny"));
-    param->setRoots(setup->DFind(file_name, "roots"));
-    param->setNu(setup->DFind(file_name, "tDistNu"));
-    param->setUseFatTails(setup->IFind(file_name, "useFatTails"));
-    param->setg(setup->DFind(file_name, "g"));
-    param->setm(setup->DFind(file_name, "m"));
-    param->setJacobianm(setup->DFind(file_name, "Jacobianm"));
-    param->setSigmaNN(setup->DFind(file_name, "SigmaNN"));
-    param->setRmax(setup->DFind(file_name, "rmax"));
-    param->setUVdamp(setup->DFind(file_name, "UVdamp"));
-    param->setSetWSDeformParams(setup->IFind(file_name, "setWSDeformParams"));
+        setup->iFind(file_name, "inverseQsForMaxTime"));
+    param->setSeed(setup->uLLIFind(file_name, "seed"));
+    param->setUseSeedList(setup->iFind(file_name, "useSeedList"));
+    param->setNy(setup->iFind(file_name, "Ny"));
+    param->setRoots(setup->dFind(file_name, "roots"));
+    param->setg(setup->dFind(file_name, "g"));
+    param->setm(setup->dFind(file_name, "m"));
+    param->setJacobianm(setup->dFind(file_name, "Jacobianm"));
+    param->setSigmaNN(setup->dFind(file_name, "SigmaNN"));
+    param->setRmax(setup->dFind(file_name, "rmax"));
+    param->setUVdamp(setup->dFind(file_name, "UVdamp"));
+    param->setSetWSDeformParams(setup->iFind(file_name, "setWSDeformParams"));
     if (param->getSetWSDeformParams()) {
-        param->setR_WS(setup->DFind(file_name, "R_WS"));
-        param->setA_WS(setup->DFind(file_name, "a_WS"));
-        param->setBeta2(setup->DFind(file_name, "beta2"));
-        param->setBeta3(setup->DFind(file_name, "beta3"));
-        param->setBeta4(setup->DFind(file_name, "beta4"));
-        param->setGamma(setup->DFind(file_name, "gamma"));
-        param->setForceDmin(setup->DFind(file_name, "force_dmin_flag"));
-        param->setDmin(setup->DFind(file_name, "d_min"));
-        param->setWSdR_np(setup->DFind(file_name, "dR_np"));
-        param->setWSda_np(setup->DFind(file_name, "da_np"));
+        param->setR_WS(setup->dFind(file_name, "R_WS"));
+        param->setA_WS(setup->dFind(file_name, "a_WS"));
+        param->setBeta2(setup->dFind(file_name, "beta2"));
+        param->setBeta3(setup->dFind(file_name, "beta3"));
+        param->setBeta4(setup->dFind(file_name, "beta4"));
+        param->setGamma(setup->dFind(file_name, "gamma"));
+        param->setForceDmin(setup->dFind(file_name, "force_dmin_flag"));
+        param->setDmin(setup->dFind(file_name, "d_min"));
+        param->setWSdR_np(setup->dFind(file_name, "dR_np"));
+        param->setWSda_np(setup->dFind(file_name, "da_np"));
     }
-    param->setbmin(setup->DFind(file_name, "bmin"));
-    param->setbmax(setup->DFind(file_name, "bmax"));
+    param->setbmin(setup->dFind(file_name, "bmin"));
+    param->setbmax(setup->dFind(file_name, "bmax"));
     param->setRotateReactionPlane(
-        setup->IFind(file_name, "rotateReactionPlane"));
+        setup->iFind(file_name, "rotateReactionPlane"));
     param->setComputeGluonMultiplicity(
-        setup->IFind(file_name, "computeGluonMultiplicity"));
-    param->setQsmuRatio(setup->DFind(file_name, "QsmuRatio"));
-    param->setUsePseudoRapidity(setup->DFind(file_name, "usePseudoRapidity"));
-    param->setRapidityA(setup->DFind(file_name, "RapidityA"));
-    param->setRapidityB(setup->DFind(file_name, "RapidityB"));
-    param->setUseNucleus(setup->IFind(file_name, "useNucleus"));
-    param->setUseGaussian(setup->IFind(file_name, "useGaussian"));
-    param->setlightNucleusOption(setup->IFind(file_name, "lightNucleusOption"));
+        setup->iFind(file_name, "computeGluonMultiplicity"));
+    param->setQsmuRatio(setup->dFind(file_name, "QsmuRatio"));
+    param->setUsePseudoRapidity(setup->dFind(file_name, "usePseudoRapidity"));
+    param->setRapidityA(setup->dFind(file_name, "RapidityA"));
+    param->setRapidityB(setup->dFind(file_name, "RapidityB"));
+    param->setUseNucleus(setup->iFind(file_name, "useNucleus"));
+    param->setUseGaussian(setup->iFind(file_name, "useGaussian"));
+    param->setlightNucleusOption(setup->iFind(file_name, "lightNucleusOption"));
     param->setPolarizationProjectile(
-        setup->IFind(file_name, "polariztionProjectile"));
-    param->setPolarizationTarget(setup->IFind(file_name, "polariztionTarget"));
+        setup->iFind(file_name, "polariztionProjectile"));
+    param->setPolarizationTarget(setup->iFind(file_name, "polariztionTarget"));
     param->setPolarizationProjectileJz(
-        setup->IFind(file_name, "polarizationProjectileJz"));
+        setup->iFind(file_name, "polarizationProjectileJz"));
     param->setPolarizationTargetJz(
-        setup->IFind(file_name, "polarizationTargetJz"));
-    if (param->getPolarizationTarget() != 0
+        setup->iFind(file_name, "polarizationTargetJz"));
+    if (param->getPolarizationProjectile() != 0
         || param->getPolarizationTarget() != 0) {
         param->setNucleonPositionsFromFile(1);
     }
-    param->setg2mu(setup->DFind(file_name, "g2mu"));
-    param->setMaxtime(setup->DFind(file_name, "maxtime"));
+    param->setg2mu(setup->dFind(file_name, "g2mu"));
+    param->setMaxtime(setup->dFind(file_name, "maxtime"));
     double lattice_a = param->getL() / static_cast<double>(param->getSize());
-    // param->setdtau(setup->DFind(file_name, "dtau"));
+    // param->setdtau(setup->dFind(file_name, "dtau"));
     //   int iTimeSteps = static_cast<int>(10 * param->getMaxtime() /
     //   lattice_a) + 1;
     int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a);
     param->setdtau(param->getMaxtime() / (iTimeSteps * lattice_a));
-    // param->setxExponent(setup->DFind(file_name,"xExponent")); //  is now
-    // obsolete
-    param->setRunWithQs(setup->IFind(file_name, "runWith0Min1Avg2MaxQs"));
-    param->setRunWithkt(setup->IFind(file_name, "runWithkt"));
-    param->setRunWithLocalQs(setup->IFind(file_name, "runWithLocalQs"));
+    param->setRunWithQs(setup->iFind(file_name, "runWith0Min1Avg2MaxQs"));
+    param->setRunWithkt(setup->iFind(file_name, "runWithkt"));
+    param->setRunWithLocalQs(setup->iFind(file_name, "runWithLocalQs"));
     param->setRunWithThisFactorTimesQs(
-        setup->DFind(file_name, "runWithThisFactorTimesQs"));
+        setup->dFind(file_name, "runWithThisFactorTimesQs"));
     param->setxFromThisFactorTimesQs(
-        setup->DFind(file_name, "xFromThisFactorTimesQs"));
-    param->setLinearb(setup->IFind(file_name, "samplebFromLinearDistribution"));
-    param->setWriteOutputs(setup->IFind(file_name, "writeOutputs"));
+        setup->dFind(file_name, "xFromThisFactorTimesQs"));
+    param->setLinearb(setup->iFind(file_name, "samplebFromLinearDistribution"));
+    param->setWriteOutputs(setup->iFind(file_name, "writeOutputs"));
     param->setWriteEpsilonUHydro(
-        setup->IFindOptional(file_name, "writeEpsilonUHydro", 1));
+        setup->iFindOptional(file_name, "writeEpsilonUHydro", 1));
     param->setWriteTmunuBinary(
-        setup->IFindOptional(file_name, "writeTmunuBinary", 1));
-    param->setWriteOutputsToHDF5(setup->IFind(file_name, "writeOutputsToHDF5"));
-    param->setWriteEvolution(setup->IFind(file_name, "writeEvolution"));
-    param->setWriteWilsonLines(setup->IFind(file_name, "writeWilsonLines"));
+        setup->iFindOptional(file_name, "writeTmunuBinary", 1));
+    param->setWriteOutputsToHDF5(setup->iFind(file_name, "writeOutputsToHDF5"));
+    param->setWriteWilsonLines(setup->iFind(file_name, "writeWilsonLines"));
     param->setReadInitialWilsonLines(
-        setup->IFind(file_name, "readInitialWilsonLines"));
+        setup->iFind(file_name, "readInitialWilsonLines"));
     param->setAverageOverNuclei(
-        setup->IFind(file_name, "averageOverThisManyNuclei"));
-    param->setUseTimeForSeed(setup->IFind(file_name, "useTimeForSeed"));
-    param->setUseFixedNpart(setup->IFind(file_name, "useFixedNpart"));
-    param->setSmearQs(setup->IFind(file_name, "smearQs"));
-    param->setSmearingWidth(setup->DFind(file_name, "smearingWidth"));
-    param->setGaussianWounding(setup->IFind(file_name, "gaussianWounding"));
-    param->setReadMultFromFile(setup->IFind(file_name, "readMultFromFile"));
-    param->setProtonAnisotropy(setup->DFind(file_name, "protonAnisotropy"));
+        setup->iFind(file_name, "averageOverThisManyNuclei"));
+    param->setUseTimeForSeed(setup->iFind(file_name, "useTimeForSeed"));
+    param->setUseFixedNpart(setup->iFind(file_name, "useFixedNpart"));
+    param->setSmearQs(setup->iFind(file_name, "smearQs"));
+    param->setSmearingWidth(setup->dFind(file_name, "smearingWidth"));
+    param->setGaussianWounding(setup->iFind(file_name, "gaussianWounding"));
+    param->setReadMultFromFile(setup->iFind(file_name, "readMultFromFile"));
+    param->setProtonAnisotropy(setup->dFind(file_name, "protonAnisotropy"));
     param->setUseConstituentQuarkProton(
-        setup->DFind(file_name, "useConstituentQuarkProton"));
-    param->setNqBase(setup->DFind(file_name, "useConstituentQuarkProton"));
-    param->setNqFluc(setup->DFind(file_name, "NqFluc"));
-    param->setUseSmoothNucleus(setup->IFind(file_name, "useSmoothNucleus"));
+        setup->dFind(file_name, "useConstituentQuarkProton"));
+    param->setNqBase(setup->dFind(file_name, "useConstituentQuarkProton"));
+    param->setNqFluc(setup->dFind(file_name, "NqFluc"));
+    param->setUseSmoothNucleus(setup->iFind(file_name, "useSmoothNucleus"));
     param->setShiftConstituentQuarkProtonOrigin(
-        setup->DFind(file_name, "shiftConstituentQuarkProtonOrigin"));
-    param->setMinimumQs2ST(setup->IFind(file_name, "minimumQs2ST"));
+        setup->dFind(file_name, "shiftConstituentQuarkProtonOrigin"));
+    param->setMinimumQs2ST(setup->iFind(file_name, "minimumQs2ST"));
     param->setSubNucleonParamType(
-        setup->IFind(file_name, "SubNucleonParamType"));
-    param->setSubNucleonParamSet(setup->IFind(file_name, "SubNucleonParamSet"));
+        setup->iFind(file_name, "SubNucleonParamType"));
+    param->setSubNucleonParamSet(setup->iFind(file_name, "SubNucleonParamSet"));
     if (param->getSubNucleonParamType() > 0) {
         param->loadPosteriorParameterSets(param->getSubNucleonParamType());
     }
 
     // JIMWLK parameters
-    param->setUseJIMWLK(setup->IFind(file_name, "useJIMWLK"));
-    param->setSimpleLangevin(setup->IFind(file_name, "simpleLangevin"));
-    param->setMu0_jimwlk(setup->DFind(file_name, "mu0_jimwlk"));
+    param->setUseJIMWLK(setup->iFind(file_name, "useJIMWLK"));
+    param->setSimpleLangevin(setup->iFind(file_name, "simpleLangevin"));
+    param->setMu0_jimwlk(setup->dFind(file_name, "mu0_jimwlk"));
     param->setLambdaQCD_jimwlk(
-        setup->DFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu
-    param->setm_jimwlk(setup->DFind(file_name, "m_jimwlk"));
-    param->setJimwlk_alphas(setup->IFind(file_name, "alphas_jimwlk"));
-    param->setDs_jimwlk(setup->DFind(file_name, "Ds_jimwlk"));
+        setup->dFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu
+    param->setm_jimwlk(setup->dFind(file_name, "m_jimwlk"));
+    param->setJimwlk_alphas(setup->dFind(file_name, "alphas_jimwlk"));
+    param->setDs_jimwlk(setup->dFind(file_name, "Ds_jimwlk"));
     param->setJimwlk_x_projectile(
-        setup->DFind(file_name, "x_projectile_jimwlk"));
-    param->setJimwlk_x_target(setup->DFind(file_name, "x_target_jimwlk"));
-    param->setJimwlk_x0(setup->DFind(file_name, "jimwlk_ic_x"));
-    param->setSaveSnapshots(setup->IFind(file_name, "saveSnapshots"));
-    param->setxSnapshotList(setup->ListFind(file_name, "xSnapshotList"));
+        setup->dFind(file_name, "x_projectile_jimwlk"));
+    param->setJimwlk_x_target(setup->dFind(file_name, "x_target_jimwlk"));
+    param->setJimwlk_x0(setup->dFind(file_name, "jimwlk_ic_x"));
+    param->setSaveSnapshots(setup->iFind(file_name, "saveSnapshots"));
+    param->setxSnapshotList(setup->listFind(file_name, "xSnapshotList"));
 
     if (rank == 0) cout << "done." << endl;
 
@@ -713,7 +700,7 @@ void writeparams(Parameters *param) {
     fout1 << " Output by readInput in main.cpp: " << endl;
     fout1 << " " << endl;
     fout1 << "Program run in mode " << param->getMode() << endl;
-    fout1 << "Nc " << param->getNc() << endl;
+    fout1 << "Nc 3" << endl;
     fout1 << "size " << param->getSize() << endl;
     fout1 << "lattice spacing a "
           << param->getL() / static_cast<double>(param->getSize()) << " fm "
@@ -755,7 +742,5 @@ void writeparams(Parameters *param) {
     if (param->getSmearQs() == 1) {
         fout1 << "smearing width " << param->getSmearingWidth() << endl;
     }
-    fout1 << "Using fat tailed distribution " << param->getUseFatTails()
-          << endl;
     fout1.close();
 }

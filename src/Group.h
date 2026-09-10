@@ -1,5 +1,5 @@
-#ifndef Group_h
-#define Group_h
+#ifndef SRC_GROUP_H_
+#define SRC_GROUP_H_
 
 #include <array>
 
@@ -7,13 +7,13 @@
 
 class Group {
   private:
-    std::array<Matrix, 8> t;
+    std::array<Matrix, 8> t_;
 
   public:
-    explicit Group(int N);
+    Group();
     ~Group() = default;
 
-    Matrix &getT(int i) { return t[static_cast<std::size_t>(i)]; }
-    const Matrix &getT(int i) const { return t[static_cast<std::size_t>(i)]; }
+    Matrix &getT(int i) { return t_[static_cast<std::size_t>(i)]; }
+    const Matrix &getT(int i) const { return t_[static_cast<std::size_t>(i)]; }
 };
-#endif
+#endif  // SRC_GROUP_H_

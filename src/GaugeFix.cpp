@@ -111,16 +111,15 @@ inline void expGaugeRotationSU3(const Matrix &chi, Matrix &out) {
 //**************************************************************************
 // GaugeFix class.
 
-void GaugeFix::FFTChi(
+void GaugeFix::fftChi(
     FFT *fft, Lattice *lat, Group *group, Parameters *param, int steps) {
     const int N = param->getSize();
     int nn[2];
     nn[0] = N;
     nn[1] = N;
-    int Nc = param->getNc();
     (void)group;
 
-    Matrix one(Nc, 1.);
+    Matrix one(1.);
 
     const int max_gfiter = steps;
 
@@ -134,7 +133,7 @@ void GaugeFix::FFTChi(
         chi = new Matrix *[N * N];
 
         for (int i = 0; i < N * N; i++) {
-            chi[i] = new Matrix(Nc, 0.);
+            chi[i] = new Matrix(0.);
         }
     }
 
@@ -232,7 +231,7 @@ void GaugeFix::FFTChi(
                 "observables.gluon_multiplicity.gauge_fix.exponentiate");
 #pragma omp parallel
             {
-                Matrix localg(Nc);
+                Matrix localg;
 #pragma omp for
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < N; j++) {
@@ -266,7 +265,7 @@ void GaugeFix::FFTChi(
             // the same link.
 #pragma omp parallel
             {
-                Matrix g(Nc), gdag(Nc), gdagX(Nc), gdagY(Nc);
+                Matrix g, gdag, gdagX, gdagY;
 
 #pragma omp for collapse(2)
                 for (int i = 0; i < N; i++) {
@@ -322,43 +321,4 @@ void GaugeFix::FFTChi(
         }
         delete[] chi;
     }
-}
-
-void GaugeFix::gaugeTransform(Lattice *lat, Parameters *param, int i, int j) {
-    int N = param->getSize();
-    int pos, posmX, posmY;
-    int Nc = param->getNc();
-    Matrix g(Nc), gdag(Nc);
-
-    pos = i * N + j;
-
-    // use periodic boundary conditions to have fast convergence
-    if (i == 0) {
-        posmX = (N - 1) * N + j;
-    } else {
-        posmX = (i - 1) * N + j;
-    }
-    if (j == 0) {
-        posmY = i * N + N - 1;
-    } else {
-        posmY = i * N + j - 1;
-    }
-
-    g = gdag = lat->Ux1[pos];
-    gdag.conjg();
-
-    // gauge transform Ux and Uy
-    lat->Ux[pos] = (g * lat->Ux[pos]);
-    lat->Uy[pos] = (g * lat->Uy[pos]);
-
-    lat->Ux[posmX] = (lat->Ux[posmX] * gdag);
-    lat->Uy[posmY] = (lat->Uy[posmY] * gdag);
-
-    // gauge transform Ex and Ey
-    lat->U[pos] = (g * lat->U[pos] * gdag);
-    lat->U2[pos] = (g * lat->U2[pos] * gdag);
-
-    // gauge transform phi and pi
-    lat->Uy2[pos] = (g * lat->Uy2[pos] * gdag);
-    lat->Ux2[pos] = (g * lat->Ux2[pos] * gdag);
 }

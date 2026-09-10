@@ -20,7 +20,7 @@
 #include "GaugeFix.h"
 #include "Instrumentation.h"
 #include "MyEigen.h"
-#include "Phys_consts.h"
+#include "PhysConst.h"
 #include "SU3.h"
 
 using Fragmentation::kkp;
@@ -42,8 +42,7 @@ using std::stringstream;
 namespace {
 
 struct EvolveUScratch {
-    explicit EvolveUScratch(int Nc)
-        : E1(Nc), E2(Nc), temp1(Nc), temp2(Nc), one(Nc, 1.) {}
+    EvolveUScratch() : one(1.) {}
 
     Matrix E1;
     Matrix E2;
@@ -53,26 +52,11 @@ struct EvolveUScratch {
 };
 
 struct EvolvePhiScratch {
-    explicit EvolvePhiScratch(int Nc) : phi(Nc), pi(Nc) {}
-
     Matrix phi;
     Matrix pi;
 };
 
 struct EvolvePiScratch {
-    explicit EvolvePiScratch(int Nc)
-        : Ux(Nc),
-          Uy(Nc),
-          UxXm1(Nc),
-          UyYm1(Nc),
-          phi(Nc),
-          phiX(Nc),
-          phiY(Nc),
-          phimX(Nc),
-          phimY(Nc),
-          bracket(Nc),
-          pi(Nc) {}
-
     Matrix Ux;
     Matrix Uy;
     Matrix UxXm1;
@@ -87,18 +71,6 @@ struct EvolvePiScratch {
 };
 
 struct EvolveEScratch {
-    explicit EvolveEScratch(int Nc)
-        : Ux(Nc),
-          Uy(Nc),
-          temp1(Nc),
-          temp2(Nc),
-          En(Nc),
-          phi(Nc),
-          phiN(Nc),
-          U12(Nc),
-          U1m2(Nc),
-          U2m1(Nc) {}
-
     Matrix Ux;
     Matrix Uy;
     Matrix temp1;
@@ -236,9 +208,8 @@ void evolvePiTeam(
 }
 
 void evolveETeam(
-    Lattice *lat, int N, int Nc, double g, double dtau, double tau,
+    Lattice *lat, int N, double g, double dtau, double tau,
     EvolveEScratch &scratch) {
-    (void)Nc;
     const complex<double> coeffPlaq =
         complex<double>(0., 1.) * tau * dtau / (2. * g * g);
     const complex<double> coeffComm = complex<double>(0., 1.) * dtau / tau;
@@ -308,17 +279,16 @@ void evolveStepPersistent(
     Lattice *lat, Parameters *param, double dtau, double tau,
     bool updateCoordinates) {
     IPG_PROFILE_SCOPE("evolution.parallel_step");
-    const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
     double phaseStart = 0.0;
 
 #pragma omp parallel shared(phaseStart)
     {
-        EvolveUScratch uScratch(Nc);
-        EvolvePhiScratch phiScratch(Nc);
-        EvolvePiScratch piScratch(Nc);
-        EvolveEScratch eScratch(Nc);
+        EvolveUScratch uScratch;
+        EvolvePhiScratch phiScratch;
+        EvolvePiScratch piScratch;
+        EvolveEScratch eScratch;
 
 #pragma omp single
         {
@@ -331,7 +301,7 @@ void evolveStepPersistent(
             phaseStart = ipg::wallSeconds();
         }
 
-        evolveETeam(lat, N, Nc, g, dtau, tau, eScratch);
+        evolveETeam(lat, N, g, dtau, tau, eScratch);
 #pragma omp single
         {
             addTeamPhase("evolution.evolveE", phaseStart);
@@ -356,10 +326,9 @@ void evolveStepPersistent(
 }
 
 inline void makeTmunuTracelessDifference(
-    const Matrix &lhs, const Matrix &rhs, const Matrix &one, int Nc,
-    Matrix &out) {
+    const Matrix &lhs, const Matrix &rhs, const Matrix &one, Matrix &out) {
     out = lhs - rhs;
-    out -= (out.trace() / static_cast<double>(Nc)) * one;
+    out -= (out.trace() / 3.0) * one;
 }
 
 }  // namespace
@@ -367,13 +336,12 @@ inline void makeTmunuTracelessDifference(
 void Evolution::evolveU(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolveU");
-    const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
 
 #pragma omp parallel
     {
-        EvolveUScratch scratch(Nc);
+        EvolveUScratch scratch;
         evolveUTeam(lat, N, g, dtau, tau, scratch);
     }
 }
@@ -381,12 +349,11 @@ void Evolution::evolveU(
 void Evolution::evolvePhi(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolvePhi");
-    const int Nc = param->getNc();
     const int N = param->getSize();
 
 #pragma omp parallel
     {
-        EvolvePhiScratch scratch(Nc);
+        EvolvePhiScratch scratch;
         evolvePhiTeam(lat, N, dtau, tau, scratch);
     }
 }
@@ -394,12 +361,11 @@ void Evolution::evolvePhi(
 void Evolution::evolvePi(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolvePi");
-    const int Nc = param->getNc();
     const int N = param->getSize();
 
 #pragma omp parallel
     {
-        EvolvePiScratch scratch(Nc);
+        EvolvePiScratch scratch;
         evolvePiTeam(lat, N, dtau, tau, scratch);
     }
 }
@@ -407,46 +373,44 @@ void Evolution::evolvePi(
 void Evolution::evolveE(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolveE");
-    const int Nc = param->getNc();
     const int N = param->getSize();
     const double g = param->getg();
 
 #pragma omp parallel
     {
-        EvolveEScratch scratch(Nc);
-        evolveETeam(lat, N, Nc, g, dtau, tau, scratch);
+        EvolveEScratch scratch;
+        evolveETeam(lat, N, g, dtau, tau, scratch);
     }
 }
 
 void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     IPG_PROFILE_SCOPE("diagnostics.gauss_law");
-    const int Nc = param->getNc();
     const int N = param->getSize();
 
-    Matrix Ux(Nc);
-    Matrix UxXm1(Nc);
-    Matrix UxYm1(Nc);
+    Matrix Ux;
+    Matrix UxXm1;
+    Matrix UxYm1;
 
-    Matrix Uy(Nc);
-    Matrix UyXm1(Nc);
-    Matrix UyYm1(Nc);
+    Matrix Uy;
+    Matrix UyXm1;
+    Matrix UyYm1;
 
-    Matrix UxDag(Nc);
-    Matrix UxXm1Dag(Nc);
-    Matrix UxYm1Dag(Nc);
+    Matrix UxDag;
+    Matrix UxXm1Dag;
+    Matrix UxYm1Dag;
 
-    Matrix UyDag(Nc);
-    Matrix UyXm1Dag(Nc);
-    Matrix UyYm1Dag(Nc);
+    Matrix UyDag;
+    Matrix UyXm1Dag;
+    Matrix UyYm1Dag;
 
-    Matrix E1(Nc);
-    Matrix E2(Nc);
-    Matrix E1mX(Nc);
-    Matrix E2mY(Nc);
-    Matrix phi(Nc);
-    Matrix pi(Nc);
+    Matrix E1;
+    Matrix E2;
+    Matrix E1mX;
+    Matrix E2mY;
+    Matrix phi;
+    Matrix pi;
 
-    Matrix Gauss(Nc);
+    Matrix Gauss;
     double largest = 0;
 
     for (int pos = 0; pos < N * N; pos++) {
@@ -493,7 +457,7 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
 void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("output.evolved_fields");
     const int N = param->getSize();
-    const int Nc = param->getNc();
+    constexpr int Nc = 3;
     const double a = param->getL() / static_cast<double>(N);
     const double dtau = param->getdtau();
     const double tauLattice = static_cast<double>(it) * dtau;
@@ -777,7 +741,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         if (finalTmunuMeasurement) {
-            Tmunu(lat, param, it);
+            tmunu(lat, param, it);
             if (param->getWriteOutputs() == 5) {
                 // writeEvolvedFields(lat, param, it);
             }
@@ -793,7 +757,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         if (intermediateTmunuMeasurement) {
-            Tmunu(lat, param, it);
+            tmunu(lat, param, it);
             // writeEvolvedFields(lat, param, it);
             //  Preserve the historical intermediate-time finalFlag=false path
             //  when hydro output is enabled.
@@ -1059,103 +1023,102 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     }
 }
 
-void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
+void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.Tmunu");
     double averageTtautau = 0.;
     double averageTtaueta = 0.;
     double averageTxx = 0.;
 
     int N = param->getSize();
-    int Nc = param->getNc();
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
     double g = param->getg();
     double dtau = param->getdtau();
-    Matrix one(Nc, 1.);
+    Matrix one(1.);
 
 #pragma omp parallel
     {
         int pos, posX, posY, posmX, posmY, posXY, posmXpY, pospXmY, pos2X,
             pos2Y, posX2Y, pos2XY;
-        Matrix Ux(Nc);
-        Matrix Uy(Nc);
-        Matrix UxmX(Nc);
-        Matrix UymY(Nc);
-        Matrix UDx(Nc);
-        Matrix UDy(Nc);
-        Matrix UDxmX(Nc);
-        Matrix UDymY(Nc);
-        Matrix UDxmXpY(Nc);
-        Matrix UDxpXpY(Nc);
-        Matrix UxpX(Nc);
-        Matrix UxpY(Nc);
-        Matrix UDxpY(Nc);
-        Matrix UxpXpY(Nc);
-        Matrix UDypXmY(Nc);
-        Matrix UypY(Nc);
-        Matrix UypX(Nc);
-        Matrix UDypX(Nc);
-        Matrix UypXpY(Nc);
-        Matrix UDypXpY(Nc);
-        Matrix UymX(Nc);
-        Matrix UxmXpY(Nc);
-        Matrix UxmY(Nc);
-        Matrix UDxmY(Nc);
-        Matrix UypXmY(Nc);
-        Matrix UDyp2X(Nc);
-        Matrix Uyp2X(Nc);
-        Matrix UDxpX(Nc);
-        Matrix Uxp2Y(Nc);
-        Matrix UDxp2Y(Nc);
-        Matrix UDypY(Nc);
-        Matrix UDymX(Nc);
-        Matrix Uplaq(Nc), UplaqD(Nc), Uplaq1(Nc), Uplaq1D(Nc), Uplaq2(Nc);
-        Matrix E1(Nc);
-        Matrix E2(Nc);
-        Matrix E1p(Nc);
-        Matrix E2p(Nc);
-        Matrix pi(Nc);
-        Matrix piX(Nc);
-        Matrix piY(Nc);
-        Matrix piXY(Nc);
-        Matrix phi(Nc);
-        Matrix phiX(Nc);
-        Matrix phiY(Nc);
-        Matrix phiXY(Nc);
-        Matrix phimX(Nc);
-        Matrix phimY(Nc);
-        Matrix phi2XY(Nc);
-        Matrix phiX2Y(Nc);
-        Matrix phi2X(Nc);
-        Matrix phi2Y(Nc);
-        Matrix phimXpY(Nc);
-        Matrix phipXmY(Nc);
-        Matrix phiTildeX(Nc);
-        Matrix phiTildeY(Nc);
-        Matrix phiTildeXY1(Nc);
-        Matrix phiTildeXY2(Nc);
-        Matrix chainA(Nc);
-        Matrix chainB(Nc);
-        Matrix xMinus0(Nc);
-        Matrix xMinusM(Nc);
-        Matrix xMinusP(Nc);
-        Matrix xMinusT(Nc);
-        Matrix xMinusSum0(Nc);
-        Matrix xMinusSum1(Nc);
-        Matrix yPlus0(Nc);
-        Matrix yPlusM(Nc);
-        Matrix yPlusP(Nc);
-        Matrix yPlusT(Nc);
-        Matrix yPlusSum0(Nc);
-        Matrix yPlusSum1(Nc);
-        Matrix covGradX0(Nc);
-        Matrix covGradY0(Nc);
-        Matrix gradXAtY(Nc);
-        Matrix gradYAtX(Nc);
-        Matrix gradXAtYToPos(Nc);
-        Matrix gradYAtXToPos(Nc);
-        Matrix E1AtYToPos(Nc);
-        Matrix E2AtXToPos(Nc);
+        Matrix Ux;
+        Matrix Uy;
+        Matrix UxmX;
+        Matrix UymY;
+        Matrix UDx;
+        Matrix UDy;
+        Matrix UDxmX;
+        Matrix UDymY;
+        Matrix UDxmXpY;
+        Matrix UDxpXpY;
+        Matrix UxpX;
+        Matrix UxpY;
+        Matrix UDxpY;
+        Matrix UxpXpY;
+        Matrix UDypXmY;
+        Matrix UypY;
+        Matrix UypX;
+        Matrix UDypX;
+        Matrix UypXpY;
+        Matrix UDypXpY;
+        Matrix UymX;
+        Matrix UxmXpY;
+        Matrix UxmY;
+        Matrix UDxmY;
+        Matrix UypXmY;
+        Matrix UDyp2X;
+        Matrix Uyp2X;
+        Matrix UDxpX;
+        Matrix Uxp2Y;
+        Matrix UDxp2Y;
+        Matrix UDypY;
+        Matrix UDymX;
+        Matrix Uplaq, UplaqD, Uplaq1, Uplaq1D, Uplaq2;
+        Matrix E1;
+        Matrix E2;
+        Matrix E1p;
+        Matrix E2p;
+        Matrix pi;
+        Matrix piX;
+        Matrix piY;
+        Matrix piXY;
+        Matrix phi;
+        Matrix phiX;
+        Matrix phiY;
+        Matrix phiXY;
+        Matrix phimX;
+        Matrix phimY;
+        Matrix phi2XY;
+        Matrix phiX2Y;
+        Matrix phi2X;
+        Matrix phi2Y;
+        Matrix phimXpY;
+        Matrix phipXmY;
+        Matrix phiTildeX;
+        Matrix phiTildeY;
+        Matrix phiTildeXY1;
+        Matrix phiTildeXY2;
+        Matrix chainA;
+        Matrix chainB;
+        Matrix xMinus0;
+        Matrix xMinusM;
+        Matrix xMinusP;
+        Matrix xMinusT;
+        Matrix xMinusSum0;
+        Matrix xMinusSum1;
+        Matrix yPlus0;
+        Matrix yPlusM;
+        Matrix yPlusP;
+        Matrix yPlusT;
+        Matrix yPlusSum0;
+        Matrix yPlusSum1;
+        Matrix covGradX0;
+        Matrix covGradY0;
+        Matrix gradXAtY;
+        Matrix gradYAtX;
+        Matrix gradXAtYToPos;
+        Matrix gradYAtXToPos;
+        Matrix E1AtYToPos;
+        Matrix E2AtXToPos;
 
         // set plaquette in every cell
 #pragma omp for
@@ -1303,8 +1266,7 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
                 const double gradientPrefactor =
                     0.5 / (it * dtau) / (it * dtau);
                 const double plaquetteEnergy =
-                    2. / pow(g, 2.)
-                    * (static_cast<double>(Nc) - su3::trace(Uplaq).real());
+                    2. / pow(g, 2.) * (3.0 - su3::trace(Uplaq).real());
 
                 lat->cells[pos]->setTtautau(
                     lat->cells[pos]->getTtautau() + plaquetteEnergy
@@ -1486,19 +1448,19 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
                 // below.
                 chainA = Uy * UxpY * UDypX * UDx;
                 chainB = Ux * UypX * UDxpY * UDy;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinus0);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinus0);
 
                 chainA = UDxmX * UymX * UxmXpY * UDy;
                 chainB = Uy * UDxmXpY * UDymX * UxmX;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinusM);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinusM);
 
                 chainA = UypX * UxpXpY * UDyp2X * UDxpX;
                 chainB = UxpX * Uyp2X * UDxpXpY * UDypX;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinusP);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinusP);
 
                 chainA = UDx * Uy * UxpY * UDypX;
                 chainB = UypX * UDxpY * UDy * Ux;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, xMinusT);
+                makeTmunuTracelessDifference(chainA, chainB, one, xMinusT);
 
                 xMinusSum0 = xMinus0 + xMinusM;
                 xMinusSum1 = xMinusP + xMinusT;
@@ -1509,15 +1471,15 @@ void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
 
                 chainA = UDymY * UxmY * UypXmY * UDx;
                 chainB = Ux * UDypXmY * UDxmY * UymY;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, yPlusM);
+                makeTmunuTracelessDifference(chainA, chainB, one, yPlusM);
 
                 chainA = UxpY * UypXpY * UDxp2Y * UDypY;
                 chainB = UypY * Uxp2Y * UDypXpY * UDxpY;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, yPlusP);
+                makeTmunuTracelessDifference(chainA, chainB, one, yPlusP);
 
                 chainA = UDy * Ux * UypX * UDxpY;
                 chainB = UxpY * UDypX * UDx * Uy;
-                makeTmunuTracelessDifference(chainA, chainB, one, Nc, yPlusT);
+                makeTmunuTracelessDifference(chainA, chainB, one, yPlusT);
 
                 yPlusSum0 = yPlus0 + yPlusM;
                 yPlusSum1 = yPlusP + yPlusT;
@@ -1628,33 +1590,6 @@ void Evolution::u(Lattice *lat, Parameters *param, int it, bool finalFlag) {
     IPG_PROFILE_SCOPE("observables.flow_velocity");
     MyEigen myeigen;
     myeigen.flowVelocity4D(lat, param, it, finalFlag);
-}
-
-void Evolution::anisotropy(Lattice *lat, Parameters *param, int it) {
-    stringstream straniso_name;
-    straniso_name << "anisotropy" << param->getEventId() << ".dat";
-    string aniso_name;
-    aniso_name = straniso_name.str();
-
-    ofstream foutAniso(aniso_name.c_str(), std::ios::app);
-    int N = param->getSize();
-    double L = param->getL();
-    double a = L / N;  // lattice spacing in fm
-
-    double num = 0., den = 0.;
-    int pos;
-    for (int ix = 0; ix < N; ix++) {
-        for (int iy = 0; iy < N; iy++) {
-            pos = ix * N + iy;
-            if (lat->cells[pos]->getTtautau() > 10.) {
-                num += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-            }
-        }
-    }
-
-    foutAniso << it * a * param->getdtau() << " " << num / den << endl;
-    foutAniso.close();
 }
 
 void Evolution::eccentricity(
@@ -2179,7 +2114,6 @@ void Evolution::eccentricity(
     avySq /= toteps;
     avrSq /= toteps;
     Rbar = 1. / sqrt(1. / avxSq + 1. / avySq);
-    param->setEccentricity2(eccentricity2);
     if (it == 1) param->setPsi(Psi2);
 
     if (doAniso == 0) {
@@ -2605,12 +2539,12 @@ void Evolution::readNkt(Parameters *param) {
                 fin >> dummy;
                 fin >> kt;
                 fin >> nkt;
-                nIn[ikt] = atof(nkt.c_str());
+                nIn_[ikt] = atof(nkt.c_str());
                 fin >> dummy >> Tpp >> b >> Npart;
                 if (ikt == 0) dkt = atof(kt.c_str());
                 if (ikt == 1) dkt = dkt - atof(kt.c_str());
             }
-            cout << nIn[ikt] << endl;
+            cout << nIn_[ikt] << endl;
         }
         fin.close();
         cout << " done." << endl;
@@ -2645,11 +2579,11 @@ void Evolution::readNkt(Parameters *param) {
 
     for (int ik = 0; ik < 100; ik++) {
         if (param->getUsePseudoRapidity() == 0) {
-            dNdeta2 += nIn[ik] * (ik + 0.5) * dkt * dkt * 2.
+            dNdeta2 += nIn_[ik] * (ik + 0.5) * dkt * dkt * 2.
                        * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
         } else {
             dNdeta2 +=
-                nIn[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
+                nIn_[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
                 * cosh(param->getRapidity())
                 / (sqrt(
                     pow(cosh(param->getRapidity()), 2.)
@@ -2672,7 +2606,6 @@ int Evolution::multiplicity(
     Lattice *lat, Group *group, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.gluon_multiplicity");
     int N = param->getSize();
-    int Nc = param->getNc();
     int npos, pos;
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
@@ -2719,7 +2652,7 @@ int Evolution::multiplicity(
     int itmax = static_cast<int>(floor(maxtime / (a * dtau) + 1e-10));
 
     double multiplicityPhaseStart = ipg::wallSeconds();
-    gaugefix.FFTChi(fft, lat, group, param, 4000);
+    gaugefix.fftChi(fft_, lat, group, param, 4000);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.gauge_fix", multiplicityPhaseStart);
     // gauge is fixed
@@ -2728,7 +2661,7 @@ int Evolution::multiplicity(
     E1 = new Matrix *[N * N];
 
     for (int i = 0; i < N * N; i++) {
-        E1[i] = new Matrix(Nc, 0.);
+        E1[i] = new Matrix(0.);
     }
     addPhaseAndRestart(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
@@ -2850,7 +2783,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.prepare_E1", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1, E1, nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E1", multiplicityPhaseStart);
 
@@ -3054,7 +2987,7 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E2", multiplicityPhaseStart);
 
-    fft->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1, E1, nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E2", multiplicityPhaseStart);
 
@@ -3241,7 +3174,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.prepare_pi", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1, E1, nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_pi", multiplicityPhaseStart);
 
@@ -3626,1655 +3559,6 @@ int Evolution::multiplicity(
     delete[] E1;
     addPhaseAndRestart(
         "observables.gluon_multiplicity.cleanup", multiplicityPhaseStart);
-
-    cout << " done." << endl;
-    param->setSuccess(1);
-    return 1;
-}
-
-int Evolution::multiplicitynkxky(
-    Lattice *lat, Group *group, Parameters *param, int it) {
-    const int N = param->getSize();
-    const int Nc = param->getNc();
-    int npos, pos;
-    double L = param->getL();
-    double a = L / N;  // lattice spacing in fm
-    double kx, ky, kt2, omega2;
-    double g = param->getg();
-    int nn[2];
-    nn[0] = N;
-    nn[1] = N;
-    double dtau = param->getdtau();
-    double nkt;
-    const int bins = 100;
-    double n[bins];   // k_T array
-    double E[bins];   // k_T array
-    double n2[bins];  // k_T array
-    int counter[bins];
-    double dkt = 2.83 / static_cast<double>(bins);
-    double dNdeta = 0.;
-    double dNdeta2 = 0.;
-    double dNdetaCut = 0.;
-    double dNdetaCut2 = 0.;
-    double dEdetaCut = 0.;
-    double dEdetaCut2 = 0.;
-    double dEdeta = 0.;
-    double dEdeta2 = 0.;
-    vector<double> Nkxky(N * N, 0);
-
-    stringstream strnkxky_name;
-    strnkxky_name << "nkxky-t" << it * dtau * a << "-" << param->getEventId()
-                  << ".dat";
-    string nkxky_name;
-    nkxky_name = strnkxky_name.str();
-
-    stringstream strNpartdNdy_name;
-    strNpartdNdy_name << "NpartdNdy-t" << it * dtau * a << "-"
-                      << param->getEventId() << ".dat";
-    string NpartdNdy_name;
-    NpartdNdy_name = strNpartdNdy_name.str();
-
-    stringstream strNpartdNdyH_name;
-    strNpartdNdyH_name << "NpartdNdyHadrons-t" << it * dtau * a << "-"
-                       << param->getEventId() << ".dat";
-    string NpartdNdyH_name;
-    NpartdNdyH_name = strNpartdNdyH_name.str();
-
-    stringstream strmult_name;
-    strmult_name << "multiplicity-t" << it * dtau * a << "-"
-                 << param->getEventId() << ".dat";
-    string mult_name;
-    mult_name = strmult_name.str();
-
-    stringstream strdNdy_name;
-    strdNdy_name << "dNdy-t" << it * dtau * a << "-" << param->getEventId()
-                 << ".dat";
-    string dNdy_name;
-    dNdy_name = strdNdy_name.str();
-
-    cout << "Measuring multiplicity ... " << endl;
-
-    // fix transverse Coulomb gauge
-    GaugeFix gaugefix;
-
-    double maxtime;
-    if (param->getInverseQsForMaxTime() == 1) {
-        maxtime = 1. / param->getAverageQs() * hbarc;
-        cout << "maximal evolution time = " << maxtime << " fm" << endl;
-    } else {
-        maxtime = param->getMaxtime();  // maxtime is in fm
-    }
-
-    int itmax = static_cast<int>(floor(maxtime / (a * dtau) + 1e-10));
-
-    gaugefix.FFTChi(fft, lat, group, param, 4000);
-    // gauge is fixed
-
-    Matrix **E1;
-    E1 = new Matrix *[N * N];
-
-    for (int i = 0; i < N * N; i++) {
-        E1[i] = new Matrix(Nc, 0.);
-    }
-
-    double g2mu2A, g2mu2B, gfactor, alphas = 0., Qs = 0.;
-    double c = param->getc();
-    double muZero = param->getMuZero();
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->U[pos]
-                           * sqrt(gfactor);  // replace one of the 1/g in the
-                                             // lattice E^i by the running one
-            } else {
-                *E1[pos] = lat->U[pos];
-            }
-        }
-    }
-
-    // do Fourier transforms
-    fft->fftn(E1, E1, nn, 1);
-
-    for (int ik = 0; ik < bins; ik++) {
-        n[ik] = 0.;
-        E[ik] = 0.;
-        n2[ik] = 0.;
-        counter[ik] = 0;
-    }
-
-    const int hbins = 2000;
-
-    //  double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1],
-    //  NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
-    double Nhgsl[hbins + 1], Ng;
-    // for (int ih=0; ih<=hbins; ih++)
-    //   {
-    //     Nh[ih]=0.;
-    //     Eh[ih]=0.;
-    //     NhL[ih]=0.;
-    //     NhH[ih]=0.;
-    //   }
-
-    ofstream foutNkxky((nkxky_name).c_str(), std::ios::out);
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-            Nkxky[pos] = 0.;
-        }
-    }
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            nkt = 0.;
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-
-            // i=0 or j=0 have no negative k_T value available
-
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                          * (g * g / ((it - 0.5) * dtau)
-                             * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
-                    if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                }
-
-                dNdeta += nkt;
-                dEdeta += nkt * sqrt(omega2) * hbarc / a;
-
-                for (int ik = 0; ik < bins; ik++) {
-                    if (abs(sqrt(kt2)) > ik * dkt
-                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
-                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
-                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
-                                 / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
-                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
-                                 * N / M_PI / M_PI / 2. / 2.;
-                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
-                        // dividing by bin size; bin is dkt times Jacobian
-                        // k(=ik*dkt) times 2Pi in phi times the correct number
-                        // of counts for an infinite lattice: area in bin
-                        // divided by total area
-                        counter[ik] += 1;  // number of entries in n[ik]
-                    }
-                }
-            }
-            if (i != 0 && j != 0) {
-                Nkxky[pos] = nkt * N * N / M_PI / M_PI / 2. / 2.;
-            }
-        }
-    }
-
-    /// -------- 2 ---------
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->U2[pos] * sqrt(gfactor);  // "
-            } else {
-                *E1[pos] = lat->U2[pos];
-            }
-        }
-    }
-
-    fft->fftn(E1, E1, nn, 1);
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            nkt = 0.;
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-
-            // i=0 or j=0 have no negative k_T value available
-
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                          * (g * g / ((it - 0.5) * dtau)
-                             * (((((*E1[pos]) * (*E1[npos])).trace()).real())));
-                    if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                }
-
-                dNdeta += nkt;
-                dEdeta += nkt * sqrt(omega2) * hbarc / a;
-
-                for (int ik = 0; ik < bins; ik++) {
-                    if (abs(sqrt(kt2)) > ik * dkt
-                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
-                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
-                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
-                                 / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
-                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
-                                 * N / M_PI / M_PI / 2. / 2.;
-                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
-                        // dividing by bin size; bin is dkt times Jacobian
-                        // k(=ik*dkt) times 2Pi in phi times the correct number
-                        // of counts for an infinite lattice: area in bin
-                        // divided by total area
-                    }
-                }
-            }
-            if (i != 0 && j != 0) {
-                Nkxky[pos] += nkt * N * N / M_PI / M_PI / 2. / 2.;
-            }
-        }
-    }
-
-    /// ------3 --------
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->Ux2[pos]
-                           * sqrt(gfactor);  // replace the only 1/g by the
-                                             // running one (physical pi goes
-                                             // like 1/g, like physical E^i)
-            } else {
-                *E1[pos] = lat->Ux2[pos];
-            }
-        }
-    }
-
-    // do Fourier transforms
-    fft->fftn(E1, E1, nn, 1);
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            nkt = 0.;
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-
-            // i=0 or j=0 have no negative k_T value available
-
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                          * (((it - 0.5) * dtau)
-                             * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
-                    if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                }
-
-                dNdeta += nkt;
-                dEdeta += nkt * sqrt(omega2) * hbarc / a;
-
-                for (int ik = 0; ik < bins; ik++) {
-                    if (abs(sqrt(kt2)) > ik * dkt
-                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
-                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
-                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
-                                 / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
-                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
-                                 * N / M_PI / M_PI / 2. / 2.;
-                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
-                        // dividing by bin size; bin is dkt times Jacobian
-                        // k(=ik*dkt) times 2Pi in phi times the correct number
-                        // of counts for an infinite lattice: area in bin
-                        // divided by total area
-                    }
-                }
-            }
-            if (i != 0 && j != 0) {
-                Nkxky[pos] += nkt * N * N / M_PI / M_PI / 2. / 2.;
-            }
-            if (param->getWriteOutputs() == 2)
-                foutNkxky << 2. * sin(kx / 2.) / a * hbarc << " "
-                          << 2. * sin(ky / 2.) / a * hbarc << " "
-                          << Nkxky[pos] * a / hbarc * a / hbarc << "\n";
-        }
-        if (param->getWriteOutputs() == 2) foutNkxky << endl;
-    }
-    foutNkxky.close();
-
-    double m, P;
-    m = param->getJacobianm();                                // in GeV
-    P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
-
-    ofstream foutMult(mult_name.c_str(), std::ios::out);
-    for (int ik = 0; ik < bins; ik++) {
-        if (counter[ik] > 0) {
-            n[ik] = n[ik] / static_cast<double>(counter[ik]);
-            E[ik] = E[ik] / static_cast<double>(counter[ik]);
-            if (param->getUsePseudoRapidity() == 0) {
-                dNdeta2 += n[ik] * (ik + 0.5) * dkt * dkt * 2.
-                           * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
-                dEdeta2 += E[ik] * (ik + 0.5) * dkt * dkt * 2.
-                           * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
-                if (ik * dkt / a * hbarc > 3.)  //
-                {
-                    dNdetaCut += n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                    dEdetaCut += E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                }
-                if (ik * dkt / a * hbarc > 6.)  // large cut
-                {
-                    dNdetaCut2 += n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                    dEdetaCut2 += E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                }
-            } else {
-                dNdeta2 += n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                           * cosh(param->getRapidity())
-                           / (sqrt(
-                               pow(cosh(param->getRapidity()), 2.)
-                               + m * m
-                                     / (((ik + 0.5) * dkt / a * hbarc)
-                                        * ((ik + 0.5) * dkt / a
-                                           * hbarc))));  // integrate, gives a
-                                                         // ik*dkt*2pi*dkt
-                dEdeta2 += E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                           * cosh(param->getRapidity())
-                           / (sqrt(
-                               pow(cosh(param->getRapidity()), 2.)
-                               + m * m
-                                     / (((ik + 0.5) * dkt / a * hbarc)
-                                        * ((ik + 0.5) * dkt / a
-                                           * hbarc))));  // integrate, gives a
-                                                         // ik*dkt*2pi*dkt
-
-                if (ik * dkt / a * hbarc > 3.)  //
-                {
-                    dNdetaCut +=
-                        n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                    dEdetaCut +=
-                        E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                }
-                if (ik * dkt / a * hbarc > 6.)  // large cut
-                {
-                    dNdetaCut2 +=
-                        n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                    dEdetaCut2 +=
-                        E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                }
-            }
-            // integrate, gives a ik*dkt*2pi*dkt, in |eta|<2.4, 0.4 GeV p_T cut,
-            // charged N_track (offline, factor 0.83)
-        }
-
-        // output dN/d^2k
-        if (it > 0) {
-            foutMult << it * dtau * a << " " << ik * dkt / a * hbarc << " "
-                     << n[ik] * a / hbarc * a / hbarc << " "
-                     << n2[ik] * a / hbarc * a / hbarc << " " << param->getTpp()
-                     << " " << param->getb() << " " << param->getNpart()
-                     << endl;
-        }
-    }
-
-    foutMult.close();
-
-    double dNdetaHadrons = 0;
-    double dNdetaHadronsCut = 0;
-    double dNdetaHadronsCut2 = 0;
-    double dEdetaHadrons = 0;
-    double dEdetaHadronsCut = 0;
-    double dEdetaHadronsCut2 = 0;
-
-    // compute hadrons using fragmentation function
-    if (it == itmax && param->getWriteOutputs() == 3) {
-        cout << " Hadronizing ... " << endl;
-        double z, frac;
-        double mypt, kt;
-        int ik;
-        const int steps = 6000;
-        double dz = 0.95 / static_cast<double>(steps);
-        double zValues[steps + 1];
-        double zintegrand[steps + 1];
-        // double Ezintegrand[steps+1];
-        // double Lzintegrand[steps+1];
-        // double Hzintegrand[steps+1];
-        gsl_interp_accel *zacc = gsl_interp_accel_alloc();
-        gsl_spline *zspline = gsl_spline_alloc(gsl_interp_cspline, steps + 1);
-
-        for (int ih = 0; ih <= hbins; ih++) {
-            mypt = ih * (20. / static_cast<double>(hbins));
-
-            for (int iz = 0; iz <= steps; iz++) {
-                z = 0.05 + iz * dz;
-                zValues[iz] = z;
-
-                kt = mypt / z;
-
-                ik = static_cast<int>(
-                    floor(kt * a / hbarc / dkt - 0.5 + 0.00000001));
-
-                frac = (kt - (ik + 0.5) * dkt / a * hbarc) / (dkt / a * hbarc);
-
-                if (ik + 1 < bins && ik >= 0)
-                    Ng = ((1. - frac) * n[ik] + frac * n[ik + 1]) * a / hbarc
-                         * a / hbarc;  // to make dN/d^2k_T fo k_T in GeV
-                else
-                    Ng = 0.;
-
-                if (param->getUsePseudoRapidity() == 0) {
-                    zintegrand[iz] = 1. / (z * z) * Ng * kkp(7, 1, z, kt);
-                    // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * kkp(7,1,z,kt);
-                    // Lzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt/2.);
-                    // Hzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt*2.);
-                } else {
-                    zintegrand[iz] =
-                        1. / (z * z) * Ng * 2.
-                        * (kkp(1, 1, z, kt) * cosh(param->getRapidity())
-                               / (sqrt(
-                                   pow(cosh(param->getRapidity()), 2.)
-                                   + m_pion * m_pion / (mypt * mypt)))
-                           + kkp(2, 1, z, kt) * cosh(param->getRapidity())
-                                 / (sqrt(
-                                     pow(cosh(param->getRapidity()), 2.)
-                                     + m_kaon * m_kaon / (mypt * mypt)))
-                           + kkp(4, 1, z, kt) * cosh(param->getRapidity())
-                                 / (sqrt(
-                                     pow(cosh(param->getRapidity()), 2.)
-                                     + m_proton * m_proton / (mypt * mypt))));
-
-                    // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng *
-                    // 	2. *
-                    // (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-                    // 	      +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-                    // 	      +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
-
-                    // Lzintegrand[iz] =  1./(z*z) * Ng *
-                    // 	2. *
-                    // (kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-                    // 	      +kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-                    // 	      +kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
-
-                    // Hzintegrand[iz] =  1./(z*z) * Ng *
-                    // 	2. *
-                    // (kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-                    // 	      +kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-                    // 	      +kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
-                }
-            }
-
-            zValues[steps] = 1.;  // set exactly 1
-
-            gsl_spline_init(zspline, zValues, zintegrand, steps + 1);
-            Nhgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
-
-            //	  gsl_spline_init (zspline, zValues, Lzintegrand, steps+1);
-            // NhLgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
-
-            // gsl_spline_init (zspline, zValues, Hzintegrand, steps+1);
-            // NhHgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
-        }
-
-        gsl_spline_free(zspline);
-        gsl_interp_accel_free(zacc);
-
-        stringstream strmultHad_name;
-        strmultHad_name << "multiplicityHadrons" << param->getEventId()
-                        << ".dat";
-        string multHad_name;
-        multHad_name = strmultHad_name.str();
-
-        ofstream foutdNdpt(multHad_name.c_str(), std::ios::out);
-        for (int ih = 0; ih <= hbins; ih++) {
-            if (ih % 10 == 0)
-                foutdNdpt << ih * 20. / static_cast<double>(hbins) << " "
-                          << Nhgsl[ih] << " " << 0. << " " << 0. << " "
-                          << param->getTpp() << " " << param->getb()
-                          << endl;  // leaving out the L and H ones for now
-        }
-        foutdNdpt.close();
-
-        cout << " done." << endl;
-
-        // integrate over pT using gsl
-        double pt[hbins + 1];
-        double integrand[hbins + 1];
-        double Eintegrand[hbins + 1];
-        for (int ih = 0; ih <= hbins; ih++) {
-            pt[ih] = ih * 20. / static_cast<double>(hbins);
-            integrand[ih] = Nhgsl[ih] * pt[ih];
-            Eintegrand[ih] = Nhgsl[ih] * pt[ih] * pt[ih];
-        }
-
-        gsl_interp_accel *ptacc = gsl_interp_accel_alloc();
-        gsl_spline *ptspline = gsl_spline_alloc(gsl_interp_cspline, hbins + 1);
-        gsl_spline_init(ptspline, pt, integrand, hbins + 1);
-        dNdetaHadrons =
-            2 * M_PI * gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-        dNdetaHadronsCut =
-            2 * M_PI * gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-        dNdetaHadronsCut2 =
-            2 * M_PI * gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
-
-        gsl_spline_init(ptspline, pt, Eintegrand, hbins + 1);
-        dEdetaHadrons =
-            2 * M_PI * gsl_spline_eval_integ(ptspline, 0.25, 19., ptacc);
-        dEdetaHadronsCut =
-            2 * M_PI * gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-        dEdetaHadronsCut2 =
-            2 * M_PI * gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
-
-        gsl_spline_free(ptspline);
-        gsl_interp_accel_free(ptacc);
-    }
-
-    if (param->getUsePseudoRapidity() == 0 && param->getMPIRank() == 0) {
-        cout << "dN/dy 1 = " << dNdeta << ", dE/dy 1 = " << dEdeta << endl;
-        cout << "dN/dy 2 = " << dNdeta2 << ", dE/dy 2 = " << dEdeta2 << endl;
-        cout << "gluon <p_T> = " << dEdeta / dNdeta << endl;
-    } else if (param->getUsePseudoRapidity() == 1) {
-        m = param->getJacobianm();                                // in GeV
-        P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
-        dNdeta *=
-            cosh(param->getRapidity())
-            / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / (P * P)));
-        dEdeta *=
-            cosh(param->getRapidity())
-            / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / (P * P)));
-
-        if (param->getMPIRank() == 0) {
-            cout << "dN/deta 1 = " << dNdeta << ", dE/deta 1 = " << dEdeta
-                 << endl;
-            cout << "dN/deta 2 = " << dNdeta2 << ", dE/deta 2 = " << dEdeta2
-                 << endl;
-            cout << "dN/deta_cut 1 = " << dNdetaCut << endl;
-            cout << "dN/deta_cut 2 = " << dNdetaCut2 << endl;
-            cout << "gluon <p_T> = " << dEdeta / dNdeta << endl;
-        }
-    }
-
-    if (dNdeta == 0.) {
-        cout << "No collision happened on rank " << param->getMPIRank()
-             << ". Restarting with new random number..." << endl;
-        for (int i = 0; i < N * N; i++) {
-            delete E1[i];
-        }
-
-        delete[] E1;
-        return 0;
-    }
-
-    if (it == itmax) {
-        cout << "hadron <p_T> = " << dEdetaHadrons / dNdetaHadrons << endl;
-        cout << "Hadrons: dN/dy(p_T>250 MeV)=" << dNdetaHadrons
-             << ", dE/dy(p_T>250 MeV)=" << dEdetaHadrons << endl;
-
-        stringstream strmeanpt_name;
-        strmeanpt_name << "meanpt" << param->getEventId() << ".dat";
-        string meanpt_name;
-        meanpt_name = strmeanpt_name.str();
-
-        ofstream foutNch(meanpt_name.c_str(), std::ios::out);
-        foutNch << dNdeta << " " << dEdeta / dNdeta << " " << dNdetaHadrons
-                << " " << dEdetaHadrons / dNdetaHadrons << endl;
-        foutNch.close();
-
-        ofstream foutNN(NpartdNdy_name.c_str(), std::ios::app);
-        foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp()
-               << " " << param->getb() << " " << dEdeta << " "
-               << param->getRandomSeed() << " "
-               << "N/A"
-               << " "
-               << "N/A"
-               << " "
-               << "N/A"
-               << " " << dNdetaCut << " " << dEdetaCut << " " << dNdetaCut2
-               << " " << dEdetaCut2 << " "
-               << g * g
-                      / (4. * M_PI * 4. * M_PI
-                         / (9.
-                            * log(
-                                pow(pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * param->getAverageQs() / 0.2,
-                                            2. / c),
-                                    c))))
-               << endl;
-        foutNN.close();
-
-        ofstream foutNNH(NpartdNdyH_name.c_str(), std::ios::app);
-        foutNNH << param->getNpart() << " " << dNdetaHadrons << " "
-                << param->getTpp() << " " << param->getb() << " "
-                << dEdetaHadrons << " " << param->getRandomSeed() << " "
-                << "N/A"
-                << " "
-                << "N/A"
-                << " "
-                << "N/A"
-                << " " << dNdetaHadronsCut << " " << dEdetaHadronsCut << " "
-                << dNdetaHadronsCut2 << " " << dEdetaHadronsCut2 << " "
-                << g * g
-                       / (4. * M_PI * 4. * M_PI
-                          / (9.
-                             * log(pow(
-                                 pow(muZero / 0.2, 2. / c)
-                                     + pow(
-                                         param->getRunWithThisFactorTimesQs()
-                                             * param->getAverageQs() / 0.2,
-                                         2. / c),
-                                 c))))
-                << endl;
-        foutNNH.close();
-    }
-
-    for (int i = 0; i < N * N; i++) {
-        delete E1[i];
-    }
-
-    delete[] E1;
-
-    cout << " done." << endl;
-    param->setSuccess(1);
-    return 1;
-}
-
-int Evolution::correlations(
-    Lattice *lat, Group *group, Parameters *param, int it) {
-    const int N = param->getSize();
-    const int Nc = param->getNc();
-    int npos, pos;
-    double L = param->getL();
-    double a = L / N;  // lattice spacing in fm
-    double kx, ky, kt2, omega2;
-    double g = param->getg();
-    int nn[2];
-    nn[0] = N;
-    nn[1] = N;
-    double dtau = param->getdtau();
-    double nkt, nkt1, nkt2, nkt3, nkt4, nkt5, nkt6;
-    const int bins = 40;
-    const int phiBins = 16;
-    double n[bins][phiBins];  // |k_T|, phi array
-    //  double n2[bins][phiBins]; // |k_T|, phi array
-    std::vector<std::vector<double>> nkxky;  // kx, ky array
-    nkxky.resize(N);
-    for (int i = 0; i < N; i++) {
-        nkxky[i].resize(N, 0);
-    }
-    double nk[bins];  //|k_T| array
-    // double nNoMixedTerms[bins][phiBins]; //|k_T|, phi array
-    // double nkNoMixedTerms[bins]; //|k_T| array
-    // int counter[bins][phiBins];
-    int counterk[bins];
-    double dkt = 2.83 / static_cast<double>(bins);
-    double dNdeta = 0.;
-    double dNdetaNoMixedTerms = 0.;
-    double dNdeta1 = 0.;
-    double dNdeta2 = 0.;
-    double dNdeta3 = 0.;
-    double dNdeta4 = 0.;
-    double dNdeta5 = 0.;
-    double dNdeta6 = 0.;
-    double anglePhi;
-    double k;
-    double deltaPhi = 2. * M_PI / static_cast<double>(phiBins);
-
-    stringstream strCorr_name;
-    strCorr_name << "Corr" << param->getEventId() << ".dat";
-    string Corr_name;
-    Corr_name = strCorr_name.str();
-
-    stringstream strPhiMult_name;
-    strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
-    string PhiMult_name;
-    PhiMult_name = strPhiMult_name.str();
-
-    stringstream strPhiMultHad_name;
-    strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() << ".dat";
-    string PhiMultHad_name;
-    PhiMultHad_name = strPhiMultHad_name.str();
-
-    cout << "Measuring multiplicity version 2... " << endl;
-
-    // fix transverse Coulomb gauge
-    GaugeFix gaugefix;
-
-    double maxtime;
-    if (param->getInverseQsForMaxTime() == 1) {
-        maxtime = 1. / param->getAverageQs() * hbarc;
-        cout << "maximal evolution time = " << maxtime << " fm" << endl;
-    } else {
-        maxtime = param->getMaxtime();  // maxtime is in fm
-    }
-
-    //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-    gaugefix.FFTChi(fft, lat, group, param, 4000);
-    // gauge is fixed
-
-    Matrix U1(Nc, 1.);
-    Matrix U2(Nc, 1.);
-    Matrix U1dag(Nc, 1.);
-    Matrix U2dag(Nc, 1.);
-
-    Matrix **A1;
-    A1 = new Matrix *[N * N];
-    Matrix **A2;
-    A2 = new Matrix *[N * N];
-    Matrix **phi;
-    phi = new Matrix *[N * N];
-
-    Matrix **E1;
-    Matrix **E2;
-    Matrix **pi;
-    E1 = new Matrix *[N * N];
-    E2 = new Matrix *[N * N];
-    pi = new Matrix *[N * N];
-
-    for (int i = 0; i < N * N; i++) {
-        A1[i] = new Matrix(Nc, 0.);
-        A2[i] = new Matrix(Nc, 0.);
-        E1[i] = new Matrix(Nc, 0.);
-        E2[i] = new Matrix(Nc, 0.);
-        pi[i] = new Matrix(Nc, 0.);
-        phi[i] = new Matrix(Nc, 0.);
-    }
-
-    // version that determines the exact log of U1 and U2:
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-            U1 = lat->Ux[pos];
-            U2 = lat->Uy[pos];
-
-            U1.logm();
-            U2.logm();
-
-            *A1[pos] = complex<double>(0., -1.) * U1;
-            *A2[pos] = complex<double>(0., -1.) * U2;
-        }
-    }
-
-    double g2mu2A, g2mu2B, gfactor, alphas = 0., Qs = 0.;
-    double c = param->getc();
-    double muZero = param->getMuZero();
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->U[pos]
-                           * sqrt(gfactor);  // replace one of the 1/g in the
-                                             // lattice E^i by the running one
-                *E2[pos] = lat->U2[pos] * sqrt(gfactor);  // "
-                *pi[pos] = lat->Ux2[pos]
-                           * sqrt(gfactor);  // replace the only 1/g by the
-                                             // running one (physical pi goes
-                                             // like 1/g, like physical E^i)
-                *A1[pos] = *A1[pos] * sqrt(gfactor);  //"
-                *A2[pos] = *A2[pos] * sqrt(gfactor);  // "
-                *phi[pos] = lat->Uy2[pos]
-                            * sqrt(gfactor);  // replace the only 1/g by the
-                                              // running one (physical pi goes
-                                              // like 1/g, like physical E^i)
-            } else {
-                *E1[pos] = lat->U[pos];
-                *E2[pos] = lat->U2[pos];
-                *pi[pos] = lat->Ux2[pos];
-                *phi[pos] = lat->Uy2[pos];
-            }
-        }
-    }
-
-    // do Fourier transforms
-
-    fft->fftn(A1, A1, nn, 1);
-    fft->fftn(A2, A2, nn, 1);
-    fft->fftn(phi, phi, nn, 1);
-
-    fft->fftn(E1, E1, nn, 1);
-    fft->fftn(E2, E2, nn, 1);
-    fft->fftn(pi, pi, nn, 1);
-
-    for (int ik = 0; ik < bins; ik++) {
-        nk[ik] = 0.;
-        // nkNoMixedTerms[ik] = 0.;
-        counterk[ik] = 0;
-        for (int iphi = 0; iphi < phiBins; iphi++) {
-            n[ik][iphi] = 0.;
-            // n2[ik][iphi] = 0.;
-            // nNoMixedTerms[ik][iphi] = 0.;
-            //	  counter[ik][iphi]=0;
-        }
-    }
-
-    // leave out the first cell to make it symmetric
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-
-            // i=0 or j=0 have no negative k_T value available
-
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt1 =
-                        1. / sqrt(omega2) / static_cast<double>(N * N)
-                        * (1. / ((it - 0.5) * dtau)
-                           * ((((*E1[pos]) * (*E1[npos])).trace()).real()
-                              + (((*E2[pos]) * (*E2[npos])).trace()).real()));
-
-                    nkt2 = 1. / sqrt(omega2) / static_cast<double>(N * N)
-                           * (((it - 0.5) * dtau)
-                              * ((((*pi[pos]) * (*pi[npos])).trace()).real()));
-
-                    nkt3 =
-                        sqrt(omega2) / static_cast<double>(N * N)
-                        * ((it)*dtau
-                           * ((((*A1[pos]) * (*A1[npos])).trace()).real()
-                              + (((*A2[pos]) * (*A2[npos])).trace()).real()));
-
-                    nkt4 =
-                        sqrt(omega2) / static_cast<double>(N * N)
-                        * (1. / ((it)*dtau)
-                           * ((((*phi[pos]) * (*phi[npos])).trace()).real()));
-
-                    nkt5 = 1. / static_cast<double>(N * N)
-                           * (complex<double>(0., 1.)
-                              * ((*E1[pos]) * (*A1[npos])
-                                 - (*A1[pos]) * (*E1[npos])
-                                 + (*E2[pos]) * (*A2[npos])
-                                 - (*A2[pos]) * (*E2[npos]))
-                                    .trace())
-                                 .real();
-
-                    nkt6 = 1. / static_cast<double>(N * N)
-                           * (complex<double>(0., 1.)
-                              * ((*pi[pos]) * (*phi[npos])
-                                 - (*phi[pos]) * (*pi[npos]))
-                                    .trace())
-                                 .real();
-
-                    if (param->getRunWithkt() == 1) {
-                        nkt1 *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                        nkt2 *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                        nkt3 *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                        nkt4 *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                        nkt5 *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                        nkt6 *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                } else {
-                    nkt1 = 0.;
-                    nkt2 = 0.;
-                    nkt3 = 0.;
-                    nkt4 = 0.;
-                    nkt5 = 0.;
-                    nkt6 = 0.;
-                }
-
-                dNdeta1 += nkt1;
-                dNdeta2 += nkt2;
-                dNdeta3 += nkt3;
-                dNdeta4 += nkt4;
-                dNdeta5 += nkt5;
-                dNdeta6 += nkt6;
-
-                nkt = nkt1 + nkt2 + nkt3 + nkt4 + nkt5 + nkt6;
-
-                dNdeta += nkt;  // total multiplicity
-
-                nkxky[i][j] = nkt;
-            }
-        }
-    }
-
-    double latkx, latky;
-    double fracX, fracY;
-    for (int ik = 0; ik < bins; ik++) {
-        k = ik * dkt;
-        for (int iphi = 0; iphi < phiBins; iphi++) {
-            anglePhi = deltaPhi * iphi;
-
-            kx = k * cos(anglePhi);
-            ky = k * sin(anglePhi);
-
-            int i = floor(((kx) / 2 / M_PI + 0.5) * N + 1e-10);
-            int j = floor(((ky) / 2 / M_PI + 0.5) * N + 1e-10);
-
-            latkx =
-                (2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N)));
-            latky =
-                (2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N)));
-
-            fracX = (kx - latkx) / (2 * M_PI / static_cast<double>(N));
-            fracY = (ky - latky) / (2 * M_PI / static_cast<double>(N));
-
-            if (i + 1 < N && j + 1 < N)
-                n[ik][iphi] = ((1. - fracX) * (1. - fracY) * nkxky[i][j]
-                               + (fracX) * (1. - fracY) * nkxky[i + 1][j]
-                               + (1. - fracX) * (fracY)*nkxky[i][j + 1]
-                               + (fracX) * (fracY)*nkxky[i + 1][j + 1])
-                              / 2. / M_PI / 2. / M_PI * N
-                              * N;  // dkt/2/Pi/sqrt(kx*kx+ky*ky);
-            else
-                n[ik][iphi] = 0.;
-
-            if (k == 0) n[ik][iphi] = 0.;
-        }
-    }
-
-    //  double m,P;
-    // m=param->getJacobianm(); // in GeV
-    // P=0.13+0.32*pow(param->getRoots()/1000.,0.115); //in GeV
-    double result, fullResult, fullResult2;
-    fullResult = 0.;
-    fullResult2 = 0.;
-
-    for (int ik = 1; ik < bins; ik++) {
-        if (counterk[ik] > 0) {
-            nk[ik] = nk[ik] / static_cast<double>(counterk[ik]);
-        }
-        result = 0.;
-        for (int iphi = 0; iphi < phiBins; iphi++) {
-            result += n[ik][iphi] * deltaPhi;
-        }
-        fullResult += result * (ik)*dkt * dkt;
-        fullResult2 += nk[ik] * 2. * M_PI * (ik + 0.5) * dkt * dkt;
-    }
-    cout << "N=" << dNdeta << ", k integrated N=" << fullResult2 << endl;
-    cout << "N=" << dNdeta << ", k and phi integrated N=" << fullResult << endl;
-
-    // output dN/d^2k
-    ofstream foutPhiMult(PhiMult_name.c_str(), std::ios::out);
-    if (it == 1) {
-        foutPhiMult
-            << "3"
-            << " " << bins << " " << phiBins
-            << endl;  // 3 is the number of times we read out. modify if needed.
-    }
-    for (int ik = 1; ik < bins; ik += 4) {
-        for (int iphi = 0; iphi < phiBins; iphi++) {
-            foutPhiMult
-                << it * dtau * a << " " << ik * dkt / a * hbarc << " "
-                << iphi * deltaPhi << " " << n[ik][iphi] * a / hbarc * a / hbarc
-                << endl;  //<< " " << nNoMixedTerms[ik][iphi]*a/hbarc*a/hbarc <<
-                          // endl;
-        }
-    }
-    foutPhiMult.close();
-
-    // compute hadrons using fragmentation function
-
-    const int hbins = 40;
-    double Nh[hbins + 1][phiBins], Ng;
-
-    for (int ih = 0; ih <= hbins; ih++) {
-        for (int iphi = 0; iphi < phiBins; iphi++) {
-            Nh[ih][iphi] = 0.;
-        }
-    }
-    double z, frac;
-    double mypt, kt;
-    int ik;
-    int steps = 200;
-    double dz = 0.95 / static_cast<double>(steps);
-
-    for (int iphi = 0; iphi < phiBins; iphi++) {
-        for (int ih = 0; ih <= hbins; ih++) {
-            mypt = ih * dkt / a * hbarc;  //(10./static_cast<double>(hbins)); //
-                                          // the hadron's p_T
-
-            for (int iz = 0; iz < steps; iz++) {
-                z = 0.05 + iz * dz;
-
-                kt = mypt / z;  // the gluon's k_T
-
-                ik = static_cast<int>(
-                    floor(kt * a / hbarc / dkt - 0.5 + 0.00000001));
-
-                frac = (kt - (ik + 0.5) * dkt / a * hbarc) / (dkt / a * hbarc);
-
-                if (ik + 1 < bins && ik >= 0) {
-                    Ng = ((1. - frac) * n[ik][iphi] + frac * n[ik + 1][iphi])
-                         * a / hbarc * a
-                         / hbarc;  // to make dN/d^2k_T fo k_T in GeV
-                    if (kt > 2) Ng *= exp(-(kt - 2) * 0.5);
-                } else
-                    Ng = 0.;
-
-                if (param->getUsePseudoRapidity() == 0) {
-                    if (z == 0.05 || z == 1.) {
-                        Nh[ih][iphi] +=
-                            1. / (z * z) * Ng * kkp(7, 1, z, kt) * dz * 0.5;
-                    } else {
-                        Nh[ih][iphi] +=
-                            1. / (z * z) * Ng * kkp(7, 1, z, kt) * dz;
-                    }
-                } else {
-                    if (z == 0.05 || z == 1.) {
-                        Nh[ih][iphi] +=
-                            1. / (z * z) * Ng * 2.
-                            * (kkp(1, 1, z, kt) * cosh(param->getRapidity())
-                                   / (sqrt(
-                                       pow(cosh(param->getRapidity()), 2.)
-                                       + m_pion * m_pion / (mypt * mypt)))
-                               + kkp(2, 1, z, kt) * cosh(param->getRapidity())
-                                     / (sqrt(
-                                         pow(cosh(param->getRapidity()), 2.)
-                                         + m_kaon * m_kaon / (mypt * mypt)))
-                               + kkp(4, 1, z, kt) * cosh(param->getRapidity())
-                                     / (sqrt(
-                                         pow(cosh(param->getRapidity()), 2.)
-                                         + m_proton * m_proton
-                                               / (mypt * mypt))))
-                            * dz * 0.5;
-                    } else {
-                        Nh[ih][iphi] +=
-                            1. / (z * z) * Ng * 2.
-                            * (kkp(1, 1, z, kt) * cosh(param->getRapidity())
-                                   / (sqrt(
-                                       pow(cosh(param->getRapidity()), 2.)
-                                       + m_pion * m_pion / (mypt * mypt)))
-                               + kkp(2, 1, z, kt) * cosh(param->getRapidity())
-                                     / (sqrt(
-                                         pow(cosh(param->getRapidity()), 2.)
-                                         + m_kaon * m_kaon / (mypt * mypt)))
-                               + kkp(4, 1, z, kt) * cosh(param->getRapidity())
-                                     / (sqrt(
-                                         pow(cosh(param->getRapidity()), 2.)
-                                         + m_proton * m_proton
-                                               / (mypt * mypt))))
-                            * dz;
-                    }
-                }
-            }
-        }
-    }
-    // output dN/d^2k
-    ofstream foutPhiMultHad(PhiMultHad_name.c_str(), std::ios::out);
-    if (it == 1) {
-        foutPhiMultHad
-            << "3"
-            << " " << hbins << " " << phiBins
-            << endl;  // 3 is the number of times we read out. modify if needed.
-    }
-    for (int ih = 0; ih < hbins; ih++) {
-        for (int iphi = 0; iphi < phiBins; iphi++) {
-            foutPhiMultHad << it * dtau * a << " " << ih * dkt / a * hbarc
-                           << " " << iphi * deltaPhi << " " << Nh[ih][iphi]
-                           << endl;
-        }
-    }
-    foutPhiMultHad.close();
-
-    ofstream foutCorr(Corr_name.c_str(), std::ios::out);
-    foutCorr << it * dtau * a << " " << dNdeta1 << " " << dNdeta2 << " "
-             << dNdeta3 << " " << dNdeta4 << " " << dNdeta5 << " " << dNdeta6
-             << " " << dNdeta << " " << dNdetaNoMixedTerms << endl;
-    foutCorr.close();
-
-    for (int i = 0; i < N * N; i++) {
-        delete E1[i];
-        delete E2[i];
-        delete pi[i];
-        delete A1[i];
-        delete A2[i];
-        delete phi[i];
-    }
-
-    delete[] E1;
-    delete[] E2;
-    delete[] pi;
-    delete[] A1;
-    delete[] A2;
-    delete[] phi;
 
     cout << " done." << endl;
     param->setSuccess(1);

@@ -1,7 +1,7 @@
 // Copyright Chun Shen @ 2017
 // This class is inspired by the JetScapeLogger class written by Joern Putschke
 
-#include "pretty_ostream.h"
+#include "PrettyOstream.h"
 
 #include <sys/resource.h>
 #include <sys/time.h>
@@ -15,50 +15,50 @@ using std::cout;
 using std::endl;
 using std::string;
 
-pretty_ostream::pretty_ostream() {}
+PrettyOstream::PrettyOstream() {}
 
-pretty_ostream::~pretty_ostream() {}
+PrettyOstream::~PrettyOstream() {}
 
 //! This function flushes out message to the screen
-void pretty_ostream::flush(string type) {
+void PrettyOstream::flush(string type) {
     std::transform(type.begin(), type.end(), type.begin(), ::tolower);
     if (type == "info") {
-        info(message_stream.str());
+        info(messageStream_.str());
     } else if (type == "warning") {
-        warning(message_stream.str());
+        warning(messageStream_.str());
     } else if (type == "error") {
-        error(message_stream.str());
+        error(messageStream_.str());
     } else if (type == "debug") {
-        debug(message_stream.str());
+        debug(messageStream_.str());
     }
-    message_stream.str("");
-    message_stream.clear();
+    messageStream_.str("");
+    messageStream_.clear();
 }
 
 //! This function output information message
-void pretty_ostream::info(string message) {
-    cout << "[Info] " << get_memory_usage() << " " << message << endl;
+void PrettyOstream::info(string message) {
+    cout << "[Info] " << getMemoryUsage() << " " << message << endl;
 }
 
 //! This function output debug message
-void pretty_ostream::debug(string message) {
-    cout << CYAN << "[Debug] " << get_memory_usage() << " " << message << RESET
+void PrettyOstream::debug(string message) {
+    cout << CYAN << "[Debug] " << getMemoryUsage() << " " << message << RESET
          << endl;
 }
 
 //! This function output warning message
-void pretty_ostream::warning(string message) {
+void PrettyOstream::warning(string message) {
     cout << BOLD << YELLOW << "[Warning] " << message << RESET << endl;
 }
 
 //! This function output error message
-void pretty_ostream::error(string message) {
+void PrettyOstream::error(string message) {
     cout << BOLD << RED << "[Error] " << message << RESET << endl;
 }
 
 //! This function returns a string for the memory usage
 //! of the current program in MB
-string pretty_ostream::get_memory_usage() {
+string PrettyOstream::getMemoryUsage() {
     struct rusage usage;
     if (getrusage(RUSAGE_SELF, &usage) == 0) {
         double memory_usage_in_MB = 0.0;

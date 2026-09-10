@@ -67,49 +67,13 @@
    email: m-mat @ math.sci.hiroshima-u.ac.jp (remove spaces)
 */
 
-/* initializes mt[NN] with a seed */
+/* initializes mt_[NN] with a seed */
 void Random::init_genrand64(unsigned long long seed) {
-    mt[0] = seed;
-    for (mti = 1; mti < NN; mti++)
-        mt[mti] =
-            (6364136223846793005ULL * (mt[mti - 1] ^ (mt[mti - 1] >> 62))
-             + mti);
-}
-
-/* initialize by an array with array-length */
-/* init_key is the array for initializing keys */
-/* key_length is its length */
-void Random::init_by_array64(
-    unsigned long long init_key[], unsigned long long key_length) {
-    unsigned long long i, j, k;
-    init_genrand64(19650218ULL);
-    i = 1;
-    j = 0;
-    k = (NN > key_length ? NN : key_length);
-    for (; k; k--) {
-        mt[i] =
-            (mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >> 62)) * 3935559000370003845ULL))
-            + init_key[j] + j; /* non linear */
-        i++;
-        j++;
-        if (i >= NN) {
-            mt[0] = mt[NN - 1];
-            i = 1;
-        }
-        if (j >= key_length) j = 0;
-    }
-    for (k = NN - 1; k; k--) {
-        mt[i] =
-            (mt[i] ^ ((mt[i - 1] ^ (mt[i - 1] >> 62)) * 2862933555777941757ULL))
-            - i; /* non linear */
-        i++;
-        if (i >= NN) {
-            mt[0] = mt[NN - 1];
-            i = 1;
-        }
-    }
-
-    mt[0] = 1ULL << 63; /* MSB is 1; assuring non-zero initial array */
+    mt_[0] = seed;
+    for (mti_ = 1; mti_ < NN; mti_++)
+        mt_[mti_] =
+            (6364136223846793005ULL * (mt_[mti_ - 1] ^ (mt_[mti_ - 1] >> 62))
+             + mti_);
 }
 
 void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
@@ -117,34 +81,34 @@ void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
     std::size_t produced = 0;
 
     while (produced < count) {
-        if (mti >= NN) {
-            if (mti == NN + 1) init_genrand64(5489ULL);
+        if (mti_ >= NN) {
+            if (mti_ == NN + 1) init_genrand64(5489ULL);
 
             int i = 0;
             unsigned long long x;
             for (; i < NN - MM; ++i) {
-                x = (mt[i] & UM) | (mt[i + 1] & LM);
-                mt[i] =
-                    mt[i + MM] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+                x = (mt_[i] & UM) | (mt_[i + 1] & LM);
+                mt_[i] =
+                    mt_[i + MM] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
             }
             for (; i < NN - 1; ++i) {
-                x = (mt[i] & UM) | (mt[i + 1] & LM);
-                mt[i] = mt[i + (MM - NN)] ^ (x >> 1)
-                        ^ mag01[static_cast<int>(x & 1ULL)];
+                x = (mt_[i] & UM) | (mt_[i + 1] & LM);
+                mt_[i] = mt_[i + (MM - NN)] ^ (x >> 1)
+                         ^ mag01[static_cast<int>(x & 1ULL)];
             }
-            x = (mt[NN - 1] & UM) | (mt[0] & LM);
-            mt[NN - 1] =
-                mt[MM - 1] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
-            mti = 0;
+            x = (mt_[NN - 1] & UM) | (mt_[0] & LM);
+            mt_[NN - 1] =
+                mt_[MM - 1] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+            mti_ = 0;
         }
 
-        const std::size_t available = static_cast<std::size_t>(NN - mti);
+        const std::size_t available = static_cast<std::size_t>(NN - mti_);
         const std::size_t remaining = count - produced;
         const std::size_t take =
             (remaining < available) ? remaining : available;
         std::memcpy(
-            out + produced, mt + mti, take * sizeof(unsigned long long));
-        mti += static_cast<int>(take);
+            out + produced, mt_ + mti_, take * sizeof(unsigned long long));
+        mti_ += static_cast<int>(take);
         produced += take;
     }
 }
@@ -155,27 +119,27 @@ unsigned long long Random::genrand64_int64(void) {
     unsigned long long x;
     static unsigned long long mag01[2] = {0ULL, MATRIX_A};
 
-    if (mti >= NN) { /* generate NN words at one time */
+    if (mti_ >= NN) { /* generate NN words at one time */
 
         /* if init_genrand64() has not been called, */
         /* a default initial seed is used     */
-        if (mti == NN + 1) init_genrand64(5489ULL);
+        if (mti_ == NN + 1) init_genrand64(5489ULL);
 
         for (i = 0; i < NN - MM; i++) {
-            x = (mt[i] & UM) | (mt[i + 1] & LM);
-            mt[i] = mt[i + MM] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
+            x = (mt_[i] & UM) | (mt_[i + 1] & LM);
+            mt_[i] = mt_[i + MM] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
         }
         for (; i < NN - 1; i++) {
-            x = (mt[i] & UM) | (mt[i + 1] & LM);
-            mt[i] = mt[i + (MM - NN)] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
+            x = (mt_[i] & UM) | (mt_[i + 1] & LM);
+            mt_[i] = mt_[i + (MM - NN)] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
         }
-        x = (mt[NN - 1] & UM) | (mt[0] & LM);
-        mt[NN - 1] = mt[MM - 1] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
+        x = (mt_[NN - 1] & UM) | (mt_[0] & LM);
+        mt_[NN - 1] = mt_[MM - 1] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
 
-        mti = 0;
+        mti_ = 0;
     }
 
-    x = mt[mti++];
+    x = mt_[mti_++];
 
     x ^= (x >> 29) & 0x5555555555555555ULL;
     x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
@@ -205,58 +169,48 @@ double Random::genrand64_real3(void) {
     return ((genrand64_int64() >> 12) + 0.5) * (1.0 / 4503599627370496.0);
 }
 
-double Random::Gauss2(double mean, double sigma) {
-    double x, y, z, result;
-    do {
-        y = genrand64_real3();
-    } while (!y);
-    z = genrand64_real3();
-    x = z * 6.283185;
-    result = mean + sigma * sin(x) * sqrt(-2. * log(y));
-    return result;
-}
-
-double Random::Gauss(double mean, double width) {
+double Random::gauss(double mean, double width) {
     // produces random numbers with distribution
     // p(y)dy  = 1/\sqrt{2\pi \sigma^2} exp(-(y-\mu)^2/(2\sigma^2)) dy
 
     // default is \mu=0, \sigma = 1
 
-    // if iset=0, generate both random numbers new, else use the unused one from
-    // the previous step. this saves lots of time.
+    // if iset_=0, generate both random numbers new, else use the unused one
+    // from the previous step. this saves lots of time.
     double fac, rsq, v1, v2;
 
-    // if(idum<0) iset=0;
+    // if(idum<0) iset_=0;
 
-    if (iset == 0) {
+    if (iset_ == 0) {
         do {
             v1 = 2.0 * genrand64_real3() - 1.0;
             v2 = 2.0 * genrand64_real3() - 1.0;
             rsq = v1 * v1 + v2 * v2;
         } while (rsq > 1. || rsq == 0.);
         fac = sqrt(-2.0 * log(rsq) / rsq);
-        gset = v1 * fac;
-        iset = 1;
+        gset_ = v1 * fac;
+        iset_ = 1;
         return mean + width * v2 * fac;
     } else {
-        iset = 0;
-        return mean + width * gset;
+        iset_ = 0;
+        return mean + width * gset_;
     }
 }
 
-void Random::GaussBulk(
+void Random::gaussBulk(
     double *out, std::size_t count, std::vector<double> &scratch) {
     if (count == 0) return;
 
-    // Preserve the exact scalar Gauss() stream, including the cached partner
-    // in gset/iset. Generate candidate polar pairs in ordered rejection rounds:
-    // if R accepted pairs are still required, draw exactly R candidates.  If
-    // some are rejected, the next round draws exactly the number still needed.
-    // Consequently no MT word is consumed beyond the scalar stopping point.
+    // Preserve the exact scalar gauss() stream, including the cached partner
+    // in gset_/iset_. Generate candidate polar pairs in ordered rejection
+    // rounds: if R accepted pairs are still required, draw exactly R
+    // candidates.  If some are rejected, the next round draws exactly the
+    // number still needed. Consequently no MT word is consumed beyond the
+    // scalar stopping point.
     std::size_t outOffset = 0;
-    if (iset != 0) {
-        out[outOffset++] = gset;
-        iset = 0;
+    if (iset_ != 0) {
+        out[outOffset++] = gset_;
+        iset_ = 0;
         if (outOffset == count) return;
     }
 
@@ -295,7 +249,7 @@ void Random::GaussBulk(
         }
 
         // Scan candidates serially in original RNG order.  This preserves the
-        // precise rejection decisions and accepted-pair ordering of Gauss().
+        // precise rejection decisions and accepted-pair ordering of gauss().
         for (std::size_t pair = 0; pair < needed; ++pair) {
             const double v1 = 2.0 * uniforms[2 * pair] - 1.0;
             const double v2 = 2.0 * uniforms[2 * pair + 1] - 1.0;
@@ -336,8 +290,8 @@ void Random::GaussBulk(
         const double rsq = accepted[base + 2];
         const double fac = sqrt(-2.0 * log(rsq) / rsq);
         out[count - 1] = v2 * fac;
-        gset = v1 * fac;
-        iset = 1;
+        gset_ = v1 * fac;
+        iset_ = 1;
     }
 
     if (profile) {
@@ -385,36 +339,9 @@ double Random::sampleGammaInc() {
 }
 
 void Random::gslRandomInit(unsigned long long seed) {
-    gsl_rng_set(gslRandom, seed);
+    gsl_rng_set(gslRandom_, seed);
 }
 
-double Random::NBD(double nbar, double k) {
-    double p = k / (nbar + k);
-    double n = k;
-
-    return gsl_ran_negative_binomial(gslRandom, p, n);
-}
-
-int Random::Poisson(const double mean) {
-    return (gsl_ran_poisson(gslRandom, mean));
-}
-
-double Random::tdist(double nu) {
-    // produces random numbers with distribution
-    // p(x) dx = {\Gamma((\nu + 1)/2) \over \sqrt{\pi \nu} \Gamma(\nu/2)}
-    //           (1 + x^2/\nu)^{-(\nu + 1)/2} dx
-    // with mean 0 and variance nu/(nu-2)
-    // however, I take care of that variance when returning the value, so that
-    // variance is always 1
-
-    if (nu <= 2) {
-        std::cerr << "nu has to be > 2. Exiting." << std::endl;
-        exit(1);
-    }
-
-    double f;
-
-    f = sqrt((nu - 2.) / nu) * gsl_ran_tdist(gslRandom, nu);
-
-    return f;
+int Random::poisson(const double mean) {
+    return (gsl_ran_poisson(gslRandom_, mean));
 }

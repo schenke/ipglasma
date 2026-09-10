@@ -11,105 +11,28 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 using std::cerr;
 using std::cout;
 using std::endl;
-using std::vector;
 
 static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
     "Matrix must remain an exact contiguous complex<double>[9]");
 
-namespace {
-
-inline void requireSU3Dimension(int n) {
-    if (n != 3) {
-        std::cerr << "Error: fixed Matrix is SU(3)-only; requested " << n << "x"
-                  << n << " matrix. Exiting." << std::endl;
-        std::exit(1);
-    }
-}
-
-}  // namespace
-
 Matrix::Matrix() {
-    for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
+    for (int i = 0; i < 9; ++i) e_[i] = complex<double>(0.0, 0.0);
 }
 
-Matrix::Matrix(int n) {
-    requireSU3Dimension(n);
-    for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
+Matrix::Matrix(double a) {
+    for (int i = 0; i < 9; ++i) e_[i] = complex<double>(0.0, 0.0);
+    e_[0] = complex<double>(a, 0.0);
+    e_[4] = complex<double>(a, 0.0);
+    e_[8] = complex<double>(a, 0.0);
 }
 
-Matrix::Matrix(int n, double a) {
-    requireSU3Dimension(n);
-    for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
-    e[0] = complex<double>(a, 0.0);
-    e[4] = complex<double>(a, 0.0);
-    e[8] = complex<double>(a, 0.0);
-}
-
-Matrix::Matrix(int n, NoInitTag) { requireSU3Dimension(n); }
-
-// MaxTr version of reunitarization
-void Matrix::reu2() {
-    Matrix A1(3, 0.);
-    Matrix A2(3, 0.);
-    Matrix A3(3, 0.);
-
-    Matrix G(3);
-    Matrix E(3);
-
-    for (int i = 0; i < 10; i++) {
-        E = *this;
-        complex<double> N1 = sqrt(
-            (conj(e[0]) + e[4]) * conj(conj(e[0]) + e[4])
-            + (conj(e[3]) - e[1]) * conj(conj(e[3]) - e[1]));
-        complex<double> N2 = sqrt(
-            (conj(e[0]) + e[8]) * conj(conj(e[0]) + e[8])
-            + (conj(e[6]) - e[2]) * conj(conj(e[6]) - e[2]));
-        complex<double> N3 = sqrt(
-            (conj(e[4]) + e[8]) * conj(conj(e[4]) + e[8])
-            + (conj(e[7]) - e[5]) * conj(conj(e[7]) - e[5]));
-
-        G = (1. / N1) * E;
-        A1.set(0, 0, conj(G(0)) + G(4));
-        A1.set(0, 1, -G(1) + conj(G(3)));
-        A1.set(0, 2, 0.);
-        A1.set(1, 0, conj(G(1)) - G(3));
-        A1.set(1, 1, G(0) + conj(G(4)));
-        A1.set(1, 2, 0.);
-        A1.set(2, 0, 0.);
-        A1.set(2, 1, 0.);
-        A1.set(2, 2, 1.);
-
-        G = (1. / N2) * E;
-        A2.set(0, 0, conj(G(0)) + G(8));
-        A2.set(0, 1, 0.);
-        A2.set(0, 2, -G(2) + conj(G(6)));
-        A2.set(1, 0, 0.);
-        A2.set(1, 1, 1.);
-        A2.set(1, 2, 0.);
-        A2.set(2, 0, conj(G(2)) - G(6));
-        A2.set(2, 1, 0.);
-        A2.set(2, 2, G(0) + conj(G(8)));
-
-        G = (1. / N3) * E;
-        A3.set(0, 0, 1.);
-        A3.set(0, 1, 0.);
-        A3.set(0, 2, 0.);
-        A3.set(1, 0, 0.);
-        A3.set(1, 1, conj(G(4)) + G(8));
-        A3.set(1, 2, -G(5) + conj(G(7)));
-        A3.set(2, 0, 0.);
-        A3.set(2, 1, conj(G(5)) - G(7));
-        A3.set(2, 2, G(4) + conj(G(8)));
-
-        *this = A1 * A2 * A3;
-    }
-}
+Matrix::Matrix(NoInitTag) {}
 
 // operators:
 
 Matrix operator*(const Matrix &a, const Matrix &b) {
-    Matrix c(3, Matrix::noInit);
+    Matrix c(Matrix::noInit);
     const complex<double> *A = a.data();
     const complex<double> *B = b.data();
     complex<double> *C = c.data();
@@ -127,28 +50,28 @@ Matrix operator*(const Matrix &a, const Matrix &b) {
 
 //-
 Matrix operator-(const Matrix &a, const Matrix &b) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) - b(i));
     return aa;
 }
 
 //+
 Matrix operator+(const Matrix &a, const Matrix &b) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) + b(i));
     return aa;
 }
 
 //* multiply by a real scalar
 Matrix operator*(const Matrix &a, const double s) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) {
         aa.set(i, a(i) * s);
     }
     return aa;
 }
 Matrix operator*(const double s, const Matrix &a) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) {
         aa.set(i, a(i) * s);
     }
@@ -157,7 +80,7 @@ Matrix operator*(const double s, const Matrix &a) {
 
 //* multiply by a complex number
 Matrix operator*(const complex<double> s, const Matrix &a) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) {
         aa.set(i, a(i) * s);
     }
@@ -166,29 +89,29 @@ Matrix operator*(const complex<double> s, const Matrix &a) {
 
 // / division by scalar
 Matrix operator/(const Matrix &a, const double s) {
-    Matrix aa(a.getNDim(), Matrix::noInit);
+    Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) / s);
     return aa;
 }
 
 Matrix &Matrix::conjg() {
-    const complex<double> a01 = e[1];
-    const complex<double> a02 = e[2];
-    const complex<double> a12 = e[5];
-    e[0] = conj(e[0]);
-    e[4] = conj(e[4]);
-    e[8] = conj(e[8]);
-    e[1] = conj(e[3]);
-    e[2] = conj(e[6]);
-    e[5] = conj(e[7]);
-    e[3] = conj(a01);
-    e[6] = conj(a02);
-    e[7] = conj(a12);
+    const complex<double> a01 = e_[1];
+    const complex<double> a02 = e_[2];
+    const complex<double> a12 = e_[5];
+    e_[0] = conj(e_[0]);
+    e_[4] = conj(e_[4]);
+    e_[8] = conj(e_[8]);
+    e_[1] = conj(e_[3]);
+    e_[2] = conj(e_[6]);
+    e_[5] = conj(e_[7]);
+    e_[3] = conj(a01);
+    e_[6] = conj(a02);
+    e_[7] = conj(a12);
     return *this;
 }
 
 Matrix Matrix::prodABconj(const Matrix &a, const Matrix &b) {
-    Matrix c(3, Matrix::noInit);
+    Matrix c(Matrix::noInit);
     c.set(
         0, 0,
         a(0, 0) * conj(b(0, 0)) + a(0, 1) * conj(b(0, 1))
@@ -229,7 +152,7 @@ Matrix Matrix::prodABconj(const Matrix &a, const Matrix &b) {
 }
 
 Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
-    Matrix c(3, Matrix::noInit);
+    Matrix c(Matrix::noInit);
     c.set(
         0, 0,
         conj(a(0, 0)) * b(0, 0) + conj(a(1, 0)) * b(1, 0)
@@ -269,16 +192,9 @@ Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
     return c;
 }
 
-Matrix &Matrix::imag() {
-    Matrix dagger = *this;
-    dagger.conjg();
-    *this -= dagger;
-    return *this;
-}
-
 // matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
 // Q^a of generators t^a as argument. Dimension is Nc
-void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
+void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
     const int Nc2m1 = 8;
     double sqrt3 = sqrt(3.);
     complex<double> f0, f1, f2, iu, u0, ua[8];
@@ -380,27 +296,20 @@ void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
              - 0.5 * Q[6] * Q[6])
             / sqrt3;
 
-    result[0] = u0;
+    out[0] = u0;
     for (int i = 0; i < 8; i++) {
-        result[i + 1] = f1 * Q[i] + halfF2 * ua[i];
+        out[i + 1] = f1 * Q[i] + halfF2 * ua[i];
     }
 
     // Check potential NaNs
     for (int i = 0; i < 9; i++) {
-        if (std::isnan(result[i].real()) or std::isnan(result[i].imag())) {
+        if (std::isnan(out[i].real()) or std::isnan(out[i].imag())) {
             // Sometimes in the very low density region we may encounter
             // (numerically) 0/0 situations In that case, set coefficient to 0,
             // so this contributes only a unit matrix (=vacuum contribution)
-            result[i] = 0;
+            out[i] = 0;
         }
     }
-}
-
-vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
-    requireSU3Dimension(Nc);
-    complex<double> coeff[9];
-    expmCoeff(Q.data(), coeff);
-    return vector<complex<double>>(coeff, coeff + 9);
 }
 
 // matrix exponential using Pade approximant
@@ -408,8 +317,8 @@ vector<complex<double>> Matrix::expmCoeff(std::vector<double> &Q, int Nc) {
 // the Pade approximant (default: p=6)
 Matrix &Matrix::expm(double t, const int p) {
     const int n = this->getNDim();
-    const Matrix I(n, 1.);
-    Matrix U(n), H2(n), P(n), Q(n);
+    const Matrix I(1.);
+    Matrix U, H2, P, Q;
     double norm = 0.0;
     // Calculate Pade coefficients
     if (p < 6) {
@@ -524,31 +433,31 @@ Matrix &Matrix::expm(double t, const int p) {
 }
 
 complex<double> Matrix::det() {
-    return e[0] * e[4] * e[8] + e[1] * e[5] * e[6] + e[2] * e[3] * e[7]
-           - e[2] * e[4] * e[6] - e[1] * e[3] * e[8] - e[5] * e[7] * e[0];
+    return e_[0] * e_[4] * e_[8] + e_[1] * e_[5] * e_[6] + e_[2] * e_[3] * e_[7]
+           - e_[2] * e_[4] * e_[6] - e_[1] * e_[3] * e_[8]
+           - e_[5] * e_[7] * e_[0];
 }
 
-complex<double> Matrix::trace() const { return e[0] + e[4] + e[8]; }
+complex<double> Matrix::trace() const { return e_[0] + e_[4] + e_[8]; }
 
-complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
-    return M1(0) * M2(0) + M1(1) * M2(3) + M1(2) * M2(6) + M1(3) * M2(1)
-           + M1(4) * M2(4) + M1(5) * M2(7) + M1(6) * M2(2) + M1(7) * M2(5)
-           + M1(8) * M2(8);
+complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const {
+    return a(0) * b(0) + a(1) * b(3) + a(2) * b(6) + a(3) * b(1) + a(4) * b(4)
+           + a(5) * b(7) + a(6) * b(2) + a(7) * b(5) + a(8) * b(8);
 }
 
 std::string Matrix::MatrixToString() {
     std::stringstream output;
     output.precision(15);
-    output << e[0].real() << " " << e[0].imag() << " " << e[3].real() << " "
-           << e[3].imag() << " " << e[6].real() << " " << e[6].imag() << " "
-           << e[1].real() << " " << e[1].imag() << " " << e[4].real() << " "
-           << e[4].imag() << " " << e[7].real() << " " << e[7].imag() << " "
-           << e[2].real() << " " << e[2].imag() << " " << e[5].real() << " "
-           << e[5].imag() << " " << e[8].real() << " " << e[8].imag();
+    output << e_[0].real() << " " << e_[0].imag() << " " << e_[3].real() << " "
+           << e_[3].imag() << " " << e_[6].real() << " " << e_[6].imag() << " "
+           << e_[1].real() << " " << e_[1].imag() << " " << e_[4].real() << " "
+           << e_[4].imag() << " " << e_[7].real() << " " << e_[7].imag() << " "
+           << e_[2].real() << " " << e_[2].imag() << " " << e_[5].real() << " "
+           << e_[5].imag() << " " << e_[8].real() << " " << e_[8].imag();
     return output.str();
 }
 
-double Matrix::FrobeniusNorm() {
+double Matrix::frobeniusNorm() {
     int n = this->getNDim();
     double norm = 0.;
 
@@ -563,7 +472,7 @@ double Matrix::FrobeniusNorm() {
     return norm;
 }
 
-double Matrix::OneNorm() {
+double Matrix::oneNorm() {
     int n = this->getNDim();
     double maxColSum = 0.0;
 
@@ -582,7 +491,7 @@ double Matrix::OneNorm() {
 
 Matrix &Matrix::inv() {
     Matrix Q = *this;
-    Matrix H2(3, Matrix::noInit);
+    Matrix H2(Matrix::noInit);
     H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
     H2.set(0, 1, (Q(0, 2) * Q(2, 1) - Q(0, 1) * Q(2, 2)));
     H2.set(0, 2, (Q(0, 1) * Q(1, 2) - Q(0, 2) * Q(1, 1)));
@@ -598,14 +507,13 @@ Matrix &Matrix::inv() {
 }
 
 // Pade approximant of log(I+A) (I is unit matrix). good for A\sim I
-Matrix &Matrix::logm_pade(const int m) {
-    const int n = this->getNDim();
-    Matrix S(n, 0.);
-    Matrix A(n);
+Matrix &Matrix::logmPade(const int m) {
+    Matrix S(0.);
+    Matrix A;
     A = *this;
-    Matrix I(n, 1.);
-    Matrix D(n);     // denominator
-    Matrix invD(n);  // denominator
+    Matrix I(1.);
+    Matrix D;     // denominator
+    Matrix invD;  // denominator
     double xi;
     double wi;
     gsl_integration_glfixed_table *table;
@@ -639,13 +547,13 @@ Matrix &Matrix::sqrtm(const int scale) {
     double g;
     double Mres;
     double reldiff;
-    Matrix X(n);
-    Matrix Xold(n);
-    Matrix M(n);
-    Matrix invM(n);
-    Matrix I(n, 1.);
-    Matrix Mr(n);
-    Matrix XmXo(n);
+    Matrix X;
+    Matrix Xold;
+    Matrix M;
+    Matrix invM;
+    Matrix I(1.);
+    Matrix Mr;
+    Matrix XmXo;
 
     X = *this;
     M = *this;
@@ -667,11 +575,11 @@ Matrix &Matrix::sqrtm(const int scale) {
         M = 0.5 * (I + (M + invM) / 2.);
 
         Mr = M - I;
-        Mres = Mr.FrobeniusNorm();
+        Mres = Mr.frobeniusNorm();
 
         XmXo = X - Xold;
 
-        reldiff = XmXo.FrobeniusNorm() / X.FrobeniusNorm();
+        reldiff = XmXo.frobeniusNorm() / X.frobeniusNorm();
         if (reldiff < eps) sc = 0;  // switch to no scaling
 
         if (Mres <= tol) break;
@@ -687,14 +595,13 @@ Matrix &Matrix::sqrtm(const int scale) {
 // algorithms for the matrix logarithm, MIMS eprint 2011.83 this is not the
 // improved one, just standard.
 Matrix &Matrix::logm() {
-    const int n = this->getNDim();
-    const Matrix I(n, 1.);
-    Matrix X(n);
-    Matrix L(n);
+    const Matrix I(1.);
+    Matrix X;
+    Matrix L;
     int k, p, itk;
     double normdiff;
     int j1, j2 = 0.;
-    Matrix M(n);
+    Matrix M;
     int m;
 
     double xvals[16] = {
@@ -712,7 +619,7 @@ Matrix &Matrix::logm() {
 
     while (1) {
         M = X - I;
-        normdiff = M.OneNorm();
+        normdiff = M.oneNorm();
 
         if (normdiff <= xvals[15]) {
             p = p + 1;
@@ -745,7 +652,7 @@ Matrix &Matrix::logm() {
     }  // while(1) loop
 
     L = X - I;
-    L.logm_pade(m);
+    L.logmPade(m);
 
     X = pow(2., k) * L;
 

@@ -13,13 +13,13 @@
 #include <vector>
 
 #include "Instrumentation.h"
-#include "Phys_consts.h"
+#include "PhysConst.h"
 #include "gsl/gsl_complex.h"
 #include "gsl/gsl_complex_math.h"
 #include "gsl/gsl_eigen.h"
 
 using PhysConst::hbarc;
-using PhysConst::small_eps;
+using PhysConst::smallEps;
 
 using std::cout;
 using std::endl;
@@ -1196,7 +1196,7 @@ void MyEigen::flowVelocity4DImpl(
                     resultTetaeta = (1. - fracy) * x1 + fracy * x2;
 
                     double values[10];
-                    if (resultT00 * gfactor * hbarc > small_eps) {
+                    if (resultT00 * gfactor * hbarc > smallEps) {
                         values[0] = resultT00 * gfactor * hbarc;
                         values[1] = resultTxx * gfactor * hbarc;
                         values[2] = resultTyy * gfactor * hbarc;
@@ -1209,9 +1209,9 @@ void MyEigen::flowVelocity4DImpl(
                         values[8] = -tau0 * resultTyeta * gfactor * hbarc;
                         values[9] = -tau0 * resultTxeta * gfactor * hbarc;
                     } else {
-                        values[0] = small_eps;
-                        values[1] = small_eps / 2.;
-                        values[2] = small_eps / 2.;
+                        values[0] = smallEps;
+                        values[1] = smallEps / 2.;
+                        values[2] = smallEps / 2.;
                         for (int component = 3; component < 10; ++component) {
                             values[component] = 0.0;
                         }
@@ -1231,16 +1231,9 @@ void MyEigen::flowVelocity4DImpl(
                         foutEps1 << '\n';
                     }
                 } else {
-                    double values[10] = {small_eps,
-                                         small_eps / 2.,
-                                         small_eps / 2.,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0};
+                    double values[10] = {
+                        smallEps, smallEps / 2., smallEps / 2., 0.0, 0.0,
+                        0.0,      0.0,           0.0,           0.0, 0.0};
                     if (writeBinaryTmunu) {
                         const std::size_t offset =
                             static_cast<std::size_t>(ix) * 10u;
@@ -1517,100 +1510,4 @@ void MyEigen::flowVelocity4DImpl(
     }
     cout << "Wrote outputs" << endl;
     // done output for hydro
-}
-
-void MyEigen::test() {
-    gsl_complex square;
-    gsl_complex factor;
-    gsl_complex euklidiansquare;
-    GSL_SET_COMPLEX(&square, 0, 0);
-
-    double data[] = {0.1,     -0.001, -0.01,   0.001, -0.1,
-                     -0.0001, 0.01,   -0.0001, -0.1};
-
-    gsl_matrix_view m = gsl_matrix_view_array(data, 3, 3);  // matrix
-
-    gsl_vector_complex *eval = gsl_vector_complex_alloc(
-        3);  // eigenvalues are components of this vector
-    gsl_matrix_complex *evec = gsl_matrix_complex_alloc(
-        3, 3);  // eigenvectors are columns of this matrix
-
-    gsl_eigen_nonsymmv_workspace *w = gsl_eigen_nonsymmv_alloc(3);  // workspace
-
-    gsl_eigen_nonsymmv(
-        &m.matrix, eval, evec,
-        w);  // solve for eigenvalues and eigenvectors (without 'v'
-             // only compute eigenvalues)
-
-    gsl_eigen_nonsymmv_free(w);  // free memory associated with workspace
-
-    {  // output:
-        int i;
-
-        for (i = 0; i < 3; i++) {
-            gsl_complex eval_i = gsl_vector_complex_get(eval, i);
-            gsl_vector_complex_view evec_i = gsl_matrix_complex_column(evec, i);
-
-            printf(
-                "before eigenvalue = %g + %gi\n", GSL_REAL(eval_i),
-                GSL_IMAG(eval_i));
-            GSL_SET_COMPLEX(&square, 0, 0);
-            GSL_SET_COMPLEX(&euklidiansquare, 0, 0);
-
-            for (int j = 0; j < 3; ++j) {
-                gsl_complex z = gsl_vector_complex_get(&evec_i.vector, j);
-                printf("%g + %gi\n", GSL_REAL(z), GSL_IMAG(z));
-                euklidiansquare =
-                    gsl_complex_add(euklidiansquare, gsl_complex_mul(z, z));
-
-                if (j == 0)
-                    square = gsl_complex_add(square, gsl_complex_mul(z, z));
-                else
-                    square = gsl_complex_sub(square, gsl_complex_mul(z, z));
-            }
-
-            if (GSL_REAL(square) > 0)
-                printf(
-                    "before u_mu u^mu = %g + %gi\n", GSL_REAL(square),
-                    GSL_IMAG(square));
-            else
-                printf(
-                    "before z_mu z^mu = %g + %gi\n", GSL_REAL(square),
-                    GSL_IMAG(square));
-
-            GSL_SET_COMPLEX(
-                &factor,
-                sqrt(abs(GSL_REAL(euklidiansquare) / GSL_REAL(square))), 0);
-            printf(
-                "eigenvalue = %g + %gi\n", GSL_REAL(eval_i), GSL_IMAG(eval_i));
-
-            GSL_SET_COMPLEX(&square, 0, 0);
-
-            for (int j = 0; j < 3; ++j) {
-                gsl_complex z = gsl_vector_complex_get(&evec_i.vector, j);
-                z = gsl_complex_mul(z, factor);
-
-                printf("%g + %gi\n", GSL_REAL(z), GSL_IMAG(z));
-
-                if (j == 0)
-                    square = gsl_complex_add(square, gsl_complex_mul(z, z));
-                else
-                    square = gsl_complex_sub(square, gsl_complex_mul(z, z));
-            }
-
-            if (GSL_REAL(square) > 0)
-                printf(
-                    "u_mu u^mu = %g + %gi\n", GSL_REAL(square),
-                    GSL_IMAG(square));
-            else
-                printf(
-                    "z_mu z^mu = %g + %gi\n", GSL_REAL(square),
-                    GSL_IMAG(square));
-        }
-    }
-
-    gsl_vector_complex_free(eval);
-    gsl_matrix_complex_free(evec);
-
-    exit(1);
 }

@@ -1,111 +1,111 @@
-#ifndef Cell_h
-#define Cell_h
+#ifndef SRC_CELL_H_
+#define SRC_CELL_H_
 
 // Scalar per-site state. Fundamental SU(3) matrices are intentionally not
 // stored here; they live in contiguous structure-of-arrays fields on Lattice.
 class Cell {
   private:
-    double epsilon;
+    double epsilon_;
 
-    double g2mu2A;
-    double TpA;
-    double g2mu2B;
-    double TpB;
+    double g2mu2A_;
+    double TpA_;
+    double g2mu2B_;
+    double TpB_;
 
-    double Ttautau;
-    double Txx;
-    double Tyy;
-    double Txy;
-    double Tetaeta;
-    double Ttaux;
-    double Ttauy;
-    double Ttaueta;
-    double Txeta;
-    double Tyeta;
+    double Ttautau_;
+    double Txx_;
+    double Tyy_;
+    double Txy_;
+    double Tetaeta_;
+    double Ttaux_;
+    double Ttauy_;
+    double Ttaueta_;
+    double Txeta_;
+    double Tyeta_;
 
-    double pitautau;
-    double pixx;
-    double piyy;
-    double pixy;
-    double pietaeta;
-    double pitaux;
-    double pitauy;
-    double pitaueta;
-    double pixeta;
-    double piyeta;
+    double pitautau_;
+    double pixx_;
+    double piyy_;
+    double pixy_;
+    double pietaeta_;
+    double pitaux_;
+    double pitauy_;
+    double pitaueta_;
+    double pixeta_;
+    double piyeta_;
 
-    double utau;
-    double ux;
-    double uy;
-    double ueta;
+    double utau_;
+    double ux_;
+    double uy_;
+    double ueta_;
 
   public:
-    explicit Cell(int Nc);
+    Cell();
     ~Cell() = default;
 
-    void setg2mu2A(double in) { g2mu2A = in; }
-    void setg2mu2B(double in) { g2mu2B = in; }
-    double getg2mu2A() const { return g2mu2A; }
-    double getg2mu2B() const { return g2mu2B; }
+    void setg2mu2A(double x) { g2mu2A_ = x; }
+    void setg2mu2B(double x) { g2mu2B_ = x; }
+    double getg2mu2A() const { return g2mu2A_; }
+    double getg2mu2B() const { return g2mu2B_; }
 
-    void setTpA(double in) { TpA = in; }
-    void setTpB(double in) { TpB = in; }
-    double getTpA() const { return TpA; }
-    double getTpB() const { return TpB; }
+    void setTpA(double x) { TpA_ = x; }
+    void setTpB(double x) { TpB_ = x; }
+    double getTpA() const { return TpA_; }
+    double getTpB() const { return TpB_; }
 
-    void setEpsilon(double in) { epsilon = in; }
-    double getEpsilon() const { return epsilon; }
+    void setEpsilon(double x) { epsilon_ = x; }
+    double getEpsilon() const { return epsilon_; }
 
-    void setTtautau(double in) { Ttautau = in; }
-    double getTtautau() const { return Ttautau; }
-    void setTxx(double in) { Txx = in; }
-    double getTxx() const { return Txx; }
-    void setTyy(double in) { Tyy = in; }
-    double getTyy() const { return Tyy; }
-    void setTxy(double in) { Txy = in; }
-    double getTxy() const { return Txy; }
-    void setTetaeta(double in) { Tetaeta = in; }
-    double getTetaeta() const { return Tetaeta; }
-    void setTtaux(double in) { Ttaux = in; }
-    double getTtaux() const { return Ttaux; }
-    void setTtauy(double in) { Ttauy = in; }
-    double getTtauy() const { return Ttauy; }
-    void setTtaueta(double in) { Ttaueta = in; }
-    double getTtaueta() const { return Ttaueta; }
-    void setTxeta(double in) { Txeta = in; }
-    double getTxeta() const { return Txeta; }
-    void setTyeta(double in) { Tyeta = in; }
-    double getTyeta() const { return Tyeta; }
+    void setTtautau(double x) { Ttautau_ = x; }
+    double getTtautau() const { return Ttautau_; }
+    void setTxx(double x) { Txx_ = x; }
+    double getTxx() const { return Txx_; }
+    void setTyy(double x) { Tyy_ = x; }
+    double getTyy() const { return Tyy_; }
+    void setTxy(double x) { Txy_ = x; }
+    double getTxy() const { return Txy_; }
+    void setTetaeta(double x) { Tetaeta_ = x; }
+    double getTetaeta() const { return Tetaeta_; }
+    void setTtaux(double x) { Ttaux_ = x; }
+    double getTtaux() const { return Ttaux_; }
+    void setTtauy(double x) { Ttauy_ = x; }
+    double getTtauy() const { return Ttauy_; }
+    void setTtaueta(double x) { Ttaueta_ = x; }
+    double getTtaueta() const { return Ttaueta_; }
+    void setTxeta(double x) { Txeta_ = x; }
+    double getTxeta() const { return Txeta_; }
+    void setTyeta(double x) { Tyeta_ = x; }
+    double getTyeta() const { return Tyeta_; }
 
-    void setpitautau(double in) { pitautau = in; }
-    double getpitautau() const { return pitautau; }
-    void setpixx(double in) { pixx = in; }
-    double getpixx() const { return pixx; }
-    void setpiyy(double in) { piyy = in; }
-    double getpiyy() const { return piyy; }
-    void setpixy(double in) { pixy = in; }
-    double getpixy() const { return pixy; }
-    void setpietaeta(double in) { pietaeta = in; }
-    double getpietaeta() const { return pietaeta; }
-    void setpitaux(double in) { pitaux = in; }
-    double getpitaux() const { return pitaux; }
-    void setpitauy(double in) { pitauy = in; }
-    double getpitauy() const { return pitauy; }
-    void setpitaueta(double in) { pitaueta = in; }
-    double getpitaueta() const { return pitaueta; }
-    void setpixeta(double in) { pixeta = in; }
-    double getpixeta() const { return pixeta; }
-    void setpiyeta(double in) { piyeta = in; }
-    double getpiyeta() const { return piyeta; }
+    void setpitautau(double x) { pitautau_ = x; }
+    double getpitautau() const { return pitautau_; }
+    void setpixx(double x) { pixx_ = x; }
+    double getpixx() const { return pixx_; }
+    void setpiyy(double x) { piyy_ = x; }
+    double getpiyy() const { return piyy_; }
+    void setpixy(double x) { pixy_ = x; }
+    double getpixy() const { return pixy_; }
+    void setpietaeta(double x) { pietaeta_ = x; }
+    double getpietaeta() const { return pietaeta_; }
+    void setpitaux(double x) { pitaux_ = x; }
+    double getpitaux() const { return pitaux_; }
+    void setpitauy(double x) { pitauy_ = x; }
+    double getpitauy() const { return pitauy_; }
+    void setpitaueta(double x) { pitaueta_ = x; }
+    double getpitaueta() const { return pitaueta_; }
+    void setpixeta(double x) { pixeta_ = x; }
+    double getpixeta() const { return pixeta_; }
+    void setpiyeta(double x) { piyeta_ = x; }
+    double getpiyeta() const { return piyeta_; }
 
-    void setutau(double in) { utau = in; }
-    double getutau() const { return utau; }
-    void setux(double in) { ux = in; }
-    double getux() const { return ux; }
-    void setuy(double in) { uy = in; }
-    double getuy() const { return uy; }
-    void setueta(double in) { ueta = in; }
-    double getueta() const { return ueta; }
+    void setutau(double x) { utau_ = x; }
+    double getutau() const { return utau_; }
+    void setux(double x) { ux_ = x; }
+    double getux() const { return ux_; }
+    void setuy(double x) { uy_ = x; }
+    double getuy() const { return uy_; }
+    void setueta(double x) { ueta_ = x; }
+    double getueta() const { return ueta_; }
 };
 
-#endif
+#endif  // SRC_CELL_H_

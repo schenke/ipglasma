@@ -39,7 +39,7 @@ char *char_malloc(int n1) {
 
 void char_free(char *vec) { free(vec); }
 
-int IsFile(string file_name) {
+int isFile(string file_name) {
     FILE *temp;
 
     if ((temp = fopen(file_name.c_str(), "r")) == NULL) {
@@ -48,9 +48,9 @@ int IsFile(string file_name) {
         fclose(temp);
         return 1;
     }
-} /* IsFile */
+} /* isFile */
 
-string StringFind(string file_name, string st) {
+string stringFind(string file_name, string st) {
     string inputname = file_name;
     string tmpfilename;
     string str = st;
@@ -63,7 +63,7 @@ string StringFind(string file_name, string st) {
     int ind;
     static int flag = 0;
     if (flag == 0) {
-        if (!IsFile(file_name)) {
+        if (!isFile(file_name)) {
             cerr << "The file named " << file_name << " is absent." << endl;
             if (file_name == "") {
                 cerr << "No input file name specified." << endl;
@@ -100,22 +100,22 @@ string StringFind(string file_name, string st) {
         exit(1);
     }
     return (0);
-} /* StringFind */
+} /* stringFind */
 
-double DFind(string file_name, string st) {
+double dFind(string file_name, string st) {
     string s;
     double x;
     std::stringstream stm;
-    s = StringFind(file_name, st);
+    s = stringFind(file_name, st);
     stm << s;
     stm >> x;
     return x;
-} /* DFind */
+} /* dFind */
 
-int IFind(string file_name, string st) {
+int iFind(string file_name, string st) {
     double f;
-    f = DFind(file_name, st);
+    f = dFind(file_name, st);
     return (static_cast<int>(f + 0.5));
-} /* IFind */
+} /* iFind */
 
 }  // namespace Util

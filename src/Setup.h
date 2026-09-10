@@ -1,8 +1,8 @@
 // Setup.h is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 
-#ifndef Setup_H
-#define Setup_H
+#ifndef SRC_SETUP_H_
+#define SRC_SETUP_H_
 
 #include <string>
 #include <vector>
@@ -12,13 +12,13 @@ class Setup {
     // Constructor.
     Setup() {}
 
-    std::string StringFind(std::string file_name, std::string st);
-    int IFind(std::string file_name, std::string st);
-    int IFindOptional(std::string file_name, std::string st, int defaultValue);
-    unsigned long long int ULLIFind(std::string file_name, std::string st);
-    double DFind(std::string file_name, std::string st);
-    int IsFile(std::string file_name);
-    std::vector<double> ListFind(std::string file_name, std::string st);
+    std::string stringFind(std::string file_name, std::string st);
+    int iFind(std::string file_name, std::string st);
+    int iFindOptional(std::string file_name, std::string st, int defaultValue);
+    unsigned long long int uLLIFind(std::string file_name, std::string st);
+    double dFind(std::string file_name, std::string st);
+    int isFile(std::string file_name);
+    std::vector<double> listFind(std::string file_name, std::string st);
 };
 
-#endif  // Setup_H
+#endif  // SRC_SETUP_H_

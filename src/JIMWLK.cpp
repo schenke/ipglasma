@@ -1,4 +1,4 @@
-#include "jimwlk.h"
+#include "JIMWLK.h"
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_sf_bessel.h>
@@ -11,8 +11,6 @@
 
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
-      Nc_(param.getNc()),
-      Nc2m1_(param.getNc() * param.getNc() - 1),
       Ngrid_(param.getSize()),
       Ncells_(param.getSize() * param.getSize()) {
     nn_[0] = param_.getSize();
@@ -30,8 +28,8 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
         VxsiVx_ = new Matrix *[Ncells_];
         VxsiVy_ = new Matrix *[Ncells_];
         for (int i = 0; i < Ncells_; i++) {
-            VxsiVx_[i] = new Matrix(Nc_, 0);
-            VxsiVy_[i] = new Matrix(Nc_, 0);
+            VxsiVx_[i] = new Matrix(0.);
+            VxsiVy_[i] = new Matrix(0.);
         }
     }
 }
@@ -145,8 +143,8 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
 }
 
 double JIMWLK::getAlphas(const double x, const double y) const {
-    double alphas = 1.0;
-    if (param_.getJimwlk_alphas() > 1e-10) {
+    double alphas = param_.getJimwlk_alphas();
+    if (alphas > 1e-10) {
         return alphas;
     }
 
@@ -238,7 +236,8 @@ void JIMWLK::evolution() {
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
                     std::stringstream ss;
                     ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->WriteWilsonLines(ss.str(), &param_, 1);
+                    lat_ptr_->writeWilsonLines(
+                        ss.str(), &param_, NucleusRole::Projectile);
                     iSnapshot++;
                 }
             }
@@ -261,7 +260,8 @@ void JIMWLK::evolution() {
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
                     std::stringstream ss;
                     ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->WriteWilsonLines(ss.str(), &param_, 2);
+                    lat_ptr_->writeWilsonLines(
+                        ss.str(), &param_, NucleusRole::Target);
                     iSnapshot++;
                 }
             }
@@ -282,10 +282,10 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
 
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y
-    // (kept serial: random_ptr_->Gauss() mutates shared RNG state)
+    // (kept serial: random_ptr_->gauss() mutates shared RNG state)
     for (int i = 0; i < Ncells_; i++) {
         for (int n = 0; n < 2 * Nc2m1_; n++) {
-            xi2_[i][n] = std::complex<double>(random_ptr_->Gauss(), 0.);
+            xi2_[i][n] = std::complex<double>(random_ptr_->gauss(), 0.);
         }
     }
 
@@ -338,7 +338,7 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
 #pragma omp parallel for
     for (int i = 0; i < Ncells_; i++) {
         Matrix left = negI_dssqrt * (*VxsiVx_[i]);
-        Matrix right(Nc_, 0.);
+        Matrix right(0.);
 
         for (int a = 0; a < Nc2m1_; a++) {
             const Matrix &Ta = group_ptr_->getT(a);

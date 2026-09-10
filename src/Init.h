@@ -1,8 +1,8 @@
 // Init.h is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 
-#ifndef Init_H
-#define Init_H
+#ifndef SRC_INIT_H_
+#define SRC_INIT_H_
 
 #include <cstdint>
 
@@ -12,31 +12,28 @@
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 #include "Random.h"
-#include "pretty_ostream.h"
 
-enum Initialization_method {
-    SAMPLE_COLOR_CHARGES,
-    READ_WLINE_TEXT,
-    READ_WLINE_BINARY,
-    INITIALIZE_AFTER_JIMWLK
+enum class InitializationMethod {
+    SampleColorCharges,
+    ReadWlineText,
+    ReadWlineBinary
 };
 
 class Init {
   private:
-    int const static iymaxNuc = 44;  // for the Tp-y table
+    int const static iymaxNuc_ = 44;  // for the Tp-y table
 
-    int const static iTpmax =
+    int const static iTpmax_ =
         200;  // updated in March 2019 to a larger T_A range
 
-    double const deltaYNuc = 0.25;  // for the new table
-    FFT fft;
+    double const deltaYNuc_ = 0.25;  // for the new table
+    FFT fft_;
     //  Matrix** A;
     //  Glauber *glauber;
-    double Qs2Nuclear[iTpmax][iymaxNuc];
-    double Tlist[iTpmax];
-
-    double As[1];
+    double Qs2Nuclear_[iTpmax_][iymaxNuc_];
+    double Tlist_[iTpmax_];
 
     std::vector<vector<float>> nucleonPosArrA_;
     std::vector<vector<float>> nucleonPosArrB_;
@@ -46,37 +43,34 @@ class Init {
     // list of x and y coordinates of nucleons in nucleus B
     std::vector<ReturnValue> nucleusB_;
 
-    pretty_ostream messager;
+    PrettyOstream messager_;
 
-    int Nc_, Nc2m1_;
+    static constexpr int Nc_ = 3;
+    static constexpr int Nc2m1_ = Nc_ * Nc_ - 1;
     Group *group_ptr_;
     Random *random_ptr_;
 
     Matrix one_;
-    vector<vector<double>> xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
+    vector<vector<double>> xq1_, xq2_, yq1_, yq2_, BGq1_, BGq2_, gauss1_,
+        gauss2_;
 
   public:
     // Constructor.
-    Init(const int nn[], const int Nc) : fft(nn) {
-        Nc_ = Nc;
-        Nc2m1_ = Nc_ * Nc_ - 1;
-        one_ = Matrix(Nc_, 1.);
-    };
+    explicit Init(const int nn[]) : fft_(nn), one_(1.) {};
 
     ~Init() {};
 
     void init(
         Lattice *lat, Group *group, Parameters *param, Random *random,
-        Glauber *glauber, Initialization_method init_method);
+        Glauber *glauber, InitializationMethod init_method);
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     void initializeForwardLightCone(Lattice *lat, Parameters *param);
     void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     void readNuclearQs(Parameters *param);
-    void solveAxbComplex(double *Jab, double *Fa, std::vector<double> &xvec);
     void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
 
-    double getNuclearQs2(double Qs2atZeroY, double y);
+    double getNuclearQs2(double T, double y);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
@@ -85,10 +79,8 @@ class Init {
 
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
-    void multiplicity(Lattice *lat, Parameters *param);
 
-    Matrix getUfromExponent(std::vector<double> &in);
-    bool findUInForwardLightconeBjoern(Matrix &U1, Matrix &U2, Matrix &Usol);
+    Matrix getUfromExponent(std::vector<double> &Q);
     bool findUInForwardLightconeChun(
         Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
 
@@ -96,44 +88,43 @@ class Init {
         const int nucleusA, const int lightNucleusOption,
         const int polarizationFlag, const double polJz,
         vector<vector<float>> &nucleonPosArr);
-    void generate_nucleus_configuration(
+    void generateNucleusConfiguration(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-        double beta3, double beta4, double gamma, bool force_dmin_flag,
+        double beta3, double beta4, double gamma, bool forceDminFlag,
         double d_min, double dR_np, double da_np,
         std::vector<ReturnValue> &nucleus);
-    void generate_nucleus_configuration_with_woods_saxon(
+    void generateNucleusConfigurationWithWoodsSaxon(
         Random *random, int A, int Z, double a_WS, double R_WS, double d_min,
         double dR_np, double da_np, std::vector<ReturnValue> &nucleus);
-    void generate_nucleus_configuration_with_deformed_woods_saxon(
+    void generateNucleusConfigurationWithDeformedWoodsSaxon(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
         double beta3, double beta4, double d_min, double dR_np, double da_np,
         std::vector<ReturnValue> &nucleus);
-    void generate_nucleus_configuration_with_deformed_woods_saxon2(
+    void generateNucleusConfigurationWithDeformedWoodsSaxon2(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
         double beta3, double beta4, double gamma, double dR_np, double da_np,
         std::vector<ReturnValue> &nucleus);
-    void generate_nucleus_configuration_with_deformed_woods_saxon_force_dmin(
+    void generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
         double beta3, double beta4, double gamma, double d_min, double dR_np,
         double da_np, std::vector<ReturnValue> &nucleus);
-    double sample_r_from_woods_saxon(
+    double sampleRFromWoodsSaxon(
         Random *random, double a_WS, double R_WS) const;
-    void sample_r_and_costheta_from_deformed_woods_saxon(
+    void sampleRAndCosthetaFromDeformedWoodsSaxon(
         Random *random, double a_WS, double R_WS, double beta2, double beta3,
         double beta4, double &r, double &costheta) const;
-    double fermi_distribution(double r, double R_WS, double a_WS) const;
-    double spherical_harmonics(int l, double ct) const;
-    double spherical_harmonics_Y22(double ct, double phi) const;
-    void recenter_nucleus(
+    double fermiDistribution(double r, double R_WS, double a_WS) const;
+    double sphericalHarmonics(int l, double ct) const;
+    double sphericalHarmonicsY22(double ct, double phi) const;
+    void recenterNucleus(
         std::vector<double> &x, std::vector<double> &y, std::vector<double> &z);
-    void recenter_nucleus(std::vector<ReturnValue> &nucleus);
+    void recenterNucleus(std::vector<ReturnValue> &nucleus);
     void assignProtons(
         Random *random, std::vector<ReturnValue> &nucleus, const int Z);
-    void rotate_nucleus(Random *random, std::vector<ReturnValue> &nucleus);
-    void rotate_nucleus(
+    void rotateNucleus(
         double phi_global, double theta_global,
         std::vector<ReturnValue> &nucleus);
-    void rotate_nucleus_3D(Random *random, std::vector<ReturnValue> &nucleus);
+    void rotateNucleus3D(Random *random, std::vector<ReturnValue> &nucleus);
 
     void samplePartonPositions(
         Parameters *param, Random *random, std::vector<double> &x_array,
@@ -149,4 +140,4 @@ class Init {
     int sampleNumberOfPartons(Random *random, Parameters *param);
 };
 
-#endif  // Init_H
+#endif  // SRC_INIT_H_

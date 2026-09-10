@@ -1,8 +1,8 @@
 // FFT.h is part of the IP-Glasma solver.
 // Copyright (C) 2012 Bjoern Schenke.
 
-#ifndef FFT_H
-#define FFT_H
+#ifndef SRC_FFT_H_
+#define SRC_FFT_H_
 
 #ifdef _OPENMP
 #include <omp.h>
@@ -68,7 +68,7 @@ class FFT {
   private:
     fftw_complex *input, *output;
     fftw_complex *inputMany, *outputMany;
-    fftw_plan p, pback, pmany, pmanyback;
+    fftw_plan p_, pback_;
 
   public:
     // Constructor.
@@ -80,27 +80,19 @@ class FFT {
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
         output =
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
-        p = fftw_plan_dft_2d(
+        p_ = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
-        pback = fftw_plan_dft_2d(
+        pback_ = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
         inputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
         outputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
-        pmany = fftw_plan_many_dft(
-            2, nn, 9, input, nn, 1, nn[0] * nn[1], output, nn, 1, nn[0] * nn[1],
-            FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
-        pmanyback = fftw_plan_many_dft(
-            2, nn, 9, input, nn, 1, nn[0] * nn[1], output, nn, 1, nn[0] * nn[1],
-            FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
     };
     // Destructor
     ~FFT() {
-        fftw_destroy_plan(pmany);
-        fftw_destroy_plan(pmanyback);
-        fftw_destroy_plan(p);
-        fftw_destroy_plan(pback);
+        fftw_destroy_plan(p_);
+        fftw_destroy_plan(pback_);
         fftw_free(input);
         fftw_free(output);
         fftw_free(inputMany);
@@ -116,12 +108,10 @@ class FFT {
 
     template <class T>
     void fftn(T **data, T **outdata, const int nn[], const int isign);
-    template <class T>
-    void fftnMany(T **data, T **outdata, const int nn[], const int isign);
 
     void fftnComplex(
         complex<double> *data, complex<double> *outdata, const int nn[],
         const int isign);
 };
 
-#endif  // FFT_H
+#endif  // SRC_FFT_H_

@@ -4,7 +4,7 @@ set (SOURCES
     Matrix.cpp
     Setup.cpp
     Init.cpp
-    jimwlk.cpp
+    JIMWLK.cpp
     Random.cpp
     Group.cpp
     Lattice.cpp
@@ -13,9 +13,8 @@ set (SOURCES
     Util.cpp
     Evolution.cpp
     GaugeFix.cpp
-    Spinor.cpp
     MyEigen.cpp
-    pretty_ostream.cpp
+    PrettyOstream.cpp
     Parameters.cpp
     Instrumentation.cpp
     )

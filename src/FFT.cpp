@@ -75,9 +75,9 @@ void FFT::fftnVector(
         }
 
         if (isign == 1)
-            fftw_execute(p);
+            fftw_execute(p_);
         else
-            fftw_execute(pback);
+            fftw_execute(pback_);
 
         // if this is inverse transform, normalize.
         if (isign == -1) {
@@ -196,9 +196,9 @@ void FFT::fftnArray(
         }
 
         if (isign == 1)
-            fftw_execute(p);
+            fftw_execute(p_);
         else
-            fftw_execute(pback);
+            fftw_execute(pback_);
 
         // if this is inverse transform, normalize.
         if (isign == -1) {
@@ -329,9 +329,9 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
             fftw_complex *localOutput =
                 outputMany + static_cast<std::size_t>(k) * ntot;
             if (isign == 1)
-                fftw_execute_dft(p, localInput, localOutput);
+                fftw_execute_dft(p_, localInput, localOutput);
             else
-                fftw_execute_dft(pback, localInput, localOutput);
+                fftw_execute_dft(pback_, localInput, localOutput);
         }
 
 #pragma omp single
@@ -372,126 +372,6 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
         profiler.add("fft.matrix.execute", executeSeconds);
         profiler.add("fft.matrix.unpack", unpackSeconds);
     }
-}
-
-template <class T>
-void FFT::fftnMany(T **data, T **outdata, const int nn[], const int isign) {
-    IPG_PROFILE_SCOPE("fft.total");
-    unsigned ntot = nn[0] * nn[1];
-    int mDim, pos, newpos;  // matrix dimension
-    mDim = data[0]->getNDim();
-
-    // mDim is the size of the matrix (how many rows)
-
-    mDim *= mDim;
-    // ndim is the dimension of the FFT (always 2 here)
-
-    // for each component of the matrix fill the input array for the FFT (resort
-    // as you fill in)
-
-    //    cout << "mDim=" << mDim << endl;
-
-    for (int k = 0; k < mDim; k++) {
-        //	oo   ->  xo
-        //      ox       oo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
-            }
-        }
-        //	xo   ->  oo
-        //      oo       ox
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j + k;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
-            }
-        }
-        //	ox   ->  oo
-        //      oo       xo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
-            }
-        }
-        //	oo   ->  ox
-        //      xo       oo
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                input[newpos][0] = data[pos]->getRe(k);
-                input[newpos][1] = data[pos]->getIm(k);
-            }
-        }
-    }
-
-    if (isign == 1)
-        fftw_execute(pmany);
-    else
-        fftw_execute(pmanyback);
-
-    // if this is inverse transform, normalize.
-    if (isign == -1) {
-        for (unsigned i = 0; i < ntot * 9; i++) {
-            output[i][0] /= static_cast<double>(ntot);
-            output[i][1] /= static_cast<double>(ntot);
-        }
-    }
-
-    for (int k = 0; k < mDim; k++) {
-        //	oo   ->  xo
-        //      ox       oo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
-            }
-        }
-        //	xo   ->  oo
-        //      oo       ox
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
-            }
-        }
-        //	ox   ->  oo
-        //      oo       xo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2 + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
-            }
-        }
-        //	oo   ->  ox
-        //      xo       oo
-
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2 + k * ntot;
-                outdata[pos]->setRe(k, output[newpos][0]);
-                outdata[pos]->setIm(k, output[newpos][1]);
-            }
-        }
-    }
-
-    //------
 }
 
 void FFT::fftnComplex(
@@ -554,9 +434,9 @@ void FFT::fftnComplex(
         }
 
         if (isign == 1)
-            fftw_execute(p);
+            fftw_execute(p_);
         else
-            fftw_execute(pback);
+            fftw_execute(pback_);
 
         // if this is inverse transform, normalize.
         if (isign == -1) {
@@ -616,6 +496,4 @@ void FFT::fftnComplex(
 
 // Define specializations of the template:
 template void FFT::fftn(
-    Matrix **data, Matrix **outdata, const int nn[], const int isign);
-template void FFT::fftnMany(
     Matrix **data, Matrix **outdata, const int nn[], const int isign);

@@ -1,5 +1,5 @@
-#ifndef IPGLASMA_INSTRUMENTATION_H
-#define IPGLASMA_INSTRUMENTATION_H
+#ifndef SRC_INSTRUMENTATION_H_
+#define SRC_INSTRUMENTATION_H_
 
 #include <chrono>
 #include <cstdint>
@@ -68,4 +68,4 @@ void writeLatticeFingerprint(Lattice *lat, int rank, int event_id);
 #define IPG_PROFILE_SCOPE(phase_name) \
     ipg::ScopedTimer IPG_JOIN(ipg_scoped_timer_, __LINE__)(phase_name)
 
-#endif
+#endif  // SRC_INSTRUMENTATION_H_

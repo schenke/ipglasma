@@ -43,8 +43,8 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
 - **useFluctuatingx**: controls how to determine Bjorken-$x$ when generating the initial condition
   - 1: Dynanically determined $b_\perp$ dependent $x$ 
   - 0: Fixed $x$
-- **Rapidity**:
-  - If `useFluctuatingx 0`, then $x = 0.01 e^{-\mathrm{Rapidity}}$ (for both projectile and target)
+- **RapidityA** and **RapidityB**:
+  - If `useFluctuatingx 0`, then $x = 0.01 e^{-\mathrm{RapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{RapidityB}}$ for the target
   - If `useFluctuatingx 1`, consider particle production at rapidity $y$
 
 
@@ -62,7 +62,7 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
  - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
  	- 0: no
  	- 1: yes	
- - **writeInitialWilsonLines**: controls if the generated Wilson lines for the saved on disc. File names depend on random seed (parameter `seed`). Wilson lines at the initial condition and after the evolution are saved.
+ - **writeWilsonLines**: controls if the generated Wilson lines for the saved on disc. File names depend on random seed (parameter `seed`). Wilson lines at the initial condition and after the evolution are saved.
     - 0: do not save Wilson lines
 	- 1: save in text format
 	- 2: save in binary format (faster I/O, smaller file size)

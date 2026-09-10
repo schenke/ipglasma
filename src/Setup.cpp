@@ -66,7 +66,7 @@ string Setup::stringFind(string file_name, string st) {
         // return xstr;
         exit(1);
     }
-    return (0);
+    return "";
 } /* stringFind */
 
 std::vector<double> Setup::listFind(string file_name, string st) {

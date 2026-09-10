@@ -125,7 +125,7 @@ class Matrix {
     Matrix prodABconj(const Matrix &a, const Matrix &b);
     Matrix prodAconjB(const Matrix &a, const Matrix &b);
 
-    complex<double> traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const;
+    complex<double> traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const;
 
     friend ostream &operator<<(ostream &os, const Matrix &p) {
         for (int i = 0; i < kN; ++i) {

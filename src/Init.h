@@ -72,7 +72,7 @@ class Init {
     void readNuclearQs(Parameters *param);
     void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
 
-    double getNuclearQs2(double Qs2atZeroY, double y);
+    double getNuclearQs2(double T, double y);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
@@ -82,7 +82,7 @@ class Init {
     // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
     // *random, Glauber *glauber);
 
-    Matrix getUfromExponent(std::vector<double> &in);
+    Matrix getUfromExponent(std::vector<double> &Q);
     bool findUInForwardLightconeChun(
         Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
 
@@ -92,7 +92,7 @@ class Init {
         vector<vector<float>> &nucleonPosArr);
     void generateNucleusConfiguration(
         Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-        double beta3, double beta4, double gamma, bool force_dmin_flag,
+        double beta3, double beta4, double gamma, bool forceDminFlag,
         double d_min, double dR_np, double da_np,
         std::vector<ReturnValue> &nucleus);
     void generateNucleusConfigurationWithWoodsSaxon(

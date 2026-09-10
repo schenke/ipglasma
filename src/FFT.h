@@ -68,7 +68,7 @@ class FFT {
   private:
     fftw_complex *input, *output;
     fftw_complex *inputMany, *outputMany;
-    fftw_plan p, pback;
+    fftw_plan p_, pback_;
 
   public:
     // Constructor.
@@ -80,9 +80,9 @@ class FFT {
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
         output =
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
-        p = fftw_plan_dft_2d(
+        p_ = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
-        pback = fftw_plan_dft_2d(
+        pback_ = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
         inputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
@@ -91,8 +91,8 @@ class FFT {
     };
     // Destructor
     ~FFT() {
-        fftw_destroy_plan(p);
-        fftw_destroy_plan(pback);
+        fftw_destroy_plan(p_);
+        fftw_destroy_plan(pback_);
         fftw_free(input);
         fftw_free(output);
         fftw_free(inputMany);

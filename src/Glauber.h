@@ -9,6 +9,8 @@
 #define TINY (1.0e-10)
 #define LIMIT 10000
 
+enum class NucleusRole { Projectile, Target };
+
 struct ReturnValue {
     double x;
     double y;
@@ -23,9 +25,9 @@ struct Nucleus {
     std::string name;
     double A;
     double Z;
-    int AnumFunc;
-    int AnumFuncIntegrand;
-    int DensityFunc;
+    int anumFunc;
+    int anumFuncIntegrand;
+    int densityFunc;
     double w_WS;
     double a_WS;
     double R_WS;
@@ -41,11 +43,11 @@ struct Nucleus {
 };
 
 struct Data {
-    double SigmaNN;
-    Nucleus Target;
-    Nucleus Projectile;
-    double SCutOff;
-    int InterMax;
+    double sigmaNN;
+    Nucleus target;
+    Nucleus projectile;
+    double sCutoff;
+    int interMax;
     /* trap door */
 };
 
@@ -55,7 +57,7 @@ class Glauber {
 
     double AnumR_, NuInS_S_;
     Nucleus *Nuc_WS_;
-    Data GlauberData_;
+    Data glauberData_;
     ptr_func tempFunc_;
     double b_;  // impact parameter
     double currentTAB_;
@@ -72,14 +74,12 @@ class Glauber {
     int nucleusA2() const { return static_cast<int>(currentA2_); }
     int nucleusZ1() const { return static_cast<int>(currentZ1_); }
     int nucleusZ2() const { return static_cast<int>(currentZ2_); }
-    const Data &getGlauberData() const { return GlauberData_; }
+    const Data &getGlauberData() const { return glauberData_; }
     int isFile(char *file_name);
     void findNucleusData(
-        Nucleus *nucleus, std::string target, std::string file_name, int rank);
-    void findNucleusData2(
         Nucleus *nucleus, std::string name, bool setWSDeformParams, double R_WS,
         double a_WS, double beta2, double beta3, double beta4, double gamma,
-        bool force_dmin, double d_min, double dR_np, double da_np);
+        bool forceDminFlag, double d_min, double dR_np, double da_np);
     void printGlauberData();
     void printNucleusData(Nucleus *nucleus);
     int linearFindXorg(double x, double *Vx, int ymax);
@@ -91,8 +91,8 @@ class Glauber {
     double vInterpolate(double x, double *Vx, double *Vy, int ymax);
     double *makeVx(double down, double up, int maxi_num);
     double *makeVy(double *vx, int maxi_num);
-    double *readInVx(char *, int maxi_num, int quiet);
-    double *readInVy(char *, int maxi_num, int quiet);
+    double *readInVx(char *file_name, int maxi_num, int quiet);
+    double *readInVy(char *file_name, int maxi_num, int quiet);
 
     double interNuPInSP(double s);
     double interNuTInST(double s);
@@ -118,11 +118,11 @@ class Glauber {
     double oLSIntegrand(double s);
     double tAB();
     void initGlauber(
-        double SigmaNN, std::string Target, std::string Projectile, double inb,
+        double sigmaNN, std::string target, std::string projectile, double inb,
         bool setWSDeformParams, double R_WS, double a_WS, double beta2,
-        double beta3, double beta4, double gamma, bool force_dmin, double d_min,
+        double beta3, double beta4, double gamma, bool forceDminFlag, double d_min,
         double dR_np, double da_np, int imax);
     double areaTA(double x, double A);
-    ReturnValue sampleTARejection(Random *random, int PorT);
+    ReturnValue sampleTARejection(Random *random, NucleusRole nucleus);
 };
 #endif  // SRC_GLAUBER_H_

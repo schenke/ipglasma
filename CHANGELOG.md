@@ -17,7 +17,6 @@ The main categories for changes in this file are:
 * `Removed` for now removed features.
 
 ## 2.0.0
-Date: 2026-XX-XX
 
 ### Input / Output
 * Add input parameters to configure a JIMWLK small-x evolution stage (`useJIMWLK`, `alphas_jimwlk`, `mu0_jimwlk`, `Lambda_QCD_jimwlk`, `m_jimwlk`, `Ds_jimwlk`, `x_projectile_jimwlk`, `x_target_jimwlk`, `simpleLangevin`, `saveSnapshots`).
@@ -61,6 +60,12 @@ Date: 2026-XX-XX
 * Rename `Glauber`'s lowercase `tiny`/`limit` macros to `TINY`/`LIMIT`, matching the `ALL_CAPS` convention used by every other macro in the codebase.
 * Modernize `Init`'s `Initialization_method` to a scoped `enum class InitializationMethod` with `PascalCase` enumerators, matching `NucleusRole`.
 * Simplify `Glauber`'s `Nucleus`/`Data` from C-style `typedef struct` to plain `struct` declarations.
+* Standardize function-parameter naming: `Cell`'s setters now use `x` like every other class' setters (instead of `in`), and the "force minimum inter-nucleon distance" flag is now consistently named `forceDminFlag` everywhere it appears (`Glauber`, `Init`), instead of drifting between `force_dmin`, `forceDminFlag`, and `force_dmin_flag` depending on the file.
+* Replace `Glauber::sampleTARejection`'s magic-number `int PorT` parameter with the existing `NucleusRole` enum (moved from `JIMWLK.h` to `Glauber.h`, where it more naturally belongs), removing the last raw `1`/`2` projectile/target literals from `Init`.
+* Fix several declaration/definition parameter-name mismatches found by cross-checking every header against its `.cpp`: `Setup::listFind` (`fileName`/`paramName` → `file_name`/`st`, matching its own declaration and sibling functions), `Glauber::makeCoeff` (`bb` → `b`, no longer needed now that the colliding public member is `b_`), `Glauber::readInVx`/`readInVy` (name the previously-unnamed `char *` parameter `file_name`), `Init::getNuclearQs2` (declaration said `Qs2atZeroY`, but the parameter is actually a temperature-like table lookup value, named `T` in the implementation and now in the declaration too), and `Matrix::expmCoeff` (`result` → `out`, matching its declaration).
+* Rename `Matrix::traceOfProdcutOfMatrix`'s parameters `M1`/`M2` to `a`/`b`, matching every other two-matrix function in `Matrix`/`SU3.h`, and rename `Init::getUfromExponent`'s parameter `in` to `Q`, matching the identically-meaning parameter of `Matrix::expmCoeff` that it forwards to.
+* Fix three more private member variables that were missed by the earlier trailing-underscore pass: `Group::t` → `t_`, `FFT::p`/`pback` → `p_`/`pback_`, and `PrettyOstream::message_stream` → `messageStream_` (also fixing its casing). Also rename `Parameters`' backing member for the "force minimum inter-nucleon distance" flag from `force_dmin_flag_` to `forceDminFlag_`, matching the parameter name it was already unified to everywhere else.
+* Fix a batch of `PascalCase` quantity names left over from before the member-variable and struct-field naming passes, none of which were physics-notation exceptions: `Parameters`' `Target_`/`Projectile_`/`SigmaNN_`/`Psi_`/`NucleusQsTableFileName_` members, `Glauber`'s `GlauberData_` member, its `Data` struct's `SigmaNN`/`Target`/`Projectile`/`SCutOff`/`InterMax` fields and `Nucleus`'s `AnumFunc`/`AnumFuncIntegrand`/`DensityFunc` fields, and `Glauber::initGlauber`'s `SigmaNN`/`Target`/`Projectile` parameters (and its local `Target_Name`/`Projectile_Name` copies) are now `sigmaNN`/`target`/`projectile`/etc., matching the lowercase-leading convention already used for every other member, field and parameter (e.g. `beta2_`/`gamma_` were already lowercase Greek letters, unlike the capitalized `SigmaNN_`).
 
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.
@@ -74,9 +79,11 @@ Date: 2026-XX-XX
 * Fix a duplicated-getter bug where setting `polariztionProjectile` alone had no effect, because the target polarization flag was checked twice instead of the projectile flag.
 * Fix `alphas_jimwlk`: it was parsed as an integer (silently truncating fractional fixed-coupling values to 0) and was ignored by the JIMWLK kernel even when set to a valid value.
 * Fix `b`/`phi_RP` being left uninitialized when `useNucleus=0`.
+* Fix `Init::readInNucleusConfigs` hanging forever in an infinite loop instead of exiting with an error message when the requested nucleon-configuration file doesn't exist.
 
 ### Removed
 * Remove functions that were declared or defined but never called, including `Evolution::evolveUfast`/`multiplicitynkxky`/`correlations`/`anisotropy`, `GaugeFix::gaugeTransform`, the `Spinor` class and `Matrix::reu`/`reu2`/`imag`, `Init::solveAxbComplex`/`multiplicity`/the 2-argument `rotate_nucleus` overload/`findUInForwardLightconeBjoern`, `MyEigen::test`, `FFT::fftnMany`, `Glauber::FindXorg`/`PAB`/`AnumHulthenInt`, and about a dozen unused `Parameters` getter/setter pairs.
+* Remove `Glauber`'s dead `findNucleusData` overload (declared but never defined or called) and rename the surviving `findNucleusData2` to `findNucleusData`.
 * Remove the old serial validation script and other now-unused files.
 
 [Link to diff from previous version](https://github.com/schenke/ipglasma/compare/1.0...2.0.0)

@@ -6,12 +6,11 @@
 #include <vector>
 
 #include "FFT.h"
+#include "Glauber.h"
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
 #include "Random.h"
-
-enum class NucleusRole { Projectile, Target };
 
 class JIMWLK {
   private:

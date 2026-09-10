@@ -20,7 +20,7 @@
 
 class PrettyOstream {
   private:
-    std::ostringstream message_stream;
+    std::ostringstream messageStream_;
 
   public:
     PrettyOstream();
@@ -47,7 +47,7 @@ class PrettyOstream {
     //! reload the << operator
     template <typename T>
     PrettyOstream &operator<<(T const &value) {
-        message_stream << value;
+        messageStream_ << value;
         return (*this);
     }
 };

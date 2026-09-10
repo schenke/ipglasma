@@ -7,13 +7,13 @@
 
 class Group {
   private:
-    std::array<Matrix, 8> t;
+    std::array<Matrix, 8> t_;
 
   public:
     Group();
     ~Group() = default;
 
-    Matrix &getT(int i) { return t[static_cast<std::size_t>(i)]; }
-    const Matrix &getT(int i) const { return t[static_cast<std::size_t>(i)]; }
+    Matrix &getT(int i) { return t_[static_cast<std::size_t>(i)]; }
+    const Matrix &getT(int i) const { return t_[static_cast<std::size_t>(i)]; }
 };
 #endif  // SRC_GROUP_H_

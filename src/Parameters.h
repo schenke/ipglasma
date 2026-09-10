@@ -86,7 +86,7 @@ class Parameters {
     unsigned long long int randomSeed_;  // stores the random seed used (so the
                                         // event can be reproduced)
     std::string
-        NucleusQsTableFileName_;  // the file name for the table containing Qs^2
+        nucleusQsTableFileName_;  // the file name for the table containing Qs^2
                                  // as a function of Y and Qs^2(Y=0)
     double BG_;  // the width of the Gaussian describing the shape of the proton
                 // in GeV^(-2)
@@ -113,18 +113,18 @@ class Parameters {
                               // use the manually entered maximal evolution time
                               // (0)
     double area_;  // area of the initial interaction region
-    double Psi_;  // the initial angle Psi_2 that determines the event-plane
+    double psi_;  // the initial angle Psi_2 that determines the event-plane
                  // (geometric/spatial one)
     // Glauber parameters:
-    double SigmaNN_;      // nucleon-nucleon cross section
+    double sigmaNN_;      // nucleon-nucleon cross section
     double b_;            // impact parameter
     double bmin_;         // minimum impact parameter to sample from
     double bmax_;         // maximum impact parameter to sample to
     double phiRP_;       // the reaction plane angle
     int linearb_;         // sample b from a linear distribution if 1, uniform
                          // distribution otherwise
-    std::string Target_;  // target nucleus' name
-    std::string Projectile_;  // projectile nucleus' name
+    std::string target_;  // target nucleus' name
+    std::string projectile_;  // projectile nucleus' name
     double L_;                // lattice size in fm
     double LOutput_;          // lattice size for the output in fm
     int useNucleus_;  // use nuclei (1) or a constant g^2mu distribution over the
@@ -191,7 +191,7 @@ class Parameters {
                    // in Uranium
     double beta3_, beta4_, gamma_;
     double d_min_;
-    bool setWSDeformParams_, force_dmin_flag_;
+    bool setWSDeformParams_, forceDminFlag_;
     double WSdR_np_, WSda_np_;
 
     bool rotateReactionPlane_;  // flag to randomly rotate the event reaction
@@ -255,8 +255,8 @@ class Parameters {
     int getRunningCoupling() { return runningCoupling_; }
     void setg(double x) { g_ = x; }
     double getg() { return g_; }
-    void setSigmaNN(double x) { SigmaNN_ = x; }
-    double getSigmaNN() { return SigmaNN_; }
+    void setSigmaNN(double x) { sigmaNN_ = x; }
+    double getSigmaNN() { return sigmaNN_; }
     void setb(double x) { b_ = x; }
     double getb() const { return b_; }
     void setPhiRP(double x) { phiRP_ = x; }
@@ -265,10 +265,10 @@ class Parameters {
     double getbmin() { return bmin_; }
     void setbmax(double x) { bmax_ = x; }
     double getbmax() { return bmax_; }
-    void setTarget(std::string x) { Target_ = x; }
-    std::string getTarget() { return Target_; }
-    void setProjectile(std::string x) { Projectile_ = x; }
-    std::string getProjectile() { return Projectile_; }
+    void setTarget(std::string x) { target_ = x; }
+    std::string getTarget() { return target_; }
+    void setProjectile(std::string x) { projectile_ = x; }
+    std::string getProjectile() { return projectile_; }
     void setL(double x) { L_ = x; }
     double getL() { return L_; }
     void setLOutput(double x) { LOutput_ = x; }
@@ -307,9 +307,9 @@ class Parameters {
     void setUseSeedList(int x) { useSeedList_ = x; };
     int getUseSeedList() { return useSeedList_; }
     void setNucleusQsTableFileName(std::string x) {
-        NucleusQsTableFileName_ = x;
+        nucleusQsTableFileName_ = x;
     }
-    std::string getNucleusQsTableFileName() { return NucleusQsTableFileName_; }
+    std::string getNucleusQsTableFileName() { return nucleusQsTableFileName_; }
     void setBG(double x) { BG_ = x; }
     double getBG() { return BG_; }
     void setBGq(double x) { BGq_ = x; }
@@ -340,8 +340,8 @@ class Parameters {
     int getUseFixedNpart() { return useFixedNpart_; }
     void setArea(double x) { area_ = x; }
     double getArea() { return area_; }
-    void setPsi(double x) { Psi_ = x; }
-    double getPsi() { return Psi_; }
+    void setPsi(double x) { psi_ = x; }
+    double getPsi() { return psi_; }
     void setSmearingWidth(double x) { smearingWidth_ = x; }
     double getSmearingWidth() { return smearingWidth_; }
     void setMPIRank(int x) { MPIrank_ = x; }
@@ -379,11 +379,11 @@ class Parameters {
     double getDmin() const { return d_min_; }
     void setForceDmin(int x) {
         if (x == 0)
-            force_dmin_flag_ = false;
+            forceDminFlag_ = false;
         else
-            force_dmin_flag_ = true;
+            forceDminFlag_ = true;
     }
-    bool getForceDmin() const { return (force_dmin_flag_); }
+    bool getForceDmin() const { return (forceDminFlag_); }
     void setWSdR_np(double dR_np) { WSdR_np_ = dR_np; }
     double getWSdR_np() const { return WSdR_np_; }
     void setWSda_np(double da_np) { WSda_np_ = da_np; }

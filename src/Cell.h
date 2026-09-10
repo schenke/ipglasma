@@ -43,68 +43,68 @@ class Cell {
     Cell();
     ~Cell() = default;
 
-    void setg2mu2A(double in) { g2mu2A_ = in; }
-    void setg2mu2B(double in) { g2mu2B_ = in; }
+    void setg2mu2A(double x) { g2mu2A_ = x; }
+    void setg2mu2B(double x) { g2mu2B_ = x; }
     double getg2mu2A() const { return g2mu2A_; }
     double getg2mu2B() const { return g2mu2B_; }
 
-    void setTpA(double in) { TpA_ = in; }
-    void setTpB(double in) { TpB_ = in; }
+    void setTpA(double x) { TpA_ = x; }
+    void setTpB(double x) { TpB_ = x; }
     double getTpA() const { return TpA_; }
     double getTpB() const { return TpB_; }
 
-    void setEpsilon(double in) { epsilon_ = in; }
+    void setEpsilon(double x) { epsilon_ = x; }
     double getEpsilon() const { return epsilon_; }
 
-    void setTtautau(double in) { Ttautau_ = in; }
+    void setTtautau(double x) { Ttautau_ = x; }
     double getTtautau() const { return Ttautau_; }
-    void setTxx(double in) { Txx_ = in; }
+    void setTxx(double x) { Txx_ = x; }
     double getTxx() const { return Txx_; }
-    void setTyy(double in) { Tyy_ = in; }
+    void setTyy(double x) { Tyy_ = x; }
     double getTyy() const { return Tyy_; }
-    void setTxy(double in) { Txy_ = in; }
+    void setTxy(double x) { Txy_ = x; }
     double getTxy() const { return Txy_; }
-    void setTetaeta(double in) { Tetaeta_ = in; }
+    void setTetaeta(double x) { Tetaeta_ = x; }
     double getTetaeta() const { return Tetaeta_; }
-    void setTtaux(double in) { Ttaux_ = in; }
+    void setTtaux(double x) { Ttaux_ = x; }
     double getTtaux() const { return Ttaux_; }
-    void setTtauy(double in) { Ttauy_ = in; }
+    void setTtauy(double x) { Ttauy_ = x; }
     double getTtauy() const { return Ttauy_; }
-    void setTtaueta(double in) { Ttaueta_ = in; }
+    void setTtaueta(double x) { Ttaueta_ = x; }
     double getTtaueta() const { return Ttaueta_; }
-    void setTxeta(double in) { Txeta_ = in; }
+    void setTxeta(double x) { Txeta_ = x; }
     double getTxeta() const { return Txeta_; }
-    void setTyeta(double in) { Tyeta_ = in; }
+    void setTyeta(double x) { Tyeta_ = x; }
     double getTyeta() const { return Tyeta_; }
 
-    void setpitautau(double in) { pitautau_ = in; }
+    void setpitautau(double x) { pitautau_ = x; }
     double getpitautau() const { return pitautau_; }
-    void setpixx(double in) { pixx_ = in; }
+    void setpixx(double x) { pixx_ = x; }
     double getpixx() const { return pixx_; }
-    void setpiyy(double in) { piyy_ = in; }
+    void setpiyy(double x) { piyy_ = x; }
     double getpiyy() const { return piyy_; }
-    void setpixy(double in) { pixy_ = in; }
+    void setpixy(double x) { pixy_ = x; }
     double getpixy() const { return pixy_; }
-    void setpietaeta(double in) { pietaeta_ = in; }
+    void setpietaeta(double x) { pietaeta_ = x; }
     double getpietaeta() const { return pietaeta_; }
-    void setpitaux(double in) { pitaux_ = in; }
+    void setpitaux(double x) { pitaux_ = x; }
     double getpitaux() const { return pitaux_; }
-    void setpitauy(double in) { pitauy_ = in; }
+    void setpitauy(double x) { pitauy_ = x; }
     double getpitauy() const { return pitauy_; }
-    void setpitaueta(double in) { pitaueta_ = in; }
+    void setpitaueta(double x) { pitaueta_ = x; }
     double getpitaueta() const { return pitaueta_; }
-    void setpixeta(double in) { pixeta_ = in; }
+    void setpixeta(double x) { pixeta_ = x; }
     double getpixeta() const { return pixeta_; }
-    void setpiyeta(double in) { piyeta_ = in; }
+    void setpiyeta(double x) { piyeta_ = x; }
     double getpiyeta() const { return piyeta_; }
 
-    void setutau(double in) { utau_ = in; }
+    void setutau(double x) { utau_ = x; }
     double getutau() const { return utau_; }
-    void setux(double in) { ux_ = in; }
+    void setux(double x) { ux_ = x; }
     double getux() const { return ux_; }
-    void setuy(double in) { uy_ = in; }
+    void setuy(double x) { uy_ = x; }
     double getuy() const { return uy_; }
-    void setueta(double in) { ueta_ = in; }
+    void setueta(double x) { ueta_ = x; }
     double getueta() const { return ueta_; }
 };
 

@@ -75,9 +75,9 @@ void FFT::fftnVector(
         }
 
         if (isign == 1)
-            fftw_execute(p);
+            fftw_execute(p_);
         else
-            fftw_execute(pback);
+            fftw_execute(pback_);
 
         // if this is inverse transform, normalize.
         if (isign == -1) {
@@ -196,9 +196,9 @@ void FFT::fftnArray(
         }
 
         if (isign == 1)
-            fftw_execute(p);
+            fftw_execute(p_);
         else
-            fftw_execute(pback);
+            fftw_execute(pback_);
 
         // if this is inverse transform, normalize.
         if (isign == -1) {
@@ -329,9 +329,9 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
             fftw_complex *localOutput =
                 outputMany + static_cast<std::size_t>(k) * ntot;
             if (isign == 1)
-                fftw_execute_dft(p, localInput, localOutput);
+                fftw_execute_dft(p_, localInput, localOutput);
             else
-                fftw_execute_dft(pback, localInput, localOutput);
+                fftw_execute_dft(pback_, localInput, localOutput);
         }
 
 #pragma omp single
@@ -434,9 +434,9 @@ void FFT::fftnComplex(
         }
 
         if (isign == 1)
-            fftw_execute(p);
+            fftw_execute(p_);
         else
-            fftw_execute(pback);
+            fftw_execute(pback_);
 
         // if this is inverse transform, normalize.
         if (isign == -1) {

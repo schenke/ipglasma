@@ -128,7 +128,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusA_.push_back(rv);
         } else if (A1 == 2) {
             // deuteron
-            rv = glauber->sampleTARejection(random, 1);
+            rv = glauber->sampleTARejection(random, NucleusRole::Projectile);
             // we sample the neutron proton distance, so distance to the center
             // needs to be divided by 2
             rv.x = rv.x / 2.;
@@ -146,16 +146,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusA_.push_back(rv);
         } else {
             generateNucleusConfiguration(
-                random, A1, Z1, glauber->getGlauberData().Projectile.a_WS,
-                glauber->getGlauberData().Projectile.R_WS,
-                glauber->getGlauberData().Projectile.beta2,
-                glauber->getGlauberData().Projectile.beta3,
-                glauber->getGlauberData().Projectile.beta4,
-                glauber->getGlauberData().Projectile.gamma,
-                glauber->getGlauberData().Projectile.forceDminFlag,
-                glauber->getGlauberData().Projectile.d_min,
-                glauber->getGlauberData().Projectile.dR_np,
-                glauber->getGlauberData().Projectile.da_np, nucleusA_);
+                random, A1, Z1, glauber->getGlauberData().projectile.a_WS,
+                glauber->getGlauberData().projectile.R_WS,
+                glauber->getGlauberData().projectile.beta2,
+                glauber->getGlauberData().projectile.beta3,
+                glauber->getGlauberData().projectile.beta4,
+                glauber->getGlauberData().projectile.gamma,
+                glauber->getGlauberData().projectile.forceDminFlag,
+                glauber->getGlauberData().projectile.d_min,
+                glauber->getGlauberData().projectile.dR_np,
+                glauber->getGlauberData().projectile.da_np, nucleusA_);
         }
 
         if (A2 == 1) {
@@ -167,7 +167,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusB_.push_back(rv2);
         } else if (A2 == 2) {
             // deuteron
-            rv = glauber->sampleTARejection(random, 2);
+            rv = glauber->sampleTARejection(random, NucleusRole::Target);
             // we sample the neutron proton distance, so distance to the center
             // needs to be divided by 2
 
@@ -187,16 +187,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusB_.push_back(rv);
         } else {
             generateNucleusConfiguration(
-                random, A2, Z2, glauber->getGlauberData().Target.a_WS,
-                glauber->getGlauberData().Target.R_WS,
-                glauber->getGlauberData().Target.beta2,
-                glauber->getGlauberData().Target.beta3,
-                glauber->getGlauberData().Target.beta4,
-                glauber->getGlauberData().Target.gamma,
-                glauber->getGlauberData().Target.forceDminFlag,
-                glauber->getGlauberData().Target.d_min,
-                glauber->getGlauberData().Target.dR_np,
-                glauber->getGlauberData().Target.da_np, nucleusB_);
+                random, A2, Z2, glauber->getGlauberData().target.a_WS,
+                glauber->getGlauberData().target.R_WS,
+                glauber->getGlauberData().target.beta2,
+                glauber->getGlauberData().target.beta3,
+                glauber->getGlauberData().target.beta4,
+                glauber->getGlauberData().target.gamma,
+                glauber->getGlauberData().target.forceDminFlag,
+                glauber->getGlauberData().target.d_min,
+                glauber->getGlauberData().target.dR_np,
+                glauber->getGlauberData().target.da_np, nucleusB_);
         }
     } else if (param->getNucleonPositionsFromFile() == 1) {
         if (nucleonPosArrA_.size() > 0) {
@@ -222,16 +222,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
             generateNucleusConfiguration(
                 random, glauber->nucleusA1(), glauber->nucleusZ1(),
-                glauber->getGlauberData().Projectile.a_WS,
-                glauber->getGlauberData().Projectile.R_WS,
-                glauber->getGlauberData().Projectile.beta2,
-                glauber->getGlauberData().Projectile.beta3,
-                glauber->getGlauberData().Projectile.beta4,
-                glauber->getGlauberData().Projectile.gamma,
-                glauber->getGlauberData().Projectile.forceDminFlag,
-                glauber->getGlauberData().Projectile.d_min,
-                glauber->getGlauberData().Projectile.dR_np,
-                glauber->getGlauberData().Projectile.da_np, nucleusA_);
+                glauber->getGlauberData().projectile.a_WS,
+                glauber->getGlauberData().projectile.R_WS,
+                glauber->getGlauberData().projectile.beta2,
+                glauber->getGlauberData().projectile.beta3,
+                glauber->getGlauberData().projectile.beta4,
+                glauber->getGlauberData().projectile.gamma,
+                glauber->getGlauberData().projectile.forceDminFlag,
+                glauber->getGlauberData().projectile.d_min,
+                glauber->getGlauberData().projectile.dR_np,
+                glauber->getGlauberData().projectile.da_np, nucleusA_);
         }
 
         if (nucleonPosArrB_.size() > 0) {
@@ -256,16 +256,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             messager_.flush("info");
             generateNucleusConfiguration(
                 random, glauber->nucleusA2(), glauber->nucleusZ2(),
-                glauber->getGlauberData().Target.a_WS,
-                glauber->getGlauberData().Target.R_WS,
-                glauber->getGlauberData().Target.beta2,
-                glauber->getGlauberData().Target.beta3,
-                glauber->getGlauberData().Target.beta4,
-                glauber->getGlauberData().Target.gamma,
-                glauber->getGlauberData().Target.forceDminFlag,
-                glauber->getGlauberData().Target.d_min,
-                glauber->getGlauberData().Target.dR_np,
-                glauber->getGlauberData().Target.da_np, nucleusB_);
+                glauber->getGlauberData().target.a_WS,
+                glauber->getGlauberData().target.R_WS,
+                glauber->getGlauberData().target.beta2,
+                glauber->getGlauberData().target.beta3,
+                glauber->getGlauberData().target.beta4,
+                glauber->getGlauberData().target.gamma,
+                glauber->getGlauberData().target.forceDminFlag,
+                glauber->getGlauberData().target.d_min,
+                glauber->getGlauberData().target.dR_np,
+                glauber->getGlauberData().target.da_np, nucleusB_);
         }
     } else if (param->getNucleonPositionsFromFile() == 2) {
         // Read in Alvioli's nucleon positions including correlations
@@ -671,6 +671,10 @@ void Init::readInNucleusConfigs(
     messager_ << "read in nucleus configurations from " << fileName;
     messager_.flush("info");
     std::ifstream inFile(fileName, std::ios::binary);
+    if (!inFile) {
+        cerr << "File " << fileName << " not found. Exiting." << endl;
+        exit(1);
+    }
     while (true) {
         vector<float> tempPos;
         for (int i = 0; i < nucleusA; i++) {
@@ -2795,7 +2799,7 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 
 void Init::generateNucleusConfiguration(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-    double beta3, double beta4, double gamma, bool force_dmin_flag,
+    double beta3, double beta4, double gamma, bool forceDminFlag,
     double d_min, double dR_np, double da_np,
     std::vector<ReturnValue> &nucleus) {
     if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
@@ -2803,7 +2807,7 @@ void Init::generateNucleusConfiguration(
         generateNucleusConfigurationWithWoodsSaxon(
             random, A, Z, a_WS, R_WS, d_min, dR_np, da_np, nucleus);
     } else {
-        if (force_dmin_flag) {
+        if (forceDminFlag) {
             generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
                 random, A, Z, a_WS, R_WS, beta2, beta3, beta4, gamma, d_min,
                 dR_np, da_np, nucleus);
@@ -3439,15 +3443,15 @@ bool Init::findUInForwardLightconeChun(
     return (success);
 }
 
-Matrix Init::getUfromExponent(std::vector<double> &in) {
+Matrix Init::getUfromExponent(std::vector<double> &Q) {
     Matrix tempM(Matrix::noInit);
     complex<double> U[9];
 
-    // expmCoeff calculates the coefficients of exp(i in[a] t[a]).  Build
+    // expmCoeff calculates the coefficients of exp(i Q[a] t[a]).  Build
     // the 3x3 matrix directly from the fixed SU(3) generators instead of
     // allocating a coefficient vector and materializing eight scaled Matrix
     // temporaries plus the chained sums.
-    tempM.expmCoeff(in.data(), U);
+    tempM.expmCoeff(Q.data(), U);
     if (std::abs(U[0].real()) < 1e-15) {
         tempM = one_;
     } else {

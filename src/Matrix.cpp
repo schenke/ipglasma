@@ -194,7 +194,7 @@ Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
 
 // matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
 // Q^a of generators t^a as argument. Dimension is Nc
-void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
+void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
     const int Nc2m1 = 8;
     double sqrt3 = sqrt(3.);
     complex<double> f0, f1, f2, iu, u0, ua[8];
@@ -296,18 +296,18 @@ void Matrix::expmCoeff(const double *Q, complex<double> result[9]) const {
              - 0.5 * Q[6] * Q[6])
             / sqrt3;
 
-    result[0] = u0;
+    out[0] = u0;
     for (int i = 0; i < 8; i++) {
-        result[i + 1] = f1 * Q[i] + halfF2 * ua[i];
+        out[i + 1] = f1 * Q[i] + halfF2 * ua[i];
     }
 
     // Check potential NaNs
     for (int i = 0; i < 9; i++) {
-        if (std::isnan(result[i].real()) or std::isnan(result[i].imag())) {
+        if (std::isnan(out[i].real()) or std::isnan(out[i].imag())) {
             // Sometimes in the very low density region we may encounter
             // (numerically) 0/0 situations In that case, set coefficient to 0,
             // so this contributes only a unit matrix (=vacuum contribution)
-            result[i] = 0;
+            out[i] = 0;
         }
     }
 }
@@ -439,10 +439,10 @@ complex<double> Matrix::det() {
 
 complex<double> Matrix::trace() const { return e_[0] + e_[4] + e_[8]; }
 
-complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
-    return M1(0) * M2(0) + M1(1) * M2(3) + M1(2) * M2(6) + M1(3) * M2(1)
-           + M1(4) * M2(4) + M1(5) * M2(7) + M1(6) * M2(2) + M1(7) * M2(5)
-           + M1(8) * M2(8);
+complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const {
+    return a(0) * b(0) + a(1) * b(3) + a(2) * b(6) + a(3) * b(1)
+           + a(4) * b(4) + a(5) * b(7) + a(6) * b(2) + a(7) * b(5)
+           + a(8) * b(8);
 }
 
 std::string Matrix::MatrixToString() {

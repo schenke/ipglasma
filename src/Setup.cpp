@@ -69,18 +69,18 @@ string Setup::stringFind(string file_name, string st) {
     return (0);
 } /* stringFind */
 
-std::vector<double> Setup::listFind(string fileName, string paramName) {
+std::vector<double> Setup::listFind(string file_name, string st) {
     std::vector<double> varlist;
-    if (!isFile(fileName)) {
-        cerr << "The input file named " << fileName << " is absent. Exiting."
+    if (!isFile(file_name)) {
+        cerr << "The input file named " << file_name << " is absent. Exiting."
              << endl;
         exit(1);
     }
-    ifstream input(fileName.c_str());
+    ifstream input(file_name.c_str());
 
     string line;
     while (std::getline(input, line)) {
-        if (line.find(paramName) != string::npos) {
+        if (line.find(st) != string::npos) {
             std::stringstream lineStream(line);
             std::string cell;
             lineStream >> cell;

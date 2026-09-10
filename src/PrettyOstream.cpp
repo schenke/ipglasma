@@ -23,16 +23,16 @@ PrettyOstream::~PrettyOstream() {}
 void PrettyOstream::flush(string type) {
     std::transform(type.begin(), type.end(), type.begin(), ::tolower);
     if (type == "info") {
-        info(message_stream.str());
+        info(messageStream_.str());
     } else if (type == "warning") {
-        warning(message_stream.str());
+        warning(messageStream_.str());
     } else if (type == "error") {
-        error(message_stream.str());
+        error(messageStream_.str());
     } else if (type == "debug") {
-        debug(message_stream.str());
+        debug(messageStream_.str());
     }
-    message_stream.str("");
-    message_stream.clear();
+    messageStream_.str("");
+    messageStream_.clear();
 }
 
 //! This function output information message

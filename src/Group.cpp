@@ -1,14 +1,10 @@
 #include "Group.h"
 
 #include <complex>
-#include <iostream>
 
 using std::complex;
-using std::cout;
-using std::endl;
 
 Group::Group() {
-    cout << "Initializing group SU(3) ... ";
     // fundamental rep.
     t_[0].set(0, 0, 0.);
     t_[0].set(0, 1, 0.5);
@@ -89,5 +85,4 @@ Group::Group() {
     t_[7].set(2, 0, 0.);
     t_[7].set(2, 1, 0.);
     t_[7].set(2, 2, -1. / (sqrt(3.)));
-    cout << "done." << endl;
 }

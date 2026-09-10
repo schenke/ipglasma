@@ -6,6 +6,7 @@
 #include <iostream>
 #include <sstream>
 
+#include "Glauber.h"
 #include "Instrumentation.h"
 
 Lattice::Lattice(Parameters *param, int length) {
@@ -13,8 +14,8 @@ Lattice::Lattice(Parameters *param, int length) {
     size_ = length * length;
     const double a = param->getL() / static_cast<double>(length);
 
-    std::cout << "Allocating square lattice of size " << length << "x" << length
-              << " with a=" << a << " fm ...";
+    messager_ << "Allocating square lattice of size " << length << "x"
+              << length << " with a=" << a << " fm ...";
 
     // Each vector is one contiguous field of fixed 3x3 matrices.  Preserve the
     // original Cell constructor semantics: all eight matrices start as I_3.
@@ -56,7 +57,8 @@ Lattice::Lattice(Parameters *param, int length) {
         }
     }
 
-    std::cout << " done on rank " << param->getMPIRank() << "." << std::endl;
+    messager_ << " done on rank " << param->getMPIRank() << ".";
+    messager_.flush("info");
 }
 
 void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
@@ -108,10 +110,14 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
 }
 
 void Lattice::writeWilsonLines(
-    std::string fileprefix, Parameters *param, const int iA) {
+    std::string fileprefix, Parameters *param, NucleusRole nucleus) {
     const int N = param->getSize();
     const double L = param->getL();
     const double a = L / static_cast<double>(N);  // lattice spacing in fm
+    const bool isProjectile = (nucleus == NucleusRole::Projectile);
+    // Preserves the historical iA=1 (projectile) / iA=2 (target) numbering
+    // used in the output filename below.
+    const int iA = isProjectile ? 1 : 2;
 
     std::stringstream strVOne_name;
     strVOne_name << fileprefix << "V-"
@@ -127,7 +133,7 @@ void Lattice::writeWilsonLines(
         for (int ix = 0; ix < N; ix++) {
             for (int iy = 0; iy < N; iy++) {
                 int pos = ix * N + iy;
-                if (iA == 1) {
+                if (isProjectile) {
                     foutU << ix << " " << iy << " " << U[pos].MatrixToString()
                           << std::endl;
                 } else {
@@ -146,7 +152,7 @@ void Lattice::writeWilsonLines(
             strVOne_name.str().c_str(), std::ios::out | std::ios::binary);
 
         double temp = param->getRapidityA();
-        if (iA == 2) temp = param->getRapidityB();
+        if (!isProjectile) temp = param->getRapidityB();
 
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
@@ -163,7 +169,7 @@ void Lattice::writeWilsonLines(
                     for (int b = 0; b < 3; b++) {
                         int indx = N * iy + ix;
                         int SU3indx = a1 * Nc_ + b;
-                        if (iA == 1) {
+                        if (isProjectile) {
                             val1[0] = U[indx].getRe(SU3indx);
                             val1[1] = U[indx].getIm(SU3indx);
                         } else {

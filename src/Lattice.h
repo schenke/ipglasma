@@ -7,6 +7,9 @@
 #include "Cell.h"
 #include "Matrix.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
+
+enum class NucleusRole;
 
 // Lattice matrix state is stored structure-of-arrays: every fundamental SU(3)
 // field is one contiguous std::vector<Matrix>, and Matrix itself is exactly
@@ -16,6 +19,7 @@ class Lattice {
   private:
     int size_;
     static constexpr int Nc_ = 3;
+    PrettyOstream messager_;
 
   public:
     Lattice(Parameters *param, int length);
@@ -45,7 +49,7 @@ class Lattice {
     std::vector<int> pospY;
 
     void writeWilsonLines(
-        std::string fileprefix, Parameters *param, const int iA);
+        std::string fileprefix, Parameters *param, NucleusRole nucleus);
     void writeSU3Matrices(std::string fileprefix, Parameters *param);
     std::vector<int> posmXpY;
     std::vector<int> pospXmY;

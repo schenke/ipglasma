@@ -1974,18 +1974,14 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             fillColorCharge(colorChargeScaleA);
         }
 
-        for (int n = 0; n < Nc2m1_; n++) {
-            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
-        }
+        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, 1, Nc2m1_);
 
         {
             IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
             applyMomentumKernel();
         }
 
-        for (int n = 0; n < Nc2m1_; n++) {
-            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
-        }
+        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, -1, Nc2m1_);
 
         {
             IPG_PROFILE_SCOPE("initialization.wilson_exponent");
@@ -2017,18 +2013,14 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             fillColorCharge(colorChargeScaleB);
         }
 
-        for (int n = 0; n < Nc2m1_; n++) {
-            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
-        }
+        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, 1, Nc2m1_);
 
         {
             IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
             applyMomentumKernel();
         }
 
-        for (int n = 0; n < Nc2m1_; n++) {
-            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
-        }
+        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, -1, Nc2m1_);
 
         // The old nucleus-B block had its omp parallel directive commented
         // out, leaving this expensive exponential/multiply pass effectively

@@ -147,9 +147,14 @@ class FFT {
     template <class T>
     void fftn(T **data, T **outdata, const int nn[], const int isign);
 
-    void fftnComplex(
-        complex<double> *data, complex<double> *outdata, const int nn[],
-        const int isign);
+    // Performs mDim independent 2D transforms, one per data[k]/outdata[k]
+    // (each a contiguous length-(nn[0]*nn[1]) plane). Batched and
+    // parallelized like fftnArray/fftn: all mDim planes are packed into the
+    // shared scratch and executed concurrently via FFTW's thread-safe
+    // new-array interface instead of looping over them serially.
+    void fftnComplexArray(
+        complex<double> **data, complex<double> **outdata, const int nn[],
+        const int isign, const int mDim);
 };
 
 #endif  // SRC_FFT_H_

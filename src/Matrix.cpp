@@ -528,6 +528,8 @@ Matrix &Matrix::logmPade(const int m) {
         S = S + wi * (A * invD);
     }
 
+    gsl_integration_glfixed_table_free(table);
+
     *this = S;
 
     return *this;

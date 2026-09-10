@@ -83,6 +83,7 @@ The main categories for changes in this file are:
 * Fix `b`/`phi_RP` being left uninitialized when `useNucleus=0`.
 * Fix `Init::readInNucleusConfigs` hanging forever in an infinite loop instead of exiting with an error message when the requested nucleon-configuration file doesn't exist.
 * Fix `Glauber::readInVx`/`readInVy` ignoring every `fscanf` return value: they now exit with an error message on a missing file, a missing `"EndOfData"` marker (which previously could loop forever on truncated input, the same bug as `readInNucleusConfigs`), or fewer entries than requested (which previously read silently stale/garbage values past EOF).
+* Fix `Matrix::logmPade` leaking its GSL Gauss-Legendre integration table on every call.
 
 ### Removed
 * Remove functions that were declared or defined but never called, including `Evolution::evolveUfast`/`multiplicitynkxky`/`correlations`/`anisotropy`, `GaugeFix::gaugeTransform`, the `Spinor` class and `Matrix::reu`/`reu2`/`imag`, `Init::solveAxbComplex`/`multiplicity`/the 2-argument `rotate_nucleus` overload/`findUInForwardLightconeBjoern`, `MyEigen::test`, `FFT::fftnMany`, `Glauber::FindXorg`/`PAB`/`AnumHulthenInt`, and about a dozen unused `Parameters` getter/setter pairs.

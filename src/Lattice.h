@@ -14,8 +14,8 @@
 // paths access these field arrays directly, without Cell pointer chasing.
 class Lattice {
   private:
-    int size;
-    static constexpr int Nc = 3;
+    int size_;
+    static constexpr int Nc_ = 3;
 
   public:
     Lattice(Parameters *param, int length);
@@ -23,7 +23,7 @@ class Lattice {
     Lattice(const Lattice &) = delete;
     Lattice &operator=(const Lattice &) = delete;
 
-    int getSize() const { return size; }
+    int getSize() const { return size_; }
 
     // Fundamental matrix lattice fields. Logical aliases are:
     // U/E1, U2/E2, Ux1/g, Uy1/Uplaq, Ux2/pi, Uy2/phi.
@@ -44,16 +44,16 @@ class Lattice {
     std::vector<int> posmY;
     std::vector<int> pospY;
 
-    void WriteWilsonLines(
+    void writeWilsonLines(
         std::string fileprefix, Parameters *param, const int iA);
-    void WriteSU3Matricies(std::string fileprefix, Parameters *param);
+    void writeSU3Matrices(std::string fileprefix, Parameters *param);
     std::vector<int> posmXpY;
     std::vector<int> pospXmY;
 };
 
 class BufferLattice {
   private:
-    int size;
+    int size_;
 
   public:
     explicit BufferLattice(int length);

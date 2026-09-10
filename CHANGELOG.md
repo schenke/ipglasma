@@ -55,6 +55,12 @@ Date: 2026-XX-XX
 * Rename `jimwlk.cpp`/`.h` to `JIMWLK.cpp`/`.h` and the `pretty_ostream` class/files to `PrettyOstream`, to match their class names.
 * Rename `utilities/read_test.cc`/`save_to_binary.cc` to `.cpp`, matching the rest of the codebase.
 * Rename `Setup`/`Util`/`Glauber`'s `PascalCase` functions (`IFind`, `PrintGlauberData`, `ReadInVx`, ...) and `Init`'s `snake_case` nucleus-generation functions to `camelCase`, for a single consistent naming convention.
+* Standardize private member-variable names to a trailing-underscore convention (`size_`, `mode_`, ...) across `Parameters`, `Init`, `Random`, `Cell`, `Evolution`, `Lattice`, and `Matrix`.
+* Encapsulate `Glauber`: move its data members from `public` to `private` (with trailing underscores) and add a `getGlauberData()` accessor for the one member that was read from outside the class.
+* Rename the remaining `PascalCase`/`snake_case` methods to `camelCase`: `Matrix::FrobeniusNorm`/`OneNorm`/`logm_pade`, `GaugeFix::FFTChi`, `Random::Gauss`/`GaussBulk`/`Poisson`, `Evolution::Tmunu`, `Lattice::WriteWilsonLines`/`WriteSU3Matricies` (also fixing a "Matricies" typo to "Matrices"), and `PrettyOstream::get_memory_usage`.
+* Rename `Glauber`'s lowercase `tiny`/`limit` macros to `TINY`/`LIMIT`, matching the `ALL_CAPS` convention used by every other macro in the codebase.
+* Modernize `Init`'s `Initialization_method` to a scoped `enum class InitializationMethod` with `PascalCase` enumerators, matching `NucleusRole`.
+* Simplify `Glauber`'s `Nucleus`/`Data` from C-style `typedef struct` to plain `struct` declarations.
 
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.

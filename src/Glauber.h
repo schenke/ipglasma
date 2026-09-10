@@ -6,8 +6,8 @@
 #include "Random.h"
 
 #define TOL (1.0e-6)
-#define tiny (1.0e-10)
-#define limit 10000
+#define TINY (1.0e-10)
+#define LIMIT 10000
 
 struct ReturnValue {
     double x;
@@ -19,7 +19,7 @@ struct ReturnValue {
     // int acceptances;
 };
 
-typedef struct nucleus {
+struct Nucleus {
     std::string name;
     double A;
     double Z;
@@ -38,40 +38,41 @@ typedef struct nucleus {
     double d_min;
     double dR_np;
     double da_np;
-} Nucleus;
+};
 
-typedef struct data {
+struct Data {
     double SigmaNN;
     Nucleus Target;
     Nucleus Projectile;
     double SCutOff;
     int InterMax;
     /* trap door */
-} Data;
+};
 
 class Glauber {
   private:
-  public:
     typedef double (*ptr_func)(double);
 
-    double AnumR, NuInS_S;
-    Nucleus *Nuc_WS;
-    Data GlauberData;
-    ptr_func tempFunc;
-    double b;  // impact parameter
-    double currentTAB;
-    double currentA1;
-    double currentA2;
-    double currentZ1;
-    double currentZ2;
+    double AnumR_, NuInS_S_;
+    Nucleus *Nuc_WS_;
+    Data GlauberData_;
+    ptr_func tempFunc_;
+    double b_;  // impact parameter
+    double currentTAB_;
+    double currentA1_;
+    double currentA2_;
+    double currentZ1_;
+    double currentZ2_;
 
+  public:
     Glauber() {};
     ~Glauber() { remove("tmp.dat"); }
 
-    int nucleusA1() const { return static_cast<int>(currentA1); }
-    int nucleusA2() const { return static_cast<int>(currentA2); }
-    int nucleusZ1() const { return static_cast<int>(currentZ1); }
-    int nucleusZ2() const { return static_cast<int>(currentZ2); }
+    int nucleusA1() const { return static_cast<int>(currentA1_); }
+    int nucleusA2() const { return static_cast<int>(currentA2_); }
+    int nucleusZ1() const { return static_cast<int>(currentZ1_); }
+    int nucleusZ2() const { return static_cast<int>(currentZ2_); }
+    const Data &getGlauberData() const { return GlauberData_; }
     int isFile(char *file_name);
     void findNucleusData(
         Nucleus *nucleus, std::string target, std::string file_name, int rank);

@@ -236,7 +236,7 @@ void JIMWLK::evolution() {
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
                     std::stringstream ss;
                     ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->WriteWilsonLines(ss.str(), &param_, 1);
+                    lat_ptr_->writeWilsonLines(ss.str(), &param_, 1);
                     iSnapshot++;
                 }
             }
@@ -259,7 +259,7 @@ void JIMWLK::evolution() {
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
                     std::stringstream ss;
                     ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->WriteWilsonLines(ss.str(), &param_, 2);
+                    lat_ptr_->writeWilsonLines(ss.str(), &param_, 2);
                     iSnapshot++;
                 }
             }
@@ -280,10 +280,10 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
 
     // generate random Gaussian noise in every cell for Nc^2-1 color
     // components and 2 spatial components x and y
-    // (kept serial: random_ptr_->Gauss() mutates shared RNG state)
+    // (kept serial: random_ptr_->gauss() mutates shared RNG state)
     for (int i = 0; i < Ncells_; i++) {
         for (int n = 0; n < 2 * Nc2m1_; n++) {
-            xi2_[i][n] = std::complex<double>(random_ptr_->Gauss(), 0.);
+            xi2_[i][n] = std::complex<double>(random_ptr_->gauss(), 0.);
         }
     }
 

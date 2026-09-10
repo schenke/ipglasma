@@ -18,7 +18,7 @@ class GaugeFix {
     // Destructor.
     ~GaugeFix() {};
 
-    void FFTChi(
+    void fftChi(
         FFT *fft, Lattice *lat, Group *group, Parameters *param, int steps);
 };
 

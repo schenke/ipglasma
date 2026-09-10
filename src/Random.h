@@ -15,15 +15,15 @@
 
 class Random {
   private:
-    int iset;
-    double gset;
+    int iset_;
+    double gset_;
 
-    unsigned long long mt[NN];
+    unsigned long long mt_[NN];
     std::vector<unsigned long long> bulkRawScratch_;
-    /* mti==NN+1 means mt[NN] is not initialized */
-    int mti;
+    /* mti_==NN+1 means mt_[NN] is not initialized */
+    int mti_;
 
-    gsl_rng *gslRandom;
+    gsl_rng *gslRandom_;
 
     std::vector<double> gammaIncCDF_;
     std::vector<double> gammaIncCDFx_;
@@ -32,12 +32,12 @@ class Random {
 
   public:
     Random() {
-        iset = 0;
-        gslRandom = gsl_rng_alloc(gsl_rng_taus);
+        iset_ = 0;
+        gslRandom_ = gsl_rng_alloc(gsl_rng_taus);
 
     };  // constructor
 
-    ~Random() { gsl_rng_free(gslRandom); };  // destructor
+    ~Random() { gsl_rng_free(gslRandom_); };  // destructor
     void init_genrand64(unsigned long long seed);
     unsigned long long genrand64_int64(void);
     long long genrand64_int63(void);
@@ -46,9 +46,9 @@ class Random {
     double genrand64_real3(void);
 
     void gslRandomInit(unsigned long long seed);
-    int Poisson(const double mean);
-    double Gauss(double mean = 0., double width = 1.);
-    void GaussBulk(
+    int poisson(const double mean);
+    double gauss(double mean = 0., double width = 1.);
+    void gaussBulk(
         double *out, std::size_t count, std::vector<double> &scratch);
 
     void setGammaIncCDF(const double omega);

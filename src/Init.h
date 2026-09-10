@@ -15,28 +15,28 @@
 #include "Random.h"
 #include "PrettyOstream.h"
 
-enum Initialization_method {
-    SAMPLE_COLOR_CHARGES,
-    READ_WLINE_TEXT,
-    READ_WLINE_BINARY,
-    INITIALIZE_AFTER_JIMWLK
+enum class InitializationMethod {
+    SampleColorCharges,
+    ReadWlineText,
+    ReadWlineBinary,
+    InitializeAfterJimwlk
 };
 
 class Init {
   private:
-    int const static iymaxNuc = 44;  // for the Tp-y table
+    int const static iymaxNuc_ = 44;  // for the Tp-y table
 
-    int const static iTpmax =
+    int const static iTpmax_ =
         200;  // updated in March 2019 to a larger T_A range
 
-    double const deltaYNuc = 0.25;  // for the new table
-    FFT fft;
+    double const deltaYNuc_ = 0.25;  // for the new table
+    FFT fft_;
     //  Matrix** A;
     //  Glauber *glauber;
-    double Qs2Nuclear[iTpmax][iymaxNuc];
-    double Tlist[iTpmax];
+    double Qs2Nuclear_[iTpmax_][iymaxNuc_];
+    double Tlist_[iTpmax_];
 
-    double As[1];
+    double As_[1];
 
     std::vector<vector<float>> nucleonPosArrA_;
     std::vector<vector<float>> nucleonPosArrB_;
@@ -46,7 +46,7 @@ class Init {
     // list of x and y coordinates of nucleons in nucleus B
     std::vector<ReturnValue> nucleusB_;
 
-    PrettyOstream messager;
+    PrettyOstream messager_;
 
     static constexpr int Nc_ = 3;
     static constexpr int Nc2m1_ = Nc_ * Nc_ - 1;
@@ -54,17 +54,17 @@ class Init {
     Random *random_ptr_;
 
     Matrix one_;
-    vector<vector<double>> xq1, xq2, yq1, yq2, BGq1, BGq2, gauss1, gauss2;
+    vector<vector<double>> xq1_, xq2_, yq1_, yq2_, BGq1_, BGq2_, gauss1_, gauss2_;
 
   public:
     // Constructor.
-    explicit Init(const int nn[]) : fft(nn), one_(1.) {};
+    explicit Init(const int nn[]) : fft_(nn), one_(1.) {};
 
     ~Init() {};
 
     void init(
         Lattice *lat, Group *group, Parameters *param, Random *random,
-        Glauber *glauber, Initialization_method init_method);
+        Glauber *glauber, InitializationMethod init_method);
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     void initializeForwardLightCone(Lattice *lat, Parameters *param);
     void sampleImpactParameter(Parameters *param);

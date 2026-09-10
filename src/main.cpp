@@ -356,13 +356,13 @@ int main(int argc, char *argv[]) {
             param->setSuccess(0);
 
             // initialize U-fields on the lattice
-            Initialization_method init_method;
+            InitializationMethod init_method;
             if (param->getReadInitialWilsonLines() == 0) {
-                init_method = SAMPLE_COLOR_CHARGES;
+                init_method = InitializationMethod::SampleColorCharges;
             } else {
                 init_method = (param->getReadInitialWilsonLines() == 1)
-                                  ? READ_WLINE_TEXT
-                                  : READ_WLINE_BINARY;
+                                  ? InitializationMethod::ReadWlineText
+                                  : InitializationMethod::ReadWlineBinary;
             }
             // First generate the V
             init.init(&lat, &group, param, random, &glauber, init_method);
@@ -378,11 +378,11 @@ int main(int argc, char *argv[]) {
                     s1 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_projectile())
                        << "_";
-                    lat.WriteWilsonLines(s1.str(), param, 1);  // nucleus A
+                    lat.writeWilsonLines(s1.str(), param, 1);  // nucleus A
                     std::stringstream s2;
                     s2 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_target()) << "_";
-                    lat.WriteWilsonLines(s2.str(), param, 2);  // nucleus B
+                    lat.writeWilsonLines(s2.str(), param, 2);  // nucleus B
                 }
             }
 

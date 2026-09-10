@@ -42,7 +42,7 @@ class PrettyOstream {
 
     //! This function returns a string for the memory usage
     //! of the current program in MB
-    std::string get_memory_usage();
+    std::string getMemoryUsage();
 
     //! reload the << operator
     template <typename T>

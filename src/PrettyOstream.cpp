@@ -37,12 +37,12 @@ void PrettyOstream::flush(string type) {
 
 //! This function output information message
 void PrettyOstream::info(string message) {
-    cout << "[Info] " << get_memory_usage() << " " << message << endl;
+    cout << "[Info] " << getMemoryUsage() << " " << message << endl;
 }
 
 //! This function output debug message
 void PrettyOstream::debug(string message) {
-    cout << CYAN << "[Debug] " << get_memory_usage() << " " << message << RESET
+    cout << CYAN << "[Debug] " << getMemoryUsage() << " " << message << RESET
          << endl;
 }
 
@@ -58,7 +58,7 @@ void PrettyOstream::error(string message) {
 
 //! This function returns a string for the memory usage
 //! of the current program in MB
-string PrettyOstream::get_memory_usage() {
+string PrettyOstream::getMemoryUsage() {
     struct rusage usage;
     if (getrusage(RUSAGE_SELF, &usage) == 0) {
         double memory_usage_in_MB = 0.0;

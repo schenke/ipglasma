@@ -309,9 +309,9 @@ void Glauber::findNucleusData2(
 }
 
 void Glauber::printGlauberData() {
-    fprintf(stderr, "GlauberData.SigmaNN = %e\n", GlauberData.SigmaNN);
-    fprintf(stderr, "GlauberData.InterMax = %d\n", GlauberData.InterMax);
-    fprintf(stderr, "GlauberData.SCutOff = %f\n", GlauberData.SCutOff);
+    fprintf(stderr, "GlauberData_.SigmaNN = %e\n", GlauberData_.SigmaNN);
+    fprintf(stderr, "GlauberData_.InterMax = %d\n", GlauberData_.InterMax);
+    fprintf(stderr, "GlauberData_.SCutOff = %f\n", GlauberData_.SCutOff);
 }
 
 void Glauber::printNucleusData(Nucleus *nucleus) {
@@ -521,13 +521,13 @@ double Glauber::interNuPInSP(double s) {
     static double *vx, *vy;
     ind++;
 
-    if (GlauberData.Projectile.A == 1.0) return 0.0;
+    if (GlauberData_.Projectile.A == 1.0) return 0.0;
 
     if (ind == 1) {
-        calcRho(&(GlauberData.Projectile));
-        up = 2.0 * GlauberData.SCutOff;
+        calcRho(&(GlauberData_.Projectile));
+        up = 2.0 * GlauberData_.SCutOff;
         down = 0.0;
-        maxi_num = GlauberData.InterMax;
+        maxi_num = GlauberData_.InterMax;
         vx = makeVx(down, up, maxi_num);
         vy = makeVy(vx, maxi_num);
     } /* if ind */
@@ -552,14 +552,14 @@ double Glauber::interNuTInST(double s) {
     static double *vx, *vy;
 
     ind++;
-    if (GlauberData.Target.A == 1.0) return 0.0;
+    if (GlauberData_.Target.A == 1.0) return 0.0;
 
     if (ind == 1) {
-        calcRho(&(GlauberData.Target));
+        calcRho(&(GlauberData_.Target));
 
-        up = 2.0 * GlauberData.SCutOff;
+        up = 2.0 * GlauberData_.SCutOff;
         down = 0.0;
-        maxi_num = GlauberData.InterMax;
+        maxi_num = GlauberData_.InterMax;
 
         vx = makeVx(down, up, maxi_num);
         vy = makeVy(vx, maxi_num);
@@ -582,7 +582,7 @@ void Glauber::calcRho(Nucleus *nucleus) {
     double f, R_WS;
     /* to pass to AnumIntegrand */
 
-    Nuc_WS = nucleus;
+    Nuc_WS_ = nucleus;
 
     R_WS = nucleus->R_WS;
 
@@ -609,9 +609,9 @@ double Glauber::nuInS(double s) {
     int id;
 
     /* to pass to the DensityFunc's */
-    NuInS_S = s;
+    NuInS_S_ = s;
 
-    id = Nuc_WS->DensityFunc;
+    id = Nuc_WS_->DensityFunc;
 
     count = 0;
     // cout << "calling integral" << endl;
@@ -624,12 +624,12 @@ double Glauber::anum3Fermi(double R_WS) {
     int count = 0;
     double up, down, a_WS, rho, f;
 
-    a_WS = Nuc_WS->a_WS;
-    // w_WS = Nuc_WS->w_WS;
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    // w_WS = Nuc_WS_->w_WS;
+    rho = Nuc_WS_->rho_WS;
 
     /* to pass to Anumintegrand */
-    AnumR = R_WS / a_WS;
+    AnumR_ = R_WS / a_WS;
 
     down = 0.0;
     up = 1.0;
@@ -645,13 +645,13 @@ double Glauber::anum3FermiInt(double xi) {
     double r;
     double R_WS, w_WS;
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
-    w_WS = Nuc_WS->w_WS;
+    w_WS = Nuc_WS_->w_WS;
 
     /* already divided by a */
-    R_WS = AnumR;
+    R_WS = AnumR_;
     r = -log(xi);
 
     f = r * r;
@@ -667,26 +667,26 @@ double Glauber::nuInt3Fermi(double xi) {
     double z, r, s;
     double w_WS, R_WS, a_WS, rho;
 
-    a_WS = Nuc_WS->a_WS;
-    w_WS = Nuc_WS->w_WS;
-    R_WS = Nuc_WS->R_WS;
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    w_WS = Nuc_WS_->w_WS;
+    R_WS = Nuc_WS_->R_WS;
+    rho = Nuc_WS_->rho_WS;
 
     /* xi = exp(-z/a), r = sqrt(z^2 + s^2) */
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
     /* devide by a_WS, make life simpler */
 
-    s = NuInS_S / a_WS;
+    s = NuInS_S_ / a_WS;
     z = -log(xi);
     r = sqrt(s * s + z * z);
     R_WS /= a_WS;
 
     c = exp(-R_WS);
 
-    f = 2.0 * a_WS * rho * (GlauberData.SigmaNN);
+    f = 2.0 * a_WS * rho * (GlauberData_.SigmaNN);
     f *= 1.0 + w_WS * pow(r / R_WS, 2.);
     f /= xi + c * exp(s * s / (r + z));
 
@@ -699,12 +699,12 @@ double Glauber::anum3Gauss(double R_WS) {
     int count = 0;
     double up, down, a_WS, rho, f;
 
-    a_WS = Nuc_WS->a_WS;
-    // w_WS = Nuc_WS->w_WS;
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    // w_WS = Nuc_WS_->w_WS;
+    rho = Nuc_WS_->rho_WS;
 
     /* to pass to Anumintegrand */
-    AnumR = R_WS / a_WS;
+    AnumR_ = R_WS / a_WS;
 
     down = 0.0;
     up = 1.0;
@@ -720,14 +720,14 @@ double Glauber::anum3GaussInt(double xi) {
     double r_sqr;
     double R_WS, w_WS;
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
-    w_WS = Nuc_WS->w_WS;
+    w_WS = Nuc_WS_->w_WS;
 
     /* already divided by a */
 
-    R_WS = AnumR;
+    R_WS = AnumR_;
 
     r_sqr = -log(xi);
 
@@ -748,26 +748,26 @@ double Glauber::nuInt3Gauss(double xi) {
     double z_sqr, r_sqr, s;
     double w_WS, R_WS, a_WS, rho;
 
-    a_WS = Nuc_WS->a_WS;
-    w_WS = Nuc_WS->w_WS;
-    R_WS = Nuc_WS->R_WS;
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    w_WS = Nuc_WS_->w_WS;
+    R_WS = Nuc_WS_->R_WS;
+    rho = Nuc_WS_->rho_WS;
 
     /* xi = exp(-z*z/a/a), r = sqrt(z^2 + s^2) */
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
     /* devide by a_WS, make life simpler */
 
-    s = NuInS_S / a_WS;
+    s = NuInS_S_ / a_WS;
     z_sqr = -log(xi);
     r_sqr = s * s + z_sqr;
     R_WS /= a_WS;
 
     c = exp(-R_WS * R_WS);
 
-    f = a_WS * rho * (GlauberData.SigmaNN);
+    f = a_WS * rho * (GlauberData_.SigmaNN);
     f *= 1.0 + w_WS * r_sqr / pow(R_WS, 2.);
     f /= sqrt(z_sqr) * (xi + c * exp(s * s));
 
@@ -779,9 +779,9 @@ double Glauber::anum2HO() {
     int count = 0;
     double up, down, a_WS, rho, f;
 
-    a_WS = Nuc_WS->a_WS;
-    // w_WS = Nuc_WS->w_WS; /* take this to be alpha */
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    // w_WS = Nuc_WS_->w_WS; /* take this to be alpha */
+    rho = Nuc_WS_->rho_WS;
 
     down = 0.0;
     up = 1.0;
@@ -797,10 +797,10 @@ double Glauber::anum2HOInt(double xi) {
     double r_sqr, r;
     double w_WS;
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
-    w_WS = Nuc_WS->w_WS;
+    w_WS = Nuc_WS_->w_WS;
 
     /* already divided by a */
 
@@ -821,27 +821,27 @@ double Glauber::nuInt2HO(double xi) {
     double z_sqr, r_sqr, s;
     double w_WS, a_WS, rho;
 
-    a_WS = Nuc_WS->a_WS;
-    w_WS = Nuc_WS->w_WS;
-    // R_WS = Nuc_WS->R_WS;
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    w_WS = Nuc_WS_->w_WS;
+    // R_WS = Nuc_WS_->R_WS;
+    rho = Nuc_WS_->rho_WS;
 
     /* xi = exp(-z*z/a/a), r = sqrt(z^2 + s^2) */
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
     /* devide by a_WS, make life simpler */
 
-    s = NuInS_S / a_WS;
+    s = NuInS_S_ / a_WS;
     z_sqr = -log(xi);
     r_sqr = s * s + z_sqr;
 
     /* no need to divide by 2 here because -infty < z < infty and
        we integrate only over positive z */
 
-    if (z_sqr < 0.0) z_sqr = tiny;
-    f = a_WS * rho * (GlauberData.SigmaNN);
+    if (z_sqr < 0.0) z_sqr = TINY;
+    f = a_WS * rho * (GlauberData_.SigmaNN);
     f *= (1.0 + w_WS * r_sqr) * exp(-s * s) / sqrt(z_sqr);
 
     return f;
@@ -852,9 +852,9 @@ double Glauber::nuInt2HO(double xi) {
 double Glauber::anumHulthen() {
     double a_WS, b_WS, rho, f;
 
-    a_WS = Nuc_WS->a_WS;
-    b_WS = Nuc_WS->w_WS; /* take this to be b */
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    b_WS = Nuc_WS_->w_WS; /* take this to be b */
+    rho = Nuc_WS_->rho_WS;
 
     /* density function has the form */
     /* rho = (1/r^2) (exp(-a r) - exp(-b r))^2 */
@@ -874,25 +874,25 @@ double Glauber::nuIntHulthen(double xi) {
     double z, r, s;
     double b_WS, a_WS, rho;
 
-    a_WS = Nuc_WS->a_WS;
-    b_WS = Nuc_WS->w_WS;
-    // R_WS = Nuc_WS->R_WS;
-    rho = Nuc_WS->rho_WS;
+    a_WS = Nuc_WS_->a_WS;
+    b_WS = Nuc_WS_->w_WS;
+    // R_WS = Nuc_WS_->R_WS;
+    rho = Nuc_WS_->rho_WS;
 
     /* xi = exp(-z a), r = sqrt(z^2 + s^2) */
 
-    if (xi == 0.0) xi = tiny;
-    if (xi == 1.0) xi = 1.0 - tiny;
+    if (xi == 0.0) xi = TINY;
+    if (xi == 1.0) xi = 1.0 - TINY;
 
     /* multiply by a_WS (in fm^-1), make life simpler */
 
-    s = NuInS_S * a_WS;
+    s = NuInS_S_ * a_WS;
     z = -log(xi);
     r = sqrt(s * s + z * z);
 
     /* mult by 2 because the integral is originally over -infty to infty */
 
-    f = 2.0 * a_WS * rho * (GlauberData.SigmaNN);
+    f = 2.0 * a_WS * rho * (GlauberData_.SigmaNN);
     g = (1.0 / r) * (exp(-r) - exp(-(b_WS / a_WS) * r));
     f *= g * g;
 
@@ -1063,7 +1063,7 @@ double Glauber::qnc7(
 
     area += -fabs(pre_sum) + fabs(left_sum) + fabs(right_sum);
 
-    if (fabs(ans - pre_sum) > tol * fabs(area) && (*count < limit)) {
+    if (fabs(ans - pre_sum) > tol * fabs(area) && (*count < LIMIT)) {
         /*
           branch by calling the function itself
           by calling the qnc7 twice, we are branching
@@ -1101,7 +1101,7 @@ double Glauber::oLSIntegrand(double s) {
     for (k = 1; k <= m; k++) {
         arg = M_PI * (2.0 * k - 1.0) / (2.0 * m);
         x = cos(arg);
-        r = sqrt(s * s + b * b + 2.0 * s * b * x);
+        r = sqrt(s * s + b_ * b_ + 2.0 * s * b_ * x);
         sum += interNuTInST(r);
     } /* k */
 
@@ -1113,9 +1113,9 @@ double Glauber::tAB() {
     double f;
     int count = 0;
     f = integral(
-        7, 0.0, GlauberData.SCutOff, TOL,
+        7, 0.0, GlauberData_.SCutOff, TOL,
         &count);                       // integrate oLSIntegrand(s)
-    f *= 2.0 / (GlauberData.SigmaNN);  // here tAB is the number of binary
+    f *= 2.0 / (GlauberData_.SigmaNN);  // here tAB is the number of binary
                                        // collisions, dimensionless (1/fm^4
                                        // integrated over dr_T^2 (gets rid
                                        // of 1/fm^2), divided by sigma (gets rid
@@ -1152,22 +1152,22 @@ void Glauber::initGlauber(
     paf = p_name;
 
     findNucleusData2(
-        &(GlauberData.Target), Target_Name, setWSDeformParams, R_WS, a_WS,
+        &(GlauberData_.Target), Target_Name, setWSDeformParams, R_WS, a_WS,
         beta2, beta3, beta4, gamma, force_dmin, d_min, dR_np, da_np);
     findNucleusData2(
-        &(GlauberData.Projectile), Projectile_Name, setWSDeformParams, R_WS,
+        &(GlauberData_.Projectile), Projectile_Name, setWSDeformParams, R_WS,
         a_WS, beta2, beta3, beta4, gamma, force_dmin, d_min, dR_np, da_np);
 
-    GlauberData.SigmaNN = 0.1 * SigmaNN;  // sigma in fm^2
-    currentA1 = GlauberData.Projectile.A;
-    currentA2 = GlauberData.Target.A;
-    currentZ1 = GlauberData.Projectile.Z;
-    currentZ2 = GlauberData.Target.Z;
+    GlauberData_.SigmaNN = 0.1 * SigmaNN;  // sigma in fm^2
+    currentA1_ = GlauberData_.Projectile.A;
+    currentA2_ = GlauberData_.Target.A;
+    currentZ1_ = GlauberData_.Projectile.Z;
+    currentZ2_ = GlauberData_.Target.Z;
 
-    GlauberData.InterMax = imax;
-    GlauberData.SCutOff = 12.;
+    GlauberData_.InterMax = imax;
+    GlauberData_.SCutOff = 12.;
 
-    b = inb;
+    b_ = inb;
 }
 
 double Glauber::areaTA(double x, double A) {
@@ -1181,7 +1181,7 @@ ReturnValue Glauber::sampleTARejection(Random *random, int PorT) {
 
     double r, x, y, tmp;
     double phi;
-    double A = 1.2 * GlauberData.SigmaNN
+    double A = 1.2 * GlauberData_.SigmaNN
                / 4.21325504715;  // increase the envelope for larger sigma_inel
                                  // (larger root_s) (was originally written
     // for root(s)=200 GeV, hence the cross section of 4.21325504715 fm^2
@@ -1195,7 +1195,7 @@ ReturnValue Glauber::sampleTARejection(Random *random, int PorT) {
                     (-0.00454545
                      * (-220. * A + areaTA(15., A) * random->genrand64_real1()))
                     / A));
-            // here random->genrand64_real1()*areaTA(GlauberData.SCutOff)
+            // here random->genrand64_real1()*areaTA(GlauberData_.SCutOff)
             // is a uniform random number on [0, area under f(x)]
             tmp = random->genrand64_real1();
 
@@ -1213,7 +1213,7 @@ ReturnValue Glauber::sampleTARejection(Random *random, int PorT) {
                     (-0.00454545
                      * (-220. * A + areaTA(15., A) * random->genrand64_real1()))
                     / A));
-            // here random->genrand64_real1()*areaTA(GlauberData.SCutOff)
+            // here random->genrand64_real1()*areaTA(GlauberData_.SCutOff)
             // is a uniform random number on [0, area under f(x)]
             tmp = random->genrand64_real1();
             // x is uniform on [0,1]

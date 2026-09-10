@@ -741,7 +741,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         if (finalTmunuMeasurement) {
-            Tmunu(lat, param, it);
+            tmunu(lat, param, it);
             if (param->getWriteOutputs() == 5) {
                 // writeEvolvedFields(lat, param, it);
             }
@@ -757,7 +757,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         if (intermediateTmunuMeasurement) {
-            Tmunu(lat, param, it);
+            tmunu(lat, param, it);
             // writeEvolvedFields(lat, param, it);
             //  Preserve the historical intermediate-time finalFlag=false path
             //  when hydro output is enabled.
@@ -1023,7 +1023,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     }
 }
 
-void Evolution::Tmunu(Lattice *lat, Parameters *param, int it) {
+void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.Tmunu");
     double averageTtautau = 0.;
     double averageTtaueta = 0.;
@@ -2540,12 +2540,12 @@ void Evolution::readNkt(Parameters *param) {
                 fin >> dummy;
                 fin >> kt;
                 fin >> nkt;
-                nIn[ikt] = atof(nkt.c_str());
+                nIn_[ikt] = atof(nkt.c_str());
                 fin >> dummy >> Tpp >> b >> Npart;
                 if (ikt == 0) dkt = atof(kt.c_str());
                 if (ikt == 1) dkt = dkt - atof(kt.c_str());
             }
-            cout << nIn[ikt] << endl;
+            cout << nIn_[ikt] << endl;
         }
         fin.close();
         cout << " done." << endl;
@@ -2580,11 +2580,11 @@ void Evolution::readNkt(Parameters *param) {
 
     for (int ik = 0; ik < 100; ik++) {
         if (param->getUsePseudoRapidity() == 0) {
-            dNdeta2 += nIn[ik] * (ik + 0.5) * dkt * dkt * 2.
+            dNdeta2 += nIn_[ik] * (ik + 0.5) * dkt * dkt * 2.
                        * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
         } else {
             dNdeta2 +=
-                nIn[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
+                nIn_[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
                 * cosh(param->getRapidity())
                 / (sqrt(
                     pow(cosh(param->getRapidity()), 2.)
@@ -2653,7 +2653,7 @@ int Evolution::multiplicity(
     int itmax = static_cast<int>(floor(maxtime / (a * dtau) + 1e-10));
 
     double multiplicityPhaseStart = ipg::wallSeconds();
-    gaugefix.FFTChi(fft, lat, group, param, 4000);
+    gaugefix.fftChi(fft_, lat, group, param, 4000);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.gauge_fix", multiplicityPhaseStart);
     // gauge is fixed
@@ -2784,7 +2784,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.prepare_E1", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1, E1, nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E1", multiplicityPhaseStart);
 
@@ -2988,7 +2988,7 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E2", multiplicityPhaseStart);
 
-    fft->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1, E1, nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E2", multiplicityPhaseStart);
 
@@ -3175,7 +3175,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.prepare_pi", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1, E1, nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_pi", multiplicityPhaseStart);
 

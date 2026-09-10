@@ -17,14 +17,14 @@ static_assert(
     "Matrix must remain an exact contiguous complex<double>[9]");
 
 Matrix::Matrix() {
-    for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
+    for (int i = 0; i < 9; ++i) e_[i] = complex<double>(0.0, 0.0);
 }
 
 Matrix::Matrix(double a) {
-    for (int i = 0; i < 9; ++i) e[i] = complex<double>(0.0, 0.0);
-    e[0] = complex<double>(a, 0.0);
-    e[4] = complex<double>(a, 0.0);
-    e[8] = complex<double>(a, 0.0);
+    for (int i = 0; i < 9; ++i) e_[i] = complex<double>(0.0, 0.0);
+    e_[0] = complex<double>(a, 0.0);
+    e_[4] = complex<double>(a, 0.0);
+    e_[8] = complex<double>(a, 0.0);
 }
 
 Matrix::Matrix(NoInitTag) {}
@@ -95,18 +95,18 @@ Matrix operator/(const Matrix &a, const double s) {
 }
 
 Matrix &Matrix::conjg() {
-    const complex<double> a01 = e[1];
-    const complex<double> a02 = e[2];
-    const complex<double> a12 = e[5];
-    e[0] = conj(e[0]);
-    e[4] = conj(e[4]);
-    e[8] = conj(e[8]);
-    e[1] = conj(e[3]);
-    e[2] = conj(e[6]);
-    e[5] = conj(e[7]);
-    e[3] = conj(a01);
-    e[6] = conj(a02);
-    e[7] = conj(a12);
+    const complex<double> a01 = e_[1];
+    const complex<double> a02 = e_[2];
+    const complex<double> a12 = e_[5];
+    e_[0] = conj(e_[0]);
+    e_[4] = conj(e_[4]);
+    e_[8] = conj(e_[8]);
+    e_[1] = conj(e_[3]);
+    e_[2] = conj(e_[6]);
+    e_[5] = conj(e_[7]);
+    e_[3] = conj(a01);
+    e_[6] = conj(a02);
+    e_[7] = conj(a12);
     return *this;
 }
 
@@ -433,11 +433,11 @@ Matrix &Matrix::expm(double t, const int p) {
 }
 
 complex<double> Matrix::det() {
-    return e[0] * e[4] * e[8] + e[1] * e[5] * e[6] + e[2] * e[3] * e[7]
-           - e[2] * e[4] * e[6] - e[1] * e[3] * e[8] - e[5] * e[7] * e[0];
+    return e_[0] * e_[4] * e_[8] + e_[1] * e_[5] * e_[6] + e_[2] * e_[3] * e_[7]
+           - e_[2] * e_[4] * e_[6] - e_[1] * e_[3] * e_[8] - e_[5] * e_[7] * e_[0];
 }
 
-complex<double> Matrix::trace() const { return e[0] + e[4] + e[8]; }
+complex<double> Matrix::trace() const { return e_[0] + e_[4] + e_[8]; }
 
 complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
     return M1(0) * M2(0) + M1(1) * M2(3) + M1(2) * M2(6) + M1(3) * M2(1)
@@ -448,16 +448,16 @@ complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &M1, Matrix &M2) const {
 std::string Matrix::MatrixToString() {
     std::stringstream output;
     output.precision(15);
-    output << e[0].real() << " " << e[0].imag() << " " << e[3].real() << " "
-           << e[3].imag() << " " << e[6].real() << " " << e[6].imag() << " "
-           << e[1].real() << " " << e[1].imag() << " " << e[4].real() << " "
-           << e[4].imag() << " " << e[7].real() << " " << e[7].imag() << " "
-           << e[2].real() << " " << e[2].imag() << " " << e[5].real() << " "
-           << e[5].imag() << " " << e[8].real() << " " << e[8].imag();
+    output << e_[0].real() << " " << e_[0].imag() << " " << e_[3].real() << " "
+           << e_[3].imag() << " " << e_[6].real() << " " << e_[6].imag() << " "
+           << e_[1].real() << " " << e_[1].imag() << " " << e_[4].real() << " "
+           << e_[4].imag() << " " << e_[7].real() << " " << e_[7].imag() << " "
+           << e_[2].real() << " " << e_[2].imag() << " " << e_[5].real() << " "
+           << e_[5].imag() << " " << e_[8].real() << " " << e_[8].imag();
     return output.str();
 }
 
-double Matrix::FrobeniusNorm() {
+double Matrix::frobeniusNorm() {
     int n = this->getNDim();
     double norm = 0.;
 
@@ -472,7 +472,7 @@ double Matrix::FrobeniusNorm() {
     return norm;
 }
 
-double Matrix::OneNorm() {
+double Matrix::oneNorm() {
     int n = this->getNDim();
     double maxColSum = 0.0;
 
@@ -507,7 +507,7 @@ Matrix &Matrix::inv() {
 }
 
 // Pade approximant of log(I+A) (I is unit matrix). good for A\sim I
-Matrix &Matrix::logm_pade(const int m) {
+Matrix &Matrix::logmPade(const int m) {
     Matrix S(0.);
     Matrix A;
     A = *this;
@@ -575,11 +575,11 @@ Matrix &Matrix::sqrtm(const int scale) {
         M = 0.5 * (I + (M + invM) / 2.);
 
         Mr = M - I;
-        Mres = Mr.FrobeniusNorm();
+        Mres = Mr.frobeniusNorm();
 
         XmXo = X - Xold;
 
-        reldiff = XmXo.FrobeniusNorm() / X.FrobeniusNorm();
+        reldiff = XmXo.frobeniusNorm() / X.frobeniusNorm();
         if (reldiff < eps) sc = 0;  // switch to no scaling
 
         if (Mres <= tol) break;
@@ -619,7 +619,7 @@ Matrix &Matrix::logm() {
 
     while (1) {
         M = X - I;
-        normdiff = M.OneNorm();
+        normdiff = M.oneNorm();
 
         if (normdiff <= xvals[15]) {
             p = p + 1;
@@ -652,7 +652,7 @@ Matrix &Matrix::logm() {
     }  // while(1) loop
 
     L = X - I;
-    L.logm_pade(m);
+    L.logmPade(m);
 
     X = pow(2., k) * L;
 

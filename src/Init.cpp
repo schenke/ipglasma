@@ -101,7 +101,7 @@ void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     ReturnValue rv, rv2;
-    messager.info("Sampling nucleon positions ... ");
+    messager_.info("Sampling nucleon positions ... ");
 
     if (param->getNucleonPositionsFromFile() == 0) {
         if (param->getAverageOverNuclei() > 1) {
@@ -146,16 +146,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusA_.push_back(rv);
         } else {
             generateNucleusConfiguration(
-                random, A1, Z1, glauber->GlauberData.Projectile.a_WS,
-                glauber->GlauberData.Projectile.R_WS,
-                glauber->GlauberData.Projectile.beta2,
-                glauber->GlauberData.Projectile.beta3,
-                glauber->GlauberData.Projectile.beta4,
-                glauber->GlauberData.Projectile.gamma,
-                glauber->GlauberData.Projectile.forceDminFlag,
-                glauber->GlauberData.Projectile.d_min,
-                glauber->GlauberData.Projectile.dR_np,
-                glauber->GlauberData.Projectile.da_np, nucleusA_);
+                random, A1, Z1, glauber->getGlauberData().Projectile.a_WS,
+                glauber->getGlauberData().Projectile.R_WS,
+                glauber->getGlauberData().Projectile.beta2,
+                glauber->getGlauberData().Projectile.beta3,
+                glauber->getGlauberData().Projectile.beta4,
+                glauber->getGlauberData().Projectile.gamma,
+                glauber->getGlauberData().Projectile.forceDminFlag,
+                glauber->getGlauberData().Projectile.d_min,
+                glauber->getGlauberData().Projectile.dR_np,
+                glauber->getGlauberData().Projectile.da_np, nucleusA_);
         }
 
         if (A2 == 1) {
@@ -187,16 +187,16 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             nucleusB_.push_back(rv);
         } else {
             generateNucleusConfiguration(
-                random, A2, Z2, glauber->GlauberData.Target.a_WS,
-                glauber->GlauberData.Target.R_WS,
-                glauber->GlauberData.Target.beta2,
-                glauber->GlauberData.Target.beta3,
-                glauber->GlauberData.Target.beta4,
-                glauber->GlauberData.Target.gamma,
-                glauber->GlauberData.Target.forceDminFlag,
-                glauber->GlauberData.Target.d_min,
-                glauber->GlauberData.Target.dR_np,
-                glauber->GlauberData.Target.da_np, nucleusB_);
+                random, A2, Z2, glauber->getGlauberData().Target.a_WS,
+                glauber->getGlauberData().Target.R_WS,
+                glauber->getGlauberData().Target.beta2,
+                glauber->getGlauberData().Target.beta3,
+                glauber->getGlauberData().Target.beta4,
+                glauber->getGlauberData().Target.gamma,
+                glauber->getGlauberData().Target.forceDminFlag,
+                glauber->getGlauberData().Target.d_min,
+                glauber->getGlauberData().Target.dR_np,
+                glauber->getGlauberData().Target.da_np, nucleusB_);
         }
     } else if (param->getNucleonPositionsFromFile() == 1) {
         if (nucleonPosArrA_.size() > 0) {
@@ -215,23 +215,23 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             recenterNucleus(nucleusA_);
         } else {
             // no configurations, sample with Woods-Saxon
-            messager << "configuration file for A = " << glauber->nucleusA1()
+            messager_ << "configuration file for A = " << glauber->nucleusA1()
                      << " is not available, generate the nucleus configuration "
                      << "using Woods-Saxon distribution instead.";
-            messager.flush("info");
+            messager_.flush("info");
 
             generateNucleusConfiguration(
                 random, glauber->nucleusA1(), glauber->nucleusZ1(),
-                glauber->GlauberData.Projectile.a_WS,
-                glauber->GlauberData.Projectile.R_WS,
-                glauber->GlauberData.Projectile.beta2,
-                glauber->GlauberData.Projectile.beta3,
-                glauber->GlauberData.Projectile.beta4,
-                glauber->GlauberData.Projectile.gamma,
-                glauber->GlauberData.Projectile.forceDminFlag,
-                glauber->GlauberData.Projectile.d_min,
-                glauber->GlauberData.Projectile.dR_np,
-                glauber->GlauberData.Projectile.da_np, nucleusA_);
+                glauber->getGlauberData().Projectile.a_WS,
+                glauber->getGlauberData().Projectile.R_WS,
+                glauber->getGlauberData().Projectile.beta2,
+                glauber->getGlauberData().Projectile.beta3,
+                glauber->getGlauberData().Projectile.beta4,
+                glauber->getGlauberData().Projectile.gamma,
+                glauber->getGlauberData().Projectile.forceDminFlag,
+                glauber->getGlauberData().Projectile.d_min,
+                glauber->getGlauberData().Projectile.dR_np,
+                glauber->getGlauberData().Projectile.da_np, nucleusA_);
         }
 
         if (nucleonPosArrB_.size() > 0) {
@@ -250,22 +250,22 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             recenterNucleus(nucleusB_);
         } else {
             // no configurations, sample with Woods-Saxon
-            messager << "configuration file for A = " << glauber->nucleusA2()
+            messager_ << "configuration file for A = " << glauber->nucleusA2()
                      << " is not available, generate the nucleus configuration "
                      << "using Woods-Saxon distribution instead.";
-            messager.flush("info");
+            messager_.flush("info");
             generateNucleusConfiguration(
                 random, glauber->nucleusA2(), glauber->nucleusZ2(),
-                glauber->GlauberData.Target.a_WS,
-                glauber->GlauberData.Target.R_WS,
-                glauber->GlauberData.Target.beta2,
-                glauber->GlauberData.Target.beta3,
-                glauber->GlauberData.Target.beta4,
-                glauber->GlauberData.Target.gamma,
-                glauber->GlauberData.Target.forceDminFlag,
-                glauber->GlauberData.Target.d_min,
-                glauber->GlauberData.Target.dR_np,
-                glauber->GlauberData.Target.da_np, nucleusB_);
+                glauber->getGlauberData().Target.a_WS,
+                glauber->getGlauberData().Target.R_WS,
+                glauber->getGlauberData().Target.beta2,
+                glauber->getGlauberData().Target.beta3,
+                glauber->getGlauberData().Target.beta4,
+                glauber->getGlauberData().Target.gamma,
+                glauber->getGlauberData().Target.forceDminFlag,
+                glauber->getGlauberData().Target.d_min,
+                glauber->getGlauberData().Target.dR_np,
+                glauber->getGlauberData().Target.da_np, nucleusB_);
         }
     } else if (param->getNucleonPositionsFromFile() == 2) {
         // Read in Alvioli's nucleon positions including correlations
@@ -488,7 +488,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 void Init::readNuclearQs(Parameters *param) {
     IPG_PROFILE_SCOPE("initialization.read_qs_table");
     // steps in qs0 and Y in the file
-    // double y[iymaxNuc];
+    // double y[iymaxNuc_];
     // double qs0[ibmax];
     string dummy;
     string T, Qs;
@@ -501,14 +501,14 @@ void Init::readNuclearQs(Parameters *param) {
     ifstream fin;
     fin.open((param->getNucleusQsTableFileName()).c_str());
     if (fin) {
-        for (int iT = 0; iT < iTpmax; iT++) {
-            for (int iy = 0; iy < iymaxNuc; iy++) {
+        for (int iT = 0; iT < iTpmax_; iT++) {
+            for (int iy = 0; iy < iymaxNuc_; iy++) {
                 if (!fin.eof()) {
                     fin >> dummy;
                     fin >> T;
-                    Tlist[iT] = atof(T.c_str());
+                    Tlist_[iT] = atof(T.c_str());
                     fin >> Qs;
-                    Qs2Nuclear[iT][iy] = atof(Qs.c_str());
+                    Qs2Nuclear_[iT][iy] = atof(Qs.c_str());
                 } else {
                     cerr << " End of file reached prematurely. Did the file "
                             "change? "
@@ -534,7 +534,7 @@ void Init::readNuclearQs(Parameters *param) {
 //   MPI_Comm_size (MPI_COMM_WORLD, &size);
 //   if(rank==0)
 //     {
-//       double package[iTpmax*iymaxNuc];
+//       double package[iTpmax_*iymaxNuc_];
 //       // steps in qs0 and Y in the file
 //       string dummy;
 //       string T, Qs;
@@ -547,18 +547,18 @@ void Init::readNuclearQs(Parameters *param) {
 //       cout << "Reading Q_s(sum(T_p),y) from file ";
 //       if(fin)
 //         {
-//           for (int iT=0; iT<iTpmax; iT++)
+//           for (int iT=0; iT<iTpmax_; iT++)
 //             {
-//               for (int iy=0; iy<iymaxNuc; iy++)
+//               for (int iy=0; iy<iymaxNuc_; iy++)
 //                 {
 //                   if (!fin.eof())
 //                     {
 //                       fin >> dummy;
 //                       fin >> T;
-//                       Tlist[iT]=atof(T.c_str());
+//                       Tlist_[iT]=atof(T.c_str());
 //                       fin >> Qs;
-//                       Qs2Nuclear[iT][iy]=atof(Qs.c_str());
-//                       package[iT*iymaxNuc+iy] = Qs2Nuclear[iT][iy];
+//                       Qs2Nuclear_[iT][iy]=atof(Qs.c_str());
+//                       package[iT*iymaxNuc_+iy] = Qs2Nuclear_[iT][iy];
 //                     }
 //                   else
 //                     {
@@ -570,8 +570,8 @@ void Init::readNuclearQs(Parameters *param) {
 //           fin.close();
 //           for (int target=1; target<size; target++)
 //             {
-//               MPI::COMM_WORLD.Send(package,iTpmax*iymaxNuc,MPI::DOUBLE,target,target);
-//               MPI::COMM_WORLD.Send(Tlist,iTpmax,MPI::DOUBLE,target,target+size);
+//               MPI::COMM_WORLD.Send(package,iTpmax_*iymaxNuc_,MPI::DOUBLE,target,target);
+//               MPI::COMM_WORLD.Send(Tlist_,iTpmax_,MPI::DOUBLE,target,target+size);
 //             }
 //           cout << " done." << endl;
 //         }
@@ -584,14 +584,14 @@ void Init::readNuclearQs(Parameters *param) {
 //     }
 //   else
 //     {
-//       double package[iTpmax*iymaxNuc];
-//       MPI::COMM_WORLD.Recv(package,iTpmax*iymaxNuc,MPI::DOUBLE,0,rank);
-//       MPI::COMM_WORLD.Recv(Tlist,iTpmax,MPI::DOUBLE,0,rank+size);
-//       for (int iT=0; iT<iTpmax; iT++)
+//       double package[iTpmax_*iymaxNuc_];
+//       MPI::COMM_WORLD.Recv(package,iTpmax_*iymaxNuc_,MPI::DOUBLE,0,rank);
+//       MPI::COMM_WORLD.Recv(Tlist_,iTpmax_,MPI::DOUBLE,0,rank+size);
+//       for (int iT=0; iT<iTpmax_; iT++)
 //         {
-//           for (int iy=0; iy<iymaxNuc; iy++)
+//           for (int iy=0; iy<iymaxNuc_; iy++)
 //             {
-//               Qs2Nuclear[iT][iy]= package[iT*iymaxNuc+iy];
+//               Qs2Nuclear_[iT][iy]= package[iT*iymaxNuc_+iy];
 //             }
 //         }
 //     }
@@ -668,8 +668,8 @@ void Init::readInNucleusConfigs(
     }
 
     fileName = path + fileName;
-    messager << "read in nucleus configurations from " << fileName;
-    messager.flush("info");
+    messager_ << "read in nucleus configurations from " << fileName;
+    messager_.flush("info");
     std::ifstream inFile(fileName, std::ios::binary);
     while (true) {
         vector<float> tempPos;
@@ -684,8 +684,8 @@ void Init::readInNucleusConfigs(
         nucleonPosArr.push_back(tempPos);
     }
     inFile.close();
-    messager << "read in " << nucleonPosArr.size() << " configurations.";
-    messager.flush("info");
+    messager_ << "read in " << nucleonPosArr.size() << " configurations.";
+    messager_.flush("info");
 }
 
 void Init::samplePartonPositions(
@@ -707,9 +707,9 @@ void Init::samplePartonPositions(
     BGq_array.assign(Nq, BGq);
     for (int iq = 0; iq < Nq; iq++) {
         if (std::abs(omega - 1) < 1e-8) {
-            double xq = sqrtBG * random->Gauss();
-            double yq = sqrtBG * random->Gauss();
-            double zq = sqrtBG * random->Gauss();
+            double xq = sqrtBG * random->gauss();
+            double yq = sqrtBG * random->gauss();
+            double zq = sqrtBG * random->gauss();
             r_array[iq] = sqrt(xq * xq + yq * yq + zq * zq);
         } else {
             double bperp = sqrtBG * sqrt(omega * random->sampleGammaInc());
@@ -782,20 +782,20 @@ double Init::getNuclearQs2(double T, double y) {
     double value, fracy, fracT, QsYdown, QsYup;
     int posy, check = 0;
     fracy = 0.;
-    posy = static_cast<int>(floor(y / deltaYNuc + 0.0000001));
+    posy = static_cast<int>(floor(y / deltaYNuc_ + 0.0000001));
 
-    if (y > iymaxNuc * deltaYNuc) {
+    if (y > iymaxNuc_ * deltaYNuc_) {
         cout << " [Init:getNuclearQs2]:ERROR: y out of range. Maximum y "
                 "value "
                 "is "
-             << iymaxNuc * deltaYNuc << ", you used " << y << ". Exiting."
+             << iymaxNuc_ * deltaYNuc_ << ", you used " << y << ". Exiting."
              << endl;
         exit(1);
     }
 
-    //  if ( T > Qs2Nuclear[iTpmax-1][iymaxNuc-1] )
-    if (T > Tlist[iTpmax - 1]) {
-        cerr << "T=" << T << ", maximal T in table=" << Tlist[iTpmax - 1]
+    //  if ( T > Qs2Nuclear_[iTpmax_-1][iymaxNuc_-1] )
+    if (T > Tlist_[iTpmax_ - 1]) {
+        cerr << "T=" << T << ", maximal T in table=" << Tlist_[iTpmax_ - 1]
              << endl;
         cerr << " [Init:getNuclearQs2]:WARNING: out of range. Using "
                 "maximal T "
@@ -803,27 +803,27 @@ double Init::getNuclearQs2(double T, double y) {
                 "table."
              << endl;
         check = 1;
-        fracy = (y - static_cast<double>(posy) * deltaYNuc) / deltaYNuc;
-        QsYdown = (Qs2Nuclear[iTpmax - 1][posy]);
-        QsYup = (Qs2Nuclear[iTpmax - 1][posy + 1]);
+        fracy = (y - static_cast<double>(posy) * deltaYNuc_) / deltaYNuc_;
+        QsYdown = (Qs2Nuclear_[iTpmax_ - 1][posy]);
+        QsYup = (Qs2Nuclear_[iTpmax_ - 1][posy + 1]);
         value = (fracy * QsYup + (1. - fracy) * QsYdown);  //*hbarc*hbarc;
         return value;
     }
 
-    if (T < Tlist[0]) {
+    if (T < Tlist_[0]) {
         check = 1;
         return 0.;
     }
 
-    for (int iT = 0; iT < iTpmax; iT++) {
-        if (T >= Tlist[iT] && T < Tlist[iT + 1]) {
-            fracT = (T - Tlist[iT]) / (Tlist[iT + 1] - Tlist[iT]);
-            fracy = (y - static_cast<double>(posy) * deltaYNuc) / deltaYNuc;
+    for (int iT = 0; iT < iTpmax_; iT++) {
+        if (T >= Tlist_[iT] && T < Tlist_[iT + 1]) {
+            fracT = (T - Tlist_[iT]) / (Tlist_[iT + 1] - Tlist_[iT]);
+            fracy = (y - static_cast<double>(posy) * deltaYNuc_) / deltaYNuc_;
 
-            QsYdown = (fracT) * (Qs2Nuclear[iT + 1][posy])
-                      + (1. - fracT) * (Qs2Nuclear[iT][posy]);
-            QsYup = (fracT) * (Qs2Nuclear[iT + 1][posy + 1])
-                    + (1. - fracT) * (Qs2Nuclear[iT][posy + 1]);
+            QsYdown = (fracT) * (Qs2Nuclear_[iT + 1][posy])
+                      + (1. - fracT) * (Qs2Nuclear_[iT][posy]);
+            QsYup = (fracT) * (Qs2Nuclear_[iT + 1][posy + 1])
+                    + (1. - fracT) * (Qs2Nuclear_[iT][posy + 1]);
             value = (fracy * QsYup + (1. - fracy) * QsYdown);  //*hbarc*hbarc;
 
             check++;
@@ -838,8 +838,8 @@ double Init::getNuclearQs2(double T, double y) {
                 "the value of Qs^2. Using maximal T_p"
              << endl;
         value =
-            (fracy * Qs2Nuclear[iTpmax - 1][posy + 1]
-             + (1. - fracy) * Qs2Nuclear[iTpmax - 1][posy]);
+            (fracy * Qs2Nuclear_[iTpmax_ - 1][posy + 1]
+             + (1. - fracy) * Qs2Nuclear_[iTpmax_ - 1][posy]);
     }
 
     return value;
@@ -850,7 +850,7 @@ double Init::getNuclearQs2(double T, double y) {
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.color_charge_density");
-    messager.info("set color charge density ...");
+    messager_.info("set color charge density ...");
 
     const int N = param->getSize();
     const double L = param->getL();
@@ -967,14 +967,14 @@ void Init::setColorChargeDensity(
 
     const int NqFlag = param->getUseConstituentQuarkProton();
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
-    xq1.clear();
-    xq2.clear();
-    yq1.clear();
-    yq2.clear();
-    BGq1.clear();
-    BGq2.clear();
-    gauss1.clear();
-    gauss2.clear();
+    xq1_.clear();
+    xq2_.clear();
+    yq1_.clear();
+    yq2_.clear();
+    BGq1_.clear();
+    BGq2_.clear();
+    gauss1_.clear();
+    gauss2_.clear();
     for (int i = 0; i < A1; i++) {
         int Npartons = 1;
         if (NqFlag > 0) {
@@ -984,13 +984,13 @@ void Init::setColorChargeDensity(
             // Move center of mass to the origin
             // Note that 1607.01711 this is not done, so parameters quoted
             // in that paper can't be used if this is done
-            xq1.push_back(x_array);
-            yq1.push_back(y_array);
-            BGq1.push_back(BGq_array);
+            xq1_.push_back(x_array);
+            yq1_.push_back(y_array);
+            BGq1_.push_back(BGq_array);
             Npartons = std::max(1, static_cast<int>(x_array.size()));
         }
         sampleQsNormalization(random, param, Npartons, gauss_array);
-        gauss1.push_back(gauss_array);
+        gauss1_.push_back(gauss_array);
     }
 
     for (int i = 0; i < A2; i++) {
@@ -998,13 +998,13 @@ void Init::setColorChargeDensity(
         if (NqFlag > 0) {
             samplePartonPositions(
                 param, random, x_array, y_array, z_array, BGq_array);
-            xq2.push_back(x_array);
-            yq2.push_back(y_array);
-            BGq2.push_back(BGq_array);
+            xq2_.push_back(x_array);
+            yq2_.push_back(y_array);
+            BGq2_.push_back(BGq_array);
             Npartons = std::max(1, static_cast<int>(x_array.size()));
         }
         sampleQsNormalization(random, param, Npartons, gauss_array);
-        gauss2.push_back(gauss_array);
+        gauss2_.push_back(gauss_array);
     }
 
     // test what a smooth Woods-Saxon would give
@@ -1095,15 +1095,15 @@ void Init::setColorChargeDensity(
                 double T = 0.;
                 double bp2 = 0.;
                 if (param->getUseConstituentQuarkProton() > 0) {
-                    for (unsigned int iq = 0; iq < xq1[i].size(); iq++) {
-                        bp2 = (xm + xq1[i][iq] - x) * (xm + xq1[i][iq] - x)
-                              + (ym + yq1[i][iq] - y) * (ym + yq1[i][iq] - y);
+                    for (unsigned int iq = 0; iq < xq1_[i].size(); iq++) {
+                        bp2 = (xm + xq1_[i][iq] - x) * (xm + xq1_[i][iq] - x)
+                              + (ym + yq1_[i][iq] - y) * (ym + yq1_[i][iq] - y);
                         bp2 /= hbarc * hbarc;
 
-                        T += exp(-bp2 / (2. * BGq1[i][iq]))
-                             / (2. * M_PI * BGq1[i][iq])
-                             / (static_cast<double>(xq1[i].size()))
-                             * gauss1[i][iq];  // I removed the 2/3 here
+                        T += exp(-bp2 / (2. * BGq1_[i][iq]))
+                             / (2. * M_PI * BGq1_[i][iq])
+                             / (static_cast<double>(xq1_[i].size()))
+                             * gauss1_[i][iq];  // I removed the 2/3 here
                                                // to make it a bit bigger
                     }
                 } else {
@@ -1117,7 +1117,7 @@ void Init::setColorChargeDensity(
                                     2.);
                     bp2 /= hbarc * hbarc;
                     T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                        * gauss1[i][0];  // T_p in this cell for the
+                        * gauss1_[i][0];  // T_p in this cell for the
                                          // current nucleon
                 }
                 lat->cells[ipos]->setTpA(
@@ -1135,15 +1135,15 @@ void Init::setColorChargeDensity(
                 double bp2 = 0.;
                 if (param->getUseConstituentQuarkProton() > 0) {
                     T = 0.;
-                    for (unsigned int iq = 0; iq < xq2[i].size(); iq++) {
-                        bp2 = (xm + xq2[i][iq] - x) * (xm + xq2[i][iq] - x)
-                              + (ym + yq2[i][iq] - y) * (ym + yq2[i][iq] - y);
+                    for (unsigned int iq = 0; iq < xq2_[i].size(); iq++) {
+                        bp2 = (xm + xq2_[i][iq] - x) * (xm + xq2_[i][iq] - x)
+                              + (ym + yq2_[i][iq] - y) * (ym + yq2_[i][iq] - y);
                         bp2 /= hbarc * hbarc;
 
-                        T += exp(-bp2 / (2. * BGq2[i][iq]))
-                             / (2. * M_PI * BGq2[i][iq])
-                             / (static_cast<double>(xq2[i].size()))
-                             * gauss2[i][iq];
+                        T += exp(-bp2 / (2. * BGq2_[i][iq]))
+                             / (2. * M_PI * BGq2_[i][iq])
+                             / (static_cast<double>(xq2_[i].size()))
+                             * gauss2_[i][iq];
                     }
                 } else {
                     const double BG = param->getBG();
@@ -1157,7 +1157,7 @@ void Init::setColorChargeDensity(
                     bp2 /= hbarc * hbarc;
 
                     T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                        * gauss2[i][0];  // T_p in this cell for the
+                        * gauss2_[i][0];  // T_p in this cell for the
                                          // current nucleon
                 }
 
@@ -1342,7 +1342,7 @@ void Init::setColorChargeDensity(
             }
         }
     }
-    messager.info("Color charge densities for nucleus A and B set. ");
+    messager_.info("Color charge densities for nucleus A and B set. ");
 }
 
 // This function compute the collision geometry quantities, such as
@@ -1613,10 +1613,10 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 
     param->setTpp(Tpp);
 
-    messager << "N_part=" << Npart;
-    messager.flush("info");
-    messager << "N_coll=" << Ncoll;
-    messager.flush("info");
+    messager_ << "N_part=" << Npart;
+    messager_.flush("info");
+    messager_ << "N_coll=" << Ncoll;
+    messager_.flush("info");
     cout << "T_pp(" << param->getb() << " fm) = " << Tpp << " 1/fm^2" << endl;
     cout << "Q_s^2(max) S_T = "
          << averageQs2 * a * a / hbarc / hbarc * static_cast<double>(count)
@@ -1860,7 +1860,7 @@ void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
 
 void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     IPG_PROFILE_SCOPE("initialization.wilson_lines");
-    messager.info("Setting Wilson lines ...");
+    messager_.info("Setting Wilson lines ...");
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
@@ -1920,7 +1920,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     };
 
     // Reuse the bulk Gaussian buffers for every longitudinal sheet.  The
-    // linear ordering matches the historical pos-major/color-minor Gauss()
+    // linear ordering matches the historical pos-major/color-minor gauss()
     // call sequence exactly.
     std::vector<double> gaussianField(
         static_cast<std::size_t>(sites) * static_cast<std::size_t>(Nc2m1_));
@@ -1943,7 +1943,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     auto fillColorCharge = [&](const std::vector<double> &scale) {
         {
             IPG_PROFILE_SCOPE("initialization.wilson_random.gauss");
-            random->GaussBulk(
+            random->gaussBulk(
                 gaussianField.data(), gaussianField.size(), gaussianScratch);
         }
         {
@@ -1970,16 +1970,16 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }
 
         for (int n = 0; n < Nc2m1_; n++) {
-            fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
+            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
         }
 
         {
-            IPG_PROFILE_SCOPE("initialization.wilson_poisson");
+            IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
             applyMomentumKernel();
         }
 
         for (int n = 0; n < Nc2m1_; n++) {
-            fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
+            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
         }
 
         {
@@ -2013,16 +2013,16 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }
 
         for (int n = 0; n < Nc2m1_; n++) {
-            fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
+            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, 1);
         }
 
         {
-            IPG_PROFILE_SCOPE("initialization.wilson_poisson");
+            IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
             applyMomentumKernel();
         }
 
         for (int n = 0; n < Nc2m1_; n++) {
-            fft.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
+            fft_.fftnComplex(rhoACoeff[n], rhoACoeff[n], nn, -1);
         }
 
         // The old nucleus-B block had its omp parallel directive commented
@@ -2067,13 +2067,13 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             ss << "0.001" << "_";
         }
         std::string wilsonfileHeader = ss.str();
-        lat->WriteWilsonLines(wilsonfileHeader, param, 1);  // nucleus A
-        lat->WriteWilsonLines(wilsonfileHeader, param, 2);  // nucleus B
+        lat->writeWilsonLines(wilsonfileHeader, param, 1);  // nucleus A
+        lat->writeWilsonLines(wilsonfileHeader, param, 2);  // nucleus B
     }
 
-    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
+    messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
-    messager.flush("info");
+    messager_.flush("info");
 }
 
 void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
@@ -2081,10 +2081,10 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     // format 1 = plain text, 2 = binary
 
     if (format > 2 or format < 1) {
-        messager << "Unknown format " << format
+        messager_ << "Unknown format " << format
                  << " when reading the initial Wilson lines, supported "
                     "formats: 1,2";
-        messager.flush("info");
+        messager_.flush("info");
         exit(1);
     }
 
@@ -2106,9 +2106,9 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     string VTwo_name;
     VTwo_name = strVTwo_name.str();
 
-    messager << "Reading Wilson lines from files " << VOne_name << " and "
+    messager_ << "Reading Wilson lines from files " << VOne_name << " and "
              << VTwo_name;
-    messager.flush("info");
+    messager_.flush("info");
 
     if (format == 1) {
         int N = param->getSize();
@@ -2128,12 +2128,12 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         ifstream finV1(VOne_name.c_str(), std::ios::in);
 
         if (!finV1) {
-            messager << "File " << VOne_name << " not found. Exiting.";
-            messager.flush("info");
+            messager_ << "File " << VOne_name << " not found. Exiting.";
+            messager_.flush("info");
             exit(1);
         }
 
-        messager << "Reading Wilson line from file " << VOne_name << " ...";
+        messager_ << "Reading Wilson line from file " << VOne_name << " ...";
 
         // set V for nucleus A
         for (int i = 0; i < nn[0]; i++) {
@@ -2220,8 +2220,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         Matrix tempM(1.);
 
         if (!InStream.good()) {
-            messager << "File " << VOne_name.c_str() << " does not exist!";
-            messager.flush("info");
+            messager_ << "File " << VOne_name.c_str() << " does not exist!";
+            messager_.flush("info");
             exit(1);
         }
 
@@ -2234,12 +2234,12 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
             if (N != param->getSize()) {
-                messager << "# ERROR wrong lattice size, data is " << N
+                messager_ << "# ERROR wrong lattice size, data is " << N
                          << " but you have specified " << param->getSize();
                 exit(0);
             }
             if (std::abs(L - param->getL()) > 1e-5) {
-                messager << "# ERROR grid length, data has " << L
+                messager_ << "# ERROR grid length, data has " << L
                          << " but you have specified " << param->getL();
                 exit(0);
             }
@@ -2283,13 +2283,13 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                     int indx = N * ix + iy;
                     if (indx >= N * N || indx < 0) {
                         if (bb == 0) {
-                            messager << "Warning: datafile " << VOne_name
+                            messager_ << "Warning: datafile " << VOne_name
                                      << " has an element " << indx
                                      << " (iy=" << iy << ", ix=" << ix
                                      << "), but the grid is N=" << N
                                      << ". Element is (" << re << " + " << im
                                      << "i), skipping it";
-                            messager.flush("info");
+                            messager_.flush("info");
                         }
                         INPUT_CTR++;
                         continue;
@@ -2305,8 +2305,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             InStream2.precision(15);
             InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
             if (!InStream2.good()) {
-                messager << "File " << VTwo_name.c_str() << " does not exist!";
-                messager.flush("info");
+                messager_ << "File " << VTwo_name.c_str() << " does not exist!";
+                messager_.flush("info");
                 exit(1);
             }
 
@@ -2320,15 +2320,15 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 InStream2.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
                 if (N != param->getSize()) {
-                    messager << "# ERROR wrong lattice size, data is " << N
+                    messager_ << "# ERROR wrong lattice size, data is " << N
                              << " but you have specified " << param->getSize();
-                    messager.flush("info");
+                    messager_.flush("info");
                     exit(0);
                 }
                 if (std::abs(L - param->getL()) > 1e-5) {
-                    messager << "# ERROR grid length, dataas " << L
+                    messager_ << "# ERROR grid length, dataas " << L
                              << " but you have specified " << param->getL();
-                    messager.flush("info");
+                    messager_.flush("info");
                     exit(0);
                 }
 
@@ -2367,13 +2367,13 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
                         if (indx >= N * N || indx < 0) {
                             if (bb == 0) {
-                                messager << "Warning: datafile " << VTwo_name
+                                messager_ << "Warning: datafile " << VTwo_name
                                          << " has an element " << indx
                                          << " (iy=" << iy << ", ix=" << ix
                                          << "), but the grid is N=" << N
                                          << ". Element is (" << re << " + "
                                          << im << "i), skipping it";
-                                messager.flush("info");
+                                messager_.flush("info");
                             }
                             INPUT_CTR++;
                             continue;
@@ -2388,9 +2388,9 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         }
     }
 
-    messager << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
+    messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
              << ". ";
-    messager.flush("info");
+    messager_.flush("info");
 }
 
 void Init::sampleImpactParameter(Parameters *param) {
@@ -2400,19 +2400,19 @@ void Init::sampleImpactParameter(Parameters *param) {
     double xb = random_ptr_->genrand64_real1();
     if (param->getUseNucleus() == 0) {
         // use b=0 fm for the constant g^2 mu case
-        messager << "Setting b=0 for constant color charge density case.";
-        messager.flush("info");
+        messager_ << "Setting b=0 for constant color charge density case.";
+        messager_.flush("info");
         b = 0;
     } else {
         if (param->getLinearb() == 1) {
             // use a linear probability distribution for b if we are doing
             // nuclei
-            messager << "Sampling linearly distributed b between " << bmin
+            messager_ << "Sampling linearly distributed b between " << bmin
                      << " and " << bmax << "fm. Found ";
             b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
         } else {
             // use a uniform distribution instead
-            messager << "Sampling uniformly distributed b between " << bmin
+            messager_ << "Sampling uniformly distributed b between " << bmin
                      << " and " << bmax << "fm. Found ";
             b = (bmax - bmin) * xb + bmin;
         }
@@ -2423,8 +2423,8 @@ void Init::sampleImpactParameter(Parameters *param) {
         phiRP = 2 * M_PI * random_ptr_->genrand64_real2();
     }
     param->setPhiRP(phiRP);
-    messager << "b = " << b << " fm, phi_RP = " << phiRP;
-    messager.flush("info");
+    messager_ << "b = " << b << " fm, phi_RP = " << phiRP;
+    messager_.flush("info");
 
     for (unsigned int i = 0; i < nucleusA_.size(); i++) {
         nucleusA_.at(i).collided = 0;
@@ -2436,11 +2436,11 @@ void Init::sampleImpactParameter(Parameters *param) {
 
 void Init::init(
     Lattice *lat, Group *group, Parameters *param, Random *random,
-    Glauber *glauber, Initialization_method init_method) {
+    Glauber *glauber, InitializationMethod init_method) {
     group_ptr_ = group;
     random_ptr_ = random;
 
-    messager.info("Initializing fields ... ");
+    messager_.info("Initializing fields ... ");
 
     if (param->getUseNucleus() == 0) {
         // No real collision geometry in the constant-g^2mu case: skip
@@ -2462,9 +2462,12 @@ void Init::init(
         param->getPolarizationTarget(), param->getPolarizationTargetJz(),
         nucleonPosArrB_);
 
-    if (init_method == READ_WLINE_BINARY or init_method == READ_WLINE_TEXT) {
+    if (init_method == InitializationMethod::ReadWlineBinary
+        or init_method == InitializationMethod::ReadWlineText) {
         // to read Wilson lines from file
-        readVFromFile(lat, param, (init_method == READ_WLINE_BINARY) ? 2 : 1);
+        readVFromFile(
+            lat, param,
+            (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
         param->setSuccess(1);
     } else {
         // to generate your own Wilson lines
@@ -2481,11 +2484,11 @@ void Init::init(
 }
 
 void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
-    messager.info("Shifting fields with impact parameter...");
+    messager_.info("Shifting fields with impact parameter...");
     const double b = param->getb();
     const double phiRP = param->getPhiRP();
-    messager << "b = " << b << " fm, phi_RP = " << phiRP;
-    messager.flush("info");
+    messager_ << "b = " << b << " fm, phi_RP = " << phiRP;
+    messager_.flush("info");
 
     const int N = param->getSize();
     BufferLattice lat_tmp(param->getSize());
@@ -2528,7 +2531,7 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
 }
 
 void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
-    messager.info("Finding fields in forward lightcone...");
+    messager_.info("Finding fields in forward lightcone...");
     // output Wilson lines (used also for the proton plots)
     double L = param->getL();
     const int N = param->getSize();
@@ -2979,9 +2982,9 @@ void Init::generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, double d_min, double dR_np,
     double da_np, std::vector<ReturnValue> &nucleus) {
-    messager << "Sampling nucleon position forcing d_min = " << d_min
+    messager_ << "Sampling nucleon position forcing d_min = " << d_min
              << " fm ...";
-    messager.flush("info");
+    messager_.flush("info");
     double rmaxCut = R_WS + dR_np + 10. * (a_WS + da_np);
     double r = 0.;
     double costheta = 0.;
@@ -3258,7 +3261,7 @@ double Init::sampleLogNormalDistribution(
     const double meansq = mean * mean;
     const double mu = log(meansq / sqrt(variance + meansq));
     const double sigma = sqrt(log(variance / meansq + 1.));
-    double sampleX = exp(mu + sigma * random->Gauss());
+    double sampleX = exp(mu + sigma * random->gauss());
     return (sampleX);
 }
 
@@ -3274,7 +3277,7 @@ void Init::sampleQsNormalization(
         // distribution
         for (int iq = 0; iq < Nq; iq++) {
             gauss_array[iq] =
-                (exp(random->Gauss(0, QsSmearWidth))
+                (exp(random->gauss(0, QsSmearWidth))
                  / exp(QsSmearWidth * QsSmearWidth / 2.));
         }
     }
@@ -3288,7 +3291,7 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
     if (ran < NqBase - NqBaseInt) {
         Nq += 1;
     }
-    Nq += random->Poisson(param->getNqFluc());
+    Nq += random->poisson(param->getNqFluc());
     return (std::max(1, Nq));
 }
 

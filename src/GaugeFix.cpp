@@ -111,7 +111,7 @@ inline void expGaugeRotationSU3(const Matrix &chi, Matrix &out) {
 //**************************************************************************
 // GaugeFix class.
 
-void GaugeFix::FFTChi(
+void GaugeFix::fftChi(
     FFT *fft, Lattice *lat, Group *group, Parameters *param, int steps) {
     const int N = param->getSize();
     int nn[2];

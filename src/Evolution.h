@@ -15,14 +15,14 @@
 
 class Evolution {
   private:
-    FFT *fft;
-    double nIn[100];  // k_T array
+    FFT *fft_;
+    double nIn_[100];  // k_T array
 
   public:
     // Constructor
-    Evolution(const int nn[]) { fft = new FFT(nn); }
+    Evolution(const int nn[]) { fft_ = new FFT(nn); }
 
-    ~Evolution() { delete fft; }
+    ~Evolution() { delete fft_; }
 
     void run(Lattice *lat, Group *group, Parameters *param);
     void evolveU(Lattice *lat, Parameters *param, double dtau, double tau);
@@ -32,7 +32,7 @@ class Evolution {
     void checkGaussLaw(Lattice *lat, Parameters *param);
     void eccentricity(
         Lattice *lat, Parameters *param, int it, double cutoff, int doAniso);
-    void Tmunu(Lattice *lat, Parameters *param, int it);
+    void tmunu(Lattice *lat, Parameters *param, int it);
     void writeEvolvedFields(Lattice *lat, Parameters *param, int it);
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);

@@ -27,6 +27,7 @@ The main categories for changes in this file are:
 * Add binary format support for reading and writing initial Wilson lines (`writeWilsonLines`/`readInitialWilsonLines` = 2) and for JIMWLK snapshots.
 * Add `evolvedFields*.ipgf` binary snapshot output and `NgluonEstimators.dat`/eccentricity output files.
 * Add nucleon configuration tables for He3, He4, C12, O16, Ne, Ne22 and Ar, including deformed and ab initio (PGCM/NLEFT) variants.
+* Replace the default nuclear-`Qs^2` table `qs2Adj_vs_Tp_vs_Y_200.in` with `qs2Adj_vs_Tp_vs_Y_240.in`, which extends the covered `T_p` range 10x to avoid the "T out of range, using maximal T in table" clamping warning at high local thickness; `Init::iTpmax_` is updated accordingly (200 → 240).
 * Remove the `Nc` input parameter; the code has always been SU(3)-only and now hardcodes it internally.
 * Remove the dead `tDistNu`, `useFatTails` and `writeEvolution` input parameters, which never had any effect on the simulation.
 

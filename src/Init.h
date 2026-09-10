@@ -26,7 +26,7 @@ class Init {
     int const static iymaxNuc_ = 44;  // for the Tp-y table
 
     int const static iTpmax_ =
-        200;  // updated in March 2019 to a larger T_A range
+        240;  // updated in Sep 2026 to a 10x extended T_A range
 
     double const deltaYNuc_ = 0.25;  // for the new table
     FFT fft_;

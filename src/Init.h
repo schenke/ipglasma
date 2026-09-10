@@ -18,8 +18,7 @@
 enum class InitializationMethod {
     SampleColorCharges,
     ReadWlineText,
-    ReadWlineBinary,
-    InitializeAfterJimwlk
+    ReadWlineBinary
 };
 
 class Init {

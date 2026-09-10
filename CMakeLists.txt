@@ -92,4 +92,18 @@ endif()
 
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wredundant-decls -Wshadow -Wundef -Wno-unused")
 
+# Pins FFTW plan selection via an on-disk wisdom cache (see FFT.h) so that
+# repeated runs with the same seed are bit-reproducible, at the cost of the
+# first run in a given directory measuring (rather than estimating) its FFT
+# plan. Off by default. Enable with -DIPGLASMA_DETERMINISTIC_FFT=ON; this is
+# a real CMake option (not a CMAKE_CXX_FLAGS string), because every branch
+# above already overwrites CMAKE_CXX_FLAGS wholesale, which would otherwise
+# silently discard a flag passed that way.
+option(IPGLASMA_DETERMINISTIC_FFT
+    "Pin FFTW plan selection via an on-disk wisdom cache for bit-reproducible runs"
+    OFF)
+if (IPGLASMA_DETERMINISTIC_FFT)
+    add_compile_definitions(IPGLASMA_DETERMINISTIC_FFT)
+endif()
+
 add_subdirectory (src)

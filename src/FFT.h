@@ -10,8 +10,12 @@
 
 #include <fftw3.h>
 
+#include <unistd.h>
+
 #include <algorithm>
 #include <complex>
+#include <cstdio>
+#include <string>
 #include <vector>
 
 using std::complex;
@@ -53,16 +57,21 @@ std::vector<T> operator/(const std::vector<T> &a, const double b) {
     return result;
 }
 
-// FFTW planner flag. FFTW_MEASURE (default) benchmarks candidate algorithms
-// at plan time and is typically fastest, but the chosen plan -- and hence the
-// last-bit rounding of FFT results -- varies run to run, making event output
-// non-reproducible at fixed seed. Compile -DIPGLASMA_DETERMINISTIC_FFT for
-// bit-reproducible runs.
-#ifdef IPGLASMA_DETERMINISTIC_FFT
-#define IPG_FFTW_PLAN_FLAG FFTW_ESTIMATE
-#else
+// FFTW planner flag. FFTW_MEASURE benchmarks candidate algorithms at plan
+// time by actually timing them, which is sensitive to whatever else the
+// machine is doing at that moment; on separate invocations of the same
+// binary, for the same problem size, this can and does pick different
+// algorithms with different floating-point rounding, making event output
+// non-reproducible at fixed seed even with no other source of randomness.
+// Building with -DIPGLASMA_DETERMINISTIC_FFT=ON (see CMakeLists.txt) fixes
+// this via an on-disk wisdom cache (see the FFT constructor below): the
+// first run in a given directory measures and records a plan, and every run
+// after that imports it and reuses it verbatim instead of measuring again,
+// making the FFT step -- and hence the whole event -- bit-reproducible. Off
+// by default, since it makes the first run in a directory take as long as
+// FFTW_MEASURE always does today, in exchange for every later run there
+// being both faster to plan and reproducible.
 #define IPG_FFTW_PLAN_FLAG FFTW_MEASURE
-#endif
 
 class FFT {
   private:
@@ -80,10 +89,34 @@ class FFT {
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
         output =
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
+#ifdef IPGLASMA_DETERMINISTIC_FFT
+        // Pin the plan across runs: import any wisdom already on disk before
+        // planning, so a previously chosen algorithm is reused verbatim
+        // instead of FFTW deciding again (and possibly differently -- see
+        // the comment on IPG_FFTW_PLAN_FLAG above).
+        const char *wisdomFile = "ipglasma_fftw_wisdom.dat";
+        fftw_import_wisdom_from_filename(wisdomFile);
+#endif
         p_ = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_FORWARD, IPG_FFTW_PLAN_FLAG);
         pback_ = fftw_plan_dft_2d(
             nn[0], nn[1], input, output, FFTW_BACKWARD, IPG_FFTW_PLAN_FLAG);
+#ifdef IPGLASMA_DETERMINISTIC_FFT
+        {
+            // Persist whatever wisdom now exists (including any plan just
+            // created above) so future runs -- and other concurrently
+            // starting MPI ranks -- converge onto the same plan. Write to a
+            // per-process temp file and rename into place atomically so a
+            // concurrent writer can never observe a partially written file.
+            std::string tmpFile =
+                std::string(wisdomFile) + ".tmp." + std::to_string(getpid());
+            if (fftw_export_wisdom_to_filename(tmpFile.c_str())) {
+                std::rename(tmpFile.c_str(), wisdomFile);
+            } else {
+                std::remove(tmpFile.c_str());
+            }
+        }
+#endif
         inputMany = (fftw_complex *)fftw_malloc(
             sizeof(fftw_complex) * nn[0] * nn[1] * 9);
         outputMany = (fftw_complex *)fftw_malloc(

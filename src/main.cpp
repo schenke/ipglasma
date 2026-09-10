@@ -378,11 +378,13 @@ int main(int argc, char *argv[]) {
                     s1 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_projectile())
                        << "_";
-                    lat.writeWilsonLines(s1.str(), param, 1);  // nucleus A
+                    lat.writeWilsonLines(
+                        s1.str(), param, NucleusRole::Projectile);
                     std::stringstream s2;
                     s2 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_target()) << "_";
-                    lat.writeWilsonLines(s2.str(), param, 2);  // nucleus B
+                    lat.writeWilsonLines(
+                        s2.str(), param, NucleusRole::Target);
                 }
             }
 

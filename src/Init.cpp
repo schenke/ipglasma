@@ -2073,8 +2073,9 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             ss << "0.001" << "_";
         }
         std::string wilsonfileHeader = ss.str();
-        lat->writeWilsonLines(wilsonfileHeader, param, 1);  // nucleus A
-        lat->writeWilsonLines(wilsonfileHeader, param, 2);  // nucleus B
+        lat->writeWilsonLines(
+            wilsonfileHeader, param, NucleusRole::Projectile);
+        lat->writeWilsonLines(wilsonfileHeader, param, NucleusRole::Target);
     }
 
     messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()

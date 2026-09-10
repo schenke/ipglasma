@@ -23,5 +23,5 @@ module add python-data gsl fftw
 taskset -pc $$
 
 # Run the program
-python3 parallel_test_vector_meson_production.py -max_workers "${SLURM_NTASKS:-1}" -datadir /path/todatadir -maxevents 1500 -subnucleondiffraction_path /projappl/lappi/heikki/subnucleondiffraction -ipglasma_path /scratch/lappi/heikki/ipglasma_upstream
+python3 parallel_test_vector_meson_production.py --max-workers "${SLURM_NTASKS:-1}" --datadir /path/todatadir --maxevents 1500 --subnucleondiffraction-path /projappl/lappi/heikki/subnucleondiffraction --ipglasma-path /scratch/lappi/heikki/ipglasma_upstream
 

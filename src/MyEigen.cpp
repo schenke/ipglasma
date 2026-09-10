@@ -1231,16 +1231,9 @@ void MyEigen::flowVelocity4DImpl(
                         foutEps1 << '\n';
                     }
                 } else {
-                    double values[10] = {smallEps,
-                                         smallEps / 2.,
-                                         smallEps / 2.,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0,
-                                         0.0};
+                    double values[10] = {
+                        smallEps, smallEps / 2., smallEps / 2., 0.0, 0.0,
+                        0.0,      0.0,           0.0,           0.0, 0.0};
                     if (writeBinaryTmunu) {
                         const std::size_t offset =
                             static_cast<std::size_t>(ix) * 10u;

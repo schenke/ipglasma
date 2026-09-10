@@ -215,9 +215,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             recenterNucleus(nucleusA_);
         } else {
             // no configurations, sample with Woods-Saxon
-            messager_ << "configuration file for A = " << glauber->nucleusA1()
-                     << " is not available, generate the nucleus configuration "
-                     << "using Woods-Saxon distribution instead.";
+            messager_
+                << "configuration file for A = " << glauber->nucleusA1()
+                << " is not available, generate the nucleus configuration "
+                << "using Woods-Saxon distribution instead.";
             messager_.flush("info");
 
             generateNucleusConfiguration(
@@ -250,9 +251,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             recenterNucleus(nucleusB_);
         } else {
             // no configurations, sample with Woods-Saxon
-            messager_ << "configuration file for A = " << glauber->nucleusA2()
-                     << " is not available, generate the nucleus configuration "
-                     << "using Woods-Saxon distribution instead.";
+            messager_
+                << "configuration file for A = " << glauber->nucleusA2()
+                << " is not available, generate the nucleus configuration "
+                << "using Woods-Saxon distribution instead.";
             messager_.flush("info");
             generateNucleusConfiguration(
                 random, glauber->nucleusA2(), glauber->nucleusZ2(),
@@ -1108,7 +1110,7 @@ void Init::setColorChargeDensity(
                              / (2. * M_PI * BGq1_[i][iq])
                              / (static_cast<double>(xq1_[i].size()))
                              * gauss1_[i][iq];  // I removed the 2/3 here
-                                               // to make it a bit bigger
+                                                // to make it a bit bigger
                     }
                 } else {
                     const double BG = param->getBG();
@@ -1122,7 +1124,7 @@ void Init::setColorChargeDensity(
                     bp2 /= hbarc * hbarc;
                     T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
                         * gauss1_[i][0];  // T_p in this cell for the
-                                         // current nucleon
+                                          // current nucleon
                 }
                 lat->cells[ipos]->setTpA(
                     lat->cells[ipos]->getTpA()
@@ -1162,7 +1164,7 @@ void Init::setColorChargeDensity(
 
                     T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
                         * gauss2_[i][0];  // T_p in this cell for the
-                                         // current nucleon
+                                          // current nucleon
                 }
 
                 lat->cells[ipos]->setTpB(
@@ -2076,7 +2078,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     }
 
     messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
-             << ". ";
+              << ". ";
     messager_.flush("info");
 }
 
@@ -2086,8 +2088,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
     if (format > 2 or format < 1) {
         messager_ << "Unknown format " << format
-                 << " when reading the initial Wilson lines, supported "
-                    "formats: 1,2";
+                  << " when reading the initial Wilson lines, supported "
+                     "formats: 1,2";
         messager_.flush("info");
         exit(1);
     }
@@ -2111,7 +2113,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     VTwo_name = strVTwo_name.str();
 
     messager_ << "Reading Wilson lines from files " << VOne_name << " and "
-             << VTwo_name;
+              << VTwo_name;
     messager_.flush("info");
 
     if (format == 1) {
@@ -2239,12 +2241,12 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
             if (N != param->getSize()) {
                 messager_ << "# ERROR wrong lattice size, data is " << N
-                         << " but you have specified " << param->getSize();
+                          << " but you have specified " << param->getSize();
                 exit(0);
             }
             if (std::abs(L - param->getL()) > 1e-5) {
                 messager_ << "# ERROR grid length, data has " << L
-                         << " but you have specified " << param->getL();
+                          << " but you have specified " << param->getL();
                 exit(0);
             }
 
@@ -2288,11 +2290,11 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                     if (indx >= N * N || indx < 0) {
                         if (bb == 0) {
                             messager_ << "Warning: datafile " << VOne_name
-                                     << " has an element " << indx
-                                     << " (iy=" << iy << ", ix=" << ix
-                                     << "), but the grid is N=" << N
-                                     << ". Element is (" << re << " + " << im
-                                     << "i), skipping it";
+                                      << " has an element " << indx
+                                      << " (iy=" << iy << ", ix=" << ix
+                                      << "), but the grid is N=" << N
+                                      << ". Element is (" << re << " + " << im
+                                      << "i), skipping it";
                             messager_.flush("info");
                         }
                         INPUT_CTR++;
@@ -2318,20 +2320,21 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             if (InStream2.is_open()) {
                 // READING IN PARAMETERS
                 InStream2.read(reinterpret_cast<char *>(&N), sizeof(int));
-                InStream2.read(reinterpret_cast<char *>(&NcInFile), sizeof(int));
+                InStream2.read(
+                    reinterpret_cast<char *>(&NcInFile), sizeof(int));
                 InStream2.read(reinterpret_cast<char *>(&L), sizeof(double));
                 InStream2.read(reinterpret_cast<char *>(&a), sizeof(double));
                 InStream2.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
                 if (N != param->getSize()) {
                     messager_ << "# ERROR wrong lattice size, data is " << N
-                             << " but you have specified " << param->getSize();
+                              << " but you have specified " << param->getSize();
                     messager_.flush("info");
                     exit(0);
                 }
                 if (std::abs(L - param->getL()) > 1e-5) {
                     messager_ << "# ERROR grid length, dataas " << L
-                             << " but you have specified " << param->getL();
+                              << " but you have specified " << param->getL();
                     messager_.flush("info");
                     exit(0);
                 }
@@ -2372,11 +2375,11 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                         if (indx >= N * N || indx < 0) {
                             if (bb == 0) {
                                 messager_ << "Warning: datafile " << VTwo_name
-                                         << " has an element " << indx
-                                         << " (iy=" << iy << ", ix=" << ix
-                                         << "), but the grid is N=" << N
-                                         << ". Element is (" << re << " + "
-                                         << im << "i), skipping it";
+                                          << " has an element " << indx
+                                          << " (iy=" << iy << ", ix=" << ix
+                                          << "), but the grid is N=" << N
+                                          << ". Element is (" << re << " + "
+                                          << im << "i), skipping it";
                                 messager_.flush("info");
                             }
                             INPUT_CTR++;
@@ -2393,7 +2396,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     }
 
     messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
-             << ". ";
+              << ". ";
     messager_.flush("info");
 }
 
@@ -2412,12 +2415,12 @@ void Init::sampleImpactParameter(Parameters *param) {
             // use a linear probability distribution for b if we are doing
             // nuclei
             messager_ << "Sampling linearly distributed b between " << bmin
-                     << " and " << bmax << "fm. Found ";
+                      << " and " << bmax << "fm. Found ";
             b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
         } else {
             // use a uniform distribution instead
             messager_ << "Sampling uniformly distributed b between " << bmin
-                     << " and " << bmax << "fm. Found ";
+                      << " and " << bmax << "fm. Found ";
             b = (bmax - bmin) * xb + bmin;
         }
     }
@@ -2799,9 +2802,8 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 
 void Init::generateNucleusConfiguration(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
-    double beta3, double beta4, double gamma, bool forceDminFlag,
-    double d_min, double dR_np, double da_np,
-    std::vector<ReturnValue> &nucleus) {
+    double beta3, double beta4, double gamma, bool forceDminFlag, double d_min,
+    double dR_np, double da_np, std::vector<ReturnValue> &nucleus) {
     if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
         && std::abs(beta3) < 1e-15 && std::abs(gamma) < 1e-15) {
         generateNucleusConfigurationWithWoodsSaxon(
@@ -2835,8 +2837,7 @@ void Init::generateNucleusConfigurationWithWoodsSaxon(
         idx_array[i] = i;
     }
     for (int i = Z; i < A; i++) {
-        r_array[i] =
-            sampleRFromWoodsSaxon(random, a_WS + da_np, R_WS + dR_np);
+        r_array[i] = sampleRFromWoodsSaxon(random, a_WS + da_np, R_WS + dR_np);
         idx_array[i] = i;
     }
     std::stable_sort(
@@ -2987,7 +2988,7 @@ void Init::generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
     double beta3, double beta4, double gamma, double d_min, double dR_np,
     double da_np, std::vector<ReturnValue> &nucleus) {
     messager_ << "Sampling nucleon position forcing d_min = " << d_min
-             << " fm ...";
+              << " fm ...";
     messager_.flush("info");
     double rmaxCut = R_WS + dR_np + 10. * (a_WS + da_np);
     double r = 0.;
@@ -3234,8 +3235,7 @@ void Init::rotateNucleus(
     }
 }
 
-void Init::rotateNucleus3D(
-    Random *random, std::vector<ReturnValue> &nucleus) {
+void Init::rotateNucleus3D(Random *random, std::vector<ReturnValue> &nucleus) {
     // rotate the nucleus with the full three solid angles
     // required for tri-axial deformed nuclei
     // https://en.wikipedia.org/wiki/Euler_angles

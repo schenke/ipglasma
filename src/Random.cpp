@@ -94,7 +94,7 @@ void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
             for (; i < NN - 1; ++i) {
                 x = (mt_[i] & UM) | (mt_[i + 1] & LM);
                 mt_[i] = mt_[i + (MM - NN)] ^ (x >> 1)
-                        ^ mag01[static_cast<int>(x & 1ULL)];
+                         ^ mag01[static_cast<int>(x & 1ULL)];
             }
             x = (mt_[NN - 1] & UM) | (mt_[0] & LM);
             mt_[NN - 1] =
@@ -175,8 +175,8 @@ double Random::gauss(double mean, double width) {
 
     // default is \mu=0, \sigma = 1
 
-    // if iset_=0, generate both random numbers new, else use the unused one from
-    // the previous step. this saves lots of time.
+    // if iset_=0, generate both random numbers new, else use the unused one
+    // from the previous step. this saves lots of time.
     double fac, rsq, v1, v2;
 
     // if(idum<0) iset_=0;
@@ -202,10 +202,11 @@ void Random::gaussBulk(
     if (count == 0) return;
 
     // Preserve the exact scalar gauss() stream, including the cached partner
-    // in gset_/iset_. Generate candidate polar pairs in ordered rejection rounds:
-    // if R accepted pairs are still required, draw exactly R candidates.  If
-    // some are rejected, the next round draws exactly the number still needed.
-    // Consequently no MT word is consumed beyond the scalar stopping point.
+    // in gset_/iset_. Generate candidate polar pairs in ordered rejection
+    // rounds: if R accepted pairs are still required, draw exactly R
+    // candidates.  If some are rejected, the next round draws exactly the
+    // number still needed. Consequently no MT word is consumed beyond the
+    // scalar stopping point.
     std::size_t outOffset = 0;
     if (iset_ != 0) {
         out[outOffset++] = gset_;

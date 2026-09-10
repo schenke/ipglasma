@@ -19,13 +19,13 @@
 #include "FFT.h"
 #include "Init.h"
 #include "Instrumentation.h"
+#include "JIMWLK.h"
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 #include "Random.h"
 #include "Setup.h"
-#include "JIMWLK.h"
-#include "PrettyOstream.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0

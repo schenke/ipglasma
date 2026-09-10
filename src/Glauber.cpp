@@ -469,7 +469,8 @@ double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
     while (strcmp(s, "EndOfData") != 0) {
         if (fscanf(input, "%s", sx) != 1 || fscanf(input, "%s", s) != 1) {
             fprintf(
-                stderr, "File %s is missing its \"EndOfData\" marker. Exiting.\n",
+                stderr,
+                "File %s is missing its \"EndOfData\" marker. Exiting.\n",
                 file_name);
             exit(1);
         }
@@ -525,7 +526,8 @@ double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
     while (strcmp(s, "EndOfData") != 0) {
         if (fscanf(input, "%s", sy) != 1 || fscanf(input, "%s", s) != 1) {
             fprintf(
-                stderr, "File %s is missing its \"EndOfData\" marker. Exiting.\n",
+                stderr,
+                "File %s is missing its \"EndOfData\" marker. Exiting.\n",
                 file_name);
             exit(1);
         }
@@ -1156,12 +1158,12 @@ double Glauber::tAB() {
     int count = 0;
     f = integral(
         7, 0.0, glauberData_.sCutoff, TOL,
-        &count);                       // integrate oLSIntegrand(s)
+        &count);                        // integrate oLSIntegrand(s)
     f *= 2.0 / (glauberData_.sigmaNN);  // here tAB is the number of binary
-                                       // collisions, dimensionless (1/fm^4
-                                       // integrated over dr_T^2 (gets rid
-                                       // of 1/fm^2), divided by sigma (gets rid
-                                       // of the other))
+                                        // collisions, dimensionless (1/fm^4
+                                        // integrated over dr_T^2 (gets rid
+                                        // of 1/fm^2), divided by sigma (gets
+                                        // rid of the other))
     return f;
 } /* tAB */
 

@@ -16,119 +16,123 @@ class Parameters {
 
     int size_;        // the length of the lattice (make it 2^n, with n integer)
     int sizeOutput_;  // the length of the lattice for the output data
-                     // (sizeOutput
-                     // <= size!)
+                      // (sizeOutput
+                      // <= size!)
     int etaSizeOutput_;  // the length of the lattice in rapidity for the output
-                        // data
+                         // data
     double detaOutput_;  // step size in rapidity for the output data
     int runningCoupling_;  // switch to decide if alpha_s should run (0 constant
-                          // alpha_s, 1 running coupling)
-    int useTimeForSeed_;  // decide if the system time should be used to generate
-                         // a seed (1) or not (0)
-    int useSeedList_;     // read random seeds from a file if set to (1) - this
-                         // overwrites the 'use time for seed' setting
+                           // alpha_s, 1 running coupling)
+    int useTimeForSeed_;   // decide if the system time should be used to
+                           // generate a seed (1) or not (0)
+    int useSeedList_;      // read random seeds from a file if set to (1) - this
+                           // overwrites the 'use time for seed' setting
     unsigned long long int
         seed_;  // random seed that's added to the current time
                 // to generate the full seed (or the full seed,
                 // depending on the value of getUseTimeforSeed())
-    int Ny_;     // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
-    double g2mu_;       // g^2 mu [in lattice units]
-    int mode_;  // mode: (1) run the evolution, (2) analysis with files from disk
+    int Ny_;    // longitudinal 'resolution' (see Lappi, Eur. Phys. J. C55,285)
+    double g2mu_;  // g^2 mu [in lattice units]
+    int mode_;     // mode: (1) run the evolution, (2) analysis with files from
+                   // disk
     int runWithQs_;  // set whether alpha_s should run with the maximum(2),
-                    // average (1) or minimum(0) of Q_s from nucleus A and B
+                     // average (1) or minimum(0) of Q_s from nucleus A and B
     int runWithkt_;  // set whether alpha_s should run kt (1) or not (0) - if
-                    // this is set it overwrites any running with Q_s
+                     // this is set it overwrites any running with Q_s
     int runWithLocalQs_;  // set whether alpha_s should run with the local Q_s
-                         // from nucleus A and B (1) or the average (0), both
-                         // use settings from runWithQs
+                          // from nucleus A and B (1) or the average (0), both
+                          // use settings from runWithQs
     double runWithThisFactorTimesQs_;  // set the factor in front of Q_s under
-                                      // the log in alpha_s
-    double g_;  // coupling g needed in the initU3 where g^2mu does not scale out
+                                       // the log in alpha_s
+    double
+        g_;  // coupling g needed in the initU3 where g^2mu does not scale out
     double m_;  // mass term in GeV to cut off the Coulomb tail - should be of
-               // the order of \Lambda_QCD = 0.2 GeV
-    double Jacobianm_;   // mass term in GeV in the Jacobian going from y to eta
-    double QsmuRatio_;   // ratio between Qs and mu: Q_s = QsmuRatio * g^2 mu for
+                // the order of \Lambda_QCD = 0.2 GeV
+    double Jacobianm_;  // mass term in GeV in the Jacobian going from y to eta
+    double QsmuRatio_;  // ratio between Qs and mu: Q_s = QsmuRatio * g^2 mu for
                         // nucleus A
-    double QsmuRatioB_;  // ratio between Qs and mu: Q_s = QsmuRatio * g^2 mu for
-                        // nucleus B
-    double rapidityA_;  // rapidity to use when getting Q_s from IPSat.
-                        // Basically to pick x for now
-    double rapidityB_;  // rapidity to use when getting Q_s from IPSat.
-                        // Basically to pick x for now
+    double QsmuRatioB_;  // ratio between Qs and mu: Q_s = QsmuRatio * g^2 mu
+                         // for nucleus B
+    double rapidityA_;   // rapidity to use when getting Q_s from IPSat.
+                         // Basically to pick x for now
+    double rapidityB_;   // rapidity to use when getting Q_s from IPSat.
+                         // Basically to pick x for now
     int usePseudoRapidity_;  // if selected (1) the variable 'rapidity' will
-                            // contain the pseudorapidity and the right
-                            // conversion will be done (incl. Jacobian)
+                             // contain the pseudorapidity and the right
+                             // conversion will be done (incl. Jacobian)
     double averageQs_;  // the average Q_s (maximum of nucleus A and B) used as
-                       // scale for running coupling
+                        // scale for running coupling
     double averageQsAvg_;  // the average Q_s (average of nucleus A and B) used
-                          // as scale for running coupling
+                           // as scale for running coupling
     double averageQsmin_;  // the average Q_s (minimum of nucleus A and B) used
-                          // as scale for running coupling
+                           // as scale for running coupling
     double
         alphas_;  // the alpha_s computed at the scale given by the average Q_s
     int writeOutputs_;  // decide whether to write (1) or not write (0) large
-                       // output files (like hydro input data)
+                        // output files (like hydro input data)
     int writeEpsilonUHydro_;  // run the flow-velocity/hydro-output calculation
-                             // (1) or write only Tmunu at measurement times (0)
+                              // (1) or write only Tmunu at measurement times
+                              // (0)
     int writeTmunuBinary_;    // write Tmunu as compact binary .ipgt (1) or
-                             // formatted text .dat (0)
+                              // formatted text .dat (0)
     int writeOutputsToHDF5_;  // decide whether to write (1) or not write (0)
-                             // output files to one hdf5 file
-    int writeWilsonLines_;  // decide whether to write (1) in text or (2)
-                           // in binary format or not write (0) generated
-                           // Wilson lines (before any evolution)
+                              // output files to one hdf5 file
+    int writeWilsonLines_;    // decide whether to write (1) in text or (2)
+                              // in binary format or not write (0) generated
+                              // Wilson lines (before any evolution)
     int readInitialWilsonLines_;  // decide wheter to generate initial Wilson
-                                 // lines (0), or read these in plain text (1)
-                                 // or in binary format (2)
+                                  // lines (0), or read these in plain text (1)
+                                  // or in binary format (2)
     unsigned long long int randomSeed_;  // stores the random seed used (so the
-                                        // event can be reproduced)
+                                         // event can be reproduced)
     std::string
         nucleusQsTableFileName_;  // the file name for the table containing Qs^2
-                                 // as a function of Y and Qs^2(Y=0)
+                                  // as a function of Y and Qs^2(Y=0)
     double BG_;  // the width of the Gaussian describing the shape of the proton
-                // in GeV^(-2)
+                 // in GeV^(-2)
     double BGq_;     // the mean width of the Gaussian describing the shape of
                      // a constituent quark in GeV^(-2)
     double BGqVar_;  // the variance of the Gaussian width describing the shape
     double omega_;
     // of a constituent quark in GeV^(-4)
     double dq_min_;  // the minimum distance between valence quarks [fm]
-    double muZero_;   // mu_0 in the running coupling (makes it infrared finite)
+    double muZero_;  // mu_0 in the running coupling (makes it infrared finite)
     double c_;  // determines how smooth the cutoff in the running coupling is
     double roots_;  // square root of s: center of mass energy of the collision
-                   // in GeV
+                    // in GeV
     int useFluctuatingx_;  // switch to determine if the rapidity value in the
-                          // input file should always be used (0) or if x should
-                          // fluctuate as the local Q_s
+                           // input file should always be used (0) or if x
+                           // should fluctuate as the local Q_s
     // x = Q_s*beta/roots (1). the value of roots is only used when this is set
     // to 1.
-    double xFromThisFactorTimesQs_;  // set the factor beta in x = Q_s*beta/roots
+    double
+        xFromThisFactorTimesQs_;  // set the factor beta in x = Q_s*beta/roots
     double Tpp_;  // This is the convolution of two T_p's to be used in the
-                 // weight for different impact parameters
+                  // weight for different impact parameters
     // T_pp (b_T) = \sum \delta^2 x_T T_p(x_T) T_p(x_T-b_T)
     int inverseQsForMaxTime_;  // use 1/Q_s as the maximal evolution time (1) or
-                              // use the manually entered maximal evolution time
-                              // (0)
-    double area_;  // area of the initial interaction region
+                               // use the manually entered maximal evolution
+                               // time (0)
+    double area_;              // area of the initial interaction region
     double psi_;  // the initial angle Psi_2 that determines the event-plane
-                 // (geometric/spatial one)
+                  // (geometric/spatial one)
     // Glauber parameters:
     double sigmaNN_;      // nucleon-nucleon cross section
     double b_;            // impact parameter
     double bmin_;         // minimum impact parameter to sample from
     double bmax_;         // maximum impact parameter to sample to
-    double phiRP_;       // the reaction plane angle
+    double phiRP_;        // the reaction plane angle
     int linearb_;         // sample b from a linear distribution if 1, uniform
-                         // distribution otherwise
+                          // distribution otherwise
     std::string target_;  // target nucleus' name
     std::string projectile_;  // projectile nucleus' name
     double L_;                // lattice size in fm
     double LOutput_;          // lattice size for the output in fm
-    int useNucleus_;  // use nuclei (1) or a constant g^2mu distribution over the
-                     // lattice
+    int useNucleus_;  // use nuclei (1) or a constant g^2mu distribution over
+                      // the lattice
     int lightNucleusOption_;  // for light nuclei (carbon, oxygen): 1:
-                             // Woods-Saxon; 2: variational MC; 3: alpha
-                             // clusters
+                              // Woods-Saxon; 2: variational MC; 3: alpha
+                              // clusters
 
     int polarizationFlagProjectile_;  // 0: unpolarized; 1: longitudinal
                                       // polarized; 2: transverse
@@ -138,54 +142,54 @@ class Parameters {
     double polJzTarget_;          // The Jz polarization of the target
 
     int useGaussian_;        // use a Gaussian profile on top of the constant
-                            // background
+                             // background
     double dtau_;            // time step in lattice units
     double maxtime_;         // maximal evolution time in fm/c
     int Npart_;              // Number of participants
-    int averageOverNuclei_;  // average over this many nuclei to get a smooth(er)
-                            // distribution
+    int averageOverNuclei_;  // average over this many nuclei to get a
+                             // smooth(er) distribution
     int nucleonPositionsFromFile_;  // switch to determine whether to sample
-                                   // nucleon positions (0) or read them from a
-                                   // file (1)
+                                    // nucleon positions (0) or read them from a
+                                    // file (1)
     int useFixedNpart_;  // if 0 do not demand a given N_part, if >1 sample the
-                        // initial configuration until the given N_part is
-                        // reached
+                         // initial configuration until the given N_part is
+                         // reached
     int smearQs_;  // decide whether to smear Q_s using a Poisson distribution
-                  // around its mean at every x_T (1) or not (0)
+                   // around its mean at every x_T (1) or not (0)
     double smearingWidth_;  // width of the Gaussian smearing around the mean
-                           // g^2mu^2
+                            // g^2mu^2
     int gaussianWounding_;  // use hard sphere profile (0) or Gaussian cross
-                           // section (1) to determine whether a nucleon is
-                           // wounded
+                            // section (1) to determine whether a nucleon is
+                            // wounded
     int MPIrank_;           // MPI rank
     int MPIsize_;           // MPI number of cores
     int event_id_;
     int success_;  // no collision happened (0) or collision happened (1) - used
-                  // to restart if there was no collision
+                   // to restart if there was no collision
     int readMultFromFile_;  // if set, the gluon distribution as a function of
-                           // k_T is read from file and the integrated rate
-                           // computed
+                            // k_T is read from file and the integrated rate
+                            // computed
     double
         rmax_;  // radius at which we cut distribution for each nucleon (in fm)
-    double protonAnisotropy_;  // anisotropy of the proton thickness function: xi
-                              // in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi] -
-                              // as a first test
+    double protonAnisotropy_;  // anisotropy of the proton thickness function:
+                               // xi in Exp[-(x^2 + xi y^2)/2/B]/2/Pi/B Sqrt[xi]
+                               // - as a first test
     int useConstituentQuarkProton_;  // if >0, use proton made up of
-                                    // useConstituentQuarkProton constituent
-                                    // quarks.
+                                     // useConstituentQuarkProton constituent
+                                     // quarks.
     double NqBase_;
     double NqFluc_;
     int useSmoothNucleus_;  // if 1, use a smooth Woods-Saxon distribution for a
-                           // heavy nucleus
+                            // heavy nucleus
     int shiftConstituentQuarkProtonOrigin_;  // if 1, move constituent quark
-                                            // center of mass to origin
+                                             // center of mass to origin
     double UVdamp_;                          // UV damping parameter
     int minimumQs2ST_;  // if >0 this will excludes events with Qs_min^2 S_T <
-                       // minimumQs2ST. Can be used to trigger on high
-                       // multiplicity events.
+                        // minimumQs2ST. Can be used to trigger on high
+                        // multiplicity events.
     double R_WS_, a_WS_;
     double beta2_;  // value of deformation parameter beta2 to test sensitivity
-                   // in Uranium
+                    // in Uranium
     double beta3_, beta4_, gamma_;
     double d_min_;
     bool setWSDeformParams_, forceDminFlag_;
@@ -200,7 +204,7 @@ class Parameters {
     bool simpleLangevin_;
 
     double jimwlk_alphas_;  // 0 = running coupling, positive value = fixed
-                           // coupling
+                            // coupling
     double m_jimwlk_;
     double mu0_jimwlk_;
     double LambdaQCD_jimwlk_;
@@ -208,7 +212,7 @@ class Parameters {
     // int measureSteps_jimwlk;
     double ds_jimwlk_;
     double x0_jimwlk_;  // Bjorken-x at the initial condition of the JIMLWK
-                       // evolution
+                        // evolution
 
     double jimwlk_x1_;  // Bjorken x for the nucleus A (projectile)
     double jimwlk_x2_;  // Bjorken x for the nucleus B (target)

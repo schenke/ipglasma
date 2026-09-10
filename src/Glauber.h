@@ -116,8 +116,8 @@ class Glauber {
     void initGlauber(
         double sigmaNN, std::string target, std::string projectile, double inb,
         bool setWSDeformParams, double R_WS, double a_WS, double beta2,
-        double beta3, double beta4, double gamma, bool forceDminFlag, double d_min,
-        double dR_np, double da_np, int imax);
+        double beta3, double beta4, double gamma, bool forceDminFlag,
+        double d_min, double dR_np, double da_np, int imax);
     double areaTA(double x, double A);
     ReturnValue sampleTARejection(Random *random, NucleusRole nucleus);
 };

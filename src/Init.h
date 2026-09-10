@@ -12,8 +12,8 @@
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
-#include "Random.h"
 #include "PrettyOstream.h"
+#include "Random.h"
 
 enum class InitializationMethod {
     SampleColorCharges,
@@ -52,7 +52,8 @@ class Init {
     Random *random_ptr_;
 
     Matrix one_;
-    vector<vector<double>> xq1_, xq2_, yq1_, yq2_, BGq1_, BGq2_, gauss1_, gauss2_;
+    vector<vector<double>> xq1_, xq2_, yq1_, yq2_, BGq1_, BGq2_, gauss1_,
+        gauss2_;
 
   public:
     // Constructor.

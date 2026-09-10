@@ -1266,8 +1266,7 @@ void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
                 const double gradientPrefactor =
                     0.5 / (it * dtau) / (it * dtau);
                 const double plaquetteEnergy =
-                    2. / pow(g, 2.)
-                    * (3.0 - su3::trace(Uplaq).real());
+                    2. / pow(g, 2.) * (3.0 - su3::trace(Uplaq).real());
 
                 lat->cells[pos]->setTtautau(
                     lat->cells[pos]->getTtautau() + plaquetteEnergy
@@ -3565,4 +3564,3 @@ int Evolution::multiplicity(
     param->setSuccess(1);
     return 1;
 }
-

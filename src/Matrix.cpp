@@ -434,15 +434,15 @@ Matrix &Matrix::expm(double t, const int p) {
 
 complex<double> Matrix::det() {
     return e_[0] * e_[4] * e_[8] + e_[1] * e_[5] * e_[6] + e_[2] * e_[3] * e_[7]
-           - e_[2] * e_[4] * e_[6] - e_[1] * e_[3] * e_[8] - e_[5] * e_[7] * e_[0];
+           - e_[2] * e_[4] * e_[6] - e_[1] * e_[3] * e_[8]
+           - e_[5] * e_[7] * e_[0];
 }
 
 complex<double> Matrix::trace() const { return e_[0] + e_[4] + e_[8]; }
 
 complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const {
-    return a(0) * b(0) + a(1) * b(3) + a(2) * b(6) + a(3) * b(1)
-           + a(4) * b(4) + a(5) * b(7) + a(6) * b(2) + a(7) * b(5)
-           + a(8) * b(8);
+    return a(0) * b(0) + a(1) * b(3) + a(2) * b(6) + a(3) * b(1) + a(4) * b(4)
+           + a(5) * b(7) + a(6) * b(2) + a(7) * b(5) + a(8) * b(8);
 }
 
 std::string Matrix::MatrixToString() {

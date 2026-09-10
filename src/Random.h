@@ -33,6 +33,8 @@ class Random {
   public:
     Random() {
         iset_ = 0;
+        gset_ = 0.;
+        mti_ = NN + 1;
         gslRandom_ = gsl_rng_alloc(gsl_rng_taus);
 
     };  // constructor

@@ -142,114 +142,70 @@ void FFT::fftnArray(
     complex<double> **data, complex<double> **outdata, const int nn[],
     const int isign, const int mDim) {
     IPG_PROFILE_SCOPE("fft.total");
-    unsigned ntot = nn[0] * nn[1];
-    int pos, newpos;
+    if (mDim > kMaxBatchDim) {
+        std::cerr << "FFT::fftnArray: mDim=" << mDim
+                  << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting."
+                  << std::endl;
+        exit(1);
+    }
+    const unsigned ntot = static_cast<unsigned>(nn[0] * nn[1]);
 
-    //    cout << "size=" << mDim << endl;
-    // mDim is the size of the vector (how many rows)
+    // Same checkerboard-sign trick as fftn(): for even lattice dimensions,
+    // a half-lattice shift of the input/output is equivalent to multiplying
+    // by (-1)^(i+j) (plus a global sign on the output), so the FFTW buffers
+    // can stay in natural row-major order instead of being built via a
+    // four-quadrant index remap. Each of the mDim planes is an independent
+    // transform, so they're packed into their own slice of the existing
+    // inputMany/outputMany scratch and executed concurrently on the shared
+    // plan via the (thread-safe) new-array interface -- the same pattern
+    // fftn() already uses for the 9-component Matrix case.
+    const double outputGlobalSign =
+        (((nn[0] / 2 + nn[1] / 2) & 1) != 0) ? -1.0 : 1.0;
+    const double inverseNorm =
+        (isign == -1) ? 1.0 / static_cast<double>(ntot) : 1.0;
 
-    // ndim is the dimension of the FFT (always 2 here)
-
-    //    cout << "mDim=" << mDim << endl;
-    // for each component of the vector fill the input array for the FFT (resort
-    // as you fill in)
-    for (int k = 0; k < mDim; k++) {
-        //	oo   ->  xo
-        //      ox       oo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                input[newpos][0] = real(data[pos][k]);
-                input[newpos][1] = imag(data[pos][k]);
-            }
-        }
-        //	xo   ->  oo
-        //      oo       ox
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j;
-                input[newpos][0] = real(data[pos][k]);
-                input[newpos][1] = imag(data[pos][k]);
-            }
-        }
-        //	ox   ->  oo
-        //      oo       xo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2;
-                input[newpos][0] = real(data[pos][k]);
-                input[newpos][1] = imag(data[pos][k]);
-            }
-        }
-        //	oo   ->  ox
-        //      xo       oo
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                input[newpos][0] = real(data[pos][k]);
-                input[newpos][1] = imag(data[pos][k]);
+#pragma omp parallel
+    {
+#pragma omp for schedule(static)
+        for (int k = 0; k < mDim; ++k) {
+            fftw_complex *localInput =
+                inputMany + static_cast<std::size_t>(k) * ntot;
+            for (int i = 0; i < nn[0]; ++i) {
+                for (int j = 0; j < nn[1]; ++j) {
+                    const int pos = i * nn[1] + j;
+                    const double sign = ((i + j) & 1) ? -1.0 : 1.0;
+                    const complex<double> value = data[pos][k];
+                    localInput[pos][0] = sign * value.real();
+                    localInput[pos][1] = sign * value.imag();
+                }
             }
         }
 
-        if (isign == 1)
-            fftw_execute(p_);
-        else
-            fftw_execute(pback_);
-
-        // if this is inverse transform, normalize.
-        if (isign == -1) {
-            for (unsigned i = 0; i < ntot; i++) {
-                output[i][0] /= static_cast<double>(ntot);
-                output[i][1] /= static_cast<double>(ntot);
-            }
+#pragma omp for schedule(static)
+        for (int k = 0; k < mDim; ++k) {
+            fftw_complex *localInput =
+                inputMany + static_cast<std::size_t>(k) * ntot;
+            fftw_complex *localOutput =
+                outputMany + static_cast<std::size_t>(k) * ntot;
+            if (isign == 1)
+                fftw_execute_dft(p_, localInput, localOutput);
+            else
+                fftw_execute_dft(pback_, localInput, localOutput);
         }
 
-        //	xo   ->  oo
-        //      oo       ox
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                outdata[pos][k] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-                //	cout << output[newpos][0] << " " << output[newpos][1] <<
-                // endl;
-                // cout << "data=" << data[pos][k] << endl;
-            }
-        }
-        //	oo   ->  xo
-        //      ox       oo
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j;
-                outdata[pos][k] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-            }
-        }
-        //	oo   ->  ox
-        //      xo       oo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2;
-                outdata[pos][k] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-            }
-        }
-        //	ox   ->  oo
-        //      oo       xo
-
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                outdata[pos][k] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
+#pragma omp for schedule(static)
+        for (int k = 0; k < mDim; ++k) {
+            fftw_complex *localOutput =
+                outputMany + static_cast<std::size_t>(k) * ntot;
+            for (int i = 0; i < nn[0]; ++i) {
+                for (int j = 0; j < nn[1]; ++j) {
+                    const int pos = i * nn[1] + j;
+                    const double sign =
+                        ((i + j) & 1) ? -outputGlobalSign : outputGlobalSign;
+                    outdata[pos][k] = complex<double>(
+                        sign * localOutput[pos][0] * inverseNorm,
+                        sign * localOutput[pos][1] * inverseNorm);
+                }
             }
         }
     }

@@ -80,7 +80,7 @@ def generate_temp_input(source_input_file="input_vm_proton", seed=0, x_pom="0.00
             elif line.lstrip().startswith("x_target_jimwlk"):
                 f.write(f"x_target_jimwlk {x_pom}\n")
             elif line.lstrip().startswith("NucleusQsTableFileName"):
-                f.write(f"NucleusQsTableFileName {os.path.join(ipglasma_path, 'qs2Adj_vs_Tp_vs_Y_200.in')}\n")
+                f.write(f"NucleusQsTableFileName {os.path.join(ipglasma_path, 'qs2Adj_vs_Tp_vs_Y_240.in')}\n")
             elif line.lstrip().startswith("size "):
                 f.write(f"size {lattice_N}\n")
             elif line.lstrip().startswith("L "):
@@ -303,9 +303,9 @@ def main():
 
     os.makedirs(datadir, exist_ok=True)
     shutil.copy2(os.path.join(script_dir, "input_vm_proton"), os.path.join(datadir, "input_vm_proton"))
-    shutil.copy2(os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_200.in"), os.path.join(script_dir, "qs2Adj_vs_Tp_vs_Y_200.in"))
-    #if os.path.exists(os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_200.in")):
-    #    shutil.copy2(os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_200.in"), os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_200.in"))
+    shutil.copy2(os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_240.in"), os.path.join(script_dir, "qs2Adj_vs_Tp_vs_Y_240.in"))
+    #if os.path.exists(os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_240.in")):
+    #    shutil.copy2(os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_240.in"), os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_240.in"))
 
     ipglasma_binary = os.path.join(ipglasma_path, "ipglasma")
     subnucleondiffraction_binary = os.path.join(subnucleondiffraction_path, "build", "bin", "subnucleondiffraction")

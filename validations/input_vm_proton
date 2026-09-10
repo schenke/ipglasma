@@ -82,6 +82,7 @@ detaOutput 0
 writeOutputs 1
 readInitialWilsonLines 0
 writeWilsonLines 2
+writeEpsilonUHydro 0
 writeOutputsToHDF5 0
 useJIMWLK 1
 mu0_jimwlk 0.28

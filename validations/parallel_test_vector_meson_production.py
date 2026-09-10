@@ -18,13 +18,17 @@ The lattice size can be increased by modifying the input file "input_vm_proton".
 The script also generates plots  color field (tr V(x)) for selected events.
 
 Example usage:
-    python3 test_vector_meson_production.py -maxevents 100 -datadir path_for_cross_sections -subnucleondiffraction_path path_to_subnucleondiffraction_directory
+    python3 parallel_test_vector_meson_production.py --maxevents 100 --datadir path_for_cross_sections --subnucleondiffraction-path path_to_subnucleondiffraction_directory
 
-Maximum number of parallel workers can be specified with -max_workers. By default, it uses the number of logical CPUs.
+Maximum number of parallel workers can be specified with --max-workers. By default, it uses the number of logical CPUs.
 
 The comparison plot will be saved in the specified directory as "cross_section.pdf". The color field plots will be saved as "output_<event_id>.pdf".
 
-Use -plot_only to skip the simulation and only generate the comparison plots from existing data files in the specified directory.
+Use --plot-only to skip the simulation and only generate the comparison plots from existing data files in the specified directory.
+
+The IP-Glasma input file used as a template can be specified with --input-template (default: input_vm_proton). The Qs table file
+it points to (NucleusQsTableFileName) is read from that template rather than hardcoded, so pointing --input-template at a
+differently configured input file also picks up its Qs table.
 
 Before running this, make sure you have downloaded and built the subnucleondiffraction code from https://github.com/hejajama/subnucleondiffraction
 '''
@@ -32,8 +36,6 @@ Before running this, make sure you have downloaded and built the subnucleondiffr
 """
 
 import argparse
-import cmd
-import cmd
 import fnmatch
 import os
 import shutil
@@ -64,7 +66,18 @@ def _script_dir():
     return os.path.dirname(os.path.abspath(__file__))
 
 
-def generate_temp_input(source_input_file="input_vm_proton", seed=0, x_pom="0.001705", working_dir=".", ipglasma_path=ipglasma_path):
+def read_input_value(template_path, key):
+    """Return the (string) value of a "key value" line in an IP-Glasma
+    input file, or None if the key is not present."""
+    with open(template_path, "r") as f:
+        for line in f:
+            tokens = line.split()
+            if len(tokens) >= 2 and tokens[0] == key:
+                return tokens[1]
+    return None
+
+
+def generate_temp_input(source_input_file="input_vm_proton", seed=0, x_pom="0.001705", working_dir=".", qs_table_path=None):
     with open(source_input_file, "r") as f:
         lines = f.readlines()
 
@@ -79,8 +92,8 @@ def generate_temp_input(source_input_file="input_vm_proton", seed=0, x_pom="0.00
                 f.write(f"x_projectile_jimwlk {x_pom}\n")
             elif line.lstrip().startswith("x_target_jimwlk"):
                 f.write(f"x_target_jimwlk {x_pom}\n")
-            elif line.lstrip().startswith("NucleusQsTableFileName"):
-                f.write(f"NucleusQsTableFileName {os.path.join(ipglasma_path, 'qs2Adj_vs_Tp_vs_Y_240.in')}\n")
+            elif line.lstrip().startswith("NucleusQsTableFileName") and qs_table_path:
+                f.write(f"NucleusQsTableFileName {qs_table_path}\n")
             elif line.lstrip().startswith("size "):
                 f.write(f"size {lattice_N}\n")
             elif line.lstrip().startswith("L "):
@@ -96,7 +109,7 @@ def remove_temp_input(temp_input_path):
         os.remove(temp_input_path)
 
 
-def run_command(cmd, cwd, stdout_path=None, stderr_path=None, slurm=True):
+def run_command(cmd, cwd, stdout_path=None, stderr_path=None, slurm=False):
     print(f"Running: {' '.join(str(part) for part in cmd)}", " stdout:", stdout_path, " stderr:", stderr_path)
     srun_cmd = ["srun", "--ntasks=1", "--cpus-per-task=1"] + cmd
     if not slurm:
@@ -194,16 +207,16 @@ def PlotComparison(datadir="", subnucleondiffraction_path="", reference_cross_se
     plt.close(fig)
 
 
-def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma_binary, input_file_path, reference_file_path, ipglasma_path):
+def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma_binary, input_file_path, reference_file_path, ipglasma_path, qs_table_path, slurm=False):
     worker_dir = os.path.join(datadir, f"seed_{seed}")
     os.makedirs(worker_dir, exist_ok=True)
 
     print(f"===== RUNNING SEED {seed} =====", flush=True)
-    temp_input_path = generate_temp_input(source_input_file=input_file_path, seed=seed, x_pom=xpom, working_dir=worker_dir, ipglasma_path=ipglasma_path)
+    temp_input_path = generate_temp_input(source_input_file=input_file_path, seed=seed, x_pom=xpom, working_dir=worker_dir, qs_table_path=qs_table_path)
 
     log_path = os.path.join(worker_dir, f"ipglasma_log_{seed}")
     ipglasma_cmd = os.path.join(ipglasma_path, ipglasma_binary)
-    run_command([ipglasma_cmd, temp_input_path], cwd=worker_dir, stdout_path=log_path, stderr_path=log_path + ".err")
+    run_command([ipglasma_cmd, temp_input_path], cwd=worker_dir, stdout_path=log_path, stderr_path=log_path + ".err", slurm=slurm)
     print("Removing temp files", temp_input_path, flush=True)
     remove_temp_input(temp_input_path)
     print("Done", seed, flush=True)
@@ -213,8 +226,8 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     print(f"===== RUNNING SUBNUCLEONDIFFRACTION FOR EVENTS {id1} AND {id2} =====", flush=True)
     spectra_1_path = os.path.join(worker_dir, f"spectra_{id1}")
     spectra_2_path = os.path.join(worker_dir, f"spectra_{id2}")
-    run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", os.path.join(worker_dir, f"Final_x_{xpom}_V-{id1}")], cwd=worker_dir, stdout_path=spectra_1_path, stderr_path=spectra_1_path + ".err")
-    run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", os.path.join(worker_dir, f"Final_x_{xpom}_V-{id2}")], cwd=worker_dir, stdout_path=spectra_2_path, stderr_path=spectra_2_path + ".err")
+    run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", os.path.join(worker_dir, f"Final_x_{xpom}_V-{id1}")], cwd=worker_dir, stdout_path=spectra_1_path, stderr_path=spectra_1_path + ".err", slurm=slurm)
+    run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", os.path.join(worker_dir, f"Final_x_{xpom}_V-{id2}")], cwd=worker_dir, stdout_path=spectra_2_path, stderr_path=spectra_2_path + ".err", slurm=slurm)
 
     for file_name in [f"spectra_{id1}", f"spectra_{id2}"]:
         src = os.path.join(worker_dir, file_name)
@@ -232,6 +245,7 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
             cwd=worker_dir,
             stdout_path=tmp_output_path,
             stderr_path=tmp_output_path + ".err",
+            slurm=slurm,
         )
         try:
             data = np.loadtxt(tmp_output_path)
@@ -275,13 +289,15 @@ def main():
     global ipglasma_path
 
     parser = argparse.ArgumentParser(description="Parallel test for IP-Glasma+JIMWLK+SubnucleonDiffraction for vector meson production.")
-    parser.add_argument("-plot_only", action="store_true", help="Use existing data files for plotting the comparison.")
-    parser.add_argument("-maxevents", type=int, default=200, help="Maximum number of events for the runs.")
-    parser.add_argument("-datadir", type=str, default="./jpsi/", help="Directory to store data files.")
-    parser.add_argument("-subnucleondiffraction_path", type=str, default=subnucleondiffraction_path, help="Path to the subnucleondiffraction executable.")
-    parser.add_argument("-ipglasma_path", type=str, default=ipglasma_path, help="Path to the IP-Glasma executable.")
-    parser.add_argument("-max_workers", type=int, default=None, help="Maximum number of parallel workers. Defaults to the number of logical CPUs.")
-    parser.add_argument("-keep_logs", type=bool, default=False, help="Keep log files for each seed. Default is False.")
+    parser.add_argument("--plot-only", action="store_true", help="Use existing data files for plotting the comparison.")
+    parser.add_argument("--maxevents", type=int, default=200, help="Maximum number of events for the runs.")
+    parser.add_argument("--datadir", type=str, default="./jpsi/", help="Directory to store data files.")
+    parser.add_argument("--subnucleondiffraction-path", type=str, default=subnucleondiffraction_path, help="Path to the subnucleondiffraction executable.")
+    parser.add_argument("--ipglasma-path", type=str, default=ipglasma_path, help="Path to the IP-Glasma executable.")
+    parser.add_argument("--input-template", type=str, default="input_vm_proton", help="IP-Glasma input file to use as a template.")
+    parser.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers. Defaults to the number of logical CPUs.")
+    parser.add_argument("--keep-logs", action="store_true", help="Keep log files for each seed.")
+    parser.add_argument("--slurm", action="store_true", help="Wrap each ipglasma/subnucleondiffraction invocation with 'srun --ntasks=1 --cpus-per-task=1'.")
     args = parser.parse_args()
 
     repo_root = _repo_root()
@@ -293,6 +309,14 @@ def main():
     maxseed = int(args.maxevents / 2)
     keep_logs = args.keep_logs
 
+    # Resolve the input template: try it as given (absolute, or relative to
+    # the current working directory) first, then fall back to the script's
+    # own directory so the default ("input_vm_proton") keeps working
+    # regardless of where the script is invoked from.
+    input_file_path = args.input_template
+    if not os.path.isfile(input_file_path):
+        input_file_path = os.path.join(script_dir, args.input_template)
+
     if args.plot_only:
         PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=os.path.join(script_dir, reference_cross_section_file), x_pom=xpom)
         raise SystemExit(0)
@@ -301,11 +325,15 @@ def main():
     if hasattr(os, "sched_getaffinity"):
         print("Affinity =", os.sched_getaffinity(0))
 
+    # Read the Qs table file name from the input template (NucleusQsTableFileName)
+    # instead of hardcoding it, so the template controls which table is used.
+    qs_table_name = read_input_value(input_file_path, "NucleusQsTableFileName") if os.path.isfile(input_file_path) else None
+    if not qs_table_name:
+        raise FileNotFoundError(f"NucleusQsTableFileName not found in input template '{input_file_path}'.")
+    qs_table_path = os.path.join(ipglasma_path, qs_table_name)
+
     os.makedirs(datadir, exist_ok=True)
-    shutil.copy2(os.path.join(script_dir, "input_vm_proton"), os.path.join(datadir, "input_vm_proton"))
-    shutil.copy2(os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_240.in"), os.path.join(script_dir, "qs2Adj_vs_Tp_vs_Y_240.in"))
-    #if os.path.exists(os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_240.in")):
-    #    shutil.copy2(os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_240.in"), os.path.join(repo_root, "qs2Adj_vs_Tp_vs_Y_240.in"))
+    shutil.copy2(input_file_path, os.path.join(datadir, "input_vm_proton"))
 
     ipglasma_binary = os.path.join(ipglasma_path, "ipglasma")
     subnucleondiffraction_binary = os.path.join(subnucleondiffraction_path, "build", "bin", "subnucleondiffraction")
@@ -313,7 +341,7 @@ def main():
 
     missing = []
     non_executable = []
-    for required,exec in zip([ipglasma_binary, subnucleondiffraction_binary, subnucleondiffraction_wavefile, os.path.join(script_dir, "input_vm_proton")], [True, True, False, False]):
+    for required,exec in zip([ipglasma_binary, subnucleondiffraction_binary, subnucleondiffraction_wavefile, input_file_path, qs_table_path], [True, True, False, False, False]):
         if not os.path.exists(required):
             missing.append(required)
         elif os.path.isfile(required) and not os.access(required, os.X_OK) and exec:
@@ -337,14 +365,13 @@ def main():
         "-mcintpoints", "1e6",
     ]
 
-    input_file_path = os.path.join(script_dir, "input_vm_proton")
     reference_file_path = os.path.join(script_dir, reference_cross_section_file)
 
     failures=[]
 
     print(f"Running {maxseed} seeds in parallel with {max_workers} workers")
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [executor.submit(run_seed, seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma_binary, input_file_path, reference_file_path, ipglasma_path) for seed in range(maxseed)]
+        futures = [executor.submit(run_seed, seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma_binary, input_file_path, reference_file_path, ipglasma_path, qs_table_path, args.slurm) for seed in range(maxseed)]
         for future in as_completed(futures):
             try:
                 outcome = "not available"

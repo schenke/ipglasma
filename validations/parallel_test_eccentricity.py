@@ -309,8 +309,19 @@ def load_reference(reference_file):
         return json.load(f)
 
 
+def reproduce_command():
+    """Reconstruct the command line this script was invoked with, so it
+    can be recorded alongside a saved reference (JSON has no comment
+    syntax, so this is stashed as a regular "_command" field instead)."""
+    return "python3 {0}".format(" ".join([sys.argv[0]] + sys.argv[1:]))
+
+
 def save_reference(reference_file, eps2_values, run_meta):
-    payload = dict(summarize(eps2_values))
+    # JSON doesn't support comments, so the reproduce command is stored as
+    # a leading "_command" field instead -- keep it first so it's the
+    # first thing a human opening the file notices.
+    payload = {"_command": reproduce_command()}  # type: dict
+    payload.update(summarize(eps2_values))
     payload["eps2_values"] = [float(v) for v in eps2_values]
     payload.update(run_meta)
     with open(reference_file, "w") as f:
@@ -571,20 +582,29 @@ def main():
         save_reference(args.reference_file, eps2_values, run_meta)
         print("Saved new reference distribution to {0}".format(
             args.reference_file))
-    elif reference is not None:
-        passed, message = compare_to_reference(
-            eps2_values, reference, args.mean_tol, args.std_tol)
-        print(message)
-        if not passed:
-            exit_code = 1
-            print("REGRESSION CHECK FAILED: epsilon_2 distribution drifted "
-                  "beyond tolerance relative to {0}".format(args.reference_file))
-        else:
-            print("Regression check passed.")
     else:
-        print("No reference file found at {0}. Rerun with --save-reference "
-              "to record a baseline once you've confirmed this run's "
-              "physics is correct.".format(args.reference_file))
+        # Not (re-)saving the reference -- still write this run's
+        # distribution (same format, including the "_command" needed to
+        # reproduce it) to datadir, so it isn't lost once seed_*/ working
+        # directories are cleaned up.
+        results_file = os.path.join(datadir, "eccentricity_results.json")
+        save_reference(results_file, eps2_values, run_meta)
+        print("Saved this run's eps2 distribution to {0}".format(results_file))
+
+        if reference is not None:
+            passed, message = compare_to_reference(
+                eps2_values, reference, args.mean_tol, args.std_tol)
+            print(message)
+            if not passed:
+                exit_code = 1
+                print("REGRESSION CHECK FAILED: epsilon_2 distribution drifted "
+                      "beyond tolerance relative to {0}".format(args.reference_file))
+            else:
+                print("Regression check passed.")
+        else:
+            print("No reference file found at {0}. Rerun with --save-reference "
+                  "to record a baseline once you've confirmed this run's "
+                  "physics is correct.".format(args.reference_file))
 
     if not args.keep_logs and not args.plot_only:
             for seed in range(args.maxevents):

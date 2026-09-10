@@ -458,16 +458,37 @@ double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
     }
 
     input = fopen(file_name, "r");
-    fscanf(input, "%s", s);
+    if (input == nullptr) {
+        fprintf(stderr, "File %s not found. Exiting.\n", file_name);
+        exit(1);
+    }
+    if (fscanf(input, "%s", s) != 1) {
+        fprintf(stderr, "File %s is empty or malformed. Exiting.\n", file_name);
+        exit(1);
+    }
     while (strcmp(s, "EndOfData") != 0) {
-        fscanf(input, "%s", sx);
-        fscanf(input, "%s", s);
+        if (fscanf(input, "%s", sx) != 1 || fscanf(input, "%s", s) != 1) {
+            fprintf(
+                stderr, "File %s is missing its \"EndOfData\" marker. Exiting.\n",
+                file_name);
+            exit(1);
+        }
     }
 
     for (i = 0; i <= maxi_num; i++) {
-        fscanf(input, "%lf", &x);
+        if (fscanf(input, "%lf", &x) != 1) {
+            fprintf(
+                stderr, "File %s has fewer than %d entries. Exiting.\n",
+                file_name, maxi_num + 1);
+            exit(1);
+        }
         vx[i] = x;
-        fscanf(input, "%lf", &x);
+        if (fscanf(input, "%lf", &x) != 1) {
+            fprintf(
+                stderr, "File %s has fewer than %d entries. Exiting.\n",
+                file_name, maxi_num + 1);
+            exit(1);
+        }
     }
     fclose(input);
 
@@ -493,15 +514,36 @@ double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
     }
 
     input = fopen(file_name, "r");
-    fscanf(input, "%s", s);
+    if (input == nullptr) {
+        fprintf(stderr, "File %s not found. Exiting.\n", file_name);
+        exit(1);
+    }
+    if (fscanf(input, "%s", s) != 1) {
+        fprintf(stderr, "File %s is empty or malformed. Exiting.\n", file_name);
+        exit(1);
+    }
     while (strcmp(s, "EndOfData") != 0) {
-        fscanf(input, "%s", sy);
-        fscanf(input, "%s", s);
+        if (fscanf(input, "%s", sy) != 1 || fscanf(input, "%s", s) != 1) {
+            fprintf(
+                stderr, "File %s is missing its \"EndOfData\" marker. Exiting.\n",
+                file_name);
+            exit(1);
+        }
     }
 
     for (i = 0; i <= maxi_num; i++) {
-        fscanf(input, "%lf", &y);
-        fscanf(input, "%lf", &y);
+        if (fscanf(input, "%lf", &y) != 1) {
+            fprintf(
+                stderr, "File %s has fewer than %d entries. Exiting.\n",
+                file_name, maxi_num + 1);
+            exit(1);
+        }
+        if (fscanf(input, "%lf", &y) != 1) {
+            fprintf(
+                stderr, "File %s has fewer than %d entries. Exiting.\n",
+                file_name, maxi_num + 1);
+            exit(1);
+        }
         vy[i] = y;
     }
     fclose(input);

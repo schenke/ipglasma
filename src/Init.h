@@ -36,8 +36,6 @@ class Init {
     double Qs2Nuclear_[iTpmax_][iymaxNuc_];
     double Tlist_[iTpmax_];
 
-    double As_[1];
-
     std::vector<vector<float>> nucleonPosArrA_;
     std::vector<vector<float>> nucleonPosArrB_;
 

@@ -53,14 +53,10 @@ struct Data {
 
 class Glauber {
   private:
-    typedef double (*ptr_func)(double);
-
     double AnumR_, NuInS_S_;
     Nucleus *Nuc_WS_;
     Data glauberData_;
-    ptr_func tempFunc_;
     double b_;  // impact parameter
-    double currentTAB_;
     double currentA1_;
     double currentA2_;
     double currentZ1_;

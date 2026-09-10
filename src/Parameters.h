@@ -14,9 +14,6 @@ class Parameters {
     std::vector<std::vector<float>> posteriorParamSets_;
     std::vector<std::vector<float>> posteriorParamSetsNq3_;
 
-    double myPI_;
-    double myhbarc_;
-
     int size_;        // the length of the lattice (make it 2^n, with n integer)
     int sizeOutput_;  // the length of the lattice for the output data
                      // (sizeOutput

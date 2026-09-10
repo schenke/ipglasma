@@ -13,13 +13,13 @@
 #include <vector>
 
 #include "Instrumentation.h"
-#include "Phys_consts.h"
+#include "PhysConst.h"
 #include "gsl/gsl_complex.h"
 #include "gsl/gsl_complex_math.h"
 #include "gsl/gsl_eigen.h"
 
 using PhysConst::hbarc;
-using PhysConst::small_eps;
+using PhysConst::smallEps;
 
 using std::cout;
 using std::endl;
@@ -1196,7 +1196,7 @@ void MyEigen::flowVelocity4DImpl(
                     resultTetaeta = (1. - fracy) * x1 + fracy * x2;
 
                     double values[10];
-                    if (resultT00 * gfactor * hbarc > small_eps) {
+                    if (resultT00 * gfactor * hbarc > smallEps) {
                         values[0] = resultT00 * gfactor * hbarc;
                         values[1] = resultTxx * gfactor * hbarc;
                         values[2] = resultTyy * gfactor * hbarc;
@@ -1209,9 +1209,9 @@ void MyEigen::flowVelocity4DImpl(
                         values[8] = -tau0 * resultTyeta * gfactor * hbarc;
                         values[9] = -tau0 * resultTxeta * gfactor * hbarc;
                     } else {
-                        values[0] = small_eps;
-                        values[1] = small_eps / 2.;
-                        values[2] = small_eps / 2.;
+                        values[0] = smallEps;
+                        values[1] = smallEps / 2.;
+                        values[2] = smallEps / 2.;
                         for (int component = 3; component < 10; ++component) {
                             values[component] = 0.0;
                         }
@@ -1231,9 +1231,9 @@ void MyEigen::flowVelocity4DImpl(
                         foutEps1 << '\n';
                     }
                 } else {
-                    double values[10] = {small_eps,
-                                         small_eps / 2.,
-                                         small_eps / 2.,
+                    double values[10] = {smallEps,
+                                         smallEps / 2.,
+                                         smallEps / 2.,
                                          0.0,
                                          0.0,
                                          0.0,

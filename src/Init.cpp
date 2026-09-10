@@ -15,7 +15,7 @@
 #include <vector>
 
 #include "Instrumentation.h"
-#include "Phys_consts.h"
+#include "PhysConst.h"
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::hbarc;

@@ -9,6 +9,8 @@
 #include <memory>
 #include <vector>
 
+#include "Instrumentation.h"
+
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
       Ngrid_(param.getSize()),
@@ -281,11 +283,26 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
     const complex<double> posI_dssqrt = I * ds_sqrt;
 
     // generate random Gaussian noise in every cell for Nc^2-1 color
-    // components and 2 spatial components x and y
-    // (kept serial: random_ptr_->gauss() mutates shared RNG state)
-    for (int i = 0; i < Ncells_; i++) {
-        for (int n = 0; n < 2 * Nc2m1_; n++) {
-            xi2_[i][n] = std::complex<double>(random_ptr_->gauss(), 0.);
+    // components and 2 spatial components x and y.
+    // gaussBulk reproduces the exact same value stream, in the exact same
+    // order, as calling random_ptr_->gauss() this many times in a row (see
+    // its own comments in Random.cpp), so this is a drop-in replacement for
+    // what used to be a serial scalar loop -- the scatter into xi2_ (which,
+    // unlike the draw itself, touches no shared RNG state) can then run in
+    // parallel.
+    {
+        IPG_PROFILE_SCOPE("jimwlk.gauss_bulk");
+        const std::size_t count =
+            static_cast<std::size_t>(Ncells_) * 2 * Nc2m1_;
+        gaussNoise_.resize(count);
+        random_ptr_->gaussBulk(gaussNoise_.data(), count, gaussNoiseScratch_);
+#pragma omp parallel for
+        for (int i = 0; i < Ncells_; i++) {
+            const double *cellNoise =
+                gaussNoise_.data() + static_cast<std::size_t>(i) * 2 * Nc2m1_;
+            for (int n = 0; n < 2 * Nc2m1_; n++) {
+                xi2_[i][n] = std::complex<double>(cellNoise[n], 0.);
+            }
         }
     }
 

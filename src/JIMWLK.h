@@ -49,6 +49,11 @@ class JIMWLK {
     Matrix **VxsiVy_;
     Matrix zero_ = Matrix(0.);
 
+    // Persistent scratch for the per-step bulk noise draw in
+    // evolutionStep(), reused across steps to avoid reallocating.
+    std::vector<double> gaussNoise_;
+    std::vector<double> gaussNoiseScratch_;
+
   public:
     JIMWLK() = delete;
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);

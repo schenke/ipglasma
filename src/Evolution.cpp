@@ -127,11 +127,11 @@ void evolveUTeam(
     Lattice *lat, int N, double g, double dtau, double tau,
     EvolveUScratch &scratch) {
     const int n = 2;
+    const complex<double> iOmega(0., g * g * dtau / (tau + dtau / 2.));
 
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
-        scratch.E1 =
-            complex<double>(0., g * g * dtau / (tau + dtau / 2.)) * lat->U[pos];
+        scratch.E1 = iOmega * lat->U[pos];
 
         scratch.temp2 = scratch.one + 1. / (double)n * scratch.E1;
         for (int in = 0; in < n - 1; in++) {
@@ -142,8 +142,7 @@ void evolveUTeam(
 
         scratch.E1 = scratch.temp2;
 
-        scratch.E2 = complex<double>(0., g * g * dtau / (tau + dtau / 2.))
-                     * lat->U2[pos];
+        scratch.E2 = iOmega * lat->U2[pos];
 
         scratch.temp2 = scratch.one + 1. / (double)n * scratch.E2;
         for (int in = 0; in < n - 1; in++) {
@@ -174,6 +173,8 @@ void evolvePhiTeam(
 
 void evolvePiTeam(
     Lattice *lat, int N, double dtau, double tau, EvolvePiScratch &scratch) {
+    const double dtauOverTau = dtau / tau;
+
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
         scratch.Ux = lat->Ux[pos];
@@ -201,7 +202,7 @@ void evolvePiTeam(
         scratch.bracket = scratch.phiX + scratch.phimX + scratch.phiY
                           + scratch.phimY - 4. * scratch.phi;
 
-        scratch.pi += dtau / (tau)*scratch.bracket;
+        scratch.pi += dtauOverTau * scratch.bracket;
 
         lat->Ux2[pos] = (scratch.pi);
     }

@@ -1700,6 +1700,7 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         cout << "Using fixed alpha_s" << endl;
         alphas = param->getg() * param->getg() / 4. / M_PI;
     }
+    param->setalphas(alphas);
 
     if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0
         && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
@@ -1741,8 +1742,6 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
              << averageQs2min2 * a * a / hbarc / hbarc << " too small ( < "
              << param->getMinimumQs2ST() << ")." << endl;
     }
-
-    param->setalphas(alphas);
 
     stringstream strNEst_name;
     strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";

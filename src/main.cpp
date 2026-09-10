@@ -582,11 +582,14 @@ int readInput(
         param->setBeta3(setup->dFind(file_name, "beta3"));
         param->setBeta4(setup->dFind(file_name, "beta4"));
         param->setGamma(setup->dFind(file_name, "gamma"));
-        param->setForceDmin(setup->dFind(file_name, "force_dmin_flag"));
-        param->setDmin(setup->dFind(file_name, "d_min"));
         param->setWSdR_np(setup->dFind(file_name, "dR_np"));
         param->setWSda_np(setup->dFind(file_name, "da_np"));
     }
+    // Glauber::findNucleusData applies forceDminFlag/d_min unconditionally
+    // (unlike the other deform params above, which it only applies when
+    // setWSDeformParams is set), so these must always be read.
+    param->setForceDmin(setup->dFind(file_name, "force_dmin_flag"));
+    param->setDmin(setup->dFind(file_name, "d_min"));
     param->setbmin(setup->dFind(file_name, "bmin"));
     param->setbmax(setup->dFind(file_name, "bmax"));
     param->setRotateReactionPlane(

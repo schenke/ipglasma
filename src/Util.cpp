@@ -99,7 +99,7 @@ string stringFind(string file_name, string st) {
         cout << "Create an input file." << endl;
         exit(1);
     }
-    return (0);
+    return "";
 } /* stringFind */
 
 double dFind(string file_name, string st) {

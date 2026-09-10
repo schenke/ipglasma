@@ -211,6 +211,77 @@ void FFT::fftnArray(
     }
 }
 
+void FFT::fftnComplexArray(
+    complex<double> **data, complex<double> **outdata, const int nn[],
+    const int isign, const int mDim) {
+    IPG_PROFILE_SCOPE("fft.total");
+    if (mDim > kMaxBatchDim) {
+        std::cerr << "FFT::fftnComplexArray: mDim=" << mDim
+                  << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting."
+                  << std::endl;
+        exit(1);
+    }
+    const unsigned ntot = static_cast<unsigned>(nn[0] * nn[1]);
+
+    // Same checkerboard-sign trick as fftn()/fftnArray -- see the comment on
+    // fftnArray above. Unlike fftnArray, each plane here (data[k]) is
+    // already a standalone contiguous length-ntot array, so packing is a
+    // per-plane copy rather than a per-plane gather across a strided
+    // pos-major array.
+    const double outputGlobalSign =
+        (((nn[0] / 2 + nn[1] / 2) & 1) != 0) ? -1.0 : 1.0;
+    const double inverseNorm =
+        (isign == -1) ? 1.0 / static_cast<double>(ntot) : 1.0;
+
+#pragma omp parallel
+    {
+#pragma omp for schedule(static)
+        for (int k = 0; k < mDim; ++k) {
+            fftw_complex *localInput =
+                inputMany + static_cast<std::size_t>(k) * ntot;
+            const complex<double> *plane = data[k];
+            for (int i = 0; i < nn[0]; ++i) {
+                for (int j = 0; j < nn[1]; ++j) {
+                    const int pos = i * nn[1] + j;
+                    const double sign = ((i + j) & 1) ? -1.0 : 1.0;
+                    const complex<double> value = plane[pos];
+                    localInput[pos][0] = sign * value.real();
+                    localInput[pos][1] = sign * value.imag();
+                }
+            }
+        }
+
+#pragma omp for schedule(static)
+        for (int k = 0; k < mDim; ++k) {
+            fftw_complex *localInput =
+                inputMany + static_cast<std::size_t>(k) * ntot;
+            fftw_complex *localOutput =
+                outputMany + static_cast<std::size_t>(k) * ntot;
+            if (isign == 1)
+                fftw_execute_dft(p_, localInput, localOutput);
+            else
+                fftw_execute_dft(pback_, localInput, localOutput);
+        }
+
+#pragma omp for schedule(static)
+        for (int k = 0; k < mDim; ++k) {
+            fftw_complex *localOutput =
+                outputMany + static_cast<std::size_t>(k) * ntot;
+            complex<double> *plane = outdata[k];
+            for (int i = 0; i < nn[0]; ++i) {
+                for (int j = 0; j < nn[1]; ++j) {
+                    const int pos = i * nn[1] + j;
+                    const double sign =
+                        ((i + j) & 1) ? -outputGlobalSign : outputGlobalSign;
+                    plane[pos] = complex<double>(
+                        sign * localOutput[pos][0] * inverseNorm,
+                        sign * localOutput[pos][1] * inverseNorm);
+                }
+            }
+        }
+    }
+}
+
 // Performs Fast Fourier Transform of any object of class "T" (matrix or
 // something else) using a wrapper for FFTW This routine takes data as a
 // function of -x_max/2 to x_max/2 and returns it ordered similarly - no need to
@@ -327,126 +398,6 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
         profiler.add("fft.matrix.pack", packSeconds);
         profiler.add("fft.matrix.execute", executeSeconds);
         profiler.add("fft.matrix.unpack", unpackSeconds);
-    }
-}
-
-void FFT::fftnComplex(
-    complex<double> *data, complex<double> *outdata, const int nn[],
-    const int isign) {
-    IPG_PROFILE_SCOPE("fft.total");
-    unsigned ntot = nn[0] * nn[1];
-    int mDim, pos, newpos;  // matrix dimension
-    mDim = 1;
-
-    // mDim is the size of the matrix (how many rows)
-
-    mDim *= mDim;
-    // ndim is the dimension of the FFT (always 2 here)
-
-    // for each component of the matrix fill the input array for the FFT (resort
-    // as you fill in)
-
-    //    cout << "mDim=" << mDim << endl;
-    for (int k = 0; k < mDim; k++) {
-        //	oo   ->  xo
-        //      ox       oo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                input[newpos][0] = data[pos].real();
-                input[newpos][1] = data[pos].imag();
-            }
-        }
-        //	xo   ->  oo
-        //      oo       ox
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j;
-                input[newpos][0] = data[pos].real();
-                input[newpos][1] = data[pos].imag();
-            }
-        }
-        //	ox   ->  oo
-        //      oo       xo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2;
-                input[newpos][0] = data[pos].real();
-                input[newpos][1] = data[pos].imag();
-            }
-        }
-        //	oo   ->  ox
-        //      xo       oo
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                input[newpos][0] = data[pos].real();
-                input[newpos][1] = data[pos].imag();
-            }
-        }
-
-        if (isign == 1)
-            fftw_execute(p_);
-        else
-            fftw_execute(pback_);
-
-        // if this is inverse transform, normalize.
-        if (isign == -1) {
-            for (unsigned i = 0; i < ntot; i++) {
-                output[i][0] /= static_cast<double>(ntot);
-                output[i][1] /= static_cast<double>(ntot);
-            }
-        }
-
-        //	oo   ->  xo
-        //      ox       oo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                outdata[pos] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-                //	outdata[pos]->setIm(k,output[newpos][1]);
-            }
-        }
-        //	xo   ->  oo
-        //      oo       ox
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j;
-                outdata[pos] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-                //	outdata[pos]->setIm(k,output[newpos][1]);
-            }
-        }
-        //	ox   ->  oo
-        //      oo       xo
-        for (int i = nn[0] / 2; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2;
-                outdata[pos] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-                //	outdata[pos]->setIm(k,output[newpos][1]);
-            }
-        }
-        //	oo   ->  ox
-        //      xo       oo
-
-        for (int i = 0; i < nn[0] / 2; i++) {
-            for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2;
-                outdata[pos] =
-                    complex<double>(output[newpos][0], output[newpos][1]);
-                //	outdata[pos]->setIm(k,output[newpos][1]);
-            }
-        }
     }
 }
 

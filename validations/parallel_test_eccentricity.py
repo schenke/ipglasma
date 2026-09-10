@@ -423,6 +423,11 @@ _STRAY_OUTPUT_GLOBS = [
     "NcollList*.dat", "NpartList*.dat", "NgluonEstimators*.dat",
     "usedParameters*.dat", "eccentricities*.dat", "gluonMultiplicity*.json",
     "run.log",
+    # generate_temp_input()'s temp input file: normally removed by
+    # run_seed()'s own finally block right after ipglasma exits, but a run
+    # killed mid-event (e.g. Ctrl-C) can leave one behind -- --clean sweeps
+    # those up too.
+    "input_ecc_*.in",
 ]
 
 
@@ -432,6 +437,26 @@ def cleanup_stray_output_files(directory):
         for path in glob.glob(os.path.join(directory, pattern)):
             if os.path.isfile(path):
                 os.remove(path)
+
+
+def clean_datadir(datadir):
+    """--clean support: remove stray temporary/output files from every
+    seed_*/ working directory under `datadir` (and from `datadir` itself),
+    keeping the Tmunu snapshots and any results/plots. Meant to tidy up
+    after a run was interrupted (e.g. Ctrl-C) before it reached its own
+    end-of-run cleanup. Does not touch failed-event or missing seed_*
+    directories beyond removing the same stray files from them."""
+    if not os.path.isdir(datadir):
+        print("Nothing to clean: {0} does not exist.".format(datadir))
+        return
+    worker_dirs = sorted(
+        d for d in glob.glob(os.path.join(datadir, "seed_*")) if os.path.isdir(d))
+    for worker_dir in worker_dirs:
+        cleanup_stray_output_files(worker_dir)
+        print("Cleaned {0}".format(worker_dir))
+    cleanup_stray_output_files(datadir)
+    print("Cleaned {0} working director{1} under {2}".format(
+        len(worker_dirs), "y" if len(worker_dirs) == 1 else "ies", datadir))
 
 
 # --------------------------------------------------------------------------
@@ -477,6 +502,14 @@ def main():
                               "in --datadir (e.g. left behind by an "
                               "interrupted run with --keep-logs) and "
                               "regenerate the plot / regression check")
+    parser.add_argument("--clean", action="store_true",
+                         help="don't run or plot anything; just remove "
+                              "stray temporary/output files (run.log, "
+                              "leftover temp input files, ...) from every "
+                              "seed_*/ working directory under --datadir, "
+                              "keeping the Tmunu snapshots, then exit -- "
+                              "use this to tidy up after a run was killed "
+                              "before its own end-of-run cleanup")
     parser.add_argument(
         "--reference-file",
         default=os.path.join(
@@ -492,6 +525,12 @@ def main():
     parser.add_argument("--std-tol", type=float, default=0.25,
                          help="allowed relative change in std(eps2)")
     args = parser.parse_args()
+
+    if args.clean:
+        # Just tidy up an existing --datadir and exit -- no ipglasma
+        # checkout / binary / template needed for this.
+        clean_datadir(os.path.abspath(args.datadir))
+        sys.exit(0)
 
     ipglasma_path = os.path.abspath(args.ipglasma_path)
     ipglasma_binary = os.path.join(ipglasma_path, args.ipglasma_cmd)

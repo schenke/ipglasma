@@ -103,11 +103,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     if (param->getNucleonPositionsFromFile() == 0) {
         if (param->getAverageOverNuclei() > 1) {
             if ((glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
-                messager_ << "[Init::sampleTA]: Averaging not supported for "
-                             "collisions "
-                             "involving protons "
-                             "... Exiting.";
-                messager_.flush("info");
+                messager_ << "[Init::sampleTA]: Averaging over nuclei is not "
+                             "supported for collisions involving protons. "
+                             "Exiting.";
+                messager_.flush("error");
                 exit(1);
             }
         }
@@ -274,14 +273,11 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     } else if (param->getNucleonPositionsFromFile() == 2) {
         // Read in Alvioli's nucleon positions including correlations
         if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
-            messager_
-                << "[Init::sampleTA]: The option 'getNucleonPositionsFromFile "
-                   "== 2' "
-                   "only "
-                   "works for either both nuclei Pb-208 or Projectile p and "
-                   "Target "
-                   "Pb-208. Exiting.";
-            messager_.flush("info");
+            messager_ << "[Init::sampleTA]: nucleonPositionsFromFile == 2 only "
+                         "works when both nuclei are Pb-208, or when the "
+                         "projectile is a proton and the target is Pb-208. "
+                         "Exiting.";
+            messager_.flush("error");
             exit(1);
         }
 
@@ -312,7 +308,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         if (!fin) {
             messager_ << "[Init::sampleTA]: File " << fileName
                       << " not found. Trying alternative location:";
-            messager_.flush("info");
+            messager_.flush("warning");
             str_file.str("");
             if (fileNumber < 10)
                 str_file << "./Alvioli-Pb208/pb208-0";
@@ -327,7 +323,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         if (!fin) {
             messager_ << "[Init::sampleTA]: File " << fileName
                       << " not found. Exiting.";
-            messager_.flush("info");
+            messager_.flush("error");
             exit(1);
         }
 
@@ -396,7 +392,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         if (!fin) {
             messager_ << "[Init::sampleTA]: File " << fileName
                       << " not found. Trying alternative location:";
-            messager_.flush("info");
+            messager_.flush("warning");
             str_file.str("");
             if (fileNumber < 10)
                 str_file << "./Alvioli-Pb208/pb208-0";
@@ -411,7 +407,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         if (!fin) {
             messager_ << "[Init::sampleTA]: File " << fileName
                       << " not found. Exiting.";
-            messager_.flush("info");
+            messager_.flush("error");
             exit(1);
         }
 
@@ -463,12 +459,11 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         assignProtons(random, nucleusA_, glauber->nucleusZ1());
         assignProtons(random, nucleusB_, glauber->nucleusZ2());
     } else {
-        messager_ << "[Init::sampleTA]: NucleonPositionsFromFile can be 0 "
-                     "(sample nucleons) or "
-                     "1 or 2 "
-                     "(read from files) - you chose "
+        messager_ << "[Init::sampleTA]: nucleonPositionsFromFile must be 0 "
+                     "(sample nucleons), 1, or 2 (read from files) -- you "
+                     "chose "
                   << param->getNucleonPositionsFromFile() << ". Exiting.";
-        messager_.flush("info");
+        messager_.flush("error");
         exit(1);
     }
 
@@ -528,11 +523,9 @@ void Init::readNuclearQs(Parameters *param) {
                     Qs2Nuclear_[iT][iy] = atof(Qs.c_str());
                 } else {
                     messager_ << "[Init::readNuclearQs]: End of file reached "
-                                 "prematurely. Did the "
-                                 "file "
-                                 "change? "
-                                 "Exiting.";
-                    messager_.flush("info");
+                                 "prematurely -- did the Q_s table file "
+                                 "change? Exiting.";
+                    messager_.flush("error");
                     exit(1);
                 }
             }
@@ -542,7 +535,7 @@ void Init::readNuclearQs(Parameters *param) {
         messager_ << "[Init::readNuclearQs]: File "
                   << param->getNucleusQsTableFileName()
                   << " does not exist. Exiting.";
-        messager_.flush("info");
+        messager_.flush("error");
         exit(1);
     }
 }
@@ -626,7 +619,7 @@ void Init::readInNucleusConfigs(
     if (!inFile) {
         messager_ << "[Init::readInNucleusConfigs]: File " << fileName
                   << " not found. Exiting.";
-        messager_.flush("info");
+        messager_.flush("error");
         exit(1);
     }
     while (true) {
@@ -748,13 +741,10 @@ double Init::getNuclearQs2(double T, double y) {
         // (setColorChargeDensity), so use a fresh, stack-local instance
         // rather than sharing messager_, which is not thread-safe.
         PrettyOstream localMessager;
-        localMessager << "[Init::getNuclearQs2]: ERROR: y out of range. "
-                         "Maximum y "
-                         "value "
-                         "is "
-                      << iymaxNuc_ * deltaYNuc_ << ", you used " << y
-                      << ". Exiting.";
-        localMessager.flush("info");
+        localMessager << "[Init::getNuclearQs2]: y=" << y
+                      << " is above the tabulated range (max y="
+                      << iymaxNuc_ * deltaYNuc_ << "). Exiting.";
+        localMessager.flush("error");
         exit(1);
     }
 
@@ -762,11 +752,11 @@ double Init::getNuclearQs2(double T, double y) {
     if (T > Tlist_[iTpmax_ - 1]) {
         // Local instance for the same omp thread-safety reason as above.
         PrettyOstream localMessager;
-        localMessager << "[Init::getNuclearQs2]: WARNING: T out of range, "
-                         "using maximal T in table.";
-        localMessager << " T=" << T
-                      << ", maximal T in table=" << Tlist_[iTpmax_ - 1];
-        localMessager.flush("info");
+        localMessager << "[Init::getNuclearQs2]: T=" << T
+                      << " exceeds the tabulated range (max T="
+                      << Tlist_[iTpmax_ - 1]
+                      << "); clamping to the maximal tabulated T.";
+        localMessager.flush("warning");
         check = 1;
         fracy = (y - static_cast<double>(posy) * deltaYNuc_) / deltaYNuc_;
         QsYdown = (Qs2Nuclear_[iTpmax_ - 1][posy]);
@@ -799,11 +789,11 @@ double Init::getNuclearQs2(double T, double y) {
     if (check != 1) {
         // Local instance: same omp thread-safety reason as above.
         PrettyOstream localMessager;
-        localMessager << "[Init::getNuclearQs2]: ERROR: something went "
-                         "wrong determining the value of Qs^2, using "
-                         "maximal T_p.";
-        localMessager << " check=" << check << ", T=" << T;
-        localMessager.flush("info");
+        localMessager << "[Init::getNuclearQs2]: could not uniquely "
+                         "determine Qs^2 (check="
+                      << check << ", T=" << T
+                      << "); falling back to the maximal tabulated T_p.";
+        localMessager.flush("warning");
         value =
             (fracy * Qs2Nuclear_[iTpmax_ - 1][posy + 1]
              + (1. - fracy) * Qs2Nuclear_[iTpmax_ - 1][posy]);
@@ -1441,9 +1431,12 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 
         if (param->getUseFixedNpart() != 0
             && Npart != param->getUseFixedNpart()) {
-            messager_ << "[Init::computeCollisionGeometryQuantities]: current "
+            messager_ << "[Init::computeCollisionGeometryQuantities]: "
                          "Npart = "
-                      << Npart << " != " << param->getUseFixedNpart();
+                      << Npart
+                      << " does not match the requested fixed "
+                         "Npart = "
+                      << param->getUseFixedNpart() << "; resampling.";
             messager_.flush("info");
             param->setSuccess(0);
             return;
@@ -1564,8 +1557,8 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         param->setAverageQsmin(0.);
         param->setTpp(Tpp);
         param->setSuccess(0);
-        messager_.info(
-            "[Init::computeCollisionGeometryQuantities]: **** Rejected event - "
+        messager_.warning(
+            "[Init::computeCollisionGeometryQuantities]: Rejected event -- "
             "no overlap region (count=0).");
         return;
     }
@@ -1736,11 +1729,14 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         param->setSuccess(0);
     }
     if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) {
-        messager_ << "[Init::computeCollisionGeometryQuantities]: **** "
-                     "Rejected event - Qsmin^2 S_T="
-                  << averageQs2min2 * a * a / hbarc / hbarc << " too small ( < "
+        messager_ << "[Init::computeCollisionGeometryQuantities]: Rejected "
+                     "event -- Qsmin^2 S_T="
+                  << averageQs2min2 * a * a / hbarc / hbarc
+                  << " is below "
+                     "the "
+                     "minimum ("
                   << param->getMinimumQs2ST() << ").";
-        messager_.flush("info");
+        messager_.flush("warning");
     }
 
     stringstream strNEst_name;
@@ -2086,7 +2082,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         messager_ << "[Init::readVFromFile]: Unknown format " << format
                   << " when reading the initial Wilson lines, supported "
                      "formats: 1,2";
-        messager_.flush("info");
+        messager_.flush("error");
         exit(1);
     }
 
@@ -2132,12 +2128,13 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         if (!finV1) {
             messager_ << "[Init::readVFromFile]: File " << VOne_name
                       << " not found. Exiting.";
-            messager_.flush("info");
+            messager_.flush("error");
             exit(1);
         }
 
         messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
                   << VOne_name << " ...";
+        messager_.flush("info");
 
         // set V for nucleus A
         for (int i = 0; i < nn[0]; i++) {
@@ -2177,7 +2174,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         if (!finV2) {
             messager_ << "[Init::readVFromFile]: File " << VTwo_name
                       << " not found. Exiting.";
-            messager_.flush("info");
+            messager_.flush("error");
             exit(1);
         }
 
@@ -2230,7 +2227,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         if (!InStream.good()) {
             messager_ << "[Init::readVFromFile]: File " << VOne_name.c_str()
                       << " does not exist!";
-            messager_.flush("info");
+            messager_.flush("error");
             exit(1);
         }
 
@@ -2243,7 +2240,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
             if (N != param->getSize()) {
-                messager_ << "[Init::readVFromFile]: # ERROR wrong lattice "
+                messager_ << "[Init::readVFromFile]: wrong lattice "
                              "size, data is "
                           << N << " but you have specified "
                           << param->getSize();
@@ -2251,7 +2248,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 exit(0);
             }
             if (std::abs(L - param->getL()) > 1e-5) {
-                messager_ << "[Init::readVFromFile]: # ERROR grid length, "
+                messager_ << "[Init::readVFromFile]: wrong grid length, "
                              "data has "
                           << L << " but you have specified " << param->getL();
                 messager_.flush("error");
@@ -2295,14 +2292,13 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                     int indx = N * ix + iy;
                     if (indx >= N * N || indx < 0) {
                         if (bb == 0) {
-                            messager_
-                                << "[Init::readVFromFile]: Warning: datafile "
-                                << VOne_name << " has an element " << indx
-                                << " (iy=" << iy << ", ix=" << ix
-                                << "), but the grid is N=" << N
-                                << ". Element is (" << re << " + " << im
-                                << "i), skipping it";
-                            messager_.flush("info");
+                            messager_ << "[Init::readVFromFile]: datafile "
+                                      << VOne_name << " has an element " << indx
+                                      << " (iy=" << iy << ", ix=" << ix
+                                      << "), but the grid is N=" << N
+                                      << ". Element is (" << re << " + " << im
+                                      << "i), skipping it.";
+                            messager_.flush("warning");
                         }
                         INPUT_CTR++;
                         continue;
@@ -2320,7 +2316,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             if (!InStream2.good()) {
                 messager_ << "[Init::readVFromFile]: File " << VTwo_name.c_str()
                           << " does not exist!";
-                messager_.flush("info");
+                messager_.flush("error");
                 exit(1);
             }
 
@@ -2335,19 +2331,19 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 InStream2.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
                 if (N != param->getSize()) {
-                    messager_ << "[Init::readVFromFile]: # ERROR wrong lattice "
+                    messager_ << "[Init::readVFromFile]: wrong lattice "
                                  "size, data is "
                               << N << " but you have specified "
                               << param->getSize();
-                    messager_.flush("info");
+                    messager_.flush("error");
                     exit(0);
                 }
                 if (std::abs(L - param->getL()) > 1e-5) {
-                    messager_ << "[Init::readVFromFile]: # ERROR grid length, "
+                    messager_ << "[Init::readVFromFile]: wrong grid length, "
                                  "data has "
                               << L << " but you have specified "
                               << param->getL();
-                    messager_.flush("info");
+                    messager_.flush("error");
                     exit(0);
                 }
 
@@ -2385,14 +2381,13 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                         if (indx >= N * N || indx < 0) {
                             if (bb == 0) {
                                 messager_
-                                    << "[Init::readVFromFile]: Warning: "
-                                       "datafile "
+                                    << "[Init::readVFromFile]: datafile "
                                     << VTwo_name << " has an element " << indx
                                     << " (iy=" << iy << ", ix=" << ix
                                     << "), but the grid is N=" << N
                                     << ". Element is (" << re << " + " << im
-                                    << "i), skipping it";
-                                messager_.flush("info");
+                                    << "i), skipping it.";
+                                messager_.flush("warning");
                             }
                             INPUT_CTR++;
                             continue;
@@ -2641,7 +2636,7 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
                                  "the forward lightcone at pos x = "
                               << pos / param->getSize()
                               << " y = " << pos % param->getSize();
-                localMessager.flush("info");
+                localMessager.flush("warning");
             }
 
             UDy1 = lat->Uy1[pos];
@@ -2659,7 +2654,7 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
                                  "the forward lightcone at pos x = "
                               << pos / param->getSize()
                               << " y = " << pos % param->getSize();
-                localMessager.flush("info");
+                localMessager.flush("warning");
             }
         }
 
@@ -3476,7 +3471,7 @@ bool Init::findUInForwardLightcone(
         PrettyOstream localMessager;
         localMessager << "[Init::findUInForwardLightcone]: Did not converge, "
                       << "Fzero: " << FzeroMin;
-        localMessager.flush("info");
+        localMessager.flush("warning");
         Usol = UsolBestEst;  // return the best estimate
         success = false;
     }

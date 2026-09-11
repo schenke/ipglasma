@@ -77,8 +77,7 @@ int main(int argc, char *argv[]) {
 
     // Validate parameters before proceeding
     if (!param->ValidParameters()) {
-        messager << "[main::main]: Error: Invalid parameters detected. "
-                    "Exiting.";
+        messager << "[main::main]: Invalid parameters detected. Exiting.";
         messager.flush("error");
         return 1;
     }
@@ -434,11 +433,18 @@ int main(int argc, char *argv[]) {
                     << " --output_filename " << h5output_filename.str()
                     << " --event_id " << param->getEventId();
                 status = system(collect_command.str().c_str());
-                messager
-                    << "[main::main]: finished system call to python script "
-                       "with status: "
-                    << status;
-                messager.flush("info");
+                if (status == 0) {
+                    messager << "[main::main]: Collected this event's "
+                                "output into an HDF5 file.";
+                    messager.flush("info");
+                } else {
+                    messager << "[main::main]: combine_events_into_hdf5.py "
+                                "exited with status "
+                             << status
+                             << " while collecting this event's "
+                                "output.";
+                    messager.flush("warning");
+                }
                 h5Flag = 1;
             }
 
@@ -461,10 +467,18 @@ int main(int argc, char *argv[]) {
                         << " --output_filename RESULTS"
                         << " --combine_hdf5_files_only";
         status = system(collect_command.str().c_str());
-        messager << "[main::main]: finished system call to python script "
-                    "with status: "
-                 << status;
-        messager.flush("info");
+        if (status == 0) {
+            messager << "[main::main]: Combined all per-rank HDF5 files "
+                        "into RESULTS.h5.";
+            messager.flush("info");
+        } else {
+            messager << "[main::main]: combine_events_into_hdf5.py exited "
+                        "with status "
+                     << status
+                     << " while combining the per-rank HDF5 "
+                        "files.";
+            messager.flush("warning");
+        }
     }
 
 #ifndef DISABLEMPI

@@ -188,8 +188,8 @@ void Lattice::writeWilsonLines(
 
         if (Outfile1.good() == false) {
             messager_.error(
-                "[Lattice::writeWilsonLines]: CRITICAL ERROR -- BINARY "
-                "OUTPUT OF VECTOR CURRENTS FAILED");
+                "[Lattice::writeWilsonLines]: Failed to write the Wilson "
+                "line binary output file.");
             exit(1);
         }
 
@@ -201,9 +201,9 @@ void Lattice::writeWilsonLines(
         messager_.flush("info");
     } else {
         std::stringstream errorMsg;
-        errorMsg << "[Lattice::writeWilsonLines]: Unknown option "
-                    "param->getWriteWilsonLines()=="
-                 << param->getWriteWilsonLines();
+        errorMsg << "[Lattice::writeWilsonLines]: Unknown writeWilsonLines "
+                    "value "
+                 << param->getWriteWilsonLines() << ". Exiting.";
         messager_.error(errorMsg.str());
         exit(1);
     }

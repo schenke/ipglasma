@@ -377,8 +377,12 @@ void MyEigen::flowVelocity4DImpl(
                         // an omp parallel region, and PrettyOstream is not
                         // thread-safe to share.
                         PrettyOstream localMessager;
-                        localMessager << "[MyEigen::flowVelocity4DImpl]: " << si
-                                      << " " << sj << "\n\n"
+                        localMessager << "[MyEigen::flowVelocity4DImpl]: No "
+                                         "physical flow velocity found at "
+                                         "site ("
+                                      << si << ", " << sj
+                                      << "). T^munu and the best-guess "
+                                         "velocity there:\n\n"
                                       << lat->cells[pos]->getTtautau() << " "
                                       << lat->cells[pos]->getTtaux() << " "
                                       << lat->cells[pos]->getTtauy() << " "
@@ -398,7 +402,7 @@ void MyEigen::flowVelocity4DImpl(
                                       << "ux=" << ux << "\n"
                                       << "uy=" << uy << "\n"
                                       << "ueta=" << ueta;
-                        localMessager.flush("info");
+                        localMessager.flush("warning");
                     }
                 }
 
@@ -457,12 +461,10 @@ void MyEigen::flowVelocity4DImpl(
             gsl_matrix_complex_free(evec_ws);
         }  // omp parallel
 
-        messager_ << "[MyEigen::flowVelocity4DImpl]: " << it * dtau * a
-                  << " average u^x=" << sqrt(averageux / averageeps) << "\n"
-                  << it * dtau * a
-                  << " average u^y=" << sqrt(averageuy / averageeps) << "\n"
-                  << it * dtau * a
-                  << " average tau u^eta=" << sqrt(averageueta / averageeps);
+        messager_ << "[MyEigen::flowVelocity4DImpl]: tau=" << it * dtau * a
+                  << " fm/c: average u^x=" << sqrt(averageux / averageeps)
+                  << ", average u^y=" << sqrt(averageuy / averageeps)
+                  << ", average tau*u^eta=" << sqrt(averageueta / averageeps);
         messager_.flush("info");
     }
 
@@ -946,8 +948,7 @@ void MyEigen::flowVelocity4DImpl(
         }
 
         closeBufferedTextOutput(foutEps2, outputFilename);
-        messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot
-                  << " GeV ";
+        messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot << " GeV";
         messager_.flush("info");
     }
     //       foutEtot <<  Etot << endl;

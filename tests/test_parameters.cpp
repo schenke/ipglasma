@@ -12,34 +12,42 @@ namespace {
 // default member initializers), so every field ValidParameters() reads
 // must be set explicitly before calling it, or the test would depend on
 // indeterminate values.
-Parameters makeValidBaseline() {
-    Parameters param;
+//
+// Takes an out-parameter rather than returning by value: Parameters now
+// holds a PrettyOstream member (for ValidParameters()'s own error
+// messages), and PrettyOstream holds a std::ostringstream, which is not
+// copyable or movable -- exactly like Lattice, which already explicitly
+// deletes its copy/move for the same reason.
+void makeValidBaseline(Parameters &param) {
     param.setSize(256);
     param.setWriteWilsonLines(2);
     param.setSaveSnapshots(0);
-    return param;
 }
 }  // namespace
 
 TEST_CASE("Parameters::ValidParameters: accepts a normal configuration") {
-    Parameters param = makeValidBaseline();
+    Parameters param;
+    makeValidBaseline(param);
     CHECK(param.ValidParameters() == true);
 }
 
 TEST_CASE("Parameters::ValidParameters: rejects a non-positive lattice size") {
-    Parameters param = makeValidBaseline();
+    Parameters param;
+    makeValidBaseline(param);
     param.setSize(0);
     CHECK(param.ValidParameters() == false);
 }
 
 TEST_CASE("Parameters::ValidParameters: rejects an invalid Wilson-line format") {
-    Parameters param = makeValidBaseline();
+    Parameters param;
+    makeValidBaseline(param);
     param.setWriteWilsonLines(3);  // only 0 (off), 1 (text), 2 (binary) are valid
     CHECK(param.ValidParameters() == false);
 }
 
 TEST_CASE("Parameters::ValidParameters: writeWilsonLines=0 is valid by itself") {
-    Parameters param = makeValidBaseline();
+    Parameters param;
+    makeValidBaseline(param);
     param.setWriteWilsonLines(0);
     CHECK(param.ValidParameters() == true);
 }
@@ -47,7 +55,8 @@ TEST_CASE("Parameters::ValidParameters: writeWilsonLines=0 is valid by itself") 
 TEST_CASE(
     "Parameters::ValidParameters: rejects saveSnapshots without "
     "writeWilsonLines") {
-    Parameters param = makeValidBaseline();
+    Parameters param;
+    makeValidBaseline(param);
     param.setWriteWilsonLines(0);
     param.setSaveSnapshots(1);
     CHECK(param.ValidParameters() == false);

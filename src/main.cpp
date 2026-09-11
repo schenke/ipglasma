@@ -116,13 +116,14 @@ int main(int argc, char *argv[]) {
                 if (!fin.eof()) {
                     fin >> seedList[i];
                 } else {
-                    cerr << "Error: Not enough random seeds for the number of "
-                         << "processors selected. Exiting." << endl;
+                    messager.error(
+                        "Not enough random seeds for the number of "
+                        "processors selected. Exiting.");
                     exit(1);
                 }
             }
         } else {
-            cerr << "Random seed file 'seedList' not found. Exiting." << endl;
+            messager.error("Random seed file 'seedList' not found. Exiting.");
             exit(1);
         }
         fin.close();
@@ -531,22 +532,26 @@ int readInput(
     Setup *setup, Parameters *param, int argc, char *argv[], int rank) {
     // the first given argument is taken to be the input file name
     // if none is given, that file name is "input"
-    // cout << "Opening input file ... " << endl;
+    PrettyOstream messager;
     string file_name;
     if (argc > 1) {
         file_name = argv[1];
-        if (rank == 0)
-            cout << "Using file name \"" << file_name << "\"." << endl;
+        if (rank == 0) {
+            messager << "Using file name \"" << file_name << "\".";
+            messager.flush("info");
+        }
     } else {
         file_name = "input";
-        if (rank == 0)
-            cout << "No input file name given. Using default \"" << file_name
-                 << "\"." << endl;
+        if (rank == 0) {
+            messager << "No input file name given. Using default \""
+                      << file_name << "\".";
+            messager.flush("info");
+        }
     }
 
     // read and set all the parameters in the "param" object of class
     // "Parameters"
-    if (rank == 0) cout << "Reading parameters from file ... ";
+    if (rank == 0) messager << "Reading parameters from file ... ";
     param->setNucleusQsTableFileName(
         setup->stringFind(file_name, "NucleusQsTableFileName"));
     param->setNucleonPositionsFromFile(
@@ -688,7 +693,10 @@ int readInput(
     param->setSaveSnapshots(setup->iFind(file_name, "saveSnapshots"));
     param->setxSnapshotList(setup->listFind(file_name, "xSnapshotList"));
 
-    if (rank == 0) cout << "done." << endl;
+    if (rank == 0) {
+        messager << "done.";
+        messager.flush("info");
+    }
 
     return 0;
 }

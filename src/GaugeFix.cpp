@@ -4,14 +4,11 @@
 #include "GaugeFix.h"
 
 #include <complex>
-#include <iostream>
+#include <sstream>
 #include <vector>
 
 #include "Instrumentation.h"
 #include "Matrix.h"
-
-using std::cout;
-using std::endl;
 
 namespace {
 
@@ -137,7 +134,8 @@ void GaugeFix::fftChi(
         }
     }
 
-    cout << "gauge fixing" << endl;
+    messager_ << "gauge fixing";
+    messager_.flush("info");
 
     for (int gfiter = 0; gfiter < max_gfiter; gfiter++) {
         gresidual = 0.;
@@ -177,7 +175,8 @@ void GaugeFix::fftChi(
         gresidual /= N * N;
 
         if (gfiter % 10 == 0) {
-            cout << gfiter << " " << gresidual << endl;
+            messager_ << gfiter << " " << gresidual;
+            messager_.flush("info");
             gresidual_prev = gresidual;
         }
 
@@ -243,8 +242,14 @@ void GaugeFix::fftChi(
                         expGaugeRotationSU3(*chi[localpos], localg);
 
                         if (localg(2) != localg(2)) {
-                            cout << "problem at " << i << " " << j
-                                 << " with g=" << localg << endl;
+                            // A fresh, stack-local instance: this runs
+                            // inside an omp parallel region, and
+                            // PrettyOstream is not thread-safe to share.
+                            std::ostringstream warnMsg;
+                            warnMsg << "problem at " << i << " " << j
+                                    << " with g=" << localg;
+                            PrettyOstream localMessager;
+                            localMessager.warning(warnMsg.str());
                             localg = one;
                         }
 

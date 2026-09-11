@@ -18,6 +18,8 @@
 #include <string>
 #include <vector>
 
+#include "PrettyOstream.h"
+
 using std::complex;
 using std::vector;
 
@@ -75,6 +77,7 @@ std::vector<T> operator/(const std::vector<T> &a, const double b) {
 
 class FFT {
   private:
+    PrettyOstream messager_;
     fftw_complex *input, *output;
     fftw_complex *inputMany, *outputMany;
     fftw_plan p_, pback_;

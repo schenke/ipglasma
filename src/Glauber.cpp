@@ -6,14 +6,12 @@
 
 #include <cstring>
 #include <fstream>
-#include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <string>
 
 #include "Util.h"
 
-using std::cout;
-using std::endl;
 using std::string;
 
 void Glauber::findNucleusData(
@@ -315,12 +313,13 @@ void Glauber::printGlauberData() {
 }
 
 void Glauber::printNucleusData(Nucleus *nucleus) {
-    cout << "Nucleus Name: " << nucleus->name << endl;
-    cout << " Nucleus.A = " << nucleus->A << endl;
-    cout << " Nucleus.Z = " << nucleus->Z << endl;
-    cout << " Nucleus.w_WS = " << nucleus->w_WS << endl;
-    cout << " Nucleus.a_WS = " << nucleus->a_WS << endl;
-    cout << " Nucleus.R_WS = " << nucleus->R_WS << endl;
+    messager_ << "Nucleus Name: " << nucleus->name << "\n"
+              << " Nucleus.A = " << nucleus->A << "\n"
+              << " Nucleus.Z = " << nucleus->Z << "\n"
+              << " Nucleus.w_WS = " << nucleus->w_WS << "\n"
+              << " Nucleus.a_WS = " << nucleus->a_WS << "\n"
+              << " Nucleus.R_WS = " << nucleus->R_WS;
+    messager_.flush("info");
 }
 
 int Glauber::linearFindXorg(double x, double *Vx, int ymax) {
@@ -1230,7 +1229,6 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
                                  // (larger root_s) (was originally written
     // for root(s)=200 GeV, hence the cross section of 4.21325504715 fm^2
     // (=42.13 mb)
-    cout.precision(10);
     if (nucleus == NucleusRole::Projectile) {
         do {
             phi = 2. * M_PI * random->genrand64_real1();
@@ -1244,10 +1242,12 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
             tmp = random->genrand64_real1();
 
             // x is uniform on [0,1]
-            if (r * interNuPInSP(r) > A * r * 11. * exp(-r * r / 40.))
-                cout << "WARNING: TA>envelope: "
-                     << "TA=" << r * interNuPInSP(r)
-                     << ", f=" << A * r * 11. * exp(-r * r / 40.) << endl;
+            if (r * interNuPInSP(r) > A * r * 11. * exp(-r * r / 40.)) {
+                messager_ << std::setprecision(10) << "WARNING: TA>envelope: "
+                          << "TA=" << r * interNuPInSP(r)
+                          << ", f=" << A * r * 11. * exp(-r * r / 40.);
+                messager_.flush("warning");
+            }
         } while (tmp > r * interNuPInSP(r) / (A * r * 11. * exp(-r * r / 40.)));
     } else {
         do {
@@ -1261,10 +1261,12 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
             // is a uniform random number on [0, area under f(x)]
             tmp = random->genrand64_real1();
             // x is uniform on [0,1]
-            if (r * interNuTInST(r) > A * r * 11. * exp(-r * r / 40.))
-                cout << "WARNING: TA>envelope: "
-                     << "TA=" << r * interNuTInST(r)
-                     << ", f=" << A * r * 11. * exp(-r * r / 40.) << endl;
+            if (r * interNuTInST(r) > A * r * 11. * exp(-r * r / 40.)) {
+                messager_ << std::setprecision(10) << "WARNING: TA>envelope: "
+                          << "TA=" << r * interNuTInST(r)
+                          << ", f=" << A * r * 11. * exp(-r * r / 40.);
+                messager_.flush("warning");
+            }
         } while (tmp > r * interNuTInST(r) / (A * r * 11. * exp(-r * r / 40.)));
     }
     // reject if tmp is larger than the ratio p(y)/f(y),

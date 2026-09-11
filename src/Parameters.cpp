@@ -14,8 +14,9 @@ void Parameters::loadPosteriorParameterSetsFromFile(
     std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
     std::ifstream posteriorFile(posteriorFileName.c_str());
     if (!posteriorFile.is_open()) {
-        std::cout << "[Paramters] Can not open posterior file: "
-                  << posteriorFileName << std::endl;
+        messager_ << "[Parameters] Cannot open posterior file: "
+                  << posteriorFileName;
+        messager_.flush("error");
         exit(1);
     }
     std::string tempLine;
@@ -49,7 +50,8 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
     if (itype == 1) {
         // variant Nq
         iset = (iset % posteriorParamSets_.size());
-        std::cout << "set subnucleon param set:" << iset << std::endl;
+        messager_ << "set subnucleon param set:" << iset;
+        messager_.flush("info");
         setm(posteriorParamSets_[iset][0]);
         setBG(posteriorParamSets_[iset][1]);
         setBGq(posteriorParamSets_[iset][2]);
@@ -60,7 +62,8 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
     } else if (itype == 2 || itype == 4) {
         // fixed Nq = 3
         iset = (iset % posteriorParamSetsNq3_.size());
-        std::cout << "set subnucleon param set (Nq = 3):" << iset << std::endl;
+        messager_ << "set subnucleon param set (Nq = 3):" << iset;
+        messager_.flush("info");
         setm(posteriorParamSetsNq3_[iset][0]);
         setBG(posteriorParamSetsNq3_[iset][1]);
         setBGq(posteriorParamSetsNq3_[iset][2]);
@@ -76,21 +79,23 @@ bool Parameters::ValidParameters() {
     // otherwise. This function can be used to validate the parameters before
     // running the simulation.
     if (size_ <= 0) {
-        std::cerr << "[Parameters] Invalid lattice size " << size_ << "."
-                  << std::endl;
+        messager_ << "[Parameters] Invalid lattice size " << size_ << ".";
+        messager_.flush("error");
         return false;
     }
     if (getWriteWilsonLines() != 0
         and !Lattice::IsValidWilsonLineDataFormat(getWriteWilsonLines())) {
-        std::cerr << "[Parameters] Invalid Wilson line data format "
-                  << getWriteWilsonLines() << std::endl;
+        messager_ << "[Parameters] Invalid Wilson line data format "
+                  << getWriteWilsonLines();
+        messager_.flush("error");
         return false;
     }
     if (getSaveSnapshots() and getWriteWilsonLines() == 0) {
-        std::cerr << "[Parameters] Cannot save snapshots (saveSnapshots = "
+        messager_ << "[Parameters] Cannot save snapshots (saveSnapshots = "
                   << getSaveSnapshots() << ") "
                   << "without writing Wilson lines (writeWilsonLines = "
-                  << getWriteWilsonLines() << ")." << std::endl;
+                  << getWriteWilsonLines() << ").";
+        messager_.flush("error");
         return false;
     }
 

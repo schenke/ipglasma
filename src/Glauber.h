@@ -3,6 +3,7 @@
 
 #include <string>
 
+#include "PrettyOstream.h"
 #include "Random.h"
 
 #define TOL (1.0e-6)
@@ -53,6 +54,7 @@ struct Data {
 
 class Glauber {
   private:
+    PrettyOstream messager_;
     double AnumR_, NuInS_S_;
     Nucleus *Nuc_WS_;
     Data glauberData_;

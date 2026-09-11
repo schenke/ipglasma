@@ -7,7 +7,12 @@
 #include <string>
 #include <vector>
 
+#include "PrettyOstream.h"
+
 class Setup {
+  private:
+    PrettyOstream messager_;
+
   public:
     // Constructor.
     Setup() {}

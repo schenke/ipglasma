@@ -143,9 +143,9 @@ void FFT::fftnArray(
     const int isign, const int mDim) {
     IPG_PROFILE_SCOPE("fft.total");
     if (mDim > kMaxBatchDim) {
-        std::cerr << "FFT::fftnArray: mDim=" << mDim
-                  << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting."
-                  << std::endl;
+        messager_ << "FFT::fftnArray: mDim=" << mDim
+                  << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     const unsigned ntot = static_cast<unsigned>(nn[0] * nn[1]);
@@ -216,9 +216,9 @@ void FFT::fftnComplexArray(
     const int isign, const int mDim) {
     IPG_PROFILE_SCOPE("fft.total");
     if (mDim > kMaxBatchDim) {
-        std::cerr << "FFT::fftnComplexArray: mDim=" << mDim
-                  << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting."
-                  << std::endl;
+        messager_ << "FFT::fftnComplexArray: mDim=" << mDim
+                  << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     const unsigned ntot = static_cast<unsigned>(nn[0] * nn[1]);

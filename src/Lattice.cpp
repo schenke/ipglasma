@@ -92,7 +92,8 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     }
     foutU.close();
 
-    std::cout << "wrote " << strVOne_name.str() << std::endl;
+    messager_ << "wrote " << strVOne_name.str();
+    messager_.flush("info");
 
     std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
     foutU2.precision(15);
@@ -106,7 +107,8 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     }
     foutU2.close();
 
-    std::cout << "wrote " << strVTwo_name.str() << std::endl;
+    messager_ << "wrote " << strVTwo_name.str();
+    messager_.flush("info");
 }
 
 void Lattice::writeWilsonLines(
@@ -145,7 +147,8 @@ void Lattice::writeWilsonLines(
         }
         foutU.close();
 
-        std::cout << "wrote " << strVOne_name.str() << std::endl;
+        messager_ << "wrote " << strVOne_name.str();
+        messager_.flush("info");
     } else if (param->getWriteWilsonLines() == 2) {
         std::ofstream Outfile1;
         Outfile1.open(
@@ -183,19 +186,21 @@ void Lattice::writeWilsonLines(
         }
 
         if (Outfile1.good() == false) {
-            std::cerr << "#CRTICAL ERROR -- BINARY OUTPUT OF VECTOR "
-                         "CURRENTS FAILED"
-                      << std::endl;
+            messager_.error(
+                "CRITICAL ERROR -- BINARY OUTPUT OF VECTOR CURRENTS FAILED");
             exit(1);
         }
 
         delete[] val1;
 
         Outfile1.close();
-        std::cout << "wrote " << strVOne_name.str() << std::endl;
+        messager_ << "wrote " << strVOne_name.str();
+        messager_.flush("info");
     } else {
-        std::cerr << "# Unknwon option param->getWriteWilsonLines()=="
-                  << param->getWriteWilsonLines() << std::endl;
+        std::stringstream errorMsg;
+        errorMsg << "Unknown option param->getWriteWilsonLines()=="
+                 << param->getWriteWilsonLines();
+        messager_.error(errorMsg.str());
         exit(1);
     }
 }

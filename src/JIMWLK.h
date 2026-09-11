@@ -10,6 +10,7 @@
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 #include "Random.h"
 
 class JIMWLK {
@@ -17,6 +18,7 @@ class JIMWLK {
     Parameters &param_;
     std::shared_ptr<FFT> fft_ptr_;
     int nn_[2];
+    PrettyOstream messager_;
 
     const double fmgev = 5.068;
 

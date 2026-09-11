@@ -7,8 +7,11 @@
 #include <string>
 #include <vector>
 
+#include "PrettyOstream.h"
+
 class Parameters {
   private:
+    PrettyOstream messager_;
     int subNucleonParamType_;
     int subNucleonParamSet_;
     std::vector<std::vector<float>> posteriorParamSets_;

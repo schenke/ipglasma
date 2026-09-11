@@ -8,9 +8,12 @@
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 
 class GaugeFix {
   private:
+    PrettyOstream messager_;
+
   public:
     // Constructor.
     GaugeFix() {};

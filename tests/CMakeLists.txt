@@ -11,12 +11,14 @@ list(TRANSFORM LIB_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/src/")
 set(TEST_SOURCES
     test_main.cpp
     test_matrix.cpp
+    test_su3.cpp
     test_group.cpp
     test_random.cpp
     test_setup.cpp
     test_glauber.cpp
     test_parameters.cpp
     test_fft.cpp
+    test_lattice.cpp
     test_cell.cpp
     test_util.cpp
     test_prettyostream.cpp

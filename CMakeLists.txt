@@ -75,19 +75,15 @@ endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     if (KNL)
-       set(CMAKE_CXX_FLAGS "-g -Wall -xMIC-AVX512 -std=c++17 -O3 -fopenmp -finline-functions -march=knl  -DDOCTEST_CONFIG_DISABLE")
-       #set(CMAKE_CXX_FLAGS "-g -vecabi=cmdtarget -debug inline-debug-info -fimf-use-svml -xmic-avx512 -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fma -align -finline-functions -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+       set(CMAKE_CXX_FLAGS "-g -Wall -xMIC-AVX512 -std=c++17 -O3 -fopenmp -finline-functions -march=knl")
+       #set(CMAKE_CXX_FLAGS "-g -vecabi=cmdtarget -debug inline-debug-info -fimf-use-svml -xmic-avx512 -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fma -align -finline-functions -DNDEBUG")
     else ()
-        set(CMAKE_CXX_FLAGS "-g -ipo -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fimf-use-svml -fma -align -finline-functions -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+        set(CMAKE_CXX_FLAGS "-g -ipo -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fimf-use-svml -fma -align -finline-functions -DNDEBUG")
     endif ()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "-g -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
+    set(CMAKE_CXX_FLAGS "-g -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -DNDEBUG")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(CMAKE_CXX_FLAGS "-g -O3 -std=c++17  -stdlib=libc++ -DDOCTEST_CONFIG_DISABLE -DNDEBUG")
-endif()
-
-if (unittest)
-    set(CMAKE_CXX_FLAGS "-g ${OpenMP_CXX_FLAGS} -std=c++17 -DDOCTEST_CONFIG_IMPLEMENT_WITH_MAIN")
+    set(CMAKE_CXX_FLAGS "-g -O3 -std=c++17  -stdlib=libc++ -DNDEBUG")
 endif()
 
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wredundant-decls -Wshadow -Wundef -Wno-unused")
@@ -107,3 +103,13 @@ if (IPGLASMA_DETERMINISTIC_FFT)
 endif()
 
 add_subdirectory (src)
+
+# Doctest-based unit test suite (tests/), covering small, fast, deterministic
+# pieces (matrix algebra, RNG stream equivalence, input parsing, ...) rather
+# than full lattice evolution. Off by default; enable with -Dunittest=ON.
+# Vendors its own copy of doctest.h (tests/third_party/), so this needs no
+# extra dependency beyond what the main build already requires.
+if (unittest)
+    enable_testing()
+    add_subdirectory (tests)
+endif()

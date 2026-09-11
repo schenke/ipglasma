@@ -41,6 +41,7 @@ The main categories for changes in this file are:
 * Add a flag to enable or disable the gluon-multiplicity calculation.
 * Add profiling instrumentation (`Instrumentation.h`/`.cpp`) used throughout initialization and evolution.
 * Add validation tools for J/Psi and vector-meson production spectra under `utilities/`.
+* Add a `doctest`-based unit test suite under `tests/` covering fast, deterministic pieces of the code (`Matrix` algebra, `Random::gaussBulk`/`gauss()` stream equivalence, `Setup`'s input-file parsing, `Glauber::findNucleusData`'s species lookup table, `Parameters::ValidParameters()`, and an `FFT::fftnComplexArray` round-trip), off by default (`-Dunittest=ON`), plus a GitHub Actions workflow that builds and runs it on every push/PR to `devel`/`master`.
 
 ### Changed
 * Rewrite `Matrix`, `Cell` and `Lattice` as a structure-of-arrays layout with a fixed 3x3 `Matrix`, and switch random-number sampling to bulk generation, substantially speeding up both the classical Yang-Mills and JIMWLK evolution.

@@ -15,6 +15,15 @@ Dependencies
 * CMake
 * FFTW
 
+## Unit tests
+A [doctest](https://github.com/doctest/doctest)-based unit test suite lives under `tests/` and covers small, fast, deterministic pieces of the code (matrix algebra, RNG stream properties, input parsing, ...) rather than full lattice evolution, so it runs in a fraction of a second. It is off by default; build and run it with:
+```
+cmake -B build -Dunittest=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+It also runs automatically on every push/PR to `devel`/`master` via GitHub Actions (see `.github/workflows/tests.yml`).
+
  
 ## Input parameters
 See `src/Parameters.h` for a more detailed description of parameters that are specified in the file `input`. If a command line argument is provided, that refers to the input file that will be used.

@@ -346,8 +346,8 @@ Matrix &Matrix::expm(double t, const int p) {
             //	    Some error happens, H has elements which are NaN or
             // infinity.
             std::ostringstream errorMsg;
-            errorMsg << "[Matrix::expm]: Null input error in the template "
-                        "expm_pad. Null INPUT : "
+            errorMsg << "[Matrix::expm]: input matrix has a zero norm but "
+                        "non-zero elements (likely NaN or Inf). Input: "
                      << *this;
             PrettyOstream messager;
             messager.error(errorMsg.str());

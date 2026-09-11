@@ -440,8 +440,10 @@ double kkp(int ih, int iset, double x, double qs) {
         // --- NLO FFs
         if (iset != 1) {
             PrettyOstream messager;
-            messager.error(
-                "[Fragmentation::kkp]: iset must be 0 (LO) or 1 (NLO)");
+            messager.warning(
+                "[Fragmentation::kkp]: iset should be 0 (LO) or 1 (NLO); "
+                "got a different value, proceeding with the NLO "
+                "fragmentation functions.");
         }
         rlam = 0.213;
         s = log(log(qs * qs / (rlam * rlam)) / log(q0 * q0 / (rlam * rlam)));

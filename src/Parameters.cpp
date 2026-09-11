@@ -52,8 +52,8 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         // variant Nq
         iset = (iset % posteriorParamSets_.size());
         messager_ << "[Parameters::setParamsWithPosteriorParameterSet]: "
-                     "set subnucleon param set:"
-                  << iset;
+                     "Using subnucleon parameter set "
+                  << iset << " (variable Nq).";
         messager_.flush("info");
         setm(posteriorParamSets_[iset][0]);
         setBG(posteriorParamSets_[iset][1]);
@@ -66,8 +66,8 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         // fixed Nq = 3
         iset = (iset % posteriorParamSetsNq3_.size());
         messager_ << "[Parameters::setParamsWithPosteriorParameterSet]: "
-                     "set subnucleon param set (Nq = 3):"
-                  << iset;
+                     "Using subnucleon parameter set "
+                  << iset << " (Nq = 3).";
         messager_.flush("info");
         setm(posteriorParamSetsNq3_[iset][0]);
         setBG(posteriorParamSetsNq3_[iset][1]);

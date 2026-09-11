@@ -134,7 +134,8 @@ void GaugeFix::fftChi(
         }
     }
 
-    messager_ << "[GaugeFix::fftChi]: gauge fixing";
+    messager_ << "[GaugeFix::fftChi]: Fixing to Coulomb gauge, up to "
+              << max_gfiter << " iterations.";
     messager_.flush("info");
 
     for (int gfiter = 0; gfiter < max_gfiter; gfiter++) {
@@ -175,7 +176,8 @@ void GaugeFix::fftChi(
         gresidual /= N * N;
 
         if (gfiter % 10 == 0) {
-            messager_ << "[GaugeFix::fftChi]: " << gfiter << " " << gresidual;
+            messager_ << "[GaugeFix::fftChi]: iteration " << gfiter
+                      << ", residual = " << gresidual;
             messager_.flush("info");
             gresidual_prev = gresidual;
         }

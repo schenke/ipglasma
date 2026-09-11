@@ -72,12 +72,16 @@ string stringFind(string file_name, string st) {
                 exit(1);
             } else {
                 messager << "[Util::stringFind]: The file named " << file_name
-                         << " is absent. Creating " << tmpfilename << "...";
-                messager.flush("info");
+                         << " is absent. Creating an empty " << tmpfilename
+                         << " and reading from that instead.";
+                messager.flush("warning");
             }
             std::ofstream tmp_file(tmpfilename.c_str());
             tmp_file << "EndOfData" << endl;
             tmp_file.close();
+            // Read from the fallback file just created, not the still-
+            // missing file_name.
+            inputname = tmpfilename;
         } /* if isfile */
         flag = 1;
     } /* if flag == 0 */

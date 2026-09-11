@@ -126,8 +126,6 @@ class Matrix {
 
 Matrix operator+(const Matrix &a, const Matrix &b);
 Matrix operator-(const Matrix &a, const Matrix &b);
-Matrix operator-(const Matrix &a);
-Matrix operator/(const Matrix &a, const Matrix &b);
 
 Matrix operator*(const double a, const Matrix &b);
 Matrix operator*(const std::complex<double> a, const Matrix &b);

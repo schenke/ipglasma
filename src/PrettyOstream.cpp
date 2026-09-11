@@ -71,6 +71,6 @@ string PrettyOstream::getMemoryUsage() {
         memory_usage << std::setprecision(4) << memory_usage_in_MB << " MB";
         return (memory_usage.str());
     } else {
-        return (0);
+        return "";
     }
 }

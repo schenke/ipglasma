@@ -47,3 +47,84 @@ TEST_CASE("Random: gaussBulk output has ~zero mean and ~unit variance") {
     CHECK(std::abs(mean) < 0.05);
     CHECK(std::abs(variance - 1.0) < 0.1);
 }
+
+TEST_CASE("Random: init_genrand64 makes genrand64_int64/int63 deterministic") {
+    Random a, b;
+    a.init_genrand64(777ULL);
+    b.init_genrand64(777ULL);
+    for (int i = 0; i < 100; ++i) {
+        CHECK(a.genrand64_int64() == b.genrand64_int64());
+    }
+
+    a.init_genrand64(777ULL);
+    b.init_genrand64(777ULL);
+    for (int i = 0; i < 100; ++i) {
+        CHECK(a.genrand64_int63() == b.genrand64_int63());
+    }
+}
+
+TEST_CASE("Random: genrand64_int63 is genrand64_int64 with the top bit dropped") {
+    Random rng;
+    rng.init_genrand64(1ULL);
+    Random rng2;
+    rng2.init_genrand64(1ULL);
+    for (int i = 0; i < 50; ++i) {
+        const unsigned long long full = rng.genrand64_int64();
+        const long long half = rng2.genrand64_int63();
+        CHECK(half >= 0);
+        CHECK(static_cast<unsigned long long>(half) == (full >> 1));
+    }
+}
+
+TEST_CASE("Random: genrand64_real1/real2/real3 stay within their documented ranges") {
+    Random rng;
+    rng.init_genrand64(2024ULL);
+    for (int i = 0; i < 5000; ++i) {
+        const double r1 = rng.genrand64_real1();  // [0, 1]
+        CHECK(r1 >= 0.0);
+        CHECK(r1 <= 1.0);
+        const double r2 = rng.genrand64_real2();  // [0, 1)
+        CHECK(r2 >= 0.0);
+        CHECK(r2 < 1.0);
+        const double r3 = rng.genrand64_real3();  // (0, 1)
+        CHECK(r3 > 0.0);
+        CHECK(r3 < 1.0);
+    }
+}
+
+TEST_CASE("Random: gslRandomInit makes poisson() deterministic and ~correct mean") {
+    Random a, b;
+    a.gslRandomInit(2025ULL);
+    b.gslRandomInit(2025ULL);
+
+    const double mean = 5.0;
+    const int n = 5000;
+    long sum = 0;
+    for (int i = 0; i < n; ++i) {
+        const int drawA = a.poisson(mean);
+        const int drawB = b.poisson(mean);
+        CHECK(drawA == drawB);  // same seed -> same stream
+        CHECK(drawA >= 0);
+        sum += drawA;
+    }
+    const double empiricalMean = static_cast<double>(sum) / n;
+    CHECK(std::abs(empiricalMean - mean) < 0.3);  // generous, fixed-seed check
+}
+
+TEST_CASE("Random: setGammaIncCDF/sampleGammaInc stay within [0, xmax]") {
+    Random rng;
+    rng.init_genrand64(99ULL);
+
+    const double omega = 1.0;
+    rng.setGammaIncCDF(omega);
+    const double xmax = std::max(5.0, 5.0 / omega);
+
+    bool sawNonzero = false;
+    for (int i = 0; i < 2000; ++i) {
+        const double x = rng.sampleGammaInc();
+        CHECK(x >= 0.0);
+        CHECK(x <= xmax);
+        if (x > 0.0) sawNonzero = true;
+    }
+    CHECK(sawNonzero);
+}

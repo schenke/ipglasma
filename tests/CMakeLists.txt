@@ -11,11 +11,17 @@ list(TRANSFORM LIB_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/src/")
 set(TEST_SOURCES
     test_main.cpp
     test_matrix.cpp
+    test_group.cpp
     test_random.cpp
     test_setup.cpp
     test_glauber.cpp
     test_parameters.cpp
     test_fft.cpp
+    test_cell.cpp
+    test_util.cpp
+    test_prettyostream.cpp
+    test_instrumentation.cpp
+    test_fragmentation.cpp
     )
 
 add_executable(ipglasma_tests ${TEST_SOURCES} ${LIB_SOURCES})

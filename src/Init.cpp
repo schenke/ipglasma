@@ -2274,14 +2274,18 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                     int TEMPINDX = ((INPUT_CTR - 1) / 2);
                     int PositionIndx = TEMPINDX / 9;
 
-                    // shift here by half an impact parameter
-                    int iy = PositionIndx / N;
-                    int ixIn = PositionIndx - N * iy;
+                    // PositionIndx enumerates (ix, iy) pairs in the
+                    // writer's ix-outer/iy-inner loop order (see
+                    // Lattice::writeWilsonLines), so dividing by N
+                    // recovers ix, and the remainder is iy.
+                    int ixRaw = PositionIndx / N;
+                    int iy = PositionIndx - N * ixRaw;
 
                     double bb = param->getb();
                     a = L / static_cast<double>(N);
 
-                    double xtemp = a * ixIn - bb / 2.;
+                    // shift here by half an impact parameter
+                    double xtemp = a * ixRaw - bb / 2.;
 
                     int ix = round(xtemp / a);
 
@@ -2361,14 +2365,18 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                         int TEMPINDX = ((INPUT_CTR - 1) / 2);
                         int PositionIndx = TEMPINDX / 9;
 
-                        // shift here by half an impact parameter
-                        int iy = PositionIndx / N;
-                        int ixIn = PositionIndx - N * iy;
+                        // PositionIndx enumerates (ix, iy) pairs in the
+                        // writer's ix-outer/iy-inner loop order (see
+                        // Lattice::writeWilsonLines), so dividing by N
+                        // recovers ix, and the remainder is iy.
+                        int ixRaw = PositionIndx / N;
+                        int iy = PositionIndx - N * ixRaw;
 
                         double bb = param->getb();
                         a = L / static_cast<double>(N);
 
-                        double xtemp = a * ixIn + bb / 2.;
+                        // shift here by half an impact parameter
+                        double xtemp = a * ixRaw + bb / 2.;
 
                         int ix = round(xtemp / a);
 

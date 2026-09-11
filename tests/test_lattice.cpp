@@ -1,5 +1,4 @@
-#include "doctest.h"
-
+#include <complex>
 #include <cstdio>
 #include <fstream>
 #include <string>
@@ -7,8 +6,11 @@
 #include "Glauber.h"  // for NucleusRole
 #include "Lattice.h"
 #include "Parameters.h"
+#include "doctest.h"
 
-TEST_CASE("Lattice::IsValidWilsonLineDataFormat accepts only 1 (text) and 2 (binary)") {
+TEST_CASE(
+    "Lattice::IsValidWilsonLineDataFormat accepts only 1 (text) and 2 "
+    "(binary)") {
     CHECK(Lattice::IsValidWilsonLineDataFormat(1) == true);
     CHECK(Lattice::IsValidWilsonLineDataFormat(2) == true);
     CHECK(Lattice::IsValidWilsonLineDataFormat(0) == false);
@@ -32,7 +34,9 @@ void makeLatticeParam(Parameters &param, int size) {
 }
 }  // namespace
 
-TEST_CASE("Lattice: constructor allocates fields as identity and sizes them correctly") {
+TEST_CASE(
+    "Lattice: constructor allocates fields as identity and sizes them "
+    "correctly") {
     const int length = 4;
     Parameters param;
     makeLatticeParam(param, length);
@@ -51,7 +55,9 @@ TEST_CASE("Lattice: constructor allocates fields as identity and sizes them corr
     }
 }
 
-TEST_CASE("Lattice: neighbor index arrays wrap at the boundary (clamped, not periodic)") {
+TEST_CASE(
+    "Lattice: neighbor index arrays wrap at the boundary (clamped, not "
+    "periodic)") {
     const int length = 4;
     Parameters param;
     makeLatticeParam(param, length);
@@ -61,8 +67,8 @@ TEST_CASE("Lattice: neighbor index arrays wrap at the boundary (clamped, not per
     CHECK(lat.posmX[0] == 0);
     CHECK(lat.posmY[0] == 0);
     // Site (0, 0): plus-neighbors move one step in x or y.
-    CHECK(lat.pospX[0] == length);      // (1, 0)
-    CHECK(lat.pospY[0] == 1);           // (0, 1)
+    CHECK(lat.pospX[0] == length);  // (1, 0)
+    CHECK(lat.pospY[0] == 1);       // (0, 1)
 
     // Site (length-1, length-1): both plus-neighbors clamp back to itself.
     const int last = length * length - 1;
@@ -92,12 +98,29 @@ TEST_CASE("Lattice::writeWilsonLines (text format) writes a non-empty file") {
     std::remove(path.c_str());
 }
 
-TEST_CASE("Lattice::writeWilsonLines (binary format) writes a matching header and data") {
+TEST_CASE(
+    "Lattice::writeWilsonLines (binary format) writes a matching header and "
+    "data") {
     const int length = 4;
     Parameters param;
     makeLatticeParam(param, length);
     param.setWriteWilsonLines(2);  // binary
     Lattice lat(&param, length);
+
+    // Give two off-diagonal sites (ix != iy, swapped between them) distinct
+    // values, so a transposed site index (previously N*iy+ix instead of
+    // N*ix+iy in the binary branch -- see Lattice.cpp) would read back the
+    // wrong site's data here, instead of going unnoticed as it would on an
+    // all-identity lattice.
+    Matrix markerA(Matrix::noInit), markerB(Matrix::noInit);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            markerA.set(i, j, std::complex<double>(100 + 10 * i + j, 0.0));
+            markerB.set(i, j, std::complex<double>(200 + 10 * i + j, 0.0));
+        }
+    }
+    lat.U[1 * length + 2] = markerA;  // (ix=1, iy=2)
+    lat.U[2 * length + 1] = markerB;  // (ix=2, iy=1)
 
     const std::string prefix = "ipglasma_test_lattice_bin_";
     lat.writeWilsonLines(prefix, &param, NucleusRole::Projectile);
@@ -122,17 +145,18 @@ TEST_CASE("Lattice::writeWilsonLines (binary format) writes a matching header an
     CHECK(a == doctest::Approx(param.getL() / length));
     CHECK(rapidity == doctest::Approx(param.getRapidityA()));
 
-    // Every lattice site's Wilson line is still the identity, so each
-    // site's 9 (re, im) pairs must match the identity pattern, regardless
-    // of site order.
+    // The writer nests ix outer / iy inner (see Lattice.cpp), so the
+    // site-th 9-(re, im)-pair block in the file must be lat.U[site], i.e.
+    // lat.U[ix*length+iy] -- not lat.U[iy*length+ix]. Checking against
+    // lat.U directly (rather than a hardcoded identity pattern) also
+    // covers the two marker sites planted above.
     for (int site = 0; site < length * length; ++site) {
         for (int k = 0; k < 9; ++k) {
             double re = 0.0, im = 0.0;
             in.read(reinterpret_cast<char *>(&re), sizeof(double));
             in.read(reinterpret_cast<char *>(&im), sizeof(double));
-            const double expectedRe = (k == 0 || k == 4 || k == 8) ? 1.0 : 0.0;
-            CHECK(re == doctest::Approx(expectedRe));
-            CHECK(im == doctest::Approx(0.0));
+            CHECK(re == doctest::Approx(lat.U[site].get(k).real()));
+            CHECK(im == doctest::Approx(lat.U[site].get(k).imag()));
         }
     }
     CHECK(in.good());
@@ -163,7 +187,8 @@ TEST_CASE("Lattice::writeSU3Matrices writes non-empty Phi/Pi files") {
     }
 }
 
-TEST_CASE("BufferLattice: allocates buffer1/buffer2 as identity, sized correctly") {
+TEST_CASE(
+    "BufferLattice: allocates buffer1/buffer2 as identity, sized correctly") {
     const int length = 4;
     BufferLattice buf(length);
     CHECK(buf.buffer1.size() == static_cast<std::size_t>(length * length));

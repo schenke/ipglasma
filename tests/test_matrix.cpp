@@ -1,7 +1,6 @@
-#include "doctest.h"
-
 #include "Group.h"
 #include "Matrix.h"
+#include "doctest.h"
 
 namespace {
 bool closeTo(std::complex<double> a, std::complex<double> b, double tol) {
@@ -236,7 +235,7 @@ TEST_CASE("Matrix: prodABconj/prodAconjB match a*conjg(b)/conjg(a)*b") {
     CHECK(matricesClose(actualAconjB, expectedAconjB, 1e-13));
 }
 
-TEST_CASE("Matrix: traceOfProdcutOfMatrix matches (a*b).trace()") {
+TEST_CASE("Matrix: traceOfProductOfMatrix matches (a*b).trace()") {
     Matrix a(Matrix::noInit), b(Matrix::noInit);
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
@@ -245,11 +244,11 @@ TEST_CASE("Matrix: traceOfProdcutOfMatrix matches (a*b).trace()") {
         }
     }
     Matrix dummy;
-    CHECK(closeTo(
-        dummy.traceOfProdcutOfMatrix(a, b), (a * b).trace(), 1e-13));
+    CHECK(closeTo(dummy.traceOfProdcutOfMatrix(a, b), (a * b).trace(), 1e-13));
 }
 
-TEST_CASE("Matrix: expmCoeff matches expm(i*sum Q^a t^a) via Group's generators") {
+TEST_CASE(
+    "Matrix: expmCoeff matches expm(i*sum Q^a t^a) via Group's generators") {
     Group group;
     double Q[8] = {0.10, -0.07, 0.15, 0.02, -0.12, 0.08, -0.05, 0.09};
 
@@ -270,8 +269,20 @@ TEST_CASE("Matrix: expmCoeff matches expm(i*sum Q^a t^a) via Group's generators"
 }
 
 TEST_CASE("Matrix: MatrixToString formats elements in column-major order") {
-    Matrix I(1.);
-    CHECK(I.MatrixToString() == "1 0 0 0 0 0 0 0 1 0 0 0 0 0 0 0 1 0");
+    // A non-symmetric matrix with a distinct value at every entry: on the
+    // identity matrix previously used here, M(i,j) == M(j,i), so a
+    // row-major implementation would have produced the same string as the
+    // required column-major order and gone undetected.
+    Matrix M(Matrix::noInit);
+    for (int i = 0; i < 3; ++i) {
+        for (int j = 0; j < 3; ++j) {
+            M.set(i, j, std::complex<double>(10 * i + j, 100 + 10 * i + j));
+        }
+    }
+    // Column-major: (0,0),(1,0),(2,0), (0,1),(1,1),(2,1), (0,2),(1,2),(2,2).
+    CHECK(
+        M.MatrixToString()
+        == "0 100 10 110 20 120 1 101 11 111 21 121 2 102 12 112 22 122");
 }
 
 TEST_CASE("Matrix: getNDim/getNN report the fixed 3x3 SU(3) shape") {

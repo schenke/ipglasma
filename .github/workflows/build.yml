@@ -1,0 +1,57 @@
+name: Multi-platform build
+
+# Compiles the IP-Glasma solver across the platforms and MPI
+# configurations it actually supports (see CMakeLists.txt's AppleClang/
+# GNU branches and main.cpp's #ifndef DISABLEMPI blocks), then runs the
+# unit test suite there too. tests.yml already gives fast feedback on
+# every push/PR from Ubuntu with MPI disabled; this workflow is the
+# broader compatibility net for the macOS build and the MPI-enabled
+# build, neither of which tests.yml exercises.
+
+on:
+  push:
+    branches: [devel, master]
+  pull_request:
+    branches: [devel, master]
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+        disable_mpi: ["ON", "OFF"]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies (Ubuntu)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfftw3-dev libgsl-dev
+          if [ "${{ matrix.disable_mpi }}" = "OFF" ]; then
+            sudo apt-get install -y libopenmpi-dev openmpi-bin
+          fi
+
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: |
+          brew install fftw gsl
+          if [ "${{ matrix.disable_mpi }}" = "OFF" ]; then
+            brew install open-mpi
+          fi
+          # Homebrew's pkg-config/cmake hints aren't always on PATH by
+          # default on the runner; point CMake/pkg-config at the Homebrew
+          # prefix explicitly rather than relying on that.
+          echo "PKG_CONFIG_PATH=$(brew --prefix)/lib/pkgconfig:$PKG_CONFIG_PATH" >> "$GITHUB_ENV"
+          echo "CMAKE_PREFIX_PATH=$(brew --prefix)" >> "$GITHUB_ENV"
+
+      - name: Configure
+        run: cmake -B build -Dunittest=ON -DdisableMPI=${{ matrix.disable_mpi }}
+
+      - name: Build
+        run: cmake --build build -j
+
+      - name: Run unit tests
+        run: ctest --test-dir build --output-on-failure

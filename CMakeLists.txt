@@ -29,6 +29,13 @@ if (GSL_FOUND)
     include_directories(${GSL_INCLUDE_DIR})
 endif()
 
+# PrettyOstream uses std::mutex to serialize terminal output across
+# threads; find it explicitly rather than relying on OpenMP to pull in
+# pthread as a side effect, since OpenMP is unavailable/disabled on some
+# platforms (e.g. AppleClang below).
+set(THREADS_PREFER_PTHREAD_FLAG ON)
+find_package(Threads REQUIRED)
+
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 6.0)
         message(FATAL_ERROR "Insufficient gcc version")

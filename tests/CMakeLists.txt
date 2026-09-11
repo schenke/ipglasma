@@ -31,6 +31,12 @@ target_include_directories(ipglasma_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     )
-target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES})
+target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads)
+if (APPLE)
+    # Matches src/CMakeLists.txt: PrettyOstream::getMemoryUsage() reads
+    # ru_maxrss in different units on macOS vs. Linux and picks the
+    # conversion based on this define.
+    target_compile_definitions(ipglasma_tests PRIVATE APPLE)
+endif (APPLE)
 
 add_test(NAME ipglasma_unit_tests COMMAND ipglasma_tests)

@@ -4,13 +4,10 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 
 #include <gsl/gsl_integration.h>  // include gsl for Gauss-Legendre nodes and weights for log Pade
 
-#include <iostream>
 #include <sstream>
 #include <vector>
 
-using std::cerr;
-using std::cout;
-using std::endl;
+#include "PrettyOstream.h"
 
 static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
@@ -257,22 +254,6 @@ void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
     f2 /= den;
 
     u0 = f0 + 2. / 3. * c1 * f2;
-    // if (std::isnan(real(u0))) {
-    //     for (int i = 0; i < Nc2m1; i++) {
-    //         cout << Q[i] << " ";
-    //     }
-    //     cout << endl;
-    //     cout << "c0 = " << c0 << endl;
-    //     cout << "c0max=" << c0max << endl;
-    //     cout << "c0/c0max=" << c0 / c0max << endl;
-    //     cout << "thetaOverThree=" << thetaOverThree << endl;
-    //     cout << "u = " << u << endl;
-    //     cout << "w = " << w << endl;
-    //     cout << "f0=" << f0 << endl;
-    //     cout << "f2=" << f2 << endl;
-    //     cout << "c1=" << c1 << endl;
-    //     exit(1);
-    // }
 
     // The historical code divided f1 by (0.5*f2), added the real
     // quadratic SU(3) coefficients, and then multiplied the whole result by
@@ -322,7 +303,8 @@ Matrix &Matrix::expm(double t, const int p) {
     double norm = 0.0;
     // Calculate Pade coefficients
     if (p < 6) {
-        cout << "Matrix::expm: p should be at least 6. Exiting." << endl;
+        PrettyOstream messager;
+        messager.error("[Matrix::expm]: p should be at least 6. Exiting.");
         exit(0);
     }
     // hard coded values for speed
@@ -363,8 +345,12 @@ Matrix &Matrix::expm(double t, const int p) {
         } else {
             //	    Some error happens, H has elements which are NaN or
             // infinity.
-            cerr << "Null input error in the template expm_pad.\n";
-            cout << "Null INPUT : " << *this << "\n";
+            std::ostringstream errorMsg;
+            errorMsg << "[Matrix::expm]: input matrix has a zero norm but "
+                        "non-zero elements (likely NaN or Inf). Input: "
+                     << *this;
+            PrettyOstream messager;
+            messager.error(errorMsg.str());
             exit(0);
         }
     }

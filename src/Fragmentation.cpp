@@ -3,7 +3,8 @@
 #include "Fragmentation.h"
 
 #include <cmath>
-#include <iostream>
+
+#include "PrettyOstream.h"
 
 namespace Fragmentation {
 //**************************************************************************
@@ -76,10 +77,6 @@ double kkp(int ih, int iset, double x, double qs) {
             log(qs * qs / (rlam * rlam)) / log(rmcc * rmcc / (rlam * rlam)));
         sb = log(
             log(qs * qs / (rlam * rlam)) / log(rmbb * rmbb / (rlam * rlam)));
-
-        //      cout << "s=" << s << endl;
-        //       cout << "sc=" << sc << endl;
-        //       cout << "sb=" << sb << endl;
 
         // ---------------------- LO PION ------------------------------
         b[1] = 6.04510;
@@ -442,9 +439,11 @@ double kkp(int ih, int iset, double x, double qs) {
     } else {
         // --- NLO FFs
         if (iset != 1) {
-            std::cerr
-                << "ERROR [Fragmentation::kkp]: iset must be 0 (LO) or 1 (NLO)"
-                << std::endl;
+            PrettyOstream messager;
+            messager.warning(
+                "[Fragmentation::kkp]: iset should be 0 (LO) or 1 (NLO); "
+                "got a different value, proceeding with the NLO "
+                "fragmentation functions.");
         }
         rlam = 0.213;
         s = log(log(qs * qs / (rlam * rlam)) / log(q0 * q0 / (rlam * rlam)));

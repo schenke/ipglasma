@@ -14,6 +14,16 @@ To compile IP-Glasma, run `./compile_IPGlasma.sh`
 Dependencies
 * CMake
 * FFTW
+* GSL
+
+## Unit tests
+A [doctest](https://github.com/doctest/doctest)-based unit test suite lives under `tests/` and covers small, fast, deterministic pieces of the code (matrix algebra, RNG stream properties, input parsing, ...) rather than full lattice evolution, so it runs in a fraction of a second. It is off by default; build and run it with:
+```
+cmake -B build -Dunittest=ON
+cmake --build build
+ctest --test-dir build --output-on-failure
+```
+It also runs automatically on every push/PR to `devel`/`master` via GitHub Actions (see `.github/workflows/tests.yml`).
 
  
 ## Input parameters

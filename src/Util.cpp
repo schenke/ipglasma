@@ -6,8 +6,8 @@
 #include <sstream>
 #include <string>
 
-using std::cerr;
-using std::cout;
+#include "PrettyOstream.h"
+
 using std::endl;
 using std::string;
 
@@ -61,22 +61,31 @@ string stringFind(string file_name, string st) {
     tmpfilename = "input";
 
     int ind;
-    static int flag = 0;
-    if (flag == 0) {
-        if (!isFile(file_name)) {
-            cerr << "The file named " << file_name << " is absent." << endl;
-            if (file_name == "") {
-                cerr << "No input file name specified." << endl;
-                exit(1);
-            } else {
-                cout << "Creating " << tmpfilename << "..." << endl;
-            }
-            std::ofstream tmp_file(tmpfilename.c_str());
-            tmp_file << "EndOfData" << endl;
-            tmp_file.close();
-        } /* if isfile */
-        flag = 1;
-    } /* if flag == 0 */
+    PrettyOstream messager;
+    // Check every call rather than gating on a static "already checked"
+    // flag: with that flag, a call for a missing file_name after an
+    // earlier call already succeeded for a different file_name would skip
+    // this whole check, then hang forever reading from a stream that
+    // never opened (see the while loop below).
+    if (!isFile(file_name)) {
+        if (file_name == "") {
+            messager << "[Util::stringFind]: The file named " << file_name
+                     << " is absent. No input file name specified.";
+            messager.flush("error");
+            exit(1);
+        } else {
+            messager << "[Util::stringFind]: The file named " << file_name
+                     << " is absent. Creating an empty " << tmpfilename
+                     << " and reading from that instead.";
+            messager.flush("warning");
+        }
+        std::ofstream tmp_file(tmpfilename.c_str());
+        tmp_file << "EndOfData" << endl;
+        tmp_file.close();
+        // Read from the fallback file just created, not the still-
+        // missing file_name.
+        inputname = tmpfilename;
+    } /* if isfile */
 
     std::ifstream input(inputname.c_str());
     input >> s;
@@ -95,8 +104,9 @@ string stringFind(string file_name, string st) {
     input.close();
 
     if (ind == 0) {
-        cerr << str << " not found in " << inputname << endl;
-        cout << "Create an input file." << endl;
+        messager << "[Util::stringFind]: " << str << " not found in "
+                 << inputname << ". Create an input file.";
+        messager.flush("error");
         exit(1);
     }
     return "";

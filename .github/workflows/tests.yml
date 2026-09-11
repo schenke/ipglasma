@@ -1,0 +1,27 @@
+name: Unit tests
+
+on:
+  push:
+    branches: [devel, master]
+  pull_request:
+    branches: [devel, master]
+
+jobs:
+  unit-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfftw3-dev libgsl-dev
+
+      - name: Configure
+        run: cmake -B build -Dunittest=ON -DdisableMPI=ON
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run unit tests
+        run: ctest --test-dir build --output-on-failure

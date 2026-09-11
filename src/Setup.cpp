@@ -7,9 +7,6 @@
 #include <sstream>
 #include <string>
 
-using std::cerr;
-using std::cout;
-using std::endl;
 using std::ifstream;
 using std::string;
 using std::stringstream;
@@ -32,15 +29,17 @@ string Setup::stringFind(string file_name, string st) {
     tmpfilename = "input";
 
     int ind;
-    static int flag = 0;
-    if (flag == 0) {
-        if (!isFile(file_name)) {
-            cerr << "The input file named " << file_name
-                 << " is absent. Exiting." << endl;
-            exit(1);
-        }
-        flag = 1;
-    } /* if flag == 0 */
+    // Check every call rather than gating on a static "already checked"
+    // flag: with that flag, a call for a missing file_name after an
+    // earlier call already succeeded for a different file_name would skip
+    // this whole check, then hang forever reading from a stream that
+    // never opened (see the while loop below).
+    if (!isFile(file_name)) {
+        messager_ << "[Setup::stringFind]: The input file named " << file_name
+                  << " is absent. Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
 
     ifstream input(inputname.c_str());
 
@@ -61,9 +60,9 @@ string Setup::stringFind(string file_name, string st) {
     input.close();
 
     if (ind == 0) {
-        cerr << str << " not found in " << inputname << endl;
-        cout << "Create a complete input file." << endl;
-        // return xstr;
+        messager_ << "[Setup::stringFind]: " << str << " not found in "
+                  << inputname << ". Create a complete input file.";
+        messager_.flush("error");
         exit(1);
     }
     return "";
@@ -72,8 +71,9 @@ string Setup::stringFind(string file_name, string st) {
 std::vector<double> Setup::listFind(string file_name, string st) {
     std::vector<double> varlist;
     if (!isFile(file_name)) {
-        cerr << "The input file named " << file_name << " is absent. Exiting."
-             << endl;
+        messager_ << "[Setup::listFind]: The input file named " << file_name
+                  << " is absent. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     ifstream input(file_name.c_str());
@@ -94,18 +94,14 @@ std::vector<double> Setup::listFind(string file_name, string st) {
 
 // reads a double using stringfind:
 double Setup::dFind(string file_name, string st) {
-    // cout << "ccheck1" << endl;
     string s, s2;
     double x;
     stringstream stm;
     s = stringFind(file_name, st);
-    // cout << "ccheck2" << endl;
     stm << s;
     s2 = stm.str();
-    // cout << "ccheck3" << endl;
     x = ::atof(s2.c_str());
     // x << stm;
-    // cout << "ccheck4" << endl;
     return x;
 } /* dFind */
 
@@ -121,8 +117,9 @@ int Setup::iFind(string file_name, string st) {
 int Setup::iFindOptional(string file_name, string st, int defaultValue) {
     ifstream input(file_name.c_str());
     if (!input.is_open()) {
-        cerr << "The input file named " << file_name << " is absent. Exiting."
-             << endl;
+        messager_ << "[Setup::iFindOptional]: The input file named "
+                  << file_name << " is absent. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
 
@@ -142,8 +139,9 @@ string Setup::stringFindOptional(
     string file_name, string st, string defaultValue) {
     ifstream input(file_name.c_str());
     if (!input.is_open()) {
-        cerr << "The input file named " << file_name << " is absent. Exiting."
-             << endl;
+        messager_ << "[Setup::stringFindOptional]: The input file named "
+                  << file_name << " is absent. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
 

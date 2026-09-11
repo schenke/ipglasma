@@ -6,14 +6,12 @@
 
 #include <cstring>
 #include <fstream>
-#include <iostream>
+#include <iomanip>
 #include <sstream>
 #include <string>
 
 #include "Util.h"
 
-using std::cout;
-using std::endl;
 using std::string;
 
 void Glauber::findNucleusData(
@@ -309,18 +307,22 @@ void Glauber::findNucleusData(
 }
 
 void Glauber::printGlauberData() {
-    fprintf(stderr, "glauberData_.sigmaNN = %e\n", glauberData_.sigmaNN);
-    fprintf(stderr, "glauberData_.interMax = %d\n", glauberData_.interMax);
-    fprintf(stderr, "glauberData_.sCutoff = %f\n", glauberData_.sCutoff);
+    messager_ << "[Glauber::printGlauberData]: sigmaNN = "
+              << glauberData_.sigmaNN
+              << ", interMax = " << glauberData_.interMax
+              << ", sCutoff = " << glauberData_.sCutoff;
+    messager_.flush("debug");
 }
 
 void Glauber::printNucleusData(Nucleus *nucleus) {
-    cout << "Nucleus Name: " << nucleus->name << endl;
-    cout << " Nucleus.A = " << nucleus->A << endl;
-    cout << " Nucleus.Z = " << nucleus->Z << endl;
-    cout << " Nucleus.w_WS = " << nucleus->w_WS << endl;
-    cout << " Nucleus.a_WS = " << nucleus->a_WS << endl;
-    cout << " Nucleus.R_WS = " << nucleus->R_WS << endl;
+    messager_ << "[Glauber::printNucleusData]: Nucleus Name: " << nucleus->name
+              << "\n"
+              << " Nucleus.A = " << nucleus->A << "\n"
+              << " Nucleus.Z = " << nucleus->Z << "\n"
+              << " Nucleus.w_WS = " << nucleus->w_WS << "\n"
+              << " Nucleus.a_WS = " << nucleus->a_WS << "\n"
+              << " Nucleus.R_WS = " << nucleus->R_WS;
+    messager_.flush("info");
 }
 
 int Glauber::linearFindXorg(double x, double *Vx, int ymax) {
@@ -384,10 +386,10 @@ double Glauber::vInterpolate(double x, double *Vx, double *Vy, int ymax) {
     double h;
 
     if ((x < Vx[0]) || (x > Vx[ymax])) {
-        fprintf(
-            stderr, "vInterpolate: x = %le is outside the range (%le, %le).\n",
-            x, Vx[0], Vx[ymax]);
-        fprintf(stderr, "This can't happen.  Exiting...\n");
+        messager_ << "[Glauber::vInterpolate]: x = " << x
+                  << " is outside the tabulated range [" << Vx[0] << ", "
+                  << Vx[ymax] << "]. This should never happen -- exiting.";
+        messager_.flush("error");
         exit(0);
     }
 
@@ -430,10 +432,6 @@ double *Glauber::makeVy(double *vx, int maxi_num) {
 
     for (i = 0; i <= maxi_num; i++) {
         vy[i] = nuInS(vx[i]);
-        //   if(i % di == 0)
-        //     {
-        //       cerr << st << "[" << i << "] = " << vy[i] << endl;
-        //     }
         // data_file << vx[i] << " " << vy[i] << endl;
     }
 
@@ -454,40 +452,47 @@ double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
     vx = Util::vector_malloc(maxi_num + 1);
 
     if (quiet == 1) {
-        fprintf(stderr, "Reading in Vx from %s ...\n", file_name);
+        messager_ << "[Glauber::readInVx]: Reading in Vx from " << file_name
+                  << " ...";
+        messager_.flush("info");
     }
 
     input = fopen(file_name, "r");
     if (input == nullptr) {
-        fprintf(stderr, "File %s not found. Exiting.\n", file_name);
+        messager_ << "[Glauber::readInVx]: File " << file_name
+                  << " not found. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     if (fscanf(input, "%s", s) != 1) {
-        fprintf(stderr, "File %s is empty or malformed. Exiting.\n", file_name);
+        messager_ << "[Glauber::readInVx]: File " << file_name
+                  << " is empty or malformed. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     while (strcmp(s, "EndOfData") != 0) {
         if (fscanf(input, "%s", sx) != 1 || fscanf(input, "%s", s) != 1) {
-            fprintf(
-                stderr,
-                "File %s is missing its \"EndOfData\" marker. Exiting.\n",
-                file_name);
+            messager_ << "[Glauber::readInVx]: File " << file_name
+                      << " is missing its \"EndOfData\" marker. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
     }
 
     for (i = 0; i <= maxi_num; i++) {
         if (fscanf(input, "%lf", &x) != 1) {
-            fprintf(
-                stderr, "File %s has fewer than %d entries. Exiting.\n",
-                file_name, maxi_num + 1);
+            messager_ << "[Glauber::readInVx]: File " << file_name
+                      << " has fewer than " << maxi_num + 1
+                      << " entries. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
         vx[i] = x;
         if (fscanf(input, "%lf", &x) != 1) {
-            fprintf(
-                stderr, "File %s has fewer than %d entries. Exiting.\n",
-                file_name, maxi_num + 1);
+            messager_ << "[Glauber::readInVx]: File " << file_name
+                      << " has fewer than " << maxi_num + 1
+                      << " entries. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
     }
@@ -511,39 +516,46 @@ double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
     vy = Util::vector_malloc(maxi_num + 1);
 
     if (quiet == 1) {
-        fprintf(stderr, "Reading in Vy from %s ...\n", file_name);
+        messager_ << "[Glauber::readInVy]: Reading in Vy from " << file_name
+                  << " ...";
+        messager_.flush("info");
     }
 
     input = fopen(file_name, "r");
     if (input == nullptr) {
-        fprintf(stderr, "File %s not found. Exiting.\n", file_name);
+        messager_ << "[Glauber::readInVy]: File " << file_name
+                  << " not found. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     if (fscanf(input, "%s", s) != 1) {
-        fprintf(stderr, "File %s is empty or malformed. Exiting.\n", file_name);
+        messager_ << "[Glauber::readInVy]: File " << file_name
+                  << " is empty or malformed. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     while (strcmp(s, "EndOfData") != 0) {
         if (fscanf(input, "%s", sy) != 1 || fscanf(input, "%s", s) != 1) {
-            fprintf(
-                stderr,
-                "File %s is missing its \"EndOfData\" marker. Exiting.\n",
-                file_name);
+            messager_ << "[Glauber::readInVy]: File " << file_name
+                      << " is missing its \"EndOfData\" marker. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
     }
 
     for (i = 0; i <= maxi_num; i++) {
         if (fscanf(input, "%lf", &y) != 1) {
-            fprintf(
-                stderr, "File %s has fewer than %d entries. Exiting.\n",
-                file_name, maxi_num + 1);
+            messager_ << "[Glauber::readInVy]: File " << file_name
+                      << " has fewer than " << maxi_num + 1
+                      << " entries. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
         if (fscanf(input, "%lf", &y) != 1) {
-            fprintf(
-                stderr, "File %s has fewer than %d entries. Exiting.\n",
-                file_name, maxi_num + 1);
+            messager_ << "[Glauber::readInVy]: File " << file_name
+                      << " has fewer than " << maxi_num + 1
+                      << " entries. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
         vy[i] = y;
@@ -609,8 +621,6 @@ double Glauber::interNuTInST(double s) {
         vy = makeVy(vx, maxi_num);
     } /* if ind */
 
-    // cout << *vx << " " << *vy << endl;
-
     if (s > up)
         return 0.0;
     else {
@@ -642,7 +652,6 @@ void Glauber::calcRho(Nucleus *nucleus) {
         f = anum3Fermi(R_WS) / (nucleus->rho_WS);
 
     nucleus->rho_WS = (nucleus->A) / f;
-    // cout << " nucleus->rho_WS=" << nucleus->rho_WS << endl;
 } /* calcRho */
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
@@ -658,7 +667,6 @@ double Glauber::nuInS(double s) {
     id = Nuc_WS_->densityFunc;
 
     count = 0;
-    // cout << "calling integral" << endl;
     y = integral(id, 0.0, 1.0, TOL, &count);
 
     return y;
@@ -940,7 +948,6 @@ double Glauber::nuIntHulthen(double xi) {
     g = (1.0 / r) * (exp(-r) - exp(-(b_WS / a_WS) * r));
     f *= g * g;
 
-    //   fprintf(stderr, "%e\n", f);
     return f;
 } /* nuIntHulthen */
 
@@ -970,10 +977,6 @@ double Glauber::integral(
                 g1[i] = oLSIntegrand(down + i * dx);
             else if (id == 8)
                 g1[i] = nuIntHulthen(down + i * dx);
-            //
-            // cout << *count << " " << id << " " << down << " " << up << ",
-            // g1[" << i
-            // << "]=" << g1[i] << endl;
         }
         *count = 7;
         y = qnc7(id, tol, down, dx, g1, 0.0, 0.0, count);
@@ -1048,8 +1051,6 @@ double Glauber::qnc7(
     left_sum = 0.0;
     for (i = 0; i < 7; i++) left_sum += w[i] * fl[i];
     left_sum *= dx;
-
-    /*printf("leftsum is %le\n", left_sum);*/
 
     /*
       like wise, the right sum is in fr[]
@@ -1129,8 +1130,6 @@ double Glauber::qnc7(
             qnc7(id, tol, down + dx * 6., dx, fr, right_sum, area, count);
 
         ans = left_sum + right_sum;
-
-        /* printf("ans is %le\n", ans);*/
 
     } /* belongs to if*/
 
@@ -1230,7 +1229,6 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
                                  // (larger root_s) (was originally written
     // for root(s)=200 GeV, hence the cross section of 4.21325504715 fm^2
     // (=42.13 mb)
-    cout.precision(10);
     if (nucleus == NucleusRole::Projectile) {
         do {
             phi = 2. * M_PI * random->genrand64_real1();
@@ -1244,10 +1242,14 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
             tmp = random->genrand64_real1();
 
             // x is uniform on [0,1]
-            if (r * interNuPInSP(r) > A * r * 11. * exp(-r * r / 40.))
-                cout << "WARNING: TA>envelope: "
-                     << "TA=" << r * interNuPInSP(r)
-                     << ", f=" << A * r * 11. * exp(-r * r / 40.) << endl;
+            if (r * interNuPInSP(r) > A * r * 11. * exp(-r * r / 40.)) {
+                messager_ << std::setprecision(10)
+                          << "[Glauber::sampleTARejection]: rejection-"
+                             "sampling envelope exceeded: TA="
+                          << r * interNuPInSP(r)
+                          << ", envelope=" << A * r * 11. * exp(-r * r / 40.);
+                messager_.flush("warning");
+            }
         } while (tmp > r * interNuPInSP(r) / (A * r * 11. * exp(-r * r / 40.)));
     } else {
         do {
@@ -1261,10 +1263,14 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
             // is a uniform random number on [0, area under f(x)]
             tmp = random->genrand64_real1();
             // x is uniform on [0,1]
-            if (r * interNuTInST(r) > A * r * 11. * exp(-r * r / 40.))
-                cout << "WARNING: TA>envelope: "
-                     << "TA=" << r * interNuTInST(r)
-                     << ", f=" << A * r * 11. * exp(-r * r / 40.) << endl;
+            if (r * interNuTInST(r) > A * r * 11. * exp(-r * r / 40.)) {
+                messager_ << std::setprecision(10)
+                          << "[Glauber::sampleTARejection]: rejection-"
+                             "sampling envelope exceeded: TA="
+                          << r * interNuTInST(r)
+                          << ", envelope=" << A * r * 11. * exp(-r * r / 40.);
+                messager_.flush("warning");
+            }
         } while (tmp > r * interNuTInST(r) / (A * r * 11. * exp(-r * r / 40.)));
     }
     // reject if tmp is larger than the ratio p(y)/f(y),

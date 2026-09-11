@@ -81,7 +81,7 @@ class Init {
     // *random, Glauber *glauber);
 
     Matrix getUfromExponent(std::vector<double> &Q);
-    bool findUInForwardLightconeChun(
+    bool findUInForwardLightcone(
         Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
 
     void readInNucleusConfigs(

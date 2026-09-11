@@ -14,8 +14,8 @@ Lattice::Lattice(Parameters *param, int length) {
     size_ = length * length;
     const double a = param->getL() / static_cast<double>(length);
 
-    messager_ << "Allocating square lattice of size " << length << "x"
-              << length << " with a=" << a << " fm ...";
+    messager_ << "[Lattice::Lattice]: Allocating square lattice of size "
+              << length << "x" << length << " with a=" << a << " fm ...";
 
     // Each vector is one contiguous field of fixed 3x3 matrices.  Preserve the
     // original Cell constructor semantics: all eight matrices start as I_3.
@@ -92,7 +92,8 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     }
     foutU.close();
 
-    std::cout << "wrote " << strVOne_name.str() << std::endl;
+    messager_ << "[Lattice::writeSU3Matrices]: wrote " << strVOne_name.str();
+    messager_.flush("info");
 
     std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
     foutU2.precision(15);
@@ -106,7 +107,8 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     }
     foutU2.close();
 
-    std::cout << "wrote " << strVTwo_name.str() << std::endl;
+    messager_ << "[Lattice::writeSU3Matrices]: wrote " << strVTwo_name.str();
+    messager_.flush("info");
 }
 
 void Lattice::writeWilsonLines(
@@ -145,7 +147,9 @@ void Lattice::writeWilsonLines(
         }
         foutU.close();
 
-        std::cout << "wrote " << strVOne_name.str() << std::endl;
+        messager_ << "[Lattice::writeWilsonLines]: wrote "
+                  << strVOne_name.str();
+        messager_.flush("info");
     } else if (param->getWriteWilsonLines() == 2) {
         std::ofstream Outfile1;
         Outfile1.open(
@@ -167,7 +171,14 @@ void Lattice::writeWilsonLines(
             for (int iy = 0; iy < N; iy++) {
                 for (int a1 = 0; a1 < 3; a1++) {
                     for (int b = 0; b < 3; b++) {
-                        int indx = N * iy + ix;
+                        // Matches the text branch above and every other
+                        // U/U2 indexing in the codebase; previously this
+                        // read N * iy + ix, transposing the lattice in the
+                        // binary output whenever ix != iy (invisible on a
+                        // symmetric/identity lattice, which is why no test
+                        // caught it -- see Init::readVFromFile's matching
+                        // fix on the read side).
+                        int indx = N * ix + iy;
                         int SU3indx = a1 * Nc_ + b;
                         if (isProjectile) {
                             val1[0] = U[indx].getRe(SU3indx);
@@ -183,19 +194,24 @@ void Lattice::writeWilsonLines(
         }
 
         if (Outfile1.good() == false) {
-            std::cerr << "#CRTICAL ERROR -- BINARY OUTPUT OF VECTOR "
-                         "CURRENTS FAILED"
-                      << std::endl;
+            messager_.error(
+                "[Lattice::writeWilsonLines]: Failed to write the Wilson "
+                "line binary output file.");
             exit(1);
         }
 
         delete[] val1;
 
         Outfile1.close();
-        std::cout << "wrote " << strVOne_name.str() << std::endl;
+        messager_ << "[Lattice::writeWilsonLines]: wrote "
+                  << strVOne_name.str();
+        messager_.flush("info");
     } else {
-        std::cerr << "# Unknwon option param->getWriteWilsonLines()=="
-                  << param->getWriteWilsonLines() << std::endl;
+        std::stringstream errorMsg;
+        errorMsg << "[Lattice::writeWilsonLines]: Unknown writeWilsonLines "
+                    "value "
+                 << param->getWriteWilsonLines() << ". Exiting.";
+        messager_.error(errorMsg.str());
         exit(1);
     }
 }

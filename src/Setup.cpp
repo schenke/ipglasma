@@ -7,9 +7,6 @@
 #include <sstream>
 #include <string>
 
-using std::cerr;
-using std::cout;
-using std::endl;
 using std::ifstream;
 using std::string;
 using std::stringstream;
@@ -35,8 +32,9 @@ string Setup::stringFind(string file_name, string st) {
     static int flag = 0;
     if (flag == 0) {
         if (!isFile(file_name)) {
-            cerr << "The input file named " << file_name
-                 << " is absent. Exiting." << endl;
+            messager_ << "The input file named " << file_name
+                      << " is absent. Exiting.";
+            messager_.flush("error");
             exit(1);
         }
         flag = 1;
@@ -61,9 +59,9 @@ string Setup::stringFind(string file_name, string st) {
     input.close();
 
     if (ind == 0) {
-        cerr << str << " not found in " << inputname << endl;
-        cout << "Create a complete input file." << endl;
-        // return xstr;
+        messager_ << str << " not found in " << inputname
+                  << ". Create a complete input file.";
+        messager_.flush("error");
         exit(1);
     }
     return "";
@@ -72,8 +70,9 @@ string Setup::stringFind(string file_name, string st) {
 std::vector<double> Setup::listFind(string file_name, string st) {
     std::vector<double> varlist;
     if (!isFile(file_name)) {
-        cerr << "The input file named " << file_name << " is absent. Exiting."
-             << endl;
+        messager_ << "The input file named " << file_name
+                  << " is absent. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
     ifstream input(file_name.c_str());
@@ -121,8 +120,9 @@ int Setup::iFind(string file_name, string st) {
 int Setup::iFindOptional(string file_name, string st, int defaultValue) {
     ifstream input(file_name.c_str());
     if (!input.is_open()) {
-        cerr << "The input file named " << file_name << " is absent. Exiting."
-             << endl;
+        messager_ << "The input file named " << file_name
+                  << " is absent. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
 
@@ -142,8 +142,9 @@ string Setup::stringFindOptional(
     string file_name, string st, string defaultValue) {
     ifstream input(file_name.c_str());
     if (!input.is_open()) {
-        cerr << "The input file named " << file_name << " is absent. Exiting."
-             << endl;
+        messager_ << "The input file named " << file_name
+                  << " is absent. Exiting.";
+        messager_.flush("error");
         exit(1);
     }
 

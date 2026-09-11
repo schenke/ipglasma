@@ -6,8 +6,8 @@
 #include <sstream>
 #include <string>
 
-using std::cerr;
-using std::cout;
+#include "PrettyOstream.h"
+
 using std::endl;
 using std::string;
 
@@ -62,14 +62,18 @@ string stringFind(string file_name, string st) {
 
     int ind;
     static int flag = 0;
+    PrettyOstream messager;
     if (flag == 0) {
         if (!isFile(file_name)) {
-            cerr << "The file named " << file_name << " is absent." << endl;
             if (file_name == "") {
-                cerr << "No input file name specified." << endl;
+                messager << "The file named " << file_name
+                         << " is absent. No input file name specified.";
+                messager.flush("error");
                 exit(1);
             } else {
-                cout << "Creating " << tmpfilename << "..." << endl;
+                messager << "The file named " << file_name
+                         << " is absent. Creating " << tmpfilename << "...";
+                messager.flush("info");
             }
             std::ofstream tmp_file(tmpfilename.c_str());
             tmp_file << "EndOfData" << endl;
@@ -95,8 +99,9 @@ string stringFind(string file_name, string st) {
     input.close();
 
     if (ind == 0) {
-        cerr << str << " not found in " << inputname << endl;
-        cout << "Create an input file." << endl;
+        messager << str << " not found in " << inputname
+                 << ". Create an input file.";
+        messager.flush("error");
         exit(1);
     }
     return "";

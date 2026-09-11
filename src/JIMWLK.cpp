@@ -223,12 +223,13 @@ void JIMWLK::evolution() {
     }
 
     unsigned int iSnapshot = 0;
-    std::cout << "Evolving projectile, evolution steps " << steps_1
-              << std::endl;
+    messager_ << "Evolving projectile, evolution steps " << steps_1;
+    messager_.flush("info");
     for (int ids = 0; ids < steps_1; ids++) {
         int printSteps = steps_1 / 10;
         if (ids % printSteps == 0) {
-            std::cout << "Step " << ids << std::endl;
+            messager_ << "Step " << ids;
+            messager_.flush("info");
         }
         double xLoc = x0 * exp(-ids * dlogx);
         evolutionStep(NucleusRole::Projectile);
@@ -245,14 +246,17 @@ void JIMWLK::evolution() {
             }
         }
     }
-    std::cout << "Done." << std::endl;
+    messager_ << "Done.";
+    messager_.flush("info");
 
-    std::cout << "Evolving target, evolution steps " << steps_2 << std::endl;
+    messager_ << "Evolving target, evolution steps " << steps_2;
+    messager_.flush("info");
     iSnapshot = 0;
     for (int ids = 0; ids < steps_2; ids++) {
         int printSteps = steps_2 / 10;
         if (ids % printSteps == 0) {
-            std::cout << "Step " << ids << std::endl;
+            messager_ << "Step " << ids;
+            messager_.flush("info");
         }
         double xLoc = x0 * exp(-ids * dlogx);
         evolutionStep(NucleusRole::Target);
@@ -269,7 +273,8 @@ void JIMWLK::evolution() {
             }
         }
     }
-    std::cout << "Done." << std::endl;
+    messager_ << "Done.";
+    messager_.flush("info");
 }
 
 void JIMWLK::evolutionStep(NucleusRole nucleus) {

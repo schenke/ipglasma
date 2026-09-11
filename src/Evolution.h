@@ -12,11 +12,13 @@
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 
 class Evolution {
   private:
     FFT *fft_;
     double nIn_[100];  // k_T array
+    PrettyOstream messager_;
 
   public:
     // Constructor

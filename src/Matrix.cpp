@@ -8,6 +8,8 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 #include <sstream>
 #include <vector>
 
+#include "PrettyOstream.h"
+
 using std::cerr;
 using std::cout;
 using std::endl;
@@ -322,7 +324,8 @@ Matrix &Matrix::expm(double t, const int p) {
     double norm = 0.0;
     // Calculate Pade coefficients
     if (p < 6) {
-        cout << "Matrix::expm: p should be at least 6. Exiting." << endl;
+        PrettyOstream messager;
+        messager.error("Matrix::expm: p should be at least 6. Exiting.");
         exit(0);
     }
     // hard coded values for speed
@@ -363,8 +366,12 @@ Matrix &Matrix::expm(double t, const int p) {
         } else {
             //	    Some error happens, H has elements which are NaN or
             // infinity.
-            cerr << "Null input error in the template expm_pad.\n";
-            cout << "Null INPUT : " << *this << "\n";
+            std::ostringstream errorMsg;
+            errorMsg << "Null input error in the template expm_pad. "
+                        "Null INPUT : "
+                     << *this;
+            PrettyOstream messager;
+            messager.error(errorMsg.str());
             exit(0);
         }
     }

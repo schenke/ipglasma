@@ -6,9 +6,12 @@
 
 #include "Lattice.h"
 #include "Parameters.h"
+#include "PrettyOstream.h"
 
 class MyEigen {
   private:
+    PrettyOstream messager_;
+
   public:
     // Constructor.
     MyEigen() {};

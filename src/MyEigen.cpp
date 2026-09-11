@@ -6,7 +6,6 @@
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
-#include <iostream>
 #include <sstream>
 #include <stdexcept>
 #include <string>
@@ -21,7 +20,6 @@
 using PhysConst::hbarc;
 using PhysConst::smallEps;
 
-using std::cout;
 using std::endl;
 using std::ofstream;
 using std::string;
@@ -375,26 +373,32 @@ void MyEigen::flowVelocity4DImpl(
                 // write Tmunu in case no u was found
                 if (foundU == 0) {
                     if (si == N / 2 && sj == N / 2) {
-                        cout << si << " " << sj << endl << endl;
-                        cout << lat->cells[pos]->getTtautau() << " "
-                             << lat->cells[pos]->getTtaux() << " "
-                             << lat->cells[pos]->getTtauy() << " "
-                             << lat->cells[pos]->getTtaueta() << endl;
-                        cout << lat->cells[pos]->getTtaux() << " "
-                             << lat->cells[pos]->getTxx() << " "
-                             << lat->cells[pos]->getTxy() << " "
-                             << lat->cells[pos]->getTxeta() << endl;
-                        cout << lat->cells[pos]->getTtauy() << " "
-                             << lat->cells[pos]->getTxy() << " "
-                             << lat->cells[pos]->getTyy() << " "
-                             << lat->cells[pos]->getTyeta() << endl;
-                        cout << lat->cells[pos]->getTtaueta() << " "
-                             << lat->cells[pos]->getTxeta() << " "
-                             << lat->cells[pos]->getTyeta() << " "
-                             << lat->cells[pos]->getTetaeta() << endl;
-                        cout << "ux=" << ux << endl;
-                        cout << "uy=" << uy << endl;
-                        cout << "ueta=" << ueta << endl;
+                        // A fresh, stack-local instance: this runs inside
+                        // an omp parallel region, and PrettyOstream is not
+                        // thread-safe to share.
+                        PrettyOstream localMessager;
+                        localMessager
+                            << si << " " << sj << "\n\n"
+                            << lat->cells[pos]->getTtautau() << " "
+                            << lat->cells[pos]->getTtaux() << " "
+                            << lat->cells[pos]->getTtauy() << " "
+                            << lat->cells[pos]->getTtaueta() << "\n"
+                            << lat->cells[pos]->getTtaux() << " "
+                            << lat->cells[pos]->getTxx() << " "
+                            << lat->cells[pos]->getTxy() << " "
+                            << lat->cells[pos]->getTxeta() << "\n"
+                            << lat->cells[pos]->getTtauy() << " "
+                            << lat->cells[pos]->getTxy() << " "
+                            << lat->cells[pos]->getTyy() << " "
+                            << lat->cells[pos]->getTyeta() << "\n"
+                            << lat->cells[pos]->getTtaueta() << " "
+                            << lat->cells[pos]->getTxeta() << " "
+                            << lat->cells[pos]->getTyeta() << " "
+                            << lat->cells[pos]->getTetaeta() << "\n"
+                            << "ux=" << ux << "\n"
+                            << "uy=" << uy << "\n"
+                            << "ueta=" << ueta;
+                        localMessager.flush("info");
                     }
                 }
 
@@ -453,12 +457,13 @@ void MyEigen::flowVelocity4DImpl(
             gsl_matrix_complex_free(evec_ws);
         }  // omp parallel
 
-        cout << it * dtau * a << " average u^x=" << sqrt(averageux / averageeps)
-             << endl;
-        cout << it * dtau * a << " average u^y=" << sqrt(averageuy / averageeps)
-             << endl;
-        cout << it * dtau * a
-             << " average tau u^eta=" << sqrt(averageueta / averageeps) << endl;
+        messager_ << it * dtau * a
+                  << " average u^x=" << sqrt(averageux / averageeps) << "\n"
+                  << it * dtau * a
+                  << " average u^y=" << sqrt(averageuy / averageeps) << "\n"
+                  << it * dtau * a << " average tau u^eta="
+                  << sqrt(averageueta / averageeps);
+        messager_.flush("info");
     }
 
     //  double maxtime = param->getMaxtime(); // maxtime is in fm
@@ -498,8 +503,8 @@ void MyEigen::flowVelocity4DImpl(
     }
 
     if (hL > L) {
-        cout << "WARNING: hydro grid length larger than the computed one."
-             << endl;
+        messager_.warning(
+            "hydro grid length larger than the computed one.");
     }
 
     int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3;
@@ -940,7 +945,8 @@ void MyEigen::flowVelocity4DImpl(
         }
 
         closeBufferedTextOutput(foutEps2, outputFilename);
-        cout << "Etot = " << Etot << " GeV " << endl;
+        messager_ << "Etot = " << Etot << " GeV ";
+        messager_.flush("info");
     }
     //       foutEtot <<  Etot << endl;
     // foutEtot.close();
@@ -1508,6 +1514,6 @@ void MyEigen::flowVelocity4DImpl(
             }
         }
     }
-    cout << "Wrote outputs" << endl;
+    messager_.info("Wrote outputs");
     // done output for hydro
 }

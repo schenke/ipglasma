@@ -1,0 +1,54 @@
+name: Apply clang-format
+
+# Runs formatCode.sh against every PR and pushes a fixup commit if
+# anything needed reformatting. GITHUB_TOKEN can only push to branches in
+# this repository, so this only takes effect for PRs opened from a branch
+# here -- PRs from a fork skip this job entirely (GitHub Actions has no
+# way to push to someone else's fork with the default token); those still
+# need clang-format applied locally (./formatCode.sh) before merging.
+on:
+  pull_request:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: clang-format-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Install clang-format
+        # .clang-format uses options (e.g. AlignCaseArrows) that only exist
+        # in clang-format 19+; Ubuntu's own apt repo tops out at 18, which
+        # fails to even parse the config. Install from the LLVM apt repo
+        # instead.
+        run: |
+          wget https://apt.llvm.org/llvm.sh
+          chmod +x llvm.sh
+          sudo ./llvm.sh 19
+          sudo apt-get install -y clang-format-19
+          sudo ln -sf "$(command -v clang-format-19)" /usr/local/bin/clang-format
+
+      - name: Run clang-format
+        run: ./formatCode.sh
+
+      - name: Commit and push formatting fixes
+        run: |
+          git add src
+          if git diff --cached --quiet; then
+            echo "Already formatted, nothing to do."
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git commit -m "style: apply clang-format"
+            git push origin "HEAD:${{ github.head_ref }}"
+          fi

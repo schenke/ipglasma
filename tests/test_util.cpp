@@ -1,16 +1,20 @@
-#include "doctest.h"
-
 #include <cstdio>
 #include <cstring>
 #include <fstream>
 #include <string>
 
 #include "Util.h"
+#include "doctest.h"
 
 namespace {
-// Util::stringFind/dFind/iFind (the non-"Optional" variants) call exit(1)
-// on a missing key or missing file -- same as Setup's equivalents -- so
-// only the success path (key present) is exercised here.
+// Util::stringFind/dFind/iFind (the non-"Optional" variants) exit(1) on an
+// empty file name or an absent key, same as Setup's equivalents. A missing
+// but non-empty file name instead falls back to reading an empty "input"
+// file it creates in the current directory -- which then almost always
+// hits the "key not found" exit(1) path too, since that fallback file has
+// nothing in it. Only the success path (key present in an existing file)
+// is exercised here; the exit(1) paths would need a subprocess-based
+// death test, which this suite doesn't have infrastructure for.
 class TempInputFile {
   public:
     explicit TempInputFile(const std::string &contents) {

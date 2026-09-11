@@ -9,11 +9,21 @@
 #include <algorithm>
 #include <iomanip>
 #include <iostream>
+#include <mutex>
 #include <sstream>
 
 using std::cout;
 using std::endl;
 using std::string;
+
+namespace {
+// Guards the actual writes to cout below. Each PrettyOstream instance owns
+// its own message buffer, so one per OpenMP thread is safe, but the
+// terminal itself is one shared resource and each message below is
+// written as several separate operator<< calls, which could otherwise
+// interleave with another thread's message.
+std::mutex ttyMutex;
+}  // namespace
 
 PrettyOstream::PrettyOstream() {}
 
@@ -37,22 +47,26 @@ void PrettyOstream::flush(string type) {
 
 //! This function output information message
 void PrettyOstream::info(string message) {
+    std::lock_guard<std::mutex> lock(ttyMutex);
     cout << "[Info] " << getMemoryUsage() << " " << message << endl;
 }
 
 //! This function output debug message
 void PrettyOstream::debug(string message) {
+    std::lock_guard<std::mutex> lock(ttyMutex);
     cout << CYAN << "[Debug] " << getMemoryUsage() << " " << message << RESET
          << endl;
 }
 
 //! This function output warning message
 void PrettyOstream::warning(string message) {
+    std::lock_guard<std::mutex> lock(ttyMutex);
     cout << BOLD << YELLOW << "[Warning] " << message << RESET << endl;
 }
 
 //! This function output error message
 void PrettyOstream::error(string message) {
+    std::lock_guard<std::mutex> lock(ttyMutex);
     cout << BOLD << RED << "[Error] " << message << RESET << endl;
 }
 

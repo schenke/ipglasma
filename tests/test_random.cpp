@@ -1,9 +1,8 @@
-#include "doctest.h"
-
 #include <cmath>
 #include <vector>
 
 #include "Random.h"
+#include "doctest.h"
 
 TEST_CASE("Random: gaussBulk reproduces the exact gauss() stream") {
     const std::size_t n = 2001;  // odd, to exercise the leftover-pair path
@@ -13,6 +12,14 @@ TEST_CASE("Random: gaussBulk reproduces the exact gauss() stream") {
     scalarRng.init_genrand64(seed);
     std::vector<double> scalarStream(n);
     for (std::size_t i = 0; i < n; ++i) scalarStream[i] = scalarRng.gauss();
+    // gauss() uses the Box-Muller transform, which produces values in
+    // pairs and caches the second one for the next call. n is odd, so at
+    // this point scalarRng has one cached value left over; draw it now so
+    // the comparison below also covers gaussBulk() leaving the same value
+    // cached for its own next scalar draw (an implementation that returns
+    // the right n values but clears or overwrites that cache would
+    // otherwise still pass this test).
+    const double scalarNext = scalarRng.gauss();
 
     Random bulkRng;
     bulkRng.init_genrand64(seed);
@@ -23,6 +30,7 @@ TEST_CASE("Random: gaussBulk reproduces the exact gauss() stream") {
     for (std::size_t i = 0; i < n; ++i) {
         CHECK(bulkStream[i] == scalarStream[i]);
     }
+    CHECK(bulkRng.gauss() == scalarNext);
 }
 
 TEST_CASE("Random: gaussBulk output has ~zero mean and ~unit variance") {
@@ -63,7 +71,9 @@ TEST_CASE("Random: init_genrand64 makes genrand64_int64/int63 deterministic") {
     }
 }
 
-TEST_CASE("Random: genrand64_int63 is genrand64_int64 with the top bit dropped") {
+TEST_CASE(
+    "Random: genrand64_int63 is genrand64_int64 shifted right by one (bottom "
+    "bit dropped, sign bit clear)") {
     Random rng;
     rng.init_genrand64(1ULL);
     Random rng2;
@@ -76,7 +86,8 @@ TEST_CASE("Random: genrand64_int63 is genrand64_int64 with the top bit dropped")
     }
 }
 
-TEST_CASE("Random: genrand64_real1/real2/real3 stay within their documented ranges") {
+TEST_CASE(
+    "Random: genrand64_real1/real2/real3 stay within their documented ranges") {
     Random rng;
     rng.init_genrand64(2024ULL);
     for (int i = 0; i < 5000; ++i) {
@@ -92,7 +103,8 @@ TEST_CASE("Random: genrand64_real1/real2/real3 stay within their documented rang
     }
 }
 
-TEST_CASE("Random: gslRandomInit makes poisson() deterministic and ~correct mean") {
+TEST_CASE(
+    "Random: gslRandomInit makes poisson() deterministic and ~correct mean") {
     Random a, b;
     a.gslRandomInit(2025ULL);
     b.gslRandomInit(2025ULL);

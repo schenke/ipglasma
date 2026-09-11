@@ -572,8 +572,14 @@ int readInput(
 
     // read and set all the parameters in the "param" object of class
     // "Parameters"
-    if (rank == 0)
+    if (rank == 0) {
         messager << "[main::readInput]: Reading parameters from file ... ";
+        // Flush immediately rather than deferring to the "done." message
+        // far below: if any of the reads that follow hits a missing
+        // key/file and calls exit(1), this is the only indication that
+        // parameter parsing had even started.
+        messager.flush("info");
+    }
     param->setNucleusQsTableFileName(
         setup->stringFind(file_name, "NucleusQsTableFileName"));
     param->setNucleonPositionsFromFile(
@@ -716,7 +722,7 @@ int readInput(
     param->setxSnapshotList(setup->listFind(file_name, "xSnapshotList"));
 
     if (rank == 0) {
-        messager << "done.";
+        messager << "[main::readInput]: Finished reading parameters.";
         messager.flush("info");
     }
 

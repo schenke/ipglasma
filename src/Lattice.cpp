@@ -171,7 +171,14 @@ void Lattice::writeWilsonLines(
             for (int iy = 0; iy < N; iy++) {
                 for (int a1 = 0; a1 < 3; a1++) {
                     for (int b = 0; b < 3; b++) {
-                        int indx = N * iy + ix;
+                        // Matches the text branch above and every other
+                        // U/U2 indexing in the codebase; previously this
+                        // read N * iy + ix, transposing the lattice in the
+                        // binary output whenever ix != iy (invisible on a
+                        // symmetric/identity lattice, which is why no test
+                        // caught it -- see Init::readVFromFile's matching
+                        // fix on the read side).
+                        int indx = N * ix + iy;
                         int SU3indx = a1 * Nc_ + b;
                         if (isProjectile) {
                             val1[0] = U[indx].getRe(SU3indx);

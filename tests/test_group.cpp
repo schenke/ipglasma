@@ -17,6 +17,21 @@ TEST_CASE("Group: fundamental-rep generators are Hermitian and traceless") {
     }
 }
 
+TEST_CASE("Group: const getT() overload returns the same generators") {
+    Group group;
+    const Group &constGroup = group;
+    for (int a = 0; a < 8; ++a) {
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                CHECK(
+                    std::abs(
+                        constGroup.getT(a).get(i, j) - group.getT(a).get(i, j))
+                    < 1e-14);
+            }
+        }
+    }
+}
+
 TEST_CASE("Group: generators are normalized to Tr(t^a t^b) = 0.5 delta^ab") {
     Group group;
     for (int a = 0; a < 8; ++a) {

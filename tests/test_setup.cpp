@@ -44,6 +44,17 @@ TEST_CASE("Setup: stringFind/iFind read present keys") {
     CHECK(setup.iFind(file.path(), "foo") == 42);
 }
 
+TEST_CASE("Setup::uLLIFind reads and rounds to the nearest integer") {
+    TempInputFile file(
+        "count 42\n"
+        "rounded 7.6\n"
+        "EndOfFile\n");
+    Setup setup;
+
+    CHECK(setup.uLLIFind(file.path(), "count") == 42ULL);
+    CHECK(setup.uLLIFind(file.path(), "rounded") == 8ULL);  // 7.6 + 0.5 -> 8
+}
+
 TEST_CASE("Setup: stringFindOptional/iFindOptional fall back to default") {
     TempInputFile file(
         "foo 42\n"

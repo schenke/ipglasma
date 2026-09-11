@@ -29,7 +29,6 @@ void FFT::fftnVector(
 
     // ndim is the dimension of the FFT (always 2 here)
 
-    //    cout << "mDim=" << mDim << endl;
     // for each component of the vector fill the input array for the FFT (resort
     // as you fill in)
     for (int k = 0; k < mDim; k++) {
@@ -96,9 +95,6 @@ void FFT::fftnVector(
                 position = outdata[pos]->begin() + k;
                 *position =
                     complex<double>(output[newpos][0], output[newpos][1]);
-                //	cout << output[newpos][0] << " " << output[newpos][1] <<
-                // endl;
-                // cout << "data=" << data[pos]->at(k) << endl;
             }
         }
         //	oo   ->  xo
@@ -143,7 +139,7 @@ void FFT::fftnArray(
     const int isign, const int mDim) {
     IPG_PROFILE_SCOPE("fft.total");
     if (mDim > kMaxBatchDim) {
-        messager_ << "FFT::fftnArray: mDim=" << mDim
+        messager_ << "[FFT::fftnArray]: mDim=" << mDim
                   << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting.";
         messager_.flush("error");
         exit(1);
@@ -216,7 +212,7 @@ void FFT::fftnComplexArray(
     const int isign, const int mDim) {
     IPG_PROFILE_SCOPE("fft.total");
     if (mDim > kMaxBatchDim) {
-        messager_ << "FFT::fftnComplexArray: mDim=" << mDim
+        messager_ << "[FFT::fftnComplexArray]: mDim=" << mDim
                   << " exceeds kMaxBatchDim=" << kMaxBatchDim << ". Exiting.";
         messager_.flush("error");
         exit(1);

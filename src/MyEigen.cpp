@@ -377,27 +377,27 @@ void MyEigen::flowVelocity4DImpl(
                         // an omp parallel region, and PrettyOstream is not
                         // thread-safe to share.
                         PrettyOstream localMessager;
-                        localMessager
-                            << si << " " << sj << "\n\n"
-                            << lat->cells[pos]->getTtautau() << " "
-                            << lat->cells[pos]->getTtaux() << " "
-                            << lat->cells[pos]->getTtauy() << " "
-                            << lat->cells[pos]->getTtaueta() << "\n"
-                            << lat->cells[pos]->getTtaux() << " "
-                            << lat->cells[pos]->getTxx() << " "
-                            << lat->cells[pos]->getTxy() << " "
-                            << lat->cells[pos]->getTxeta() << "\n"
-                            << lat->cells[pos]->getTtauy() << " "
-                            << lat->cells[pos]->getTxy() << " "
-                            << lat->cells[pos]->getTyy() << " "
-                            << lat->cells[pos]->getTyeta() << "\n"
-                            << lat->cells[pos]->getTtaueta() << " "
-                            << lat->cells[pos]->getTxeta() << " "
-                            << lat->cells[pos]->getTyeta() << " "
-                            << lat->cells[pos]->getTetaeta() << "\n"
-                            << "ux=" << ux << "\n"
-                            << "uy=" << uy << "\n"
-                            << "ueta=" << ueta;
+                        localMessager << "[MyEigen::flowVelocity4DImpl]: " << si
+                                      << " " << sj << "\n\n"
+                                      << lat->cells[pos]->getTtautau() << " "
+                                      << lat->cells[pos]->getTtaux() << " "
+                                      << lat->cells[pos]->getTtauy() << " "
+                                      << lat->cells[pos]->getTtaueta() << "\n"
+                                      << lat->cells[pos]->getTtaux() << " "
+                                      << lat->cells[pos]->getTxx() << " "
+                                      << lat->cells[pos]->getTxy() << " "
+                                      << lat->cells[pos]->getTxeta() << "\n"
+                                      << lat->cells[pos]->getTtauy() << " "
+                                      << lat->cells[pos]->getTxy() << " "
+                                      << lat->cells[pos]->getTyy() << " "
+                                      << lat->cells[pos]->getTyeta() << "\n"
+                                      << lat->cells[pos]->getTtaueta() << " "
+                                      << lat->cells[pos]->getTxeta() << " "
+                                      << lat->cells[pos]->getTyeta() << " "
+                                      << lat->cells[pos]->getTetaeta() << "\n"
+                                      << "ux=" << ux << "\n"
+                                      << "uy=" << uy << "\n"
+                                      << "ueta=" << ueta;
                         localMessager.flush("info");
                     }
                 }
@@ -457,12 +457,12 @@ void MyEigen::flowVelocity4DImpl(
             gsl_matrix_complex_free(evec_ws);
         }  // omp parallel
 
-        messager_ << it * dtau * a
+        messager_ << "[MyEigen::flowVelocity4DImpl]: " << it * dtau * a
                   << " average u^x=" << sqrt(averageux / averageeps) << "\n"
                   << it * dtau * a
                   << " average u^y=" << sqrt(averageuy / averageeps) << "\n"
-                  << it * dtau * a << " average tau u^eta="
-                  << sqrt(averageueta / averageeps);
+                  << it * dtau * a
+                  << " average tau u^eta=" << sqrt(averageueta / averageeps);
         messager_.flush("info");
     }
 
@@ -504,7 +504,8 @@ void MyEigen::flowVelocity4DImpl(
 
     if (hL > L) {
         messager_.warning(
-            "hydro grid length larger than the computed one.");
+            "[MyEigen::flowVelocity4DImpl]: hydro grid length larger than "
+            "the computed one.");
     }
 
     int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3;
@@ -945,7 +946,8 @@ void MyEigen::flowVelocity4DImpl(
         }
 
         closeBufferedTextOutput(foutEps2, outputFilename);
-        messager_ << "Etot = " << Etot << " GeV ";
+        messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot
+                  << " GeV ";
         messager_.flush("info");
     }
     //       foutEtot <<  Etot << endl;
@@ -1514,6 +1516,6 @@ void MyEigen::flowVelocity4DImpl(
             }
         }
     }
-    messager_.info("Wrote outputs");
+    messager_.info("[MyEigen::flowVelocity4DImpl]: Wrote outputs");
     // done output for hydro
 }

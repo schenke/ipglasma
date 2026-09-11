@@ -134,7 +134,7 @@ void GaugeFix::fftChi(
         }
     }
 
-    messager_ << "gauge fixing";
+    messager_ << "[GaugeFix::fftChi]: gauge fixing";
     messager_.flush("info");
 
     for (int gfiter = 0; gfiter < max_gfiter; gfiter++) {
@@ -175,7 +175,7 @@ void GaugeFix::fftChi(
         gresidual /= N * N;
 
         if (gfiter % 10 == 0) {
-            messager_ << gfiter << " " << gresidual;
+            messager_ << "[GaugeFix::fftChi]: " << gfiter << " " << gresidual;
             messager_.flush("info");
             gresidual_prev = gresidual;
         }
@@ -246,8 +246,8 @@ void GaugeFix::fftChi(
                             // inside an omp parallel region, and
                             // PrettyOstream is not thread-safe to share.
                             std::ostringstream warnMsg;
-                            warnMsg << "problem at " << i << " " << j
-                                    << " with g=" << localg;
+                            warnMsg << "[GaugeFix::fftChi]: problem at " << i
+                                    << " " << j << " with g=" << localg;
                             PrettyOstream localMessager;
                             localMessager.warning(warnMsg.str());
                             localg = one;

@@ -9,7 +9,6 @@
 #endif
 
 #include <fftw3.h>
-
 #include <unistd.h>
 
 #include <algorithm>

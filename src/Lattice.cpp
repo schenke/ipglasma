@@ -14,8 +14,8 @@ Lattice::Lattice(Parameters *param, int length) {
     size_ = length * length;
     const double a = param->getL() / static_cast<double>(length);
 
-    messager_ << "Allocating square lattice of size " << length << "x"
-              << length << " with a=" << a << " fm ...";
+    messager_ << "[Lattice::Lattice]: Allocating square lattice of size "
+              << length << "x" << length << " with a=" << a << " fm ...";
 
     // Each vector is one contiguous field of fixed 3x3 matrices.  Preserve the
     // original Cell constructor semantics: all eight matrices start as I_3.
@@ -92,7 +92,7 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     }
     foutU.close();
 
-    messager_ << "wrote " << strVOne_name.str();
+    messager_ << "[Lattice::writeSU3Matrices]: wrote " << strVOne_name.str();
     messager_.flush("info");
 
     std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
@@ -107,7 +107,7 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     }
     foutU2.close();
 
-    messager_ << "wrote " << strVTwo_name.str();
+    messager_ << "[Lattice::writeSU3Matrices]: wrote " << strVTwo_name.str();
     messager_.flush("info");
 }
 
@@ -147,7 +147,8 @@ void Lattice::writeWilsonLines(
         }
         foutU.close();
 
-        messager_ << "wrote " << strVOne_name.str();
+        messager_ << "[Lattice::writeWilsonLines]: wrote "
+                  << strVOne_name.str();
         messager_.flush("info");
     } else if (param->getWriteWilsonLines() == 2) {
         std::ofstream Outfile1;
@@ -187,18 +188,21 @@ void Lattice::writeWilsonLines(
 
         if (Outfile1.good() == false) {
             messager_.error(
-                "CRITICAL ERROR -- BINARY OUTPUT OF VECTOR CURRENTS FAILED");
+                "[Lattice::writeWilsonLines]: CRITICAL ERROR -- BINARY "
+                "OUTPUT OF VECTOR CURRENTS FAILED");
             exit(1);
         }
 
         delete[] val1;
 
         Outfile1.close();
-        messager_ << "wrote " << strVOne_name.str();
+        messager_ << "[Lattice::writeWilsonLines]: wrote "
+                  << strVOne_name.str();
         messager_.flush("info");
     } else {
         std::stringstream errorMsg;
-        errorMsg << "Unknown option param->getWriteWilsonLines()=="
+        errorMsg << "[Lattice::writeWilsonLines]: Unknown option "
+                    "param->getWriteWilsonLines()=="
                  << param->getWriteWilsonLines();
         messager_.error(errorMsg.str());
         exit(1);

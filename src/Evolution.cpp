@@ -450,7 +450,7 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
 
         if (Gauss.square() > largest) largest = Gauss.square();
     }
-    messager_ << "Gauss violation=" << largest;
+    messager_ << "[Evolution::checkGaussLaw]: Gauss violation=" << largest;
     messager_.flush("info");
 }
 
@@ -580,8 +580,9 @@ void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
         throw std::runtime_error(
             "failed while writing evolved-field snapshot " + filename.str());
     }
-    messager_ << "Wrote evolved fields at tau=" << tauFm << " fm/c to "
-              << filename.str();
+    messager_ << "[Evolution::writeEvolvedFields]: Wrote evolved fields "
+                 "at tau="
+              << tauFm << " fm/c to " << filename.str();
     messager_.flush("info");
 }
 
@@ -654,8 +655,10 @@ void Evolution::writeGluonMultiplicityTarget(
         throw std::runtime_error(
             "failed while writing gluon-multiplicity target " + filename.str());
     }
-    messager_ << "Wrote gluon target dN/d" << rapidityVariable << "="
-              << dNPrimary << " to " << filename.str();
+    messager_ << "[Evolution::writeGluonMultiplicityTarget]: Wrote gluon "
+                 "target dN/d"
+              << rapidityVariable << "=" << dNPrimary << " to "
+              << filename.str();
     messager_.flush("info");
 }
 
@@ -681,7 +684,8 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     double maxtime = param->getMaxtime();  // maxtime is in fm
     if (param->getInverseQsForMaxTime() == 1) {
         maxtime = 1. / param->getAverageQs() * hbarc;
-        messager_ << "maximal evolution time = " << maxtime << " fm";
+        messager_ << "[Evolution::run]: maximal evolution time = " << maxtime
+                  << " fm";
         messager_.flush("info");
     }
 
@@ -712,19 +716,20 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     std::vector<Matrix> tmunuE2Backup(latticeSites);
     std::vector<Matrix> tmunuPiBackup(latticeSites);
 
-    messager_ << "Starting evolution: num of time steps=" << itmax;
+    messager_ << "[Evolution::run]: Starting evolution: num of time steps="
+              << itmax;
     messager_.flush("info");
     if ((param->getWriteOutputs() == 5)) {
-        messager_ << "Measuring at times " << it0 * a * dtau << ", "
-                  << it1 * a * dtau << ", " << it2 * a * dtau << ", "
+        messager_ << "[Evolution::run]: Measuring at times " << it0 * a * dtau
+                  << ", " << it1 * a * dtau << ", " << it2 * a * dtau << ", "
                   << it3 * a * dtau << ", " << itmax * a * dtau << ". ";
         messager_.flush("info");
     }
-    messager_ << " a = " << a;
+    messager_ << "[Evolution::run]:  a = " << a;
     messager_.flush("info");
-    messager_ << " dtau = " << dtau;
+    messager_ << "[Evolution::run]:  dtau = " << dtau;
     messager_.flush("info");
-    messager_ << " it0 = " << it0;
+    messager_ << "[Evolution::run]:  it0 = " << it0;
     messager_.flush("info");
 
     // do evolution
@@ -787,7 +792,8 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         if (it % 10 == 1) {
-            messager_ << "Evolving to time " << it * a * dtau << " fm/c";
+            messager_ << "[Evolution::run]: Evolving to time " << it * a * dtau
+                      << " fm/c";
             messager_.flush("info");
         }
 
@@ -2514,7 +2520,7 @@ void Evolution::eccentricity(
 }
 
 void Evolution::readNkt(Parameters *param) {
-    messager_ << "Reading n(k_T) from file ";
+    messager_ << "[Evolution::readNkt]: Reading n(k_T) from file ";
     messager_.flush("info");
     string Npart, dummy;
     string kt, nkt, Tpp, b;
@@ -2529,7 +2535,7 @@ void Evolution::readNkt(Parameters *param) {
     string mult_name;
     mult_name = strmult_name.str();
     fin.open(mult_name.c_str());
-    messager_ << mult_name.c_str() << " ... ";
+    messager_ << "[Evolution::readNkt]: File " << mult_name.c_str() << " ... ";
     messager_.flush("info");
 
     // open file
@@ -2540,7 +2546,7 @@ void Evolution::readNkt(Parameters *param) {
     string mult_name2;
     mult_name2 = strmult_name2.str();
     fin2.open(mult_name2.c_str());
-    messager_ << mult_name2.c_str() << " ... ";
+    messager_ << "[Evolution::readNkt]: File " << mult_name2.c_str() << " ... ";
     messager_.flush("info");
 
     // read file
@@ -2556,14 +2562,14 @@ void Evolution::readNkt(Parameters *param) {
                 if (ikt == 0) dkt = atof(kt.c_str());
                 if (ikt == 1) dkt = dkt - atof(kt.c_str());
             }
-            messager_ << nIn_[ikt];
+            messager_ << "[Evolution::readNkt]: " << nIn_[ikt];
             messager_.flush("info");
         }
         fin.close();
-        messager_ << " done.";
+        messager_ << "[Evolution::readNkt]:  done.";
         messager_.flush("info");
     } else {
-        messager_ << "[Evolution.cpp:readNkt]: File " << mult_name.c_str()
+        messager_ << "[Evolution::readNkt]: File " << mult_name.c_str()
                   << " does not exist. Exiting.";
         messager_.flush("error");
         exit(1);
@@ -2579,10 +2585,10 @@ void Evolution::readNkt(Parameters *param) {
             dNdeta = atof(nkt.c_str());
         }
         fin2.close();
-        messager_ << " done.";
+        messager_ << "[Evolution::readNkt]:  done.";
         messager_.flush("info");
     } else {
-        messager_ << "[Evolution.cpp:readNkt]: File " << mult_name2.c_str()
+        messager_ << "[Evolution::readNkt]: File " << mult_name2.c_str()
                   << " does not exist. Exiting.";
         messager_.flush("error");
         exit(1);
@@ -2653,7 +2659,7 @@ int Evolution::multiplicity(
                       << param->getEventId() << ".dat";
     string NpartdNdy_name;
     NpartdNdy_name = strNpartdNdy_name.str();
-    messager_ << "Measuring multiplicity ... ";
+    messager_ << "[Evolution::multiplicity]: Measuring multiplicity ... ";
     messager_.flush("info");
 
     // fix transverse Coulomb gauge
@@ -2662,7 +2668,8 @@ int Evolution::multiplicity(
     double maxtime;
     if (param->getInverseQsForMaxTime() == 1) {
         maxtime = 1. / param->getAverageQs() * hbarc;
-        messager_ << "maximal evolution time = " << maxtime << " fm";
+        messager_ << "[Evolution::multiplicity]: maximal evolution time = "
+                  << maxtime << " fm";
         messager_.flush("info");
     } else {
         maxtime = param->getMaxtime();  // maxtime is in fm
@@ -3359,7 +3366,7 @@ int Evolution::multiplicity(
     // compute hadrons using fragmentation function
     if (it == itmax && param->getWriteOutputs() == 3) {
         const double hadronizationStart = ipg::wallSeconds();
-        messager_ << " Hadronizing ... ";
+        messager_ << "[Evolution::multiplicity]:  Hadronizing ... ";
         messager_.flush("info");
         double z, frac;
         double mypt, kt;
@@ -3466,7 +3473,7 @@ int Evolution::multiplicity(
         }
         foutdNdpt.close();
 
-        messager_ << " done.";
+        messager_ << "[Evolution::multiplicity]:  done.";
         messager_.flush("info");
 
         // integrate over pT using gsl
@@ -3504,11 +3511,14 @@ int Evolution::multiplicity(
     }
 
     if (param->getUsePseudoRapidity() == 0 && param->getMPIRank() == 0) {
-        messager_ << "dN/dy 1 = " << dNdeta << ", dE/dy 1 = " << dEdeta;
+        messager_ << "[Evolution::multiplicity]: dN/dy 1 = " << dNdeta
+                  << ", dE/dy 1 = " << dEdeta;
         messager_.flush("info");
-        messager_ << "dN/dy 2 = " << dNdeta2 << ", dE/dy 2 = " << dEdeta2;
+        messager_ << "[Evolution::multiplicity]: dN/dy 2 = " << dNdeta2
+                  << ", dE/dy 2 = " << dEdeta2;
         messager_.flush("info");
-        messager_ << "gluon <p_T> = " << dEdeta / dNdeta;
+        messager_ << "[Evolution::multiplicity]: gluon <p_T> = "
+                  << dEdeta / dNdeta;
         messager_.flush("info");
     } else if (param->getUsePseudoRapidity() == 1) {
         m = param->getJacobianm();                                // in GeV
@@ -3521,17 +3531,20 @@ int Evolution::multiplicity(
             / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / (P * P)));
 
         if (param->getMPIRank() == 0) {
-            messager_ << "dN/deta 1 = " << dNdeta << ", dE/deta 1 = "
-                      << dEdeta;
+            messager_ << "[Evolution::multiplicity]: dN/deta 1 = " << dNdeta
+                      << ", dE/deta 1 = " << dEdeta;
             messager_.flush("info");
-            messager_ << "dN/deta 2 = " << dNdeta2 << ", dE/deta 2 = "
-                      << dEdeta2;
+            messager_ << "[Evolution::multiplicity]: dN/deta 2 = " << dNdeta2
+                      << ", dE/deta 2 = " << dEdeta2;
             messager_.flush("info");
-            messager_ << "dN/deta_cut 1 = " << dNdetaCut;
+            messager_ << "[Evolution::multiplicity]: dN/deta_cut 1 = "
+                      << dNdetaCut;
             messager_.flush("info");
-            messager_ << "dN/deta_cut 2 = " << dNdetaCut2;
+            messager_ << "[Evolution::multiplicity]: dN/deta_cut 2 = "
+                      << dNdetaCut2;
             messager_.flush("info");
-            messager_ << "gluon <p_T> = " << dEdeta / dNdeta;
+            messager_ << "[Evolution::multiplicity]: gluon <p_T> = "
+                      << dEdeta / dNdeta;
             messager_.flush("info");
         }
     }
@@ -3540,7 +3553,9 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.report", multiplicityPhaseStart);
 
     if (dNdeta == 0.) {
-        messager_ << "No collision happened on rank " << param->getMPIRank()
+        messager_ << "[Evolution::multiplicity]: No collision happened on "
+                     "rank "
+                  << param->getMPIRank()
                   << ". Restarting with new random number...";
         messager_.flush("warning");
         for (int i = 0; i < N * N; i++) {
@@ -3590,7 +3605,7 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.cleanup", multiplicityPhaseStart);
 
-    messager_ << " done.";
+    messager_ << "[Evolution::multiplicity]:  done.";
     messager_.flush("info");
     param->setSuccess(1);
     return 1;

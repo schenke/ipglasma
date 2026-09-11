@@ -78,10 +78,6 @@ double kkp(int ih, int iset, double x, double qs) {
         sb = log(
             log(qs * qs / (rlam * rlam)) / log(rmbb * rmbb / (rlam * rlam)));
 
-        //      cout << "s=" << s << endl;
-        //       cout << "sc=" << sc << endl;
-        //       cout << "sb=" << sb << endl;
-
         // ---------------------- LO PION ------------------------------
         b[1] = 6.04510;
         b[2] = -0.71378;

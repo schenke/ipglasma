@@ -294,8 +294,3 @@ TEST_CASE("Matrix: free +/- operators match the in-place versions") {
     CHECK(matricesClose(sum, Matrix(3.), 1e-14));
     CHECK(matricesClose(diff, Matrix(1.), 1e-14));
 }
-
-// Note: Matrix.h also declares a unary operator-(const Matrix&) and a binary
-// operator/(const Matrix&, const Matrix&), but neither has a definition
-// anywhere in Matrix.cpp -- they are unused, unimplemented declarations, so
-// calling either would fail to link. Not tested here for that reason.

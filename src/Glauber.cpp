@@ -313,7 +313,8 @@ void Glauber::printGlauberData() {
 }
 
 void Glauber::printNucleusData(Nucleus *nucleus) {
-    messager_ << "Nucleus Name: " << nucleus->name << "\n"
+    messager_ << "[Glauber::printNucleusData]: Nucleus Name: " << nucleus->name
+              << "\n"
               << " Nucleus.A = " << nucleus->A << "\n"
               << " Nucleus.Z = " << nucleus->Z << "\n"
               << " Nucleus.w_WS = " << nucleus->w_WS << "\n"
@@ -429,10 +430,6 @@ double *Glauber::makeVy(double *vx, int maxi_num) {
 
     for (i = 0; i <= maxi_num; i++) {
         vy[i] = nuInS(vx[i]);
-        //   if(i % di == 0)
-        //     {
-        //       cerr << st << "[" << i << "] = " << vy[i] << endl;
-        //     }
         // data_file << vx[i] << " " << vy[i] << endl;
     }
 
@@ -608,8 +605,6 @@ double Glauber::interNuTInST(double s) {
         vy = makeVy(vx, maxi_num);
     } /* if ind */
 
-    // cout << *vx << " " << *vy << endl;
-
     if (s > up)
         return 0.0;
     else {
@@ -641,7 +636,6 @@ void Glauber::calcRho(Nucleus *nucleus) {
         f = anum3Fermi(R_WS) / (nucleus->rho_WS);
 
     nucleus->rho_WS = (nucleus->A) / f;
-    // cout << " nucleus->rho_WS=" << nucleus->rho_WS << endl;
 } /* calcRho */
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% */
@@ -657,7 +651,6 @@ double Glauber::nuInS(double s) {
     id = Nuc_WS_->densityFunc;
 
     count = 0;
-    // cout << "calling integral" << endl;
     y = integral(id, 0.0, 1.0, TOL, &count);
 
     return y;
@@ -969,10 +962,6 @@ double Glauber::integral(
                 g1[i] = oLSIntegrand(down + i * dx);
             else if (id == 8)
                 g1[i] = nuIntHulthen(down + i * dx);
-            //
-            // cout << *count << " " << id << " " << down << " " << up << ",
-            // g1[" << i
-            // << "]=" << g1[i] << endl;
         }
         *count = 7;
         y = qnc7(id, tol, down, dx, g1, 0.0, 0.0, count);
@@ -1243,7 +1232,9 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
 
             // x is uniform on [0,1]
             if (r * interNuPInSP(r) > A * r * 11. * exp(-r * r / 40.)) {
-                messager_ << std::setprecision(10) << "WARNING: TA>envelope: "
+                messager_ << std::setprecision(10)
+                          << "[Glauber::sampleTARejection]: WARNING: "
+                             "TA>envelope: "
                           << "TA=" << r * interNuPInSP(r)
                           << ", f=" << A * r * 11. * exp(-r * r / 40.);
                 messager_.flush("warning");
@@ -1262,7 +1253,9 @@ ReturnValue Glauber::sampleTARejection(Random *random, NucleusRole nucleus) {
             tmp = random->genrand64_real1();
             // x is uniform on [0,1]
             if (r * interNuTInST(r) > A * r * 11. * exp(-r * r / 40.)) {
-                messager_ << std::setprecision(10) << "WARNING: TA>envelope: "
+                messager_ << std::setprecision(10)
+                          << "[Glauber::sampleTARejection]: WARNING: "
+                             "TA>envelope: "
                           << "TA=" << r * interNuTInST(r)
                           << ", f=" << A * r * 11. * exp(-r * r / 40.);
                 messager_.flush("warning");

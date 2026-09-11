@@ -30,7 +30,6 @@
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
 
-using std::cerr;
 using std::cout;
 using std::endl;
 using std::ifstream;
@@ -78,7 +77,8 @@ int main(int argc, char *argv[]) {
 
     // Validate parameters before proceeding
     if (!param->ValidParameters()) {
-        messager << "Error: Invalid parameters detected. Exiting.";
+        messager << "[main::main]: Error: Invalid parameters detected. "
+                    "Exiting.";
         messager.flush("error");
         return 1;
     }
@@ -93,13 +93,14 @@ int main(int argc, char *argv[]) {
             // rnum = time(0) + param->getSeed() * 10000;
         } else {
             rnum = param->getSeed();
-            messager << "Random seed = " << rnum + (rank * 1000)
+            messager << "[main::main]: Random seed = " << rnum + (rank * 1000)
                      << " - entered directly +rank*1000.";
             messager.flush("info");
         }
         param->setRandomSeed(rnum + rank * 1000);
         if (param->getUseTimeForSeed() == 1) {
-            messager << "Random seed = " << param->getRandomSeed();
+            messager << "[main::main]: Random seed = "
+                     << param->getRandomSeed();
             //<< " made from time " << rnum - param->getSeed() - (rank * 1000)
             //<< " and argument (+1000*rank) "
             //<< param->getSeed() + (rank * 1000);
@@ -117,21 +118,23 @@ int main(int argc, char *argv[]) {
                     fin >> seedList[i];
                 } else {
                     messager.error(
-                        "Not enough random seeds for the number of "
-                        "processors selected. Exiting.");
+                        "[main::main]: Not enough random seeds for the number "
+                        "of processors selected. Exiting.");
                     exit(1);
                 }
             }
         } else {
-            messager.error("Random seed file 'seedList' not found. Exiting.");
+            messager.error(
+                "[main::main]: Random seed file 'seedList' not found. "
+                "Exiting.");
             exit(1);
         }
         fin.close();
         param->setRandomSeed(seedList[rank]);
         random->init_genrand64(seedList[rank]);
         random->gslRandomInit(seedList[rank]);
-        messager << "Random seed on rank " << rank << " = " << seedList[rank]
-                 << " read from list.";
+        messager << "[main::main]: Random seed on rank " << rank << " = "
+                 << seedList[rank] << " read from list.";
         messager.flush("info");
     }
     random->setGammaIncCDF(param->getOmega());
@@ -141,8 +144,8 @@ int main(int argc, char *argv[]) {
         const int profiler_event_id = rank + iev * size;
         ipg::Profiler::instance().beginEvent(profiler_event_id);
 
-        messager << "Generating event " << iev + 1 << " out of " << nev
-                 << " ...";
+        messager << "[main::main]: Generating event " << iev + 1 << " out of "
+                 << nev << " ...";
         messager.flush("info");
         // welcome
         if (rank == 0) display_logo();
@@ -188,7 +191,8 @@ int main(int argc, char *argv[]) {
         Group group;
 
         // initialize Glauber class
-        messager << "Init Glauber on rank " << param->getMPIRank() << " ... ";
+        messager << "[main::main]: Init Glauber on rank " << param->getMPIRank()
+                 << " ... ";
         messager.flush("info");
         Glauber glauber;
         {
@@ -359,7 +363,7 @@ int main(int argc, char *argv[]) {
         {
             // allocate lattice
             Lattice lat(param, param->getSize());
-            messager.info("Lattice generated.");
+            messager.info("[main::main]: Lattice generated.");
 
             param->setSuccess(0);
 
@@ -376,10 +380,10 @@ int main(int argc, char *argv[]) {
             init.init(&lat, &group, param, random, &glauber, init_method);
 
             if (param->getUseJIMWLK()) {
-                messager.info("Start JIMWLK");
+                messager.info("[main::main]: Start JIMWLK");
                 JIMWLK jimwlkSolver(*param, &group, &lat, random);
                 jimwlkSolver.evolution();
-                messager.info("Finish JIMWLK");
+                messager.info("[main::main]: Finish JIMWLK");
 
                 if (param->getWriteWilsonLines() > 0) {
                     std::stringstream s1;
@@ -391,8 +395,7 @@ int main(int argc, char *argv[]) {
                     std::stringstream s2;
                     s2 << "Final_x_"
                        << std::to_string(param->getJimwlk_x_target()) << "_";
-                    lat.writeWilsonLines(
-                        s2.str(), param, NucleusRole::Target);
+                    lat.writeWilsonLines(s2.str(), param, NucleusRole::Target);
                 }
             }
 
@@ -406,7 +409,7 @@ int main(int argc, char *argv[]) {
                 }
                 init.shiftFieldsWithImpactParameter(&lat, param);
                 init.initializeForwardLightCone(&lat, param);
-                messager.info("Start CYM evolution");
+                messager.info("[main::main]: Start CYM evolution");
                 // do the CYM evolution of the initialized fields using
                 // parmeters in param
                 evolution.run(&lat, &group, param);
@@ -419,7 +422,7 @@ int main(int argc, char *argv[]) {
             }
 #endif
 
-            messager.info("One event finished");
+            messager.info("[main::main]: One event finished");
             if (param->getWriteOutputsToHDF5() == 1) {
                 IPG_PROFILE_SCOPE("output.hdf5_collect_event");
                 int status = 0;
@@ -432,7 +435,8 @@ int main(int argc, char *argv[]) {
                     << " --event_id " << param->getEventId();
                 status = system(collect_command.str().c_str());
                 messager
-                    << "finished system call to python script with status: "
+                    << "[main::main]: finished system call to python script "
+                       "with status: "
                     << status;
                 messager.flush("info");
                 h5Flag = 1;
@@ -457,7 +461,8 @@ int main(int argc, char *argv[]) {
                         << " --output_filename RESULTS"
                         << " --combine_hdf5_files_only";
         status = system(collect_command.str().c_str());
-        messager << "finished system call to python script with status: "
+        messager << "[main::main]: finished system call to python script "
+                    "with status: "
                  << status;
         messager.flush("info");
     }
@@ -537,21 +542,24 @@ int readInput(
     if (argc > 1) {
         file_name = argv[1];
         if (rank == 0) {
-            messager << "Using file name \"" << file_name << "\".";
+            messager << "[main::readInput]: Using file name \"" << file_name
+                     << "\".";
             messager.flush("info");
         }
     } else {
         file_name = "input";
         if (rank == 0) {
-            messager << "No input file name given. Using default \""
-                      << file_name << "\".";
+            messager << "[main::readInput]: No input file name given. Using "
+                        "default \""
+                     << file_name << "\".";
             messager.flush("info");
         }
     }
 
     // read and set all the parameters in the "param" object of class
     // "Parameters"
-    if (rank == 0) messager << "Reading parameters from file ... ";
+    if (rank == 0)
+        messager << "[main::readInput]: Reading parameters from file ... ";
     param->setNucleusQsTableFileName(
         setup->stringFind(file_name, "NucleusQsTableFileName"));
     param->setNucleonPositionsFromFile(

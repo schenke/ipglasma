@@ -66,12 +66,12 @@ string stringFind(string file_name, string st) {
     if (flag == 0) {
         if (!isFile(file_name)) {
             if (file_name == "") {
-                messager << "The file named " << file_name
+                messager << "[Util::stringFind]: The file named " << file_name
                          << " is absent. No input file name specified.";
                 messager.flush("error");
                 exit(1);
             } else {
-                messager << "The file named " << file_name
+                messager << "[Util::stringFind]: The file named " << file_name
                          << " is absent. Creating " << tmpfilename << "...";
                 messager.flush("info");
             }
@@ -99,8 +99,8 @@ string stringFind(string file_name, string st) {
     input.close();
 
     if (ind == 0) {
-        messager << str << " not found in " << inputname
-                 << ". Create an input file.";
+        messager << "[Util::stringFind]: " << str << " not found in "
+                 << inputname << ". Create an input file.";
         messager.flush("error");
         exit(1);
     }

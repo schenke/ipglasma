@@ -98,12 +98,13 @@ void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     ReturnValue rv, rv2;
-    messager_.info("Sampling nucleon positions ... ");
+    messager_.info("[Init::sampleTA]: Sampling nucleon positions ... ");
 
     if (param->getNucleonPositionsFromFile() == 0) {
         if (param->getAverageOverNuclei() > 1) {
             if ((glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
-                messager_ << "Averaging not supported for collisions "
+                messager_ << "[Init::sampleTA]: Averaging not supported for "
+                             "collisions "
                              "involving protons "
                              "... Exiting.";
                 messager_.flush("info");
@@ -199,7 +200,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         if (nucleonPosArrA_.size() > 0) {
             double ran2 = random->genrand64_real3();
             int nucleusNumber = static_cast<int>(ran2 * nucleonPosArrA_.size());
-            messager_ << "using nucleus Number = " << nucleusNumber;
+            messager_ << "[Init::sampleTA]: using nucleus Number = "
+                      << nucleusNumber;
             messager_.flush("info");
             for (int iA = 0; iA < glauber->nucleusA1(); iA++) {
                 rv.x = nucleonPosArrA_[nucleusNumber][3 * iA];
@@ -213,7 +215,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         } else {
             // no configurations, sample with Woods-Saxon
             messager_
-                << "configuration file for A = " << glauber->nucleusA1()
+                << "[Init::sampleTA]: configuration file for A = "
+                << glauber->nucleusA1()
                 << " is not available, generate the nucleus configuration "
                 << "using Woods-Saxon distribution instead.";
             messager_.flush("info");
@@ -235,7 +238,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         if (nucleonPosArrB_.size() > 0) {
             double ran2 = random->genrand64_real3();
             int nucleusNumber = static_cast<int>(ran2 * nucleonPosArrB_.size());
-            messager_ << "using nucleus Number = " << nucleusNumber;
+            messager_ << "[Init::sampleTA]: using nucleus Number = "
+                      << nucleusNumber;
             messager_.flush("info");
             for (int iA = 0; iA < glauber->nucleusA2(); iA++) {
                 rv.x = nucleonPosArrB_[nucleusNumber][3 * iA];
@@ -249,7 +253,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         } else {
             // no configurations, sample with Woods-Saxon
             messager_
-                << "configuration file for A = " << glauber->nucleusA2()
+                << "[Init::sampleTA]: configuration file for A = "
+                << glauber->nucleusA2()
                 << " is not available, generate the nucleus configuration "
                 << "using Woods-Saxon distribution instead.";
             messager_.flush("info");
@@ -270,7 +275,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         // Read in Alvioli's nucleon positions including correlations
         if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
             messager_
-                << "[Init.cpp]: The option 'getNucleonPositionsFromFile == 2' "
+                << "[Init::sampleTA]: The option 'getNucleonPositionsFromFile "
+                   "== 2' "
                    "only "
                    "works for either both nuclei Pb-208 or Projectile p and "
                    "Target "
@@ -279,7 +285,9 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
             exit(1);
         }
 
-        messager_ << "Retrieving nuclei from ";
+        messager_
+            << "[Init::sampleTA]: Retrieving nucleon positions from Alvioli's "
+               "correlated Pb-208 configuration files.";
         messager_.flush("info");
 
         // generate the file name
@@ -302,7 +310,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         ifstream fin;
         fin.open(fileName.c_str());
         if (!fin) {
-            messager_ << "File " << fileName
+            messager_ << "[Init::sampleTA]: File " << fileName
                       << " not found. Trying alternative location:";
             messager_.flush("info");
             str_file.str("");
@@ -317,12 +325,14 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         }
 
         if (!fin) {
-            messager_ << "File " << fileName << " not found. Exiting.";
+            messager_ << "[Init::sampleTA]: File " << fileName
+                      << " not found. Exiting.";
             messager_.flush("info");
             exit(1);
         }
 
-        messager_ << "Reading nucleon positions for nucleus A from file "
+        messager_ << "[Init::sampleTA]: Reading nucleon positions for nucleus "
+                     "A from file "
                   << fileName << " ... ";
         messager_.flush("info");
 
@@ -330,7 +340,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         // sample the position in the file uniformly (10,000 events per file)
         double ran2 = random->genrand64_real3();
         int nucleusNumber = static_cast<int>(ran2 * 10000);
-        messager_ << "Nucleus Number = " << nucleusNumber;
+        messager_ << "[Init::sampleTA]: Nucleus Number = " << nucleusNumber;
         messager_.flush("info");
 
         int A = 0;
@@ -362,9 +372,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
                     rv.collided = 0;
                     nucleusA_.push_back(rv);
                     A++;
-                    //        cout << "A=" << A << "/" <<
-                    // glauber->nucleusA1()<<endl; cout << rv.x << " " << rv.y
-                    // << endl;
                 }
             }
         }
@@ -387,7 +394,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         // open the file
         fin.open(fileName.c_str());
         if (!fin) {
-            messager_ << "File " << fileName
+            messager_ << "[Init::sampleTA]: File " << fileName
                       << " not found. Trying alternative location:";
             messager_.flush("info");
             str_file.str("");
@@ -402,12 +409,14 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         }
 
         if (!fin) {
-            messager_ << "File " << fileName << " not found. Exiting.";
+            messager_ << "[Init::sampleTA]: File " << fileName
+                      << " not found. Exiting.";
             messager_.flush("info");
             exit(1);
         }
 
-        messager_ << "Reading nucleon positions for nucleus B from file "
+        messager_ << "[Init::sampleTA]: Reading nucleon positions for nucleus "
+                     "B from file "
                   << fileName << " ... ";
         messager_.flush("info");
 
@@ -415,7 +424,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         ran2 = random->genrand64_real3();  // sample the position in the file
                                            // uniformly (10,000 events per file)
         nucleusNumber = static_cast<int>(ran2 * 10000);
-        messager_ << "Nucleus Number = " << nucleusNumber;
+        messager_ << "[Init::sampleTA]: Nucleus Number = " << nucleusNumber;
         messager_.flush("info");
 
         // go to the correct line in the file
@@ -443,9 +452,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
                     rv.collided = 0;
                     nucleusB_.push_back(rv);
                     A2++;
-                    //    cout << "A2=" << A2 << "/" <<
-                    // glauber->nucleusA2()<<endl; cout << rv.x << " " << rv.y
-                    // << endl;
                 }
             }
         }
@@ -457,7 +463,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         assignProtons(random, nucleusA_, glauber->nucleusZ1());
         assignProtons(random, nucleusB_, glauber->nucleusZ2());
     } else {
-        messager_ << "NucleonPositionsFromFile can be 0 (sample nucleons) or "
+        messager_ << "[Init::sampleTA]: NucleonPositionsFromFile can be 0 "
+                     "(sample nucleons) or "
                      "1 or 2 "
                      "(read from files) - you chose "
                   << param->getNucleonPositionsFromFile() << ". Exiting.";
@@ -504,7 +511,7 @@ void Init::readNuclearQs(Parameters *param) {
     string T, Qs;
     // open file
 
-    messager_ << "Reading Q_s(sum(T_p),y) from file ";
+    messager_ << "[Init::readNuclearQs]: Reading Q_s(sum(T_p),y) from file ";
     messager_ << param->getNucleusQsTableFileName() << " ... ";
     messager_.flush("info");
 
@@ -520,7 +527,8 @@ void Init::readNuclearQs(Parameters *param) {
                     fin >> Qs;
                     Qs2Nuclear_[iT][iy] = atof(Qs.c_str());
                 } else {
-                    messager_ << " End of file reached prematurely. Did the "
+                    messager_ << "[Init::readNuclearQs]: End of file reached "
+                                 "prematurely. Did the "
                                  "file "
                                  "change? "
                                  "Exiting.";
@@ -531,83 +539,13 @@ void Init::readNuclearQs(Parameters *param) {
         }
         fin.close();
     } else {
-        messager_ << "[Init.cpp:readNuclearQs]: File "
+        messager_ << "[Init::readNuclearQs]: File "
                   << param->getNucleusQsTableFileName()
                   << " does not exist. Exiting.";
         messager_.flush("info");
         exit(1);
     }
 }
-
-// void Init::readNuclearQs(Parameters *param)
-// {
-//   int rank = param->getMPIRank();
-//   int size;
-//   MPI_Comm_size (MPI_COMM_WORLD, &size);
-//   if(rank==0)
-//     {
-//       double package[iTpmax_*iymaxNuc_];
-//       // steps in qs0 and Y in the file
-//       string dummy;
-//       string T, Qs;
-//       // open file
-//       ifstream fin;
-//       fin.open((param->getNucleusQsTableFileName()).c_str());
-
-//       cout << param->getNucleusQsTableFileName() << " ... " ;
-
-//       cout << "Reading Q_s(sum(T_p),y) from file ";
-//       if(fin)
-//         {
-//           for (int iT=0; iT<iTpmax_; iT++)
-//             {
-//               for (int iy=0; iy<iymaxNuc_; iy++)
-//                 {
-//                   if (!fin.eof())
-//                     {
-//                       fin >> dummy;
-//                       fin >> T;
-//                       Tlist_[iT]=atof(T.c_str());
-//                       fin >> Qs;
-//                       Qs2Nuclear_[iT][iy]=atof(Qs.c_str());
-//                       package[iT*iymaxNuc_+iy] = Qs2Nuclear_[iT][iy];
-//                     }
-//                   else
-//                     {
-//                       cerr << " End of file reached prematurely. Did the file
-//                       change? Exiting." << endl; exit(1);
-//                     }
-//                 }
-//             }
-//           fin.close();
-//           for (int target=1; target<size; target++)
-//             {
-//               MPI::COMM_WORLD.Send(package,iTpmax_*iymaxNuc_,MPI::DOUBLE,target,target);
-//               MPI::COMM_WORLD.Send(Tlist_,iTpmax_,MPI::DOUBLE,target,target+size);
-//             }
-//           cout << " done." << endl;
-//         }
-//       else
-//         {
-//           cout << "[Init.cpp:readNuclearQs]: File " <<
-//           param->getNucleusQsTableFileName() << " does not exist. Exiting."
-//           << endl; exit(1);
-//         }
-//     }
-//   else
-//     {
-//       double package[iTpmax_*iymaxNuc_];
-//       MPI::COMM_WORLD.Recv(package,iTpmax_*iymaxNuc_,MPI::DOUBLE,0,rank);
-//       MPI::COMM_WORLD.Recv(Tlist_,iTpmax_,MPI::DOUBLE,0,rank+size);
-//       for (int iT=0; iT<iTpmax_; iT++)
-//         {
-//           for (int iy=0; iy<iymaxNuc_; iy++)
-//             {
-//               Qs2Nuclear_[iT][iy]= package[iT*iymaxNuc_+iy];
-//             }
-//         }
-//     }
-// }
 
 void Init::readInNucleusConfigs(
     const int nucleusA, const int lightNucleusOption,
@@ -680,11 +618,14 @@ void Init::readInNucleusConfigs(
     }
 
     fileName = path + fileName;
-    messager_ << "read in nucleus configurations from " << fileName;
+    messager_
+        << "[Init::readInNucleusConfigs]: read in nucleus configurations from "
+        << fileName;
     messager_.flush("info");
     std::ifstream inFile(fileName, std::ios::binary);
     if (!inFile) {
-        messager_ << "File " << fileName << " not found. Exiting.";
+        messager_ << "[Init::readInNucleusConfigs]: File " << fileName
+                  << " not found. Exiting.";
         messager_.flush("info");
         exit(1);
     }
@@ -701,7 +642,8 @@ void Init::readInNucleusConfigs(
         nucleonPosArr.push_back(tempPos);
     }
     inFile.close();
-    messager_ << "read in " << nucleonPosArr.size() << " configurations.";
+    messager_ << "[Init::readInNucleusConfigs]: read in "
+              << nucleonPosArr.size() << " configurations.";
     messager_.flush("info");
 }
 
@@ -806,7 +748,7 @@ double Init::getNuclearQs2(double T, double y) {
         // (setColorChargeDensity), so use a fresh, stack-local instance
         // rather than sharing messager_, which is not thread-safe.
         PrettyOstream localMessager;
-        localMessager << " [Init:getNuclearQs2]:ERROR: y out of range. "
+        localMessager << "[Init::getNuclearQs2]: ERROR: y out of range. "
                          "Maximum y "
                          "value "
                          "is "
@@ -820,12 +762,10 @@ double Init::getNuclearQs2(double T, double y) {
     if (T > Tlist_[iTpmax_ - 1]) {
         // Local instance for the same omp thread-safety reason as above.
         PrettyOstream localMessager;
-        localMessager << "T=" << T
-                       << ", maximal T in table=" << Tlist_[iTpmax_ - 1];
-        localMessager << " [Init:getNuclearQs2]:WARNING: out of range. Using "
-                         "maximal T "
-                         "in "
-                         "table.";
+        localMessager << "[Init::getNuclearQs2]: WARNING: T out of range, "
+                         "using maximal T in table.";
+        localMessager << " T=" << T
+                      << ", maximal T in table=" << Tlist_[iTpmax_ - 1];
         localMessager.flush("info");
         check = 1;
         fracy = (y - static_cast<double>(posy) * deltaYNuc_) / deltaYNuc_;
@@ -859,11 +799,10 @@ double Init::getNuclearQs2(double T, double y) {
     if (check != 1) {
         // Local instance: same omp thread-safety reason as above.
         PrettyOstream localMessager;
-        localMessager << check << ": T=" << T;
-        localMessager << " [Init:getNuclearQs2]:ERROR: something went wrong "
-                         "in "
-                         "determining "
-                         "the value of Qs^2. Using maximal T_p";
+        localMessager << "[Init::getNuclearQs2]: ERROR: something went "
+                         "wrong determining the value of Qs^2, using "
+                         "maximal T_p.";
+        localMessager << " check=" << check << ", T=" << T;
         localMessager.flush("info");
         value =
             (fracy * Qs2Nuclear_[iTpmax_ - 1][posy + 1]
@@ -878,7 +817,8 @@ double Init::getNuclearQs2(double T, double y) {
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.color_charge_density");
-    messager_.info("set color charge density ...");
+    messager_.info(
+        "[Init::setColorChargeDensity]: set color charge density ...");
 
     const int N = param->getSize();
     const double L = param->getL();
@@ -896,8 +836,8 @@ void Init::setColorChargeDensity(
     } else {
         // when using pseudorapidity as input convert to rapidity here.
         // later include Jacobian in multiplicity and energy
-        messager_ << "Using pseudorapidity " << param->getRapidityA() << ", "
-                  << param->getRapidityB();
+        messager_ << "[Init::setColorChargeDensity]: Using pseudorapidity "
+                  << param->getRapidityA() << ", " << param->getRapidityB();
         messager_.flush("info");
         double m = param->getJacobianm();  // in GeV
         double P =
@@ -920,8 +860,8 @@ void Init::setColorChargeDensity(
                              pow(cosh(param->getRapidityB()), 2.)
                              + m * m / (P * P))
                          - sinh(param->getRapidityB())));
-        messager_ << "Corresponds to rapidity " << rapidityA << ", "
-                  << rapidityB;
+        messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
+                  << rapidityA << ", " << rapidityB;
         messager_.flush("info");
     }
 
@@ -966,7 +906,8 @@ void Init::setColorChargeDensity(
             }
         }
         param->setSuccess(1);
-        messager_.info("constant color charge density set");
+        messager_.info(
+            "[Init::setColorChargeDensity]: constant color charge density set");
         return;
     }
 
@@ -1039,7 +980,9 @@ void Init::setColorChargeDensity(
 
     // test what a smooth Woods-Saxon would give
     if (param->getUseSmoothNucleus() == 1) {
-        messager_ << "Using smooth nucleus for test purposes. Does not "
+        messager_ << "[Init::setColorChargeDensity]: Using smooth nucleus for "
+                     "test purposes. "
+                     "Does not "
                      "include "
                      "deformation.";
         messager_.flush("info");
@@ -1095,16 +1038,6 @@ void Init::setColorChargeDensity(
             }
         }
 
-        // double normTest=0.;
-        // for(int ix=0; ix<N; ix++) // loop over all positions
-        //   {
-        //     for(int iy=0; iy<N; iy++)
-        //       {
-        //         localpos = ix*N+iy;
-        //         normTest+=lat->cells[localpos]->getTpA()*a*a;
-        //       }
-        //   }
-        // cout << "normTest=" << normTest << endl;
         param->setSuccess(1);
     } else {
         // Non-smooth nucleus add all T_p's (new in version 1.2)
@@ -1229,8 +1162,6 @@ void Init::setColorChargeDensity(
                             -2. * BG
                             * log(2 * M_PI * BG * lat->cells[ipos]->getTpA()))
                         * hbarc;
-                // cout << log(2 * M_PI * BG *
-                // lat->cells[ipos]->getTpA()) << endl;
             } else {
                 distanceA = 0.;
             }
@@ -1373,7 +1304,9 @@ void Init::setColorChargeDensity(
             }
         }
     }
-    messager_.info("Color charge densities for nucleus A and B set. ");
+    messager_.info(
+        "[Init::setColorChargeDensity]: Color charge densities for nucleus A "
+        "and B set. ");
 }
 
 // This function compute the collision geometry quantities, such as
@@ -1508,8 +1441,9 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 
         if (param->getUseFixedNpart() != 0
             && Npart != param->getUseFixedNpart()) {
-            messager_ << "current Npart = " << Npart
-                      << " != " << param->getUseFixedNpart();
+            messager_ << "[Init::computeCollisionGeometryQuantities]: current "
+                         "Npart = "
+                      << Npart << " != " << param->getUseFixedNpart();
             messager_.flush("info");
             param->setSuccess(0);
             return;
@@ -1630,7 +1564,9 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         param->setAverageQsmin(0.);
         param->setTpp(Tpp);
         param->setSuccess(0);
-        messager_.info("**** Rejected event - no overlap region (count=0).");
+        messager_.info(
+            "[Init::computeCollisionGeometryQuantities]: **** Rejected event - "
+            "no overlap region (count=0).");
         return;
     }
 
@@ -1645,102 +1581,121 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 
     param->setTpp(Tpp);
 
-    messager_ << "N_part=" << Npart;
+    messager_ << "[Init::computeCollisionGeometryQuantities]: N_part=" << Npart;
     messager_.flush("info");
-    messager_ << "N_coll=" << Ncoll;
+    messager_ << "[Init::computeCollisionGeometryQuantities]: N_coll=" << Ncoll;
     messager_.flush("info");
-    messager_ << "T_pp(" << param->getb() << " fm) = " << Tpp << " 1/fm^2";
+    messager_ << "[Init::computeCollisionGeometryQuantities]: T_pp("
+              << param->getb() << " fm) = " << Tpp << " 1/fm^2";
     messager_.flush("info");
-    messager_ << "Q_s^2(max) S_T = "
+    messager_ << "[Init::computeCollisionGeometryQuantities]: Q_s^2(max) S_T = "
               << averageQs2 * a * a / hbarc / hbarc
                      * static_cast<double>(count);
     messager_.flush("info");
-    messager_ << "Q_s^2(avg) S_T = "
+    messager_ << "[Init::computeCollisionGeometryQuantities]: Q_s^2(avg) S_T = "
               << averageQs2Avg * a * a / hbarc / hbarc
                      * static_cast<double>(count);
     messager_.flush("info");
-    messager_ << "Q_s^2(min) S_T = "
+    messager_ << "[Init::computeCollisionGeometryQuantities]: Q_s^2(min) S_T = "
               << averageQs2min * a * a / hbarc / hbarc
                      * static_cast<double>(count);
     messager_.flush("info");
-    messager_ << "Q_s^2(min) S_T = " << averageQs2min2 * a * a / hbarc / hbarc;
+    messager_ << "[Init::computeCollisionGeometryQuantities]: Q_s^2(min) S_T "
+                 "(full lattice) = "
+              << averageQs2min2 * a * a / hbarc / hbarc;
     messager_.flush("info");
 
-    messager_ << "Area = " << a * a * count << " fm^2";
+    messager_ << "[Init::computeCollisionGeometryQuantities]: Area = "
+              << a * a * count << " fm^2";
     messager_.flush("info");
 
-    messager_ << "Average Qs(max) = " << param->getAverageQs() << " GeV";
+    messager_
+        << "[Init::computeCollisionGeometryQuantities]: Average Qs(max) = "
+        << param->getAverageQs() << " GeV";
     messager_.flush("info");
-    messager_ << "Average Qs(avg) = " << param->getAverageQsAvg() << " GeV";
+    messager_
+        << "[Init::computeCollisionGeometryQuantities]: Average Qs(avg) = "
+        << param->getAverageQsAvg() << " GeV";
     messager_.flush("info");
-    messager_ << "Average Qs(min) = " << param->getAverageQsmin() << " GeV";
+    messager_
+        << "[Init::computeCollisionGeometryQuantities]: Average Qs(min) = "
+        << param->getAverageQsmin() << " GeV";
     messager_.flush("info");
 
-    messager_ << "resulting Y(Qs(max)*" << param->getxFromThisFactorTimesQs()
-              << ") = "
-              << log(0.01
-                     / (param->getAverageQs()
-                        * param->getxFromThisFactorTimesQs()
-                        / param->getRoots()));
+    messager_
+        << "[Init::computeCollisionGeometryQuantities]: resulting Y(Qs(max)*"
+        << param->getxFromThisFactorTimesQs() << ") = "
+        << log(0.01
+               / (param->getAverageQs() * param->getxFromThisFactorTimesQs()
+                  / param->getRoots()));
     messager_.flush("info");
-    messager_ << "resulting Y(Qs(avg)*" << param->getxFromThisFactorTimesQs()
-              << ") = "
-              << log(0.01
-                     / (param->getAverageQsAvg()
-                        * param->getxFromThisFactorTimesQs()
-                        / param->getRoots()));
+    messager_
+        << "[Init::computeCollisionGeometryQuantities]: resulting Y(Qs(avg)*"
+        << param->getxFromThisFactorTimesQs() << ") = "
+        << log(0.01
+               / (param->getAverageQsAvg() * param->getxFromThisFactorTimesQs()
+                  / param->getRoots()));
     messager_.flush("info");
-    messager_ << "resulting Y(Qs(min)*" << param->getxFromThisFactorTimesQs()
-              << ") =  "
-              << log(0.01
-                     / (param->getAverageQsmin()
-                        * param->getxFromThisFactorTimesQs()
-                        / param->getRoots()));
+    messager_
+        << "[Init::computeCollisionGeometryQuantities]: resulting Y(Qs(min)*"
+        << param->getxFromThisFactorTimesQs() << ") =  "
+        << log(0.01
+               / (param->getAverageQsmin() * param->getxFromThisFactorTimesQs()
+                  / param->getRoots()));
     messager_.flush("info");
 
     double alphas = 0.;
     if (param->getRunningCoupling() && param->getRunWithkt() == 0) {
         if (param->getRunWithQs() == 2) {
-            messager_ << "running with "
-                      << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
+            messager_
+                << "[Init::computeCollisionGeometryQuantities]: running with "
+                << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
             messager_.flush("info");
             alphas = 12. * M_PI
                      / ((27.) * 2.
                         * log(
                             param->getRunWithThisFactorTimesQs()
                             * param->getAverageQs() / 0.2));  // 3 flavors
-            messager_ << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
+                      << param->getRunWithThisFactorTimesQs()
                       << " Qs_max)=" << alphas;
             messager_.flush("info");
         } else if (param->getRunWithQs() == 0) {
-            messager_ << "running with "
-                      << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
+            messager_
+                << "[Init::computeCollisionGeometryQuantities]: running with "
+                << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
             messager_.flush("info");
             alphas = 12. * M_PI
                      / ((27.) * 2.
                         * log(
                             param->getRunWithThisFactorTimesQs()
                             * param->getAverageQsmin() / 0.2));  // 3 flavors
-            messager_ << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
+                      << param->getRunWithThisFactorTimesQs()
                       << " Qs_min)=" << alphas;
             messager_.flush("info");
         } else if (param->getRunWithQs() == 1) {
-            messager_ << "running with "
-                      << param->getRunWithThisFactorTimesQs() << " <Q_s>";
+            messager_
+                << "[Init::computeCollisionGeometryQuantities]: running with "
+                << param->getRunWithThisFactorTimesQs() << " <Q_s>";
             messager_.flush("info");
             alphas = 12. * M_PI
                      / ((27.) * 2.
                         * log(
                             param->getRunWithThisFactorTimesQs()
                             * param->getAverageQsAvg() / 0.2));  // 3 flavors
-            messager_ << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
+                      << param->getRunWithThisFactorTimesQs()
                       << " <Qs>)=" << alphas;
             messager_.flush("info");
         }
     } else if (param->getRunningCoupling() && param->getRunWithkt() == 1) {
-        messager_.info("Multiplicity with running alpha_s(k_T)");
+        messager_.info(
+            "[Init::computeCollisionGeometryQuantities]: Multiplicity with "
+            "running alpha_s(k_T)");
     } else {
-        messager_.info("Using fixed alpha_s");
+        messager_.info(
+            "[Init::computeCollisionGeometryQuantities]: Using fixed alpha_s");
         alphas = param->getg() * param->getg() / 4. / M_PI;
     }
     param->setalphas(alphas);
@@ -1781,9 +1736,10 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         param->setSuccess(0);
     }
     if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) {
-        messager_ << " **** Rejected event - Qsmin^2 S_T="
-                  << averageQs2min2 * a * a / hbarc / hbarc
-                  << " too small ( < " << param->getMinimumQs2ST() << ").";
+        messager_ << "[Init::computeCollisionGeometryQuantities]: **** "
+                     "Rejected event - Qsmin^2 S_T="
+                  << averageQs2min2 * a * a / hbarc / hbarc << " too small ( < "
+                  << param->getMinimumQs2ST() << ").";
         messager_.flush("info");
     }
 
@@ -1905,14 +1861,16 @@ void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
     // Free function, not an Init member, so it has no messager_ to use;
     // construct a local PrettyOstream instance instead.
     PrettyOstream messager;
-    messager << "Wrote incoming Wilson lines to " << filename.str();
+    messager
+        << "[writeInitialWilsonTrainingData]: Wrote incoming Wilson lines to "
+        << filename.str();
     messager.flush("info");
 }
 }  // namespace
 
 void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     IPG_PROFILE_SCOPE("initialization.wilson_lines");
-    messager_.info("Setting Wilson lines ...");
+    messager_.info("[Init::setV]: Setting Wilson lines ...");
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
@@ -2111,13 +2069,12 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             ss << "0.001" << "_";
         }
         std::string wilsonfileHeader = ss.str();
-        lat->writeWilsonLines(
-            wilsonfileHeader, param, NucleusRole::Projectile);
+        lat->writeWilsonLines(wilsonfileHeader, param, NucleusRole::Projectile);
         lat->writeWilsonLines(wilsonfileHeader, param, NucleusRole::Target);
     }
 
-    messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
-              << ". ";
+    messager_ << "[Init::setV]: Wilson lines V_A and V_B set on rank "
+              << param->getMPIRank() << ". ";
     messager_.flush("info");
 }
 
@@ -2126,7 +2083,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     // format 1 = plain text, 2 = binary
 
     if (format > 2 or format < 1) {
-        messager_ << "Unknown format " << format
+        messager_ << "[Init::readVFromFile]: Unknown format " << format
                   << " when reading the initial Wilson lines, supported "
                      "formats: 1,2";
         messager_.flush("info");
@@ -2151,8 +2108,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     string VTwo_name;
     VTwo_name = strVTwo_name.str();
 
-    messager_ << "Reading Wilson lines from files " << VOne_name << " and "
-              << VTwo_name;
+    messager_ << "[Init::readVFromFile]: Reading Wilson lines from files "
+              << VOne_name << " and " << VTwo_name;
     messager_.flush("info");
 
     if (format == 1) {
@@ -2173,12 +2130,14 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         ifstream finV1(VOne_name.c_str(), std::ios::in);
 
         if (!finV1) {
-            messager_ << "File " << VOne_name << " not found. Exiting.";
+            messager_ << "[Init::readVFromFile]: File " << VOne_name
+                      << " not found. Exiting.";
             messager_.flush("info");
             exit(1);
         }
 
-        messager_ << "Reading Wilson line from file " << VOne_name << " ...";
+        messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
+                  << VOne_name << " ...";
 
         // set V for nucleus A
         for (int i = 0; i < nn[0]; i++) {
@@ -2216,12 +2175,14 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         ifstream finV2(VTwo_name.c_str(), std::ios::in);
 
         if (!finV2) {
-            messager_ << "File " << VTwo_name << " not found. Exiting.";
+            messager_ << "[Init::readVFromFile]: File " << VTwo_name
+                      << " not found. Exiting.";
             messager_.flush("info");
             exit(1);
         }
 
-        messager_ << "Reading Wilson line from file " << VTwo_name << " ...";
+        messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
+                  << VTwo_name << " ...";
         messager_.flush("info");
 
         // set V for nucleus B
@@ -2267,7 +2228,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         Matrix tempM(1.);
 
         if (!InStream.good()) {
-            messager_ << "File " << VOne_name.c_str() << " does not exist!";
+            messager_ << "[Init::readVFromFile]: File " << VOne_name.c_str()
+                      << " does not exist!";
             messager_.flush("info");
             exit(1);
         }
@@ -2281,13 +2243,18 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
             if (N != param->getSize()) {
-                messager_ << "# ERROR wrong lattice size, data is " << N
-                          << " but you have specified " << param->getSize();
+                messager_ << "[Init::readVFromFile]: # ERROR wrong lattice "
+                             "size, data is "
+                          << N << " but you have specified "
+                          << param->getSize();
+                messager_.flush("error");
                 exit(0);
             }
             if (std::abs(L - param->getL()) > 1e-5) {
-                messager_ << "# ERROR grid length, data has " << L
-                          << " but you have specified " << param->getL();
+                messager_ << "[Init::readVFromFile]: # ERROR grid length, "
+                             "data has "
+                          << L << " but you have specified " << param->getL();
+                messager_.flush("error");
                 exit(0);
             }
 
@@ -2321,8 +2288,6 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
                     int ix = round(xtemp / a);
 
-                    // cout << ixIn << " " << ix << endl;
-
                     int MatrixIndx = TEMPINDX - PositionIndx * 9;
                     int j = MatrixIndx / 3;
                     int k = MatrixIndx - j * 3;
@@ -2330,12 +2295,13 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                     int indx = N * ix + iy;
                     if (indx >= N * N || indx < 0) {
                         if (bb == 0) {
-                            messager_ << "Warning: datafile " << VOne_name
-                                      << " has an element " << indx
-                                      << " (iy=" << iy << ", ix=" << ix
-                                      << "), but the grid is N=" << N
-                                      << ". Element is (" << re << " + " << im
-                                      << "i), skipping it";
+                            messager_
+                                << "[Init::readVFromFile]: Warning: datafile "
+                                << VOne_name << " has an element " << indx
+                                << " (iy=" << iy << ", ix=" << ix
+                                << "), but the grid is N=" << N
+                                << ". Element is (" << re << " + " << im
+                                << "i), skipping it";
                             messager_.flush("info");
                         }
                         INPUT_CTR++;
@@ -2352,7 +2318,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
             InStream2.precision(15);
             InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
             if (!InStream2.good()) {
-                messager_ << "File " << VTwo_name.c_str() << " does not exist!";
+                messager_ << "[Init::readVFromFile]: File " << VTwo_name.c_str()
+                          << " does not exist!";
                 messager_.flush("info");
                 exit(1);
             }
@@ -2368,14 +2335,18 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                 InStream2.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
                 if (N != param->getSize()) {
-                    messager_ << "# ERROR wrong lattice size, data is " << N
-                              << " but you have specified " << param->getSize();
+                    messager_ << "[Init::readVFromFile]: # ERROR wrong lattice "
+                                 "size, data is "
+                              << N << " but you have specified "
+                              << param->getSize();
                     messager_.flush("info");
                     exit(0);
                 }
                 if (std::abs(L - param->getL()) > 1e-5) {
-                    messager_ << "# ERROR grid length, dataas " << L
-                              << " but you have specified " << param->getL();
+                    messager_ << "[Init::readVFromFile]: # ERROR grid length, "
+                                 "data has "
+                              << L << " but you have specified "
+                              << param->getL();
                     messager_.flush("info");
                     exit(0);
                 }
@@ -2405,8 +2376,6 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
                         int ix = round(xtemp / a);
 
-                        //                  if (ixIn != ix)
-                        //  cout << ixIn << " " << ix << endl;
                         int MatrixIndx = TEMPINDX - PositionIndx * 9;
                         int j = MatrixIndx / 3;
                         int k = MatrixIndx - j * 3;
@@ -2415,19 +2384,20 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
 
                         if (indx >= N * N || indx < 0) {
                             if (bb == 0) {
-                                messager_ << "Warning: datafile " << VTwo_name
-                                          << " has an element " << indx
-                                          << " (iy=" << iy << ", ix=" << ix
-                                          << "), but the grid is N=" << N
-                                          << ". Element is (" << re << " + "
-                                          << im << "i), skipping it";
+                                messager_
+                                    << "[Init::readVFromFile]: Warning: "
+                                       "datafile "
+                                    << VTwo_name << " has an element " << indx
+                                    << " (iy=" << iy << ", ix=" << ix
+                                    << "), but the grid is N=" << N
+                                    << ". Element is (" << re << " + " << im
+                                    << "i), skipping it";
                                 messager_.flush("info");
                             }
                             INPUT_CTR++;
                             continue;
                         }
                         lat->U2[indx].set(j, k, complex<double>(re, im));
-                        // if (indx > 65000) cout << "Save ok" << endl;
                     }
                     INPUT_CTR++;
                 }
@@ -2436,8 +2406,8 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
         }
     }
 
-    messager_ << " Wilson lines V_A and V_B set on rank " << param->getMPIRank()
-              << ". ";
+    messager_ << "[Init::readVFromFile]: Wilson lines V_A and V_B set on rank "
+              << param->getMPIRank() << ". ";
     messager_.flush("info");
 }
 
@@ -2447,21 +2417,25 @@ void Init::sampleImpactParameter(Parameters *param) {
     double b = 0.;
     double xb = random_ptr_->genrand64_real1();
     if (param->getUseNucleus() == 0) {
-        // use b=0 fm for the constant g^2 mu case
-        messager_ << "Setting b=0 for constant color charge density case.";
-        messager_.flush("info");
+        // use b=0 fm for the constant g^2 mu case. Deferred flush: this
+        // message's tag also covers the shared "b = ..." line below, same
+        // as the other two branches.
+        messager_ << "[Init::sampleImpactParameter]: Setting b=0 for constant "
+                     "color charge density case. ";
         b = 0;
     } else {
         if (param->getLinearb() == 1) {
             // use a linear probability distribution for b if we are doing
             // nuclei
-            messager_ << "Sampling linearly distributed b between " << bmin
-                      << " and " << bmax << "fm. Found ";
+            messager_ << "[Init::sampleImpactParameter]: Sampling linearly "
+                         "distributed b between "
+                      << bmin << " and " << bmax << "fm. Found ";
             b = sqrt((bmax * bmax - bmin * bmin) * xb + bmin * bmin);
         } else {
             // use a uniform distribution instead
-            messager_ << "Sampling uniformly distributed b between " << bmin
-                      << " and " << bmax << "fm. Found ";
+            messager_ << "[Init::sampleImpactParameter]: Sampling uniformly "
+                         "distributed b between "
+                      << bmin << " and " << bmax << "fm. Found ";
             b = (bmax - bmin) * xb + bmin;
         }
     }
@@ -2488,7 +2462,7 @@ void Init::init(
     group_ptr_ = group;
     random_ptr_ = random;
 
-    messager_.info("Initializing fields ... ");
+    messager_.info("[Init::init]: Initializing fields ... ");
 
     if (param->getUseNucleus() == 0) {
         // No real collision geometry in the constant-g^2mu case: skip
@@ -2532,10 +2506,13 @@ void Init::init(
 }
 
 void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
-    messager_.info("Shifting fields with impact parameter...");
+    messager_.info(
+        "[Init::shiftFieldsWithImpactParameter]: Shifting fields with impact "
+        "parameter...");
     const double b = param->getb();
     const double phiRP = param->getPhiRP();
-    messager_ << "b = " << b << " fm, phi_RP = " << phiRP;
+    messager_ << "[Init::shiftFieldsWithImpactParameter]: b = " << b
+              << " fm, phi_RP = " << phiRP;
     messager_.flush("info");
 
     const int N = param->getSize();
@@ -2579,7 +2556,9 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
 }
 
 void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
-    messager_.info("Finding fields in forward lightcone...");
+    messager_.info(
+        "[Init::initializeForwardLightCone]: Finding fields in forward "
+        "lightcone...");
     // output Wilson lines (used also for the proton plots)
     double L = param->getL();
     const int N = param->getSize();
@@ -2651,13 +2630,16 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
             const std::uint64_t retrySeedX = forwardLightconeRetrySeed(
                 param->getRandomSeed(), param->getEventId(), pos, 0);
             bool status =
-                findUInForwardLightconeChun(UDx1, UDx2, temp2, retrySeedX);
+                findUInForwardLightcone(UDx1, UDx2, temp2, retrySeedX);
             lat->Ux[pos] = (temp2);
             if (!status) {
                 // Inside an omp parallel/for region: use a fresh,
                 // stack-local instance rather than sharing messager_.
                 PrettyOstream localMessager;
-                localMessager << "pos x = " << pos / param->getSize()
+                localMessager << "[Init::initializeForwardLightCone]: Failed "
+                                 "to converge finding Ux in "
+                                 "the forward lightcone at pos x = "
+                              << pos / param->getSize()
                               << " y = " << pos % param->getSize();
                 localMessager.flush("info");
             }
@@ -2666,13 +2648,16 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
             UDy2 = lat->Uy2[pos];
             const std::uint64_t retrySeedY = forwardLightconeRetrySeed(
                 param->getRandomSeed(), param->getEventId(), pos, 1);
-            status = findUInForwardLightconeChun(UDy1, UDy2, temp2, retrySeedY);
+            status = findUInForwardLightcone(UDy1, UDy2, temp2, retrySeedY);
             lat->Uy[pos] = (temp2);
             if (!status) {
                 // Inside an omp parallel/for region: use a fresh,
                 // stack-local instance rather than sharing messager_.
                 PrettyOstream localMessager;
-                localMessager << "pos x = " << pos / param->getSize()
+                localMessager << "[Init::initializeForwardLightCone]: Failed "
+                                 "to converge finding Uy in "
+                                 "the forward lightcone at pos x = "
+                              << pos / param->getSize()
                               << " y = " << pos % param->getSize();
                 localMessager.flush("info");
             }
@@ -3036,8 +3021,11 @@ void Init::generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin(
     Random *random, int A, int Z, double a_WS, double R_WS, double beta2,
     double beta3, double beta4, double gamma, double d_min, double dR_np,
     double da_np, std::vector<ReturnValue> &nucleus) {
-    messager_ << "Sampling nucleon position forcing d_min = " << d_min
-              << " fm ...";
+    messager_
+        << "[Init::generateNucleusConfigurationWithDeformedWoodsSaxonForceDmin]"
+           ": "
+           "Sampling nucleon position forcing d_min = "
+        << d_min << " fm ...";
     messager_.flush("info");
     double rmaxCut = R_WS + dR_np + 10. * (a_WS + da_np);
     double r = 0.;
@@ -3348,7 +3336,7 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
     return (std::max(1, Nq));
 }
 
-bool Init::findUInForwardLightconeChun(
+bool Init::findUInForwardLightcone(
     Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed) {
     const int maxIterations = 2000;
     const int maxRetrys = 200;
@@ -3482,11 +3470,11 @@ bool Init::findUInForwardLightconeChun(
     }
     bool success = true;
     if (nRestart == maxRetrys) {
-        // findUInForwardLightconeChun() is called from inside an omp
+        // findUInForwardLightcone() is called from inside an omp
         // parallel/for region (initializeForwardLightCone), so use a
         // fresh, stack-local instance rather than sharing messager_.
         PrettyOstream localMessager;
-        localMessager << "Did not converge in findUInForwardLightconeChun, "
+        localMessager << "[Init::findUInForwardLightcone]: Did not converge, "
                       << "Fzero: " << FzeroMin;
         localMessager.flush("info");
         Usol = UsolBestEst;  // return the best estimate

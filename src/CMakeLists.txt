@@ -1,23 +1,5 @@
-set (SOURCES
-    Fragmentation.cpp
-    FFT.cpp
-    Matrix.cpp
-    Setup.cpp
-    Init.cpp
-    JIMWLK.cpp
-    Random.cpp
-    Group.cpp
-    Lattice.cpp
-    Cell.cpp
-    Glauber.cpp
-    Util.cpp
-    Evolution.cpp
-    GaugeFix.cpp
-    MyEigen.cpp
-    PrettyOstream.cpp
-    Parameters.cpp
-    Instrumentation.cpp
-    )
+include(${CMAKE_CURRENT_SOURCE_DIR}/Sources.cmake)
+set (SOURCES ${IPGLASMA_LIB_SOURCES})
 
 set(CompileFlags "")
 if (APPLE)

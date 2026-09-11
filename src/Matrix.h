@@ -81,18 +81,6 @@ class Matrix {
         return e_[j + kN * i];
     }
 
-    bool operator==(const Matrix &p) const {
-        for (int i = 0; i < kNN; ++i)
-            if (e_[i] != p.e_[i]) return false;
-        return true;
-    }
-
-    bool operator!=(const Matrix &p) const {
-        for (int i = 0; i < kNN; ++i)
-            if (e_[i] != p.e_[i]) return true;
-        return false;
-    }
-
     Matrix &operator+=(const Matrix &a) {
         for (int i = 0; i < kNN; ++i) e_[i] += a.e_[i];
         return *this;

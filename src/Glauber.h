@@ -23,8 +23,8 @@ struct ReturnValue {
 
 struct Nucleus {
     std::string name;
-    double A;
-    double Z;
+    int A;
+    int Z;
     int anumFunc;
     int anumFuncIntegrand;
     int densityFunc;
@@ -57,19 +57,19 @@ class Glauber {
     Nucleus *Nuc_WS_;
     Data glauberData_;
     double b_;  // impact parameter
-    double currentA1_;
-    double currentA2_;
-    double currentZ1_;
-    double currentZ2_;
+    int currentA1_;
+    int currentA2_;
+    int currentZ1_;
+    int currentZ2_;
 
   public:
     Glauber() {};
     ~Glauber() { remove("tmp.dat"); }
 
-    int nucleusA1() const { return static_cast<int>(currentA1_); }
-    int nucleusA2() const { return static_cast<int>(currentA2_); }
-    int nucleusZ1() const { return static_cast<int>(currentZ1_); }
-    int nucleusZ2() const { return static_cast<int>(currentZ2_); }
+    int nucleusA1() const { return currentA1_; }
+    int nucleusA2() const { return currentA2_; }
+    int nucleusZ1() const { return currentZ1_; }
+    int nucleusZ2() const { return currentZ2_; }
     const Data &getGlauberData() const { return glauberData_; }
     int isFile(char *file_name);
     void findNucleusData(

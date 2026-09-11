@@ -33,8 +33,8 @@ void Glauber::findNucleusData(
         nucleus->beta4 = -0.03;
         nucleus->gamma = 0.;
     } else if (name.compare("Pb") == 0) {
-        nucleus->A = 208.;
-        nucleus->Z = 82.;
+        nucleus->A = 208;
+        nucleus->Z = 82;
         densityFunction = "3Fermi";
         nucleus->R_WS = 6.62;
         nucleus->w_WS = 0.;
@@ -44,8 +44,8 @@ void Glauber::findNucleusData(
         nucleus->beta4 = 0.0;
         nucleus->gamma = 0.;
     } else if (name.compare("p") == 0) {
-        nucleus->A = 1.;
-        nucleus->Z = 1.;
+        nucleus->A = 1;
+        nucleus->Z = 1;
         densityFunction = "3Fermi";
         nucleus->R_WS = 1.;
         nucleus->w_WS = 0.;
@@ -565,7 +565,7 @@ double Glauber::interNuPInSP(double s) {
     static double *vx, *vy;
     ind++;
 
-    if (glauberData_.projectile.A == 1.0) return 0.0;
+    if (glauberData_.projectile.A == 1) return 0.0;
 
     if (ind == 1) {
         calcRho(&(glauberData_.projectile));
@@ -596,7 +596,7 @@ double Glauber::interNuTInST(double s) {
     static double *vx, *vy;
 
     ind++;
-    if (glauberData_.target.A == 1.0) return 0.0;
+    if (glauberData_.target.A == 1) return 0.0;
 
     if (ind == 1) {
         calcRho(&(glauberData_.target));

@@ -3,6 +3,7 @@
 #include <cstdio>
 #include <fstream>
 #include <string>
+#include <vector>
 
 #include "Setup.h"
 
@@ -64,4 +65,40 @@ TEST_CASE("Setup: isFile reflects whether the path exists") {
 
     CHECK(setup.isFile(file.path()) == 1);
     CHECK(setup.isFile("ipglasma_test_setup_definitely_missing.txt") == 0);
+}
+
+TEST_CASE("Setup: dFind parses a floating-point value") {
+    TempInputFile file(
+        "pi 3.14159\n"
+        "negative -2.5\n"
+        "EndOfFile\n");
+    Setup setup;
+
+    CHECK(setup.dFind(file.path(), "pi") == doctest::Approx(3.14159));
+    CHECK(setup.dFind(file.path(), "negative") == doctest::Approx(-2.5));
+}
+
+TEST_CASE("Setup: listFind parses a comma-separated list on a matching line") {
+    // listFind matches by substring on the whole line, then parses every
+    // token after the first whitespace-separated one as comma-separated
+    // doubles -- mirroring how xSnapshotList is written in real input files.
+    TempInputFile file(
+        "someOtherKey 1\n"
+        "xSnapshotList 5e-3,2e-3,0.0001\n"
+        "EndOfFile\n");
+    Setup setup;
+
+    std::vector<double> list = setup.listFind(file.path(), "xSnapshotList");
+    REQUIRE(list.size() == 3);
+    CHECK(list[0] == doctest::Approx(5e-3));
+    CHECK(list[1] == doctest::Approx(2e-3));
+    CHECK(list[2] == doctest::Approx(0.0001));
+}
+
+TEST_CASE("Setup: listFind returns an empty list when no line matches") {
+    TempInputFile file("someOtherKey 1\nEndOfFile\n");
+    Setup setup;
+
+    std::vector<double> list = setup.listFind(file.path(), "notPresent");
+    CHECK(list.empty());
 }

@@ -65,6 +65,24 @@ class Init {
     void initializeForwardLightCone(Lattice *lat, Parameters *param);
     void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
+    // sampleTA's four mutually-exclusive nucleonPositionsFromFile branches,
+    // each filling nucleusA_/nucleusB_ by one particular method.
+    void sampleTAWoodsSaxon(
+        Parameters *param, Random *random, Glauber *glauber);
+    void sampleTAFromConfigFiles(Random *random, Glauber *glauber);
+    void sampleTAFromAlvioliFiles(Random *random, Glauber *glauber);
+    // Reads one nucleus's worth of nucleon positions from a randomly
+    // selected Alvioli correlated-Pb-208 configuration file, appending them
+    // to nucleus. label ("A" or "B") is used only for log messages.
+    void readOneAlvioliNucleus(
+        Random *random, int nucleonCount, const std::string &label,
+        std::vector<ReturnValue> &nucleus);
+    // Applies sampleTA's global nucleus rotation for one polarization flag
+    // (0: random 3D, 1: longitudinal, 2: transverse); called once each for
+    // the projectile and target.
+    void applyPolarizationRotation(
+        Random *random, int polarizationFlag,
+        std::vector<ReturnValue> &nucleus);
     void readNuclearQs(Parameters *param);
     void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
 

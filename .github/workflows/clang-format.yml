@@ -43,7 +43,10 @@ jobs:
         # formatCode.sh: this step has a contents:write token, and a
         # same-repo PR could otherwise replace that tracked script with
         # arbitrary commands to use or exfiltrate it.
-        run: find src -iname '*.h' -o -iname '*.cpp' | xargs clang-format -i -style=file
+        # tests/third_party is a vendored copy of doctest.h, not our code.
+        run: |
+          find src tests utilities \( -iname '*.h' -o -iname '*.cpp' \) \
+              -not -path '*/third_party/*' | xargs clang-format -i -style=file
 
       - name: Commit and push formatting fixes
         env:
@@ -53,7 +56,7 @@ jobs:
           # shell commands that run with this job's write-scoped token.
           HEAD_REF: ${{ github.head_ref }}
         run: |
-          git add src
+          git add src tests utilities
           if git diff --cached --quiet; then
             echo "Already formatted, nothing to do."
           else

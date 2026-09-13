@@ -993,6 +993,112 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
     }
 }
 
+// Computes the local-coupling factor g^2/(4 pi alpha_s) at one cell, used to
+// rescale Tmunu/epsilon-derived quantities when running coupling is enabled
+// (alpha_s runs with either the local Qs at this cell or one of the
+// event-averaged Qs choices, per param->getRunWithLocalQs()/getRunWithQs()).
+// Returns 1 when running coupling is disabled.
+double computeRunningCouplingGfactor(
+    Lattice *lat, Parameters *param, int pos, int N, double a, double g,
+    double c, double muZero) {
+    double g2mu2A, g2mu2B, alphas = 0., Qs = 0.;
+    if (param->getRunningCoupling()) {
+        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
+            && pos % N < N - 1) {
+            g2mu2A = lat->cells[pos]->getg2mu2A();
+        } else
+            g2mu2A = 0;
+
+        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
+            && pos % N < N - 1) {
+            g2mu2B = lat->cells[pos]->getg2mu2B();
+        } else
+            g2mu2B = 0;
+
+        if (param->getRunWithQs() == 2) {
+            if (g2mu2A > g2mu2B)
+                Qs = sqrt(
+                    g2mu2A * param->getQsmuRatio()
+                    * param->getQsmuRatio() / a / a * hbarc * hbarc
+                    * param->getg() * param->getg());
+            else
+                Qs = sqrt(
+                    g2mu2B * param->getQsmuRatio()
+                    * param->getQsmuRatio() / a / a * hbarc * hbarc
+                    * param->getg() * param->getg());
+        } else if (param->getRunWithQs() == 0) {
+            if (g2mu2A < g2mu2B)
+                Qs = sqrt(
+                    g2mu2A * param->getQsmuRatio()
+                    * param->getQsmuRatio() / a / a * hbarc * hbarc
+                    * param->getg() * param->getg());
+            else
+                Qs = sqrt(
+                    g2mu2B * param->getQsmuRatio()
+                    * param->getQsmuRatio() / a / a * hbarc * hbarc
+                    * param->getg() * param->getg());
+        } else if (param->getRunWithQs() == 1) {
+            Qs = sqrt(
+                (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
+                * param->getQsmuRatio() / a / a * hbarc * hbarc
+                * param->getg() * param->getg());
+        }
+
+        if (param->getRunWithLocalQs() == 1) {
+            // 3 flavors
+            alphas = 4. * M_PI
+                     / (9.
+                        * log(pow(
+                            pow(muZero / 0.2, 2. / c)
+                                + pow(
+                                    param->getRunWithThisFactorTimesQs()
+                                        * Qs / 0.2,
+                                    2. / c),
+                            c)));
+            return g * g / (4. * M_PI * alphas);
+            // run with the local (in transverse plane) coupling
+        } else {
+            if (param->getRunWithQs() == 0)
+                alphas =
+                    4. * M_PI
+                    / (9.
+                       * log(pow(
+                           pow(muZero / 0.2, 2. / c)
+                               + pow(
+                                   param->getRunWithThisFactorTimesQs()
+                                       * param->getAverageQsmin() / 0.2,
+                                   2. / c),
+                           c)));
+            else if (param->getRunWithQs() == 1)
+                alphas =
+                    4. * M_PI
+                    / (9.
+                       * log(pow(
+                           pow(muZero / 0.2, 2. / c)
+                               + pow(
+                                   param->getRunWithThisFactorTimesQs()
+                                       * param->getAverageQsAvg() / 0.2,
+                                   2. / c),
+                           c)));
+            else if (param->getRunWithQs() == 2)
+                alphas =
+                    4. * M_PI
+                    / (9.
+                       * log(pow(
+                           pow(muZero / 0.2, 2. / c)
+                               + pow(
+                                   param->getRunWithThisFactorTimesQs()
+                                       * param->getAverageQs() / 0.2,
+                                   2. / c),
+                           c)));
+
+            return g * g / (4. * M_PI * alphas);
+        }
+    } else
+        return 1.;
+}
+
+
 }  // namespace
 
 void Evolution::evolveU(
@@ -1789,100 +1895,8 @@ void Evolution::eccentricity(
             y = -L / 2. + a * iy;
             pos = ix * N + iy;
 
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
+            gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             if (lat->cells[pos]->getEpsilon() * gfactor
                 < cutoff)  // this is 1/fm^4, so Lambda_QCD^{-4} (because
@@ -1957,100 +1971,8 @@ void Evolution::eccentricity(
                 phiA = atan(y / x) + M_PI;
             }
 
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
+            gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             if (lat->cells[pos]->getEpsilon() * gfactor
                 < cutoff)  // this is 1/fm^4, so Lambda_QCD^{-4}
@@ -2126,100 +2048,8 @@ void Evolution::eccentricity(
         for (int iy = 0; iy < N; iy++) {
             pos = ix * N + iy;
 
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
+            gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             if (lat->cells[pos]->getEpsilon() * gfactor
                 < cutoff)  // this is 1/fm^4, so Lambda_QCD^{-4}
@@ -2817,100 +2647,8 @@ int Evolution::multiplicity(
         for (int j = 0; j < N; j++) {
             pos = i * N + j;
 
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
+            gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             if (param->getRunWithkt() == 0) {
                 *E1[pos] = lat->U[pos]
@@ -3015,100 +2753,8 @@ int Evolution::multiplicity(
         for (int j = 0; j < N; j++) {
             pos = i * N + j;
 
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
+            gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             if (param->getRunWithkt() == 0) {
                 *E1[pos] = lat->U2[pos] * sqrt(gfactor);  // "
@@ -3198,100 +2844,8 @@ int Evolution::multiplicity(
         for (int j = 0; j < N; j++) {
             pos = i * N + j;
 
-            if (param->getRunningCoupling()) {
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2A = lat->cells[pos]->getg2mu2A();
-                } else
-                    g2mu2A = 0;
-
-                if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-                    && pos % N < N - 1) {
-                    g2mu2B = lat->cells[pos]->getg2mu2B();
-                } else
-                    g2mu2B = 0;
-
-                if (param->getRunWithQs() == 2) {
-                    if (g2mu2A > g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 0) {
-                    if (g2mu2A < g2mu2B)
-                        Qs = sqrt(
-                            g2mu2A * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                    else
-                        Qs = sqrt(
-                            g2mu2B * param->getQsmuRatio()
-                            * param->getQsmuRatio() / a / a * hbarc * hbarc
-                            * param->getg() * param->getg());
-                } else if (param->getRunWithQs() == 1) {
-                    Qs = sqrt(
-                        (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                        * param->getQsmuRatio() / a / a * hbarc * hbarc
-                        * param->getg() * param->getg());
-                }
-
-                if (param->getRunWithLocalQs() == 1) {
-                    // 3 flavors
-                    alphas = 4. * M_PI
-                             / (9.
-                                * log(pow(
-                                    pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * Qs / 0.2,
-                                            2. / c),
-                                    c)));
-                    gfactor = g * g / (4. * M_PI * alphas);
-                    // run with the local (in transverse plane) coupling
-                } else {
-                    if (param->getRunWithQs() == 0)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsmin() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 1)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQsAvg() / 0.2,
-                                           2. / c),
-                                   c)));
-                    else if (param->getRunWithQs() == 2)
-                        alphas =
-                            4. * M_PI
-                            / (9.
-                               * log(pow(
-                                   pow(muZero / 0.2, 2. / c)
-                                       + pow(
-                                           param->getRunWithThisFactorTimesQs()
-                                               * param->getAverageQs() / 0.2,
-                                           2. / c),
-                                   c)));
-
-                    gfactor = g * g / (4. * M_PI * alphas);
-                }
-            } else
-                gfactor = 1.;
+            gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             if (param->getRunWithkt() == 0) {
                 *E1[pos] = lat->Ux2[pos]

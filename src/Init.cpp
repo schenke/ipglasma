@@ -2246,14 +2246,14 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                           << N << " but you have specified "
                           << param->getSize();
                 messager_.flush("error");
-                exit(0);
+                exit(1);
             }
             if (std::abs(L - param->getL()) > 1e-5) {
                 messager_ << "[Init::readVFromFile]: wrong grid length, "
                              "data has "
                           << L << " but you have specified " << param->getL();
                 messager_.flush("error");
-                exit(0);
+                exit(1);
             }
 
             // READING ACTUAL DATA
@@ -2341,7 +2341,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                               << N << " but you have specified "
                               << param->getSize();
                     messager_.flush("error");
-                    exit(0);
+                    exit(1);
                 }
                 if (std::abs(L - param->getL()) > 1e-5) {
                     messager_ << "[Init::readVFromFile]: wrong grid length, "
@@ -2349,7 +2349,7 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
                               << L << " but you have specified "
                               << param->getL();
                     messager_.flush("error");
-                    exit(0);
+                    exit(1);
                 }
 
                 // READING ACTUAL DATA

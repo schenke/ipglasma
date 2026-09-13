@@ -305,7 +305,7 @@ Matrix &Matrix::expm(double t, const int p) {
     if (p < 6) {
         PrettyOstream messager;
         messager.error("[Matrix::expm]: p should be at least 6. Exiting.");
-        exit(0);
+        exit(1);
     }
     // hard coded values for speed
     std::vector<double> c(p + 1, 0);
@@ -351,7 +351,7 @@ Matrix &Matrix::expm(double t, const int p) {
                      << *this;
             PrettyOstream messager;
             messager.error(errorMsg.str());
-            exit(0);
+            exit(1);
         }
     }
 

@@ -156,6 +156,12 @@ class Init {
     void computeCellColorCharge(
         Lattice *lat, Parameters *param, int ipos, double a,
         double rapidityA, double rapidityB);
+    // computeCellColorCharge's useFluctuatingx==1 iterative solve for one
+    // nucleus's g2mu2 at this cell; ySign is +1 for nucleus A, -1 for B (the
+    // only sign difference between the two originally-copy-pasted solves).
+    double computeFluctuatingXG2mu2(
+        Parameters *param, double a, double rapidity, double Tp,
+        double qsmuRatio, double ySign);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
     // Converts param's input rapidity to true rapidity when it's flagged

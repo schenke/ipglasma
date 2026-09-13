@@ -190,6 +190,12 @@ class Init {
     // Returns false if useFixedNpart is set and this event's Npart doesn't
     // match, signaling the caller to abort and resample.
     bool determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll);
+    // determineNpartAndNcoll's binary-collision pair loop: writes
+    // NcollList<id>.dat and marks each colliding nucleon pair's .collided,
+    // using either a hard-sphere (dij < d2) or Gaussian-profile wounding
+    // criterion depending on param->getGaussianWounding().
+    void computeNcollList(
+        Parameters *param, double d2, double b, double phiRP, int &Ncoll);
     // Sets param's running-coupling alpha_s from whichever Qs choice
     // param->getRunWithQs() selects, or a fixed value if running coupling
     // is disabled or alpha_s runs with k_T instead.

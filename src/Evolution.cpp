@@ -1098,6 +1098,117 @@ double computeRunningCouplingGfactor(
         return 1.;
 }
 
+// Fills E1[pos] from sourceField[pos] (one of lat->U/U2/Ux2), scaling by
+// sqrt of the local running-coupling gfactor unless alpha_s runs with k_T
+// (in which case the k_T-dependent factor is applied later, per-mode, in
+// accumulateGluonSpectrum instead).
+void prepareSpectrumField(
+    Lattice *lat, Parameters *param, int N, double a, double g, double c,
+    double muZero, const std::vector<Matrix> &sourceField,
+    std::vector<Matrix *> &E1) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            int pos = i * N + j;
+            double gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
+            if (param->getRunWithkt() == 0) {
+                *E1[pos] = sourceField[pos] * sqrt(gfactor);
+            } else {
+                *E1[pos] = sourceField[pos];
+            }
+        }
+    }
+}
+
+// Accumulates E1's (already FFT'd) momentum-space spectrum into
+// dNdeta/dEdeta and the n/E/n2 k_T bins. useElectricNormalization selects
+// nkt's electric-field (E1/E2 passes: g^2/((it-0.5)dtau)) vs pi-field
+// ((it-0.5)dtau, no g^2) normalization. accumulateCounter records bin
+// occupancy into counter[]; only one of the three spectrum passes needs to,
+// since all three share the same k_T grid.
+void accumulateGluonSpectrum(
+    Parameters *param, int N, int it, double dtau, double g, double a,
+    double c, double muZero, double dkt, int bins,
+    const std::vector<Matrix *> &E1, bool useElectricNormalization,
+    bool accumulateCounter, double &dNdeta, double &dEdeta, double *n,
+    double *E, double *n2, int *counter) {
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            double nkt = 0.;
+            int pos = i * N + j;
+            int npos = (N - i) * N + (N - j);
+
+            double kx = 2. * M_PI
+                        * (-0.5
+                           + static_cast<double>(i) / static_cast<double>(N));
+            double ky = 2. * M_PI
+                        * (-0.5
+                           + static_cast<double>(j) / static_cast<double>(N));
+            double kt2 = 4.
+                         * (sin(kx / 2.) * sin(kx / 2.)
+                            + sin(ky / 2.) * sin(ky / 2.));
+            double omega2 = 4.
+                            * (sin(kx / 2.) * sin(kx / 2.)
+                               + sin(ky / 2.)
+                                     * sin(ky / 2.));  // lattice dispersion
+                                                        // relation (this is
+                                                        // omega squared)
+
+            // i=0 or j=0 have no negative k_T value available
+            if (i != 0 && j != 0) {
+                if (omega2 != 0) {
+                    if (useElectricNormalization) {
+                        nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
+                              * (g * g / ((it - 0.5) * dtau)
+                                 * ((((*E1[pos]) * (*E1[npos])).trace())
+                                        .real()));
+                    } else {
+                        nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
+                              * (((it - 0.5) * dtau)
+                                 * ((((*E1[pos]) * (*E1[npos])).trace())
+                                        .real()));
+                    }
+                    if (param->getRunWithkt() == 1) {
+                        nkt *=
+                            g * g
+                            / (4. * M_PI * 4. * M_PI
+                               / (9.
+                                  * log(pow(
+                                      pow(muZero / 0.2, 2. / c)
+                                          + pow(
+                                              param->getRunWithThisFactorTimesQs()
+                                                  * sqrt(kt2) * hbarc / a / 0.2,
+                                              2. / c),
+                                      c))));
+                    }
+                }
+
+                dNdeta += nkt;
+                dEdeta += nkt * sqrt(omega2) * hbarc / a;
+
+                for (int ik = 0; ik < bins; ik++) {
+                    if (abs(sqrt(kt2)) > ik * dkt
+                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
+                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
+                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
+                                 / 2.;
+                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2
+                                 / M_PI / sqrt(kt2) * 2 * M_PI * sqrt(kt2)
+                                 * dkt * N * N / M_PI / M_PI / 2. / 2.;
+                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
+                        // dividing by bin size; bin is dkt times Jacobian
+                        // k(=ik*dkt) times 2Pi in phi times the correct
+                        // number of counts for an infinite lattice: area in
+                        // bin divided by total area
+                        if (accumulateCounter) {
+                            counter[ik] += 1;  // number of entries in n[ik]
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
 
 }  // namespace
 
@@ -2639,27 +2750,10 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
 
-    double g2mu2A, g2mu2B, gfactor, alphas = 0., Qs = 0.;
     double c = param->getc();
     double muZero = param->getMuZero();
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            gfactor = computeRunningCouplingGfactor(
-                lat, param, pos, N, a, g, c, muZero);
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->U[pos]
-                           * sqrt(gfactor);  // replace one of the 1/g in the
-                                             // lattice E^i by the running one
-            } else {
-                *E1[pos] = lat->U[pos];
-            }
-        }
-    }
-
+    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, E1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E1", multiplicityPhaseStart);
 
@@ -2682,88 +2776,16 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.setup_bins", multiplicityPhaseStart);
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            nkt = 0.;
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                          * (g * g / ((it - 0.5) * dtau)
-                             * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
-                    if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                }
-
-                dNdeta += nkt;
-                dEdeta += nkt * sqrt(omega2) * hbarc / a;
-
-                for (int ik = 0; ik < bins; ik++) {
-                    if (abs(sqrt(kt2)) > ik * dkt
-                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
-                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
-                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
-                                 / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
-                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
-                                 * N / M_PI / M_PI / 2. / 2.;
-                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
-                        // dividing by bin size; bin is dkt times Jacobian
-                        // k(=ik*dkt) times 2Pi in phi times the correct number
-                        // of counts for an infinite lattice: area in bin
-                        // divided by total area
-                        counter[ik] += 1;  // number of entries in n[ik]
-                    }
-                }
-            }
-        }
-    }
+    accumulateGluonSpectrum(
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, true,
+        dNdeta, dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.spectrum_E1", multiplicityPhaseStart);
 
     /// -------- 2 ---------
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            gfactor = computeRunningCouplingGfactor(
-                lat, param, pos, N, a, g, c, muZero);
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->U2[pos] * sqrt(gfactor);  // "
-            } else {
-                *E1[pos] = lat->U2[pos];
-            }
-        }
-    }
-
+    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U2, E1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E2", multiplicityPhaseStart);
 
@@ -2771,93 +2793,16 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E2", multiplicityPhaseStart);
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            nkt = 0.;
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-
-            // i=0 or j=0 have no negative k_T value available
-
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                          * (g * g / ((it - 0.5) * dtau)
-                             * (((((*E1[pos]) * (*E1[npos])).trace()).real())));
-                    if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                }
-
-                dNdeta += nkt;
-                dEdeta += nkt * sqrt(omega2) * hbarc / a;
-
-                for (int ik = 0; ik < bins; ik++) {
-                    if (abs(sqrt(kt2)) > ik * dkt
-                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
-                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
-                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
-                                 / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
-                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
-                                 * N / M_PI / M_PI / 2. / 2.;
-                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
-                        // dividing by bin size; bin is dkt times Jacobian
-                        // k(=ik*dkt) times 2Pi in phi times the correct number
-                        // of counts for an infinite lattice: area in bin
-                        // divided by total area
-                    }
-                }
-            }
-        }
-    }
+    accumulateGluonSpectrum(
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, false,
+        dNdeta, dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.spectrum_E2", multiplicityPhaseStart);
 
     /// ------3 --------
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            pos = i * N + j;
-
-            gfactor = computeRunningCouplingGfactor(
-                lat, param, pos, N, a, g, c, muZero);
-
-            if (param->getRunWithkt() == 0) {
-                *E1[pos] = lat->Ux2[pos]
-                           * sqrt(gfactor);  // replace the only 1/g by the
-                                             // running one (physical pi goes
-                                             // like 1/g, like physical E^i)
-            } else {
-                *E1[pos] = lat->Ux2[pos];
-            }
-        }
-    }
-
+    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Ux2, E1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_pi", multiplicityPhaseStart);
 
@@ -2866,69 +2811,9 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_pi", multiplicityPhaseStart);
 
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            nkt = 0.;
-            pos = i * N + j;
-            npos = (N - i) * N + (N - j);
-
-            kx = 2. * M_PI
-                 * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
-            ky = 2. * M_PI
-                 * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
-            kt2 = 4.
-                  * (sin(kx / 2.) * sin(kx / 2.)
-                     + sin(ky / 2.) * sin(ky / 2.));  //
-            omega2 = 4.
-                     * (sin(kx / 2.) * sin(kx / 2.)
-                        + sin(ky / 2.)
-                              * sin(ky / 2.));  // lattice dispersion relation
-                                                // (this is omega squared)
-
-            // i=0 or j=0 have no negative k_T value available
-
-            if (i != 0 && j != 0) {
-                if (omega2 != 0) {
-                    nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                          * (((it - 0.5) * dtau)
-                             * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
-                    if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
-                    }
-                }
-
-                dNdeta += nkt;
-                dEdeta += nkt * sqrt(omega2) * hbarc / a;
-
-                for (int ik = 0; ik < bins; ik++) {
-                    if (abs(sqrt(kt2)) > ik * dkt
-                        && abs(sqrt(kt2)) <= (ik + 1) * dkt) {
-                        n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
-                                 * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
-                                 / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
-                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
-                                 * N / M_PI / M_PI / 2. / 2.;
-                        n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
-                        // dividing by bin size; bin is dkt times Jacobian
-                        // k(=ik*dkt) times 2Pi in phi times the correct number
-                        // of counts for an infinite lattice: area in bin
-                        // divided by total area
-                    }
-                }
-            }
-        }
-    }
+    accumulateGluonSpectrum(
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, false, false,
+        dNdeta, dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.spectrum_pi", multiplicityPhaseStart);

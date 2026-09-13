@@ -13,6 +13,26 @@ static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
     "Matrix must remain an exact contiguous complex<double>[9]");
 
+namespace {
+// Analytic inverse of a general 3x3 matrix via its cofactor (adjugate)
+// matrix. Shared by Matrix::inv() (inverting *this) and Matrix::expm()
+// (inverting the Pade denominator Q), which both need this exact formula.
+Matrix cofactorInverse(const Matrix &Q) {
+    Matrix H2(Matrix::noInit);
+    H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
+    H2.set(0, 1, (Q(0, 2) * Q(2, 1) - Q(0, 1) * Q(2, 2)));
+    H2.set(0, 2, (Q(0, 1) * Q(1, 2) - Q(0, 2) * Q(1, 1)));
+    H2.set(1, 0, (Q(1, 2) * Q(2, 0) - Q(1, 0) * Q(2, 2)));
+    H2.set(1, 1, (Q(0, 0) * Q(2, 2) - Q(0, 2) * Q(2, 0)));
+    H2.set(1, 2, (Q(0, 2) * Q(1, 0) - Q(0, 0) * Q(1, 2)));
+    H2.set(2, 0, (Q(1, 0) * Q(2, 1) - Q(1, 1) * Q(2, 0)));
+    H2.set(2, 1, (Q(0, 1) * Q(2, 0) - Q(0, 0) * Q(2, 1)));
+    H2.set(2, 2, (Q(0, 0) * Q(1, 1) - Q(0, 1) * Q(1, 0)));
+    H2 *= 1. / Q.det();
+    return H2;
+}
+}  // namespace
+
 Matrix::Matrix() {
     for (int i = 0; i < 9; ++i) e_[i] = complex<double>(0.0, 0.0);
 }
@@ -390,19 +410,7 @@ Matrix &Matrix::expm(double t, const int p) {
     Q -= P;
 
     // Invert Q (SU(3) only):
-    H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
-    H2.set(0, 1, (Q(0, 2) * Q(2, 1) - Q(0, 1) * Q(2, 2)));
-    H2.set(0, 2, (Q(0, 1) * Q(1, 2) - Q(0, 2) * Q(1, 1)));
-    H2.set(1, 0, (Q(1, 2) * Q(2, 0) - Q(1, 0) * Q(2, 2)));
-    H2.set(1, 1, (Q(0, 0) * Q(2, 2) - Q(0, 2) * Q(2, 0)));
-    H2.set(1, 2, (Q(0, 2) * Q(1, 0) - Q(0, 0) * Q(1, 2)));
-    H2.set(2, 0, (Q(1, 0) * Q(2, 1) - Q(1, 1) * Q(2, 0)));
-    H2.set(2, 1, (Q(0, 1) * Q(2, 0) - Q(0, 0) * Q(2, 1)));
-    H2.set(2, 2, (Q(0, 0) * Q(1, 1) - Q(0, 1) * Q(1, 0)));
-    H2 *= 1.
-          / (Q(0, 0) * Q(1, 1) * Q(2, 2) + Q(0, 1) * Q(1, 2) * Q(2, 0)
-             + Q(0, 2) * Q(1, 0) * Q(2, 1) - Q(0, 2) * Q(1, 1) * Q(2, 0)
-             - Q(0, 1) * Q(1, 0) * Q(2, 2) - Q(1, 2) * Q(2, 1) * Q(0, 0));
+    H2 = cofactorInverse(Q);
 
     if (odd == 1) {
         U = -1. * ((2.0 * H2 * P) + I);
@@ -418,7 +426,7 @@ Matrix &Matrix::expm(double t, const int p) {
     return *this;
 }
 
-complex<double> Matrix::det() {
+complex<double> Matrix::det() const {
     return e_[0] * e_[4] * e_[8] + e_[1] * e_[5] * e_[6] + e_[2] * e_[3] * e_[7]
            - e_[2] * e_[4] * e_[6] - e_[1] * e_[3] * e_[8]
            - e_[5] * e_[7] * e_[0];
@@ -426,7 +434,7 @@ complex<double> Matrix::det() {
 
 complex<double> Matrix::trace() const { return e_[0] + e_[4] + e_[8]; }
 
-complex<double> Matrix::traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const {
+complex<double> Matrix::traceOfProductOfMatrix(Matrix &a, Matrix &b) const {
     return a(0) * b(0) + a(1) * b(3) + a(2) * b(6) + a(3) * b(1) + a(4) * b(4)
            + a(5) * b(7) + a(6) * b(2) + a(7) * b(5) + a(8) * b(8);
 }
@@ -443,7 +451,7 @@ std::string Matrix::MatrixToString() {
     return output.str();
 }
 
-double Matrix::frobeniusNorm() {
+double Matrix::frobeniusNorm() const {
     int n = this->getNDim();
     double norm = 0.;
 
@@ -458,7 +466,7 @@ double Matrix::frobeniusNorm() {
     return norm;
 }
 
-double Matrix::oneNorm() {
+double Matrix::oneNorm() const {
     int n = this->getNDim();
     double maxColSum = 0.0;
 
@@ -476,19 +484,7 @@ double Matrix::oneNorm() {
 }
 
 Matrix &Matrix::inv() {
-    Matrix Q = *this;
-    Matrix H2(Matrix::noInit);
-    H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
-    H2.set(0, 1, (Q(0, 2) * Q(2, 1) - Q(0, 1) * Q(2, 2)));
-    H2.set(0, 2, (Q(0, 1) * Q(1, 2) - Q(0, 2) * Q(1, 1)));
-    H2.set(1, 0, (Q(1, 2) * Q(2, 0) - Q(1, 0) * Q(2, 2)));
-    H2.set(1, 1, (Q(0, 0) * Q(2, 2) - Q(0, 2) * Q(2, 0)));
-    H2.set(1, 2, (Q(0, 2) * Q(1, 0) - Q(0, 0) * Q(1, 2)));
-    H2.set(2, 0, (Q(1, 0) * Q(2, 1) - Q(1, 1) * Q(2, 0)));
-    H2.set(2, 1, (Q(0, 1) * Q(2, 0) - Q(0, 0) * Q(2, 1)));
-    H2.set(2, 2, (Q(0, 0) * Q(1, 1) - Q(0, 1) * Q(1, 0)));
-    H2 *= 1. / Q.det();
-    *this = H2;
+    *this = cofactorInverse(*this);
     return *this;
 }
 

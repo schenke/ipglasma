@@ -244,7 +244,7 @@ TEST_CASE("Matrix: traceOfProductOfMatrix matches (a*b).trace()") {
         }
     }
     Matrix dummy;
-    CHECK(closeTo(dummy.traceOfProdcutOfMatrix(a, b), (a * b).trace(), 1e-13));
+    CHECK(closeTo(dummy.traceOfProductOfMatrix(a, b), (a * b).trace(), 1e-13));
 }
 
 TEST_CASE(

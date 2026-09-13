@@ -38,8 +38,8 @@ class Matrix {
     Matrix &inv();
     Matrix &logmPade(const int m);
     Matrix &sqrtm(const int scale = 1);
-    double oneNorm();
-    double frobeniusNorm();
+    double oneNorm() const;
+    double frobeniusNorm() const;
 
     Matrix &logm();
 
@@ -73,7 +73,7 @@ class Matrix {
     // Allocation-free SU(3) exponential coefficients for hot paths.
     void expmCoeff(const double *Q, complex<double> out[9]) const;
 
-    complex<double> det();
+    complex<double> det() const;
     complex<double> trace() const;
 
     std::complex<double> operator()(const int i) const { return e_[i]; }
@@ -110,10 +110,10 @@ class Matrix {
     }
 
     Matrix &conjg();
-    Matrix prodABconj(const Matrix &a, const Matrix &b);
-    Matrix prodAconjB(const Matrix &a, const Matrix &b);
+    static Matrix prodABconj(const Matrix &a, const Matrix &b);
+    static Matrix prodAconjB(const Matrix &a, const Matrix &b);
 
-    complex<double> traceOfProdcutOfMatrix(Matrix &a, Matrix &b) const;
+    complex<double> traceOfProductOfMatrix(Matrix &a, Matrix &b) const;
 
     friend ostream &operator<<(ostream &os, const Matrix &p) {
         for (int i = 0; i < kN; ++i) {

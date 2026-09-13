@@ -7,14 +7,17 @@
 
 #include "gsl/gsl_rng.h"
 
-#define NN 312
-#define MM 156
-#define MATRIX_A 0xB5026F5AA96619E9ULL
-#define UM 0xFFFFFFFF80000000ULL /* Most significant 33 bits */
-#define LM 0x7FFFFFFFULL         /* Least significant 31 bits */
-
 class Random {
   private:
+    // MT19937-64 constants (Nishimura & Matsumoto).
+    static constexpr int NN = 312;
+    static constexpr int MM = 156;
+    static constexpr unsigned long long MATRIX_A = 0xB5026F5AA96619E9ULL;
+    static constexpr unsigned long long UM =
+        0xFFFFFFFF80000000ULL;  // most significant 33 bits
+    static constexpr unsigned long long LM =
+        0x7FFFFFFFULL;  // least significant 31 bits
+
     int iset_;
     double gset_;
 
@@ -29,6 +32,8 @@ class Random {
     std::vector<double> gammaIncCDFx_;
 
     void genrand64RawBulk(unsigned long long *out, std::size_t count);
+    /* refills mt_[0..NN-1] with the next NN raw words and resets mti_ */
+    void twist();
 
   public:
     Random() {
@@ -40,6 +45,12 @@ class Random {
     };  // constructor
 
     ~Random() { gsl_rng_free(gslRandom_); };  // destructor
+
+    // gslRandom_ is a raw handle freed in the destructor; default copies
+    // would double-free it, so disable copying (nothing needs it).
+    Random(const Random &) = delete;
+    Random &operator=(const Random &) = delete;
+
     void init_genrand64(unsigned long long seed);
     unsigned long long genrand64_int64(void);
     long long genrand64_int63(void);

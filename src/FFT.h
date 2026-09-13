@@ -133,6 +133,12 @@ class FFT {
         fftw_free(inputMany);
         fftw_free(outputMany);
     };
+
+    // Owns raw FFTW buffers/plans freed in the destructor; default copies
+    // would double-free them, so disable copying (nothing needs it).
+    FFT(const FFT &) = delete;
+    FFT &operator=(const FFT &) = delete;
+
     void fftnVector(
         vector<complex<double>> **data, vector<complex<double>> **outdata,
         const int nn[], const int isign);

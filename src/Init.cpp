@@ -1129,13 +1129,51 @@ void Init::computeSmoothNucleusThickness(
     param->setSuccess(1);
 }
 
+double Init::computeNucleonThicknessAtCell(
+    Parameters *param, const std::vector<ReturnValue> &nucleus,
+    const vector<vector<double>> &xq, const vector<vector<double>> &yq,
+    const vector<vector<double>> &BGq, const vector<vector<double>> &gauss,
+    double x, double y, double xi, double nucleiInAverage) {
+    const int A = nucleus.size();
+    double Tp = 0.;
+    for (int i = 0; i < A; i++) {
+        double xm = nucleus.at(i).x;
+        double ym = nucleus.at(i).y;
+
+        double T = 0.;
+        double bp2 = 0.;
+        if (param->getUseConstituentQuarkProton() > 0) {
+            for (unsigned int iq = 0; iq < xq[i].size(); iq++) {
+                bp2 = (xm + xq[i][iq] - x) * (xm + xq[i][iq] - x)
+                      + (ym + yq[i][iq] - y) * (ym + yq[i][iq] - y);
+                bp2 /= hbarc * hbarc;
+
+                T += exp(-bp2 / (2. * BGq[i][iq])) / (2. * M_PI * BGq[i][iq])
+                     / (static_cast<double>(xq[i].size()))
+                     * gauss[i][iq];  // I removed the 2/3 here
+                                      // to make it a bit bigger
+            }
+        } else {
+            const double BG = param->getBG();
+            double phi = nucleus.at(i).phi;
+
+            bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
+                  + xi * pow((xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
+            bp2 /= hbarc * hbarc;
+            T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
+                * gauss[i][0];  // T_p in this cell for the
+                                // current nucleon
+        }
+        Tp += T / nucleiInAverage;  // add up all T_p
+    }
+    return Tp;
+}
+
 void Init::computeThicknessFromNucleons(
     Lattice *lat, Parameters *param, double nucleiInAverage) {
     const int N = param->getSize();
     const double L = param->getL();
     const double a = L / N;
-    const int A1 = nucleusA_.size();
-    const int A2 = nucleusB_.size();
     const double xi = param->getProtonAnisotropy();
 
 #pragma omp parallel for
@@ -1146,83 +1184,12 @@ void Init::computeThicknessFromNucleons(
         double x = -L / 2. + a * ix;
         double y = -L / 2. + a * iy;
 
-        // nucleus A
-        lat->cells[ipos]->setTpA(0.);
-        for (int i = 0; i < A1; i++) {
-            double xm = nucleusA_.at(i).x;
-            double ym = nucleusA_.at(i).y;
-
-            double T = 0.;
-            double bp2 = 0.;
-            if (param->getUseConstituentQuarkProton() > 0) {
-                for (unsigned int iq = 0; iq < xq1_[i].size(); iq++) {
-                    bp2 = (xm + xq1_[i][iq] - x) * (xm + xq1_[i][iq] - x)
-                          + (ym + yq1_[i][iq] - y) * (ym + yq1_[i][iq] - y);
-                    bp2 /= hbarc * hbarc;
-
-                    T += exp(-bp2 / (2. * BGq1_[i][iq]))
-                         / (2. * M_PI * BGq1_[i][iq])
-                         / (static_cast<double>(xq1_[i].size()))
-                         * gauss1_[i][iq];  // I removed the 2/3 here
-                                            // to make it a bit bigger
-                }
-            } else {
-                const double BG = param->getBG();
-                double phi = nucleusA_.at(i).phi;
-
-                bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                      + xi
-                            * pow(
-                                (xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
-                bp2 /= hbarc * hbarc;
-                T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                    * gauss1_[i][0];  // T_p in this cell for the
-                                      // current nucleon
-            }
-            lat->cells[ipos]->setTpA(
-                lat->cells[ipos]->getTpA()
-                + T / nucleiInAverage);  // add up all T_p
-        }
-
-        // nucleus B
-        lat->cells[ipos]->setTpB(0.);
-        for (int i = 0; i < A2; i++) {
-            double xm = nucleusB_.at(i).x;
-            double ym = nucleusB_.at(i).y;
-
-            double T = 0.;
-            double bp2 = 0.;
-            if (param->getUseConstituentQuarkProton() > 0) {
-                T = 0.;
-                for (unsigned int iq = 0; iq < xq2_[i].size(); iq++) {
-                    bp2 = (xm + xq2_[i][iq] - x) * (xm + xq2_[i][iq] - x)
-                          + (ym + yq2_[i][iq] - y) * (ym + yq2_[i][iq] - y);
-                    bp2 /= hbarc * hbarc;
-
-                    T += exp(-bp2 / (2. * BGq2_[i][iq]))
-                         / (2. * M_PI * BGq2_[i][iq])
-                         / (static_cast<double>(xq2_[i].size()))
-                         * gauss2_[i][iq];
-                }
-            } else {
-                const double BG = param->getBG();
-                double phi = nucleusB_.at(i).phi;
-
-                bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                      + xi
-                            * pow(
-                                (xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
-                bp2 /= hbarc * hbarc;
-
-                T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                    * gauss2_[i][0];  // T_p in this cell for the
-                                      // current nucleon
-            }
-
-            lat->cells[ipos]->setTpB(
-                lat->cells[ipos]->getTpB()
-                + T / nucleiInAverage);  // add up all T_p
-        }
+        lat->cells[ipos]->setTpA(computeNucleonThicknessAtCell(
+            param, nucleusA_, xq1_, yq1_, BGq1_, gauss1_, x, y, xi,
+            nucleiInAverage));
+        lat->cells[ipos]->setTpB(computeNucleonThicknessAtCell(
+            param, nucleusB_, xq2_, yq2_, BGq2_, gauss2_, x, y, xi,
+            nucleiInAverage));
     }
 }
 

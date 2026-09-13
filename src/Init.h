@@ -185,6 +185,14 @@ class Init {
     // sampled nucleon's (constituent-quark or single-Gaussian) thickness.
     void computeThicknessFromNucleons(
         Lattice *lat, Parameters *param, double nucleiInAverage);
+    // computeThicknessFromNucleons' per-cell, per-nucleus T_p sum
+    // (constituent-quark or single-Gaussian, depending on
+    // param->getUseConstituentQuarkProton()); called once per nucleus.
+    double computeNucleonThicknessAtCell(
+        Parameters *param, const std::vector<ReturnValue> &nucleus,
+        const vector<vector<double>> &xq, const vector<vector<double>> &yq,
+        const vector<vector<double>> &BGq, const vector<vector<double>> &gauss,
+        double x, double y, double xi, double nucleiInAverage);
     // Determines Npart/Ncoll from the (already-sampled) nucleon positions,
     // writes NcollList*.dat/NpartList*.dat, and sets param->setNpart.
     // Returns false if useFixedNpart is set and this event's Npart doesn't

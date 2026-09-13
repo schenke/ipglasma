@@ -124,13 +124,16 @@ void GaugeFix::fftChi(
     double gresidual = 0.;
     std::vector<double> residualSite(static_cast<std::size_t>(N) * N);
 
-    Matrix **chi;
+    // chiStorage owns the N*N scratch matrices; chi is a pointer-per-cell
+    // view over it for FFT::fftn's T** interface.
+    std::vector<Matrix> chiStorage;
+    std::vector<Matrix *> chi;
     {
         IPG_PROFILE_SCOPE("observables.gluon_multiplicity.gauge_fix.setup");
-        chi = new Matrix *[N * N];
-
+        chiStorage.assign(static_cast<std::size_t>(N) * N, Matrix(0.));
+        chi.resize(static_cast<std::size_t>(N) * N);
         for (int i = 0; i < N * N; i++) {
-            chi[i] = new Matrix(0.);
+            chi[i] = &chiStorage[i];
         }
     }
 
@@ -195,7 +198,7 @@ void GaugeFix::fftChi(
         {
             IPG_PROFILE_SCOPE(
                 "observables.gluon_multiplicity.gauge_fix.fft_forward");
-            fft->fftn(chi, chi, nn, 1);
+            fft->fftn(chi.data(), chi.data(), nn, 1);
         }
 
         {
@@ -224,7 +227,7 @@ void GaugeFix::fftChi(
         {
             IPG_PROFILE_SCOPE(
                 "observables.gluon_multiplicity.gauge_fix.fft_backward");
-            fft->fftn(chi, chi, nn, -1);
+            fft->fftn(chi.data(), chi.data(), nn, -1);
         }
 
         {
@@ -320,12 +323,4 @@ void GaugeFix::fftChi(
             }
         }
     }  // gfiter loop
-
-    {
-        IPG_PROFILE_SCOPE("observables.gluon_multiplicity.gauge_fix.cleanup");
-        for (int i = 0; i < N * N; i++) {
-            delete chi[i];
-        }
-        delete[] chi;
-    }
 }

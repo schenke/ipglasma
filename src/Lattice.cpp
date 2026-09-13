@@ -165,7 +165,7 @@ void Lattice::writeWilsonLines(
         Outfile1.write((char *)&a, sizeof(double));
         Outfile1.write((char *)&temp, sizeof(double));
 
-        double *val1 = new double[2];
+        double val1[2];
 
         for (int ix = 0; ix < N; ix++) {
             for (int iy = 0; iy < N; iy++) {
@@ -199,8 +199,6 @@ void Lattice::writeWilsonLines(
                 "line binary output file.");
             exit(1);
         }
-
-        delete[] val1;
 
         Outfile1.close();
         messager_ << "[Lattice::writeWilsonLines]: wrote "

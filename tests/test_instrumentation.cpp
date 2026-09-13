@@ -1,8 +1,7 @@
-#include "doctest.h"
-
 #include <thread>
 
 #include "Instrumentation.h"
+#include "doctest.h"
 
 TEST_CASE("ipg::wallSeconds is finite and monotonically non-decreasing") {
     const double t1 = ipg::wallSeconds();

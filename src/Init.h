@@ -121,8 +121,7 @@ class Init {
     void computeForwardLightconePlaquetteTeam(
         Lattice *lat, int N2, ForwardLightconePlaquetteScratch &scratch);
     // Sets lat->Ux2 to pi (E^z) in lattice units from lat->U.
-    void computeForwardLightconePiTeam(
-        Lattice *lat, Parameters *param, int N2);
+    void computeForwardLightconePiTeam(Lattice *lat, Parameters *param, int N2);
     // Zeroes lat->U/U2/Uy2 and resets lat->Ux1 to the identity, now that
     // this event's forward-lightcone fields have been consumed above.
     void resetForwardLightconeFieldsTeam(Lattice *lat, int N2);
@@ -154,8 +153,8 @@ class Init {
     // via getNuclearQs2 and (if enabled) the fluctuating-x iterative solve.
     // Called from setColorChargeDensity's per-cell loop.
     void computeCellColorCharge(
-        Lattice *lat, Parameters *param, int ipos, double a,
-        double rapidityA, double rapidityB);
+        Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
+        double rapidityB);
     // computeCellColorCharge's useFluctuatingx==1 iterative solve for one
     // nucleus's g2mu2 at this cell; ySign is +1 for nucleus A, -1 for B (the
     // only sign difference between the two originally-copy-pasted solves).
@@ -270,8 +269,7 @@ class Init {
     // (each finite-difference step adds then subtracts its own dalpha_bi).
     void computeForwardLightconeJacobian(
         const Matrix &U0, const Matrix &U1pU2, const Matrix &Usoldagger,
-        std::vector<Matrix> &MtempArr, std::vector<double> &alpha,
-        double *Jab);
+        std::vector<Matrix> &MtempArr, std::vector<double> &alpha, double *Jab);
 
     void readInNucleusConfigs(
         const int nucleusA, const int lightNucleusOption,

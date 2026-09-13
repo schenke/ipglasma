@@ -240,11 +240,10 @@ void Init::sampleTAFromConfigFiles(Random *random, Glauber *glauber) {
         recenterNucleus(nucleusA_);
     } else {
         // no configurations, sample with Woods-Saxon
-        messager_
-            << "[Init::sampleTA]: configuration file for A = "
-            << glauber->nucleusA1()
-            << " is not available, generate the nucleus configuration "
-            << "using Woods-Saxon distribution instead.";
+        messager_ << "[Init::sampleTA]: configuration file for A = "
+                  << glauber->nucleusA1()
+                  << " is not available, generate the nucleus configuration "
+                  << "using Woods-Saxon distribution instead.";
         messager_.flush("info");
 
         generateNucleusConfiguration(
@@ -278,11 +277,10 @@ void Init::sampleTAFromConfigFiles(Random *random, Glauber *glauber) {
         recenterNucleus(nucleusB_);
     } else {
         // no configurations, sample with Woods-Saxon
-        messager_
-            << "[Init::sampleTA]: configuration file for A = "
-            << glauber->nucleusA2()
-            << " is not available, generate the nucleus configuration "
-            << "using Woods-Saxon distribution instead.";
+        messager_ << "[Init::sampleTA]: configuration file for A = "
+                  << glauber->nucleusA2()
+                  << " is not available, generate the nucleus configuration "
+                  << "using Woods-Saxon distribution instead.";
         messager_.flush("info");
         generateNucleusConfiguration(
             random, glauber->nucleusA2(), glauber->nucleusZ2(),
@@ -330,8 +328,7 @@ void Init::readOneAlvioliNucleus(
     ReturnValue rv;
 
     // generate the file name
-    double ran =
-        random->genrand64_real3();  // sample the file name uniformly
+    double ran = random->genrand64_real3();  // sample the file name uniformly
     int fileNumber = static_cast<int>(ran * 10 + 1);
 
     stringstream str_file;
@@ -735,8 +732,8 @@ double Init::getNuclearQs2(double T, double y) {
 }
 
 double Init::computeFluctuatingXG2mu2(
-    Parameters *param, double a, double rapidity, double Tp,
-    double qsmuRatio, double ySign) {
+    Parameters *param, double a, double rapidity, double Tp, double qsmuRatio,
+    double ySign) {
     const double exponent = 5.6;  // see 1212.2974 Eq. (17)
     double Qs = 1.;
     double xVal = 0.;
@@ -766,12 +763,11 @@ double Init::computeFluctuatingXG2mu2(
             g2mu2 = Qs * Qs / qsmuRatio / qsmuRatio * a * a / hbarc / hbarc
                     / param->getg() / param->getg();  // lattice units? check
 
-            Ydeviation =
-                localrapidity
-                - log(
-                    0.01
-                    / (Qs * param->getxFromThisFactorTimesQs()
-                       / param->getRoots() * exp(ySign * yIn)));
+            Ydeviation = localrapidity
+                         - log(
+                             0.01
+                             / (Qs * param->getxFromThisFactorTimesQs()
+                                / param->getRoots() * exp(ySign * yIn)));
             localrapidity =
                 log(0.01
                     / (Qs * param->getxFromThisFactorTimesQs()
@@ -852,8 +848,8 @@ void Init::computeCellColorCharge(
             // nucleus A
             lat->cells[ipos]->setg2mu2A(
                 getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
-                / param->getQsmuRatio() / param->getQsmuRatio() * a * a
-                / hbarc / hbarc / param->getg()
+                / param->getQsmuRatio() / param->getQsmuRatio() * a * a / hbarc
+                / hbarc / param->getg()
                 / param->getg());  // lattice units? check
 
             // nucleus B
@@ -926,7 +922,7 @@ void Init::computeEffectiveRapidities(
     messager_ << "[Init::setColorChargeDensity]: Using pseudorapidity "
               << param->getRapidityA() << ", " << param->getRapidityB();
     messager_.flush("info");
-    double m = param->getJacobianm();  // in GeV
+    double m = param->getJacobianm();                                // in GeV
     double P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
     rapidityA =
         0.5
@@ -934,8 +930,7 @@ void Init::computeEffectiveRapidities(
             sqrt(pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
             + sinh(param->getRapidityA())
                   / (sqrt(
-                         pow(cosh(param->getRapidityA()), 2.)
-                         + m * m / (P * P))
+                         pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
                      - sinh(param->getRapidityA())));
     rapidityB =
         0.5
@@ -943,8 +938,7 @@ void Init::computeEffectiveRapidities(
             sqrt(pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
             + sinh(param->getRapidityB())
                   / (sqrt(
-                         pow(cosh(param->getRapidityB()), 2.)
-                         + m * m / (P * P))
+                         pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
                      - sinh(param->getRapidityB())));
     messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
               << rapidityA << ", " << rapidityB;
@@ -1224,9 +1218,9 @@ void Init::computeNcollList(
             }
 
             if (collided) {
-                foutNcoll
-                    << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2. << " "
-                    << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2. << endl;
+                foutNcoll << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2. << " "
+                          << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
+                          << endl;
                 Ncoll++;
                 nucleusB_.at(j).collided = 1;
                 nucleusA_.at(i).collided = 1;
@@ -1666,8 +1660,7 @@ void Init::writeUsedParametersFile(
         fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
               << " <Q_s>) = " << param->getalphas() << endl;
     } else
-        fout1 << "using fixed coupling alpha_s=" << param->getalphas()
-              << endl;
+        fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
     fout1.close();
 }
 
@@ -1870,7 +1863,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     // rhoACoeffData owns the Nc2m1_*sites backing storage; rhoACoeff is a
     // pointer-per-component view over it for FFT::fftnComplexArray's T**
     // interface.
-    std::vector<complex<double> > rhoACoeffData(
+    std::vector<complex<double>> rhoACoeffData(
         static_cast<std::size_t>(Nc2m1_) * sites);
     std::vector<complex<double> *> rhoACoeff(Nc2m1_);
     for (int i = 0; i < Nc2m1_; i++) {
@@ -2153,8 +2146,8 @@ void Init::readWilsonLineBinary(
     re = 0.;
     im = 0.;
 
-    while (InStream.read(
-        reinterpret_cast<char *>(&ValueBuffer), sizeof(double))) {
+    while (
+        InStream.read(reinterpret_cast<char *>(&ValueBuffer), sizeof(double))) {
         if (INPUT_CTR % 2 == 0)  // this is the real part
         {
             re = ValueBuffer;
@@ -2188,10 +2181,9 @@ void Init::readWilsonLineBinary(
             int indx = N * ix + iy;
             if (indx >= N * N || indx < 0) {
                 if (bb == 0) {
-                    messager_ << "[Init::readVFromFile]: datafile "
-                              << fileName << " has an element " << indx
-                              << " (iy=" << iy << ", ix=" << ix
-                              << "), but the grid is N=" << N
+                    messager_ << "[Init::readVFromFile]: datafile " << fileName
+                              << " has an element " << indx << " (iy=" << iy
+                              << ", ix=" << ix << "), but the grid is N=" << N
                               << ". Element is (" << re << " + " << im
                               << "i), skipping it.";
                     messager_.flush("warning");
@@ -2492,10 +2484,9 @@ void Init::computeForwardLightconeElectricFieldTeam(
         scratch.UDx.conjg();
 
         scratch.temp2 = scratch.Ux1mUx2 * scratch.UDx - scratch.Ux1mUx2
-                         - scratch.Ux * scratch.UDx1mUDx2 + scratch.UDx1mUDx2;
+                        - scratch.Ux * scratch.UDx1mUDx2 + scratch.UDx1mUDx2;
 
-        scratch.Ux1mUx2 =
-            lat->Ux1[neighborX[pos]] - lat->Ux2[neighborX[pos]];
+        scratch.Ux1mUx2 = lat->Ux1[neighborX[pos]] - lat->Ux2[neighborX[pos]];
         scratch.UDx1 = lat->Ux1[neighborX[pos]];
         scratch.UDx1.conjg();
         scratch.UDx2 = lat->Ux2[neighborX[pos]];
@@ -2507,8 +2498,8 @@ void Init::computeForwardLightconeElectricFieldTeam(
         scratch.UDx.conjg();
 
         scratch.temp2 = scratch.temp2 - scratch.UDx * scratch.Ux1mUx2
-                         + scratch.Ux1mUx2 + scratch.UDx1mUDx2 * scratch.Ux
-                         - scratch.UDx1mUDx2;
+                        + scratch.Ux1mUx2 + scratch.UDx1mUDx2 * scratch.Ux
+                        - scratch.UDx1mUDx2;
 
         // y part in sum
         scratch.Uy1mUy2 = lat->Uy1[pos] - lat->Uy2[pos];
@@ -2524,11 +2515,10 @@ void Init::computeForwardLightconeElectricFieldTeam(
 
         // y part of the sum:
         scratch.temp2 = scratch.temp2 + scratch.Uy1mUy2 * scratch.UDy
-                         - scratch.Uy1mUy2 - scratch.Uy * scratch.UDy1mUDy2
-                         + scratch.UDy1mUDy2;
+                        - scratch.Uy1mUy2 - scratch.Uy * scratch.UDy1mUDy2
+                        + scratch.UDy1mUDy2;
 
-        scratch.Uy1mUy2 =
-            lat->Uy1[neighborY[pos]] - lat->Uy2[neighborY[pos]];
+        scratch.Uy1mUy2 = lat->Uy1[neighborY[pos]] - lat->Uy2[neighborY[pos]];
         scratch.UDy1 = lat->Uy1[neighborY[pos]];
         scratch.UDy1.conjg();
         scratch.UDy2 = lat->Uy2[neighborY[pos]];
@@ -2540,8 +2530,8 @@ void Init::computeForwardLightconeElectricFieldTeam(
         scratch.UDy.conjg();
 
         scratch.temp2 = scratch.temp2 - scratch.UDy * scratch.Uy1mUy2
-                         + scratch.Uy1mUy2 + scratch.UDy1mUDy2 * scratch.Uy
-                         - scratch.UDy1mUDy2;
+                        + scratch.Uy1mUy2 + scratch.UDy1mUDy2 * scratch.Uy
+                        - scratch.UDy1mUDy2;
 
         outputField[pos] = ((1. / 8.) * scratch.temp2);
     }

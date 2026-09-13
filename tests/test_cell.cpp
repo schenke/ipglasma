@@ -1,6 +1,5 @@
-#include "doctest.h"
-
 #include "Cell.h"
+#include "doctest.h"
 
 TEST_CASE("Cell: default constructor zero-initializes every field") {
     // A regression guard: this codebase has repeatedly had bugs from

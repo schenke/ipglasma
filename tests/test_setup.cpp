@@ -1,11 +1,10 @@
-#include "doctest.h"
-
 #include <cstdio>
 #include <fstream>
 #include <string>
 #include <vector>
 
 #include "Setup.h"
+#include "doctest.h"
 
 namespace {
 // A small IP-Glasma-style "key value" input file, written to a fixed path

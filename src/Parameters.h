@@ -313,7 +313,9 @@ class Parameters {
     void setNucleusQsTableFileName(std::string x) {
         nucleusQsTableFileName_ = x;
     }
-    std::string getNucleusQsTableFileName() const { return nucleusQsTableFileName_; }
+    std::string getNucleusQsTableFileName() const {
+        return nucleusQsTableFileName_;
+    }
     void setBG(double x) { BG_ = x; }
     double getBG() const { return BG_; }
     void setBGq(double x) { BGq_ = x; }
@@ -335,7 +337,9 @@ class Parameters {
     void setRunWithThisFactorTimesQs(double x) {
         runWithThisFactorTimesQs_ = x;
     };
-    double getRunWithThisFactorTimesQs() const { return runWithThisFactorTimesQs_; }
+    double getRunWithThisFactorTimesQs() const {
+        return runWithThisFactorTimesQs_;
+    }
     void setxFromThisFactorTimesQs(double x) { xFromThisFactorTimesQs_ = x; };
     double getxFromThisFactorTimesQs() const { return xFromThisFactorTimesQs_; }
     void setTpp(double x) { Tpp_ = x; }
@@ -410,7 +414,9 @@ class Parameters {
     void setlightNucleusOption(int x) { lightNucleusOption_ = x; };
     int getlightNucleusOption() const { return lightNucleusOption_; }
     void setPolarizationProjectile(int x) { polarizationFlagProjectile_ = x; };
-    int getPolarizationProjectile() const { return polarizationFlagProjectile_; }
+    int getPolarizationProjectile() const {
+        return polarizationFlagProjectile_;
+    }
     void setPolarizationTarget(int x) { polarizationFlagTarget_ = x; };
     int getPolarizationTarget() const { return polarizationFlagTarget_; }
     void setPolarizationProjectileJz(double x) { polJzProjectile_ = x; };
@@ -438,7 +444,9 @@ class Parameters {
     void setReadInitialWilsonLines(int x) { readInitialWilsonLines_ = x; }
     int getReadInitialWilsonLines() const { return readInitialWilsonLines_; }
     void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile_ = x; }
-    int getNucleonPositionsFromFile() const { return nucleonPositionsFromFile_; }
+    int getNucleonPositionsFromFile() const {
+        return nucleonPositionsFromFile_;
+    }
     void setNuclearConfigurationsPath(std::string x) {
         nuclearConfigurationsPath_ = x;
     }
@@ -456,7 +464,9 @@ class Parameters {
     void setUsePseudoRapidity(int x) { usePseudoRapidity_ = x; }
     int getUsePseudoRapidity() const { return usePseudoRapidity_; }
     void setUseConstituentQuarkProton(int x) { useConstituentQuarkProton_ = x; }
-    int getUseConstituentQuarkProton() const { return useConstituentQuarkProton_; }
+    int getUseConstituentQuarkProton() const {
+        return useConstituentQuarkProton_;
+    }
     void setNqBase(double NqBase) { NqBase_ = NqBase; }
     double getNqBase() const { return NqBase_; }
     void setNqFluc(double NqFluc) { NqFluc_ = NqFluc; }

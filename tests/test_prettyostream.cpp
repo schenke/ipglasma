@@ -1,9 +1,8 @@
-#include "doctest.h"
-
 #include <cstdlib>
 #include <string>
 
 #include "PrettyOstream.h"
+#include "doctest.h"
 
 TEST_CASE("PrettyOstream::getMemoryUsage returns a plausible \"<number> MB\"") {
     PrettyOstream messager;

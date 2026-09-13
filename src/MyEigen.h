@@ -32,10 +32,9 @@ class MyEigen {
     // output is disabled (param->getWriteOutputs() % 2 != 1) -- writeJazma
     // needs Etot even when this writer itself is off.
     double writeHydroText(
-        Lattice *lat, Parameters *param, int it, bool finalFlag,
-        bool tmunuOnly, int N, double L, double a, double dtau,
-        double gfactor, int hx, int hy, int heta, double hL, double deta,
-        double ha, double tau0);
+        Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly,
+        int N, double L, double a, double dtau, double gfactor, int hx, int hy,
+        int heta, double hL, double deta, double ha, double tau0);
 
     // Writes the raw/binary Tmunu output (Tmunu-t*.dat or *.ipgt):
     // per-cell interpolated T^munu components on the output grid.
@@ -47,9 +46,9 @@ class MyEigen {
     // Writes the Jazma output (Jazma-Hydro-t*.dat): per-cell g2mu2A*g2mu2B,
     // normalized so its grid integral matches Etot (from writeHydroText).
     void writeJazma(
-        Lattice *lat, Parameters *param, int it, double Etot, int N,
-        double L, double a, double dtau, int hx, int hy, int heta, double hL,
-        double deta, double ha);
+        Lattice *lat, Parameters *param, int it, double Etot, int N, double L,
+        double a, double dtau, int hx, int hy, int heta, double hL, double deta,
+        double ha);
 };
 
 #endif  // SRC_MYEIGEN_H_

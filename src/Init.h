@@ -63,6 +63,69 @@ class Init {
         Glauber *glauber, InitializationMethod init_method);
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     void initializeForwardLightCone(Lattice *lat, Parameters *param);
+    // initializeForwardLightCone's steps, run in sequence inside one shared
+    // #pragma omp parallel region (each has its own #pragma omp for, so
+    // they stay correctly ordered by its implicit barrier).
+    // Replaces any NaN U/U2 (left over from a failed forward-lightcone
+    // solve) with the identity.
+    void sanitizeForwardLightconeU(Lattice *lat, int N2);
+    struct ForwardLightconeLinkScratch {
+        Matrix UDx;
+        Matrix UDy;
+    };
+    // Computes Ux1/Uy1 (from U) and Ux2/Uy2 (from U2).
+    void computeForwardLightconeLinksTeam(
+        Lattice *lat, int N2, ForwardLightconeLinkScratch &scratch);
+    struct ForwardLightconeUScratch {
+        Matrix temp2;
+        Matrix UDx1;
+        Matrix UDx2;
+        Matrix UDy1;
+        Matrix UDy2;
+    };
+    // Solves for Ux/Uy from Ux1/Ux2 and Uy1/Uy2 via findUInForwardLightcone.
+    void computeForwardLightconeUxUyTeam(
+        Lattice *lat, Parameters *param, int N2,
+        ForwardLightconeUScratch &scratch);
+    struct ForwardLightconeElectricFieldScratch {
+        Matrix temp2;
+        Matrix Ux1mUx2;
+        Matrix UDx1;
+        Matrix UDx2;
+        Matrix UDx1mUDx2;
+        Matrix Ux;
+        Matrix UDx;
+        Matrix Uy1mUy2;
+        Matrix UDy1;
+        Matrix UDy2;
+        Matrix UDy1mUDy2;
+        Matrix Uy;
+        Matrix UDy;
+    };
+    // Computes the initial electric field contribution from one direction
+    // (neighborX/neighborY select minus-shifted or plus-shifted neighbors),
+    // written into outputField. Called once with (posmX, posmY, lat->U) and
+    // once with (pospX, pospY, lat->U2) -- previously two copy-pasted loops.
+    void computeForwardLightconeElectricFieldTeam(
+        Lattice *lat, int N2, const std::vector<int> &neighborX,
+        const std::vector<int> &neighborY, std::vector<Matrix> &outputField,
+        ForwardLightconeElectricFieldScratch &scratch);
+    struct ForwardLightconePlaquetteScratch {
+        Matrix UDx;
+        Matrix UDy;
+        Matrix Uplaq;
+    };
+    // Computes the spatial plaquette into lat->Uy1 (reused as scratch here,
+    // ahead of computeForwardLightconePiTeam/resetForwardLightconeFieldsTeam
+    // repurposing it further).
+    void computeForwardLightconePlaquetteTeam(
+        Lattice *lat, int N2, ForwardLightconePlaquetteScratch &scratch);
+    // Sets lat->Ux2 to pi (E^z) in lattice units from lat->U.
+    void computeForwardLightconePiTeam(
+        Lattice *lat, Parameters *param, int N2);
+    // Zeroes lat->U/U2/Uy2 and resets lat->Ux1 to the identity, now that
+    // this event's forward-lightcone fields have been consumed above.
+    void resetForwardLightconeFieldsTeam(Lattice *lat, int N2);
     void sampleImpactParameter(Parameters *param);
     void sampleTA(Parameters *param, Random *random, Glauber *glauber);
     // sampleTA's four mutually-exclusive nucleonPositionsFromFile branches,

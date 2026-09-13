@@ -2464,272 +2464,239 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
     messager_.info(
         "[Init::initializeForwardLightCone]: Finding fields in forward "
         "lightcone...");
-    // output Wilson lines (used also for the proton plots)
-    double L = param->getL();
     const int N = param->getSize();
     const int N2 = N * N;
-    double a = L / N;  // lattice spacing in fm
-    double x, y;
 #pragma omp parallel
     {
-        Matrix temp2(1);
-        Matrix Ux(1);
-        Matrix Uy(1);
-        Matrix UDx(1);
-        Matrix UDy(1);
-        Matrix UDx1(1);
-        Matrix UDy1(1);
+        sanitizeForwardLightconeU(lat, N2);
 
-        Matrix Uplaq(1);
+        ForwardLightconeLinkScratch linkScratch;
+        computeForwardLightconeLinksTeam(lat, N2, linkScratch);
 
-        Matrix UDx2(1);
-        Matrix UDy2(1);
+        ForwardLightconeUScratch uScratch;
+        computeForwardLightconeUxUyTeam(lat, param, N2, uScratch);
 
-        Matrix Ux1mUx2(1);
-        Matrix UDx1mUDx2(1);
-        Matrix Uy1mUy2(1);
-        Matrix UDy1mUDy2(1);
+        // compute initial electric field
+        ForwardLightconeElectricFieldScratch electricScratch;
+        // with minus ax, ay
+        computeForwardLightconeElectricFieldTeam(
+            lat, N2, lat->posmX, lat->posmY, lat->U, electricScratch);
+        // with plus ax, ay
+        computeForwardLightconeElectricFieldTeam(
+            lat, N2, lat->pospX, lat->pospY, lat->U2, electricScratch);
 
+        // compute the plaquette
+        ForwardLightconePlaquetteScratch plaquetteScratch;
+        computeForwardLightconePlaquetteTeam(lat, N2, plaquetteScratch);
+
+        computeForwardLightconePiTeam(lat, param, N2);
+
+        resetForwardLightconeFieldsTeam(lat, N2);
+    }  // omp block
+}
+
+void Init::sanitizeForwardLightconeU(Lattice *lat, int N2) {
 // compute Ux(3) Uy(3) after the collision
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            // loops over all cells
-            auto checkU = lat->U[pos].trace();
-            if (checkU != checkU) {
-                lat->U[pos] = (one_);
-            }
-
-            checkU = lat->U2[pos].trace();
-            if (checkU != checkU) {
-                lat->U2[pos] = (one_);
-            }
+    for (int pos = 0; pos < N2; pos++) {
+        // loops over all cells
+        auto checkU = lat->U[pos].trace();
+        if (checkU != checkU) {
+            lat->U[pos] = (one_);
         }
 
+        checkU = lat->U2[pos].trace();
+        if (checkU != checkU) {
+            lat->U2[pos] = (one_);
+        }
+    }
+}
+
+void Init::computeForwardLightconeLinksTeam(
+    Lattice *lat, int N2, ForwardLightconeLinkScratch &scratch) {
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            // loops over all cells
-            UDx = lat->U[lat->pospX[pos]];
-            UDx.conjg();
-            lat->Ux1[pos] = (lat->U[pos] * UDx);
+    for (int pos = 0; pos < N2; pos++) {
+        // loops over all cells
+        scratch.UDx = lat->U[lat->pospX[pos]];
+        scratch.UDx.conjg();
+        lat->Ux1[pos] = (lat->U[pos] * scratch.UDx);
 
-            UDy = lat->U[lat->pospY[pos]];
-            UDy.conjg();
-            lat->Uy1[pos] = (lat->U[pos] * UDy);
+        scratch.UDy = lat->U[lat->pospY[pos]];
+        scratch.UDy.conjg();
+        lat->Uy1[pos] = (lat->U[pos] * scratch.UDy);
 
-            UDx = lat->U2[lat->pospX[pos]];
-            UDx.conjg();
-            lat->Ux2[pos] = (lat->U2[pos] * UDx);
+        scratch.UDx = lat->U2[lat->pospX[pos]];
+        scratch.UDx.conjg();
+        lat->Ux2[pos] = (lat->U2[pos] * scratch.UDx);
 
-            UDy = lat->U2[lat->pospY[pos]];
-            UDy.conjg();
-            lat->Uy2[pos] = (lat->U2[pos] * UDy);
-        }
-        // -----------------------------------------------------------------
-        // from Ux(1,2) and Uy(1,2) compute Ux(3) and Uy(3):
+        scratch.UDy = lat->U2[lat->pospY[pos]];
+        scratch.UDy.conjg();
+        lat->Uy2[pos] = (lat->U2[pos] * scratch.UDy);
+    }
+}
 
+// from Ux(1,2) and Uy(1,2) compute Ux(3) and Uy(3):
+void Init::computeForwardLightconeUxUyTeam(
+    Lattice *lat, Parameters *param, int N2,
+    ForwardLightconeUScratch &scratch) {
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            // loops over all cells
-            UDx1 = lat->Ux1[pos];
-            UDx2 = lat->Ux2[pos];
-            const std::uint64_t retrySeedX = forwardLightconeRetrySeed(
-                param->getRandomSeed(), param->getEventId(), pos, 0);
-            bool status =
-                findUInForwardLightcone(UDx1, UDx2, temp2, retrySeedX);
-            lat->Ux[pos] = (temp2);
-            if (!status) {
-                // Inside an omp parallel/for region: use a fresh,
-                // stack-local instance rather than sharing messager_.
-                PrettyOstream localMessager;
-                localMessager << "[Init::initializeForwardLightCone]: Failed "
-                                 "to converge finding Ux in "
-                                 "the forward lightcone at pos x = "
-                              << pos / param->getSize()
-                              << " y = " << pos % param->getSize();
-                localMessager.flush("warning");
-            }
-
-            UDy1 = lat->Uy1[pos];
-            UDy2 = lat->Uy2[pos];
-            const std::uint64_t retrySeedY = forwardLightconeRetrySeed(
-                param->getRandomSeed(), param->getEventId(), pos, 1);
-            status = findUInForwardLightcone(UDy1, UDy2, temp2, retrySeedY);
-            lat->Uy[pos] = (temp2);
-            if (!status) {
-                // Inside an omp parallel/for region: use a fresh,
-                // stack-local instance rather than sharing messager_.
-                PrettyOstream localMessager;
-                localMessager << "[Init::initializeForwardLightCone]: Failed "
-                                 "to converge finding Uy in "
-                                 "the forward lightcone at pos x = "
-                              << pos / param->getSize()
-                              << " y = " << pos % param->getSize();
-                localMessager.flush("warning");
-            }
+    for (int pos = 0; pos < N2; pos++) {
+        // loops over all cells
+        scratch.UDx1 = lat->Ux1[pos];
+        scratch.UDx2 = lat->Ux2[pos];
+        const std::uint64_t retrySeedX = forwardLightconeRetrySeed(
+            param->getRandomSeed(), param->getEventId(), pos, 0);
+        bool status = findUInForwardLightcone(
+            scratch.UDx1, scratch.UDx2, scratch.temp2, retrySeedX);
+        lat->Ux[pos] = (scratch.temp2);
+        if (!status) {
+            // Inside an omp parallel/for region: use a fresh,
+            // stack-local instance rather than sharing messager_.
+            PrettyOstream localMessager;
+            localMessager << "[Init::initializeForwardLightCone]: Failed "
+                             "to converge finding Ux in "
+                             "the forward lightcone at pos x = "
+                          << pos / param->getSize()
+                          << " y = " << pos % param->getSize();
+            localMessager.flush("warning");
         }
 
-// compute initial electric field
-// with minus ax, ay
+        scratch.UDy1 = lat->Uy1[pos];
+        scratch.UDy2 = lat->Uy2[pos];
+        const std::uint64_t retrySeedY = forwardLightconeRetrySeed(
+            param->getRandomSeed(), param->getEventId(), pos, 1);
+        status = findUInForwardLightcone(
+            scratch.UDy1, scratch.UDy2, scratch.temp2, retrySeedY);
+        lat->Uy[pos] = (scratch.temp2);
+        if (!status) {
+            // Inside an omp parallel/for region: use a fresh,
+            // stack-local instance rather than sharing messager_.
+            PrettyOstream localMessager;
+            localMessager << "[Init::initializeForwardLightCone]: Failed "
+                             "to converge finding Uy in "
+                             "the forward lightcone at pos x = "
+                          << pos / param->getSize()
+                          << " y = " << pos % param->getSize();
+            localMessager.flush("warning");
+        }
+    }
+}
+
+void Init::computeForwardLightconeElectricFieldTeam(
+    Lattice *lat, int N2, const std::vector<int> &neighborX,
+    const std::vector<int> &neighborY, std::vector<Matrix> &outputField,
+    ForwardLightconeElectricFieldScratch &scratch) {
 #pragma omp for
-        for (int pos = 0; pos < N2; pos++) {
-            // x part in sum:
-            Ux1mUx2 = lat->Ux1[pos] - lat->Ux2[pos];
-            UDx1 = lat->Ux1[pos];
-            UDx1.conjg();
-            UDx2 = lat->Ux2[pos];
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
+    for (int pos = 0; pos < N2; pos++) {
+        // x part in sum:
+        scratch.Ux1mUx2 = lat->Ux1[pos] - lat->Ux2[pos];
+        scratch.UDx1 = lat->Ux1[pos];
+        scratch.UDx1.conjg();
+        scratch.UDx2 = lat->Ux2[pos];
+        scratch.UDx2.conjg();
+        scratch.UDx1mUDx2 = scratch.UDx1 - scratch.UDx2;
 
-            Ux = lat->Ux[pos];
-            UDx = Ux;
-            UDx.conjg();
+        scratch.Ux = lat->Ux[pos];
+        scratch.UDx = scratch.Ux;
+        scratch.UDx.conjg();
 
-            temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
+        scratch.temp2 = scratch.Ux1mUx2 * scratch.UDx - scratch.Ux1mUx2
+                         - scratch.Ux * scratch.UDx1mUDx2 + scratch.UDx1mUDx2;
 
-            Ux1mUx2 = lat->Ux1[lat->posmX[pos]] - lat->Ux2[lat->posmX[pos]];
-            UDx1 = lat->Ux1[lat->posmX[pos]];
-            UDx1.conjg();
-            UDx2 = lat->Ux2[lat->posmX[pos]];
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
+        scratch.Ux1mUx2 =
+            lat->Ux1[neighborX[pos]] - lat->Ux2[neighborX[pos]];
+        scratch.UDx1 = lat->Ux1[neighborX[pos]];
+        scratch.UDx1.conjg();
+        scratch.UDx2 = lat->Ux2[neighborX[pos]];
+        scratch.UDx2.conjg();
+        scratch.UDx1mUDx2 = scratch.UDx1 - scratch.UDx2;
 
-            Ux = lat->Ux[lat->posmX[pos]];
-            UDx = Ux;
-            UDx.conjg();
+        scratch.Ux = lat->Ux[neighborX[pos]];
+        scratch.UDx = scratch.Ux;
+        scratch.UDx.conjg();
 
-            temp2 =
-                temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
+        scratch.temp2 = scratch.temp2 - scratch.UDx * scratch.Ux1mUx2
+                         + scratch.Ux1mUx2 + scratch.UDx1mUDx2 * scratch.Ux
+                         - scratch.UDx1mUDx2;
 
-            // y part in sum
-            Uy1mUy2 = lat->Uy1[pos] - lat->Uy2[pos];
-            UDy1 = lat->Uy1[pos];
-            UDy1.conjg();
-            UDy2 = lat->Uy2[pos];
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
+        // y part in sum
+        scratch.Uy1mUy2 = lat->Uy1[pos] - lat->Uy2[pos];
+        scratch.UDy1 = lat->Uy1[pos];
+        scratch.UDy1.conjg();
+        scratch.UDy2 = lat->Uy2[pos];
+        scratch.UDy2.conjg();
+        scratch.UDy1mUDy2 = scratch.UDy1 - scratch.UDy2;
 
-            Uy = lat->Uy[pos];
-            UDy = Uy;
-            UDy.conjg();
+        scratch.Uy = lat->Uy[pos];
+        scratch.UDy = scratch.Uy;
+        scratch.UDy.conjg();
 
-            // y part of the sum:
-            temp2 =
-                temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
+        // y part of the sum:
+        scratch.temp2 = scratch.temp2 + scratch.Uy1mUy2 * scratch.UDy
+                         - scratch.Uy1mUy2 - scratch.Uy * scratch.UDy1mUDy2
+                         + scratch.UDy1mUDy2;
 
-            Uy1mUy2 = lat->Uy1[lat->posmY[pos]] - lat->Uy2[lat->posmY[pos]];
-            UDy1 = lat->Uy1[lat->posmY[pos]];
-            UDy1.conjg();
-            UDy2 = lat->Uy2[lat->posmY[pos]];
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
+        scratch.Uy1mUy2 =
+            lat->Uy1[neighborY[pos]] - lat->Uy2[neighborY[pos]];
+        scratch.UDy1 = lat->Uy1[neighborY[pos]];
+        scratch.UDy1.conjg();
+        scratch.UDy2 = lat->Uy2[neighborY[pos]];
+        scratch.UDy2.conjg();
+        scratch.UDy1mUDy2 = scratch.UDy1 - scratch.UDy2;
 
-            Uy = lat->Uy[lat->posmY[pos]];
-            UDy = Uy;
-            UDy.conjg();
+        scratch.Uy = lat->Uy[neighborY[pos]];
+        scratch.UDy = scratch.Uy;
+        scratch.UDy.conjg();
 
-            temp2 =
-                temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
+        scratch.temp2 = scratch.temp2 - scratch.UDy * scratch.Uy1mUy2
+                         + scratch.Uy1mUy2 + scratch.UDy1mUDy2 * scratch.Uy
+                         - scratch.UDy1mUDy2;
 
-            lat->U[pos] = ((1. / 8.) * temp2);
-        }
+        outputField[pos] = ((1. / 8.) * scratch.temp2);
+    }
+}
 
-        // with plus ax, ay
+void Init::computeForwardLightconePlaquetteTeam(
+    Lattice *lat, int N2, ForwardLightconePlaquetteScratch &scratch) {
 #pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            // x part in sum:
-            Ux1mUx2 = lat->Ux1[pos] - lat->Ux2[pos];
-            UDx1 = lat->Ux1[pos];
-            UDx1.conjg();
-            UDx2 = lat->Ux2[pos];
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
+    for (int pos = 0; pos < N2; pos++) {
+        scratch.UDx = lat->Ux[lat->pospY[pos]];
+        scratch.UDy = lat->Uy[pos];
 
-            Ux = lat->Ux[pos];
-            UDx = Ux;
-            UDx.conjg();
+        scratch.UDx.conjg();
+        scratch.UDy.conjg();
 
-            temp2 = Ux1mUx2 * UDx - Ux1mUx2 - Ux * UDx1mUDx2 + UDx1mUDx2;
+        scratch.Uplaq =
+            lat->Ux[pos]
+            * (lat->Uy[lat->pospX[pos]] * (scratch.UDx * scratch.UDy));
+        lat->Uy1[pos] = (scratch.Uplaq);
+    }
+}
 
-            Ux1mUx2 = lat->Ux1[lat->pospX[pos]] - lat->Ux2[lat->pospX[pos]];
-            UDx1 = lat->Ux1[lat->pospX[pos]];
-            UDx1.conjg();
-            UDx2 = lat->Ux2[lat->pospX[pos]];
-            UDx2.conjg();
-            UDx1mUDx2 = UDx1 - UDx2;
-
-            Ux = lat->Ux[lat->pospX[pos]];
-            UDx = Ux;
-            UDx.conjg();
-
-            temp2 =
-                temp2 - UDx * Ux1mUx2 + Ux1mUx2 + UDx1mUDx2 * Ux - UDx1mUDx2;
-
-            // y part in sum
-            Uy1mUy2 = lat->Uy1[pos] - lat->Uy2[pos];
-            UDy1 = lat->Uy1[pos];
-            UDy1.conjg();
-            UDy2 = lat->Uy2[pos];
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
-
-            Uy = lat->Uy[pos];
-            UDy = Uy;
-            UDy.conjg();
-
-            // y part of the sum:
-            temp2 =
-                temp2 + Uy1mUy2 * UDy - Uy1mUy2 - Uy * UDy1mUDy2 + UDy1mUDy2;
-
-            Uy1mUy2 = lat->Uy1[lat->pospY[pos]] - lat->Uy2[lat->pospY[pos]];
-            UDy1 = lat->Uy1[lat->pospY[pos]];
-            UDy1.conjg();
-            UDy2 = lat->Uy2[lat->pospY[pos]];
-            UDy2.conjg();
-            UDy1mUDy2 = UDy1 - UDy2;
-
-            Uy = lat->Uy[lat->pospY[pos]];
-            UDy = Uy;
-            UDy.conjg();
-
-            temp2 =
-                temp2 - UDy * Uy1mUy2 + Uy1mUy2 + UDy1mUDy2 * Uy - UDy1mUDy2;
-
-            lat->U2[pos] = ((1. / 8.) * temp2);
-        }
-// compute the plaquette
+void Init::computeForwardLightconePiTeam(
+    Lattice *lat, Parameters *param, int N2) {
 #pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            UDx = lat->Ux[lat->pospY[pos]];
-            UDy = lat->Uy[pos];
+    for (int pos = 0; pos < N2; pos++) {
+        // this is pi in lattice units as needed for the evolution. (later,
+        // the a^4 gives the right units for the energy density
+        lat->Ux2[pos] =
+            (complex<double>(0., -2. / param->getg()) * (lat->U[pos]));
+        // factor -2 because I have A^eta (note the 1/8 before)
+        // but want \pi (E^z).
+    }
+}
 
-            UDx.conjg();
-            UDy.conjg();
-
-            Uplaq = lat->Ux[pos] * (lat->Uy[lat->pospX[pos]] * (UDx * UDy));
-            lat->Uy1[pos] = (Uplaq);
-        }
-
+void Init::resetForwardLightconeFieldsTeam(Lattice *lat, int N2) {
+    const Matrix zero(0.);
 #pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            // this is pi in lattice units as needed for the evolution. (later,
-            // the a^4 gives the right units for the energy density
-            lat->Ux2[pos] =
-                (complex<double>(0., -2. / param->getg()) * (lat->U[pos]));
-            // factor -2 because I have A^eta (note the 1/8 before)
-            // but want \pi (E^z).
-        }
+    for (int pos = 0; pos < N2; pos++) {
+        lat->U[pos] = (zero);
+        lat->U2[pos] = (zero);
+        lat->Uy2[pos] = (zero);
 
-        const Matrix zero(0.);
-#pragma omp for
-        for (int pos = 0; pos < N * N; pos++) {
-            lat->U[pos] = (zero);
-            lat->U2[pos] = (zero);
-            lat->Uy2[pos] = (zero);
-
-            // reset the Ux1 to be used for other purposes later
-            lat->Ux1[pos] = (one_);
-        }
-    }  // omp block
+        // reset the Ux1 to be used for other purposes later
+        lat->Ux1[pos] = (one_);
+    }
 }
 
 void Init::generateNucleusConfiguration(

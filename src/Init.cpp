@@ -734,13 +734,61 @@ double Init::getNuclearQs2(double T, double y) {
     return value;
 }
 
+double Init::computeFluctuatingXG2mu2(
+    Parameters *param, double a, double rapidity, double Tp,
+    double qsmuRatio, double ySign) {
+    const double exponent = 5.6;  // see 1212.2974 Eq. (17)
+    double Qs = 1.;
+    double xVal = 0.;
+    double g2mu2 = 0.;
+    double localrapidity = rapidity;
+    double yIn = rapidity;
+    double Ydeviation = 10000;
+    // iterative loops here to determine the fluctuating Y
+    while (std::abs(Ydeviation) > 0.001) {
+        if (localrapidity >= 0) {
+            Qs = sqrt(getNuclearQs2(Tp, localrapidity));
+        } else {
+            xVal = Qs * param->getxFromThisFactorTimesQs() / param->getRoots()
+                   * exp(ySign * yIn);
+            if (xVal == 0)
+                Qs = 0.;
+            else
+                Qs = sqrt(getNuclearQs2(Tp, 0.))
+                     * sqrt(
+                         pow((1 - xVal) / (1 - 0.01), exponent)
+                         * pow((0.01 / xVal), 0.2));
+        }
+        if (Qs == 0) {
+            Ydeviation = 0;
+            g2mu2 = 0.;
+        } else {
+            g2mu2 = Qs * Qs / qsmuRatio / qsmuRatio * a * a / hbarc / hbarc
+                    / param->getg() / param->getg();  // lattice units? check
+
+            Ydeviation =
+                localrapidity
+                - log(
+                    0.01
+                    / (Qs * param->getxFromThisFactorTimesQs()
+                       / param->getRoots() * exp(ySign * yIn)));
+            localrapidity =
+                log(0.01
+                    / (Qs * param->getxFromThisFactorTimesQs()
+                       / param->getRoots() * exp(ySign * yIn)));
+        }
+    }
+    if (g2mu2 != g2mu2) {
+        g2mu2 = 0.;
+    }
+    return g2mu2;
+}
+
 // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
 // Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
 void Init::computeCellColorCharge(
     Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
     double rapidityB) {
-    double QsA = 1;
-    double QsB = 1;
     int check = 0;
     double distanceA = 0;
     double distanceB = 0;
@@ -792,102 +840,14 @@ void Init::computeCellColorCharge(
         check = 2;
     }
 
-    double exponent = 5.6;  // see 1212.2974 Eq. (17)
-    double xVal = 0.;
     if (check == 2) {
         if (param->getUseFluctuatingx() == 1) {
-            double localrapidity = rapidityA;
-            double yIn = rapidityA;
-            double Ydeviation = 10000;
-            // iterative loops here to determine the fluctuating Y
-            while (std::abs(Ydeviation) > 0.001) {
-                if (localrapidity >= 0) {
-                    QsA = sqrt(getNuclearQs2(
-                        lat->cells[ipos]->getTpA(), localrapidity));
-                } else {
-                    xVal = QsA * param->getxFromThisFactorTimesQs()
-                           / param->getRoots() * exp(yIn);
-                    if (xVal == 0)
-                        QsA = 0.;
-                    else
-                        QsA = sqrt(getNuclearQs2(
-                                  lat->cells[ipos]->getTpA(), 0.))
-                              * sqrt(
-                                  pow((1 - xVal) / (1 - 0.01), exponent)
-                                  * pow((0.01 / xVal), 0.2));
-                }
-                if (QsA == 0) {
-                    Ydeviation = 0;
-                    lat->cells[ipos]->setg2mu2A(0.);
-                } else {
-                    // nucleus A
-                    lat->cells[ipos]->setg2mu2A(
-                        QsA * QsA / param->getQsmuRatio()
-                        / param->getQsmuRatio() * a * a / hbarc / hbarc
-                        / param->getg()
-                        / param->getg());  // lattice units? check
-
-                    Ydeviation =
-                        localrapidity
-                        - log(
-                            0.01
-                            / (QsA * param->getxFromThisFactorTimesQs()
-                               / param->getRoots() * exp(yIn)));
-                    localrapidity =
-                        log(0.01
-                            / (QsA * param->getxFromThisFactorTimesQs()
-                               / param->getRoots() * exp(yIn)));
-                }
-            }
-            if (lat->cells[ipos]->getg2mu2A()
-                != lat->cells[ipos]->getg2mu2A()) {
-                lat->cells[ipos]->setg2mu2A(0.);
-            }
-
-            localrapidity = rapidityB;
-            yIn = rapidityB;
-            Ydeviation = 10000;
-            while (std::abs(Ydeviation) > 0.001) {
-                if (localrapidity >= 0)
-                    QsB = sqrt(getNuclearQs2(
-                        lat->cells[ipos]->getTpB(), localrapidity));
-                else {
-                    xVal = QsB * param->getxFromThisFactorTimesQs()
-                           / param->getRoots() * exp(-yIn);
-                    if (xVal == 0)
-                        QsB = 0.;
-                    else
-                        QsB = sqrt(getNuclearQs2(
-                                  lat->cells[ipos]->getTpB(), 0.))
-                              * sqrt(
-                                  pow((1 - xVal) / (1 - 0.01), exponent)
-                                  * pow((0.01 / xVal), 0.2));
-                }
-                if (QsB == 0) {
-                    Ydeviation = 0;
-                    lat->cells[ipos]->setg2mu2B(0.);
-                } else {
-                    // nucleus B
-                    lat->cells[ipos]->setg2mu2B(
-                        QsB * QsB / param->getQsmuRatioB()
-                        / param->getQsmuRatioB() * a * a / hbarc / hbarc
-                        / param->getg() / param->getg());
-                    Ydeviation =
-                        localrapidity
-                        - log(
-                            0.01
-                            / (QsB * param->getxFromThisFactorTimesQs()
-                               / param->getRoots() * exp(-yIn)));
-                    localrapidity =
-                        log(0.01
-                            / (QsB * param->getxFromThisFactorTimesQs()
-                               / param->getRoots() * exp(-yIn)));
-                }
-            }
-            if (lat->cells[ipos]->getg2mu2B()
-                != lat->cells[ipos]->getg2mu2B()) {
-                lat->cells[ipos]->setg2mu2B(0.);
-            }
+            lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
+                param, a, rapidityA, lat->cells[ipos]->getTpA(),
+                param->getQsmuRatio(), 1.));
+            lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
+                param, a, rapidityB, lat->cells[ipos]->getTpB(),
+                param->getQsmuRatioB(), -1.));
         } else {
             // nucleus A
             lat->cells[ipos]->setg2mu2A(

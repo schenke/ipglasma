@@ -3382,9 +3382,14 @@ bool Init::findUInForwardLightcone(
         MtempArr[ai] = group_ptr_->getT(ai) * U1pU2;
     }
 
-    // use raw pointers to interface with gsl
-    double *Jab = new double[Nc2m1_ * Nc2m1_];
-    double *Fa = new double[Nc2m1_];
+    // JabData/FaData own the storage; Jab/Fa are raw-pointer views into it
+    // for solveAxb's GSL interface (gsl_matrix_view_array/
+    // gsl_vector_view_array need a raw contiguous buffer, not a
+    // std::vector).
+    std::vector<double> JabData(Nc2m1_ * Nc2m1_);
+    std::vector<double> FaData(Nc2m1_);
+    double *Jab = JabData.data();
+    double *Fa = FaData.data();
 
     double Fzero = 10.;
     double FzeroMin = 1e6;
@@ -3506,8 +3511,6 @@ bool Init::findUInForwardLightcone(
         Usol = UsolBestEst;  // return the best estimate
         success = false;
     }
-    delete[] Fa;
-    delete[] Jab;
     return (success);
 }
 

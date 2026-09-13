@@ -1226,6 +1226,50 @@ void Init::computeThicknessFromNucleons(
     }
 }
 
+void Init::computeNcollList(
+    Parameters *param, double d2, double b, double phiRP, int &Ncoll) {
+    stringstream strNcoll_name;
+    strNcoll_name << "NcollList" << param->getEventId() << ".dat";
+    string Ncoll_name;
+    Ncoll_name = strNcoll_name.str();
+
+    ofstream foutNcoll(Ncoll_name.c_str(), std::ios::out);
+
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+    const bool gaussianWounding = (param->getGaussianWounding() != 0);
+    const double G = 0.92;
+    for (int i = 0; i < A1; i++) {
+        for (int j = 0; j < A2; j++) {
+            double dx =
+                (nucleusB_.at(j).x - nucleusA_.at(i).x - b * cos(phiRP));
+            double dy =
+                (nucleusB_.at(j).y - nucleusA_.at(i).y - b * sin(phiRP));
+            double dij = dx * dx + dy * dy;
+
+            bool collided;
+            if (!gaussianWounding) {
+                collided = dij < d2;
+            } else {
+                double p = G * exp(-G * dij / d2);  // Gaussian profile
+                double ran = random_ptr_->genrand64_real1();
+                collided = ran < p;
+            }
+
+            if (collided) {
+                foutNcoll
+                    << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2. << " "
+                    << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2. << endl;
+                Ncoll++;
+                nucleusB_.at(j).collided = 1;
+                nucleusA_.at(i).collided = 1;
+            }
+        }
+    }
+
+    foutNcoll.close();
+}
+
 // This function compute the collision geometry quantities, such as
 // Npart, Ncoll, averageQs, etc.
 // Determines Npart/Ncoll from the (already-sampled) nucleon positions in
@@ -1243,69 +1287,7 @@ bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
     // Determine Npart, Ncoll. Do this only during the first stage, as in
     // the 2nd stage nuclei are shifted to b=0
     if (param->getUseSmoothNucleus() == 0) {
-        stringstream strNcoll_name;
-        strNcoll_name << "NcollList" << param->getEventId() << ".dat";
-        string Ncoll_name;
-        Ncoll_name = strNcoll_name.str();
-
-        ofstream foutNcoll(Ncoll_name.c_str(), std::ios::out);
-
-        if (param->getGaussianWounding() == 0) {
-            for (int i = 0; i < A1; i++) {
-                for (int j = 0; j < A2; j++) {
-                    double dx =
-                        (nucleusB_.at(j).x - nucleusA_.at(i).x
-                         - b * cos(phiRP));
-                    double dy =
-                        (nucleusB_.at(j).y - nucleusA_.at(i).y
-                         - b * sin(phiRP));
-                    double dij = dx * dx + dy * dy;
-                    if (dij < d2) {
-                        foutNcoll
-                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
-                            << " "
-                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
-                            << endl;
-                        Ncoll++;
-                        nucleusB_.at(j).collided = 1;
-                        nucleusA_.at(i).collided = 1;
-                    }
-                }
-            }
-        } else {
-            double p;
-            double G = 0.92;
-            double ran;
-
-            for (int i = 0; i < A1; i++) {
-                for (int j = 0; j < A2; j++) {
-                    double dx =
-                        (nucleusB_.at(j).x - nucleusA_.at(i).x
-                         - b * cos(phiRP));
-                    double dy =
-                        (nucleusB_.at(j).y - nucleusA_.at(i).y
-                         - b * sin(phiRP));
-                    double dij = dx * dx + dy * dy;
-
-                    p = G * exp(-G * dij / d2);  // Gaussian profile
-
-                    ran = random_ptr_->genrand64_real1();
-
-                    if (ran < p) {
-                        foutNcoll
-                            << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2.
-                            << " "
-                            << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
-                            << endl;
-                        Ncoll++;
-                        nucleusB_.at(j).collided = 1;
-                        nucleusA_.at(i).collided = 1;
-                    }
-                }
-            }
-        }
-
-        foutNcoll.close();
+        computeNcollList(param, d2, b, phiRP, Ncoll);
 
         stringstream strNpart_name;
         strNpart_name << "NpartList" << param->getEventId() << ".dat";

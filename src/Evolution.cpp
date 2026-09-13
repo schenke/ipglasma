@@ -2331,6 +2331,94 @@ void Evolution::readNkt(Parameters *param) {
     exit(1);
 }
 
+void Evolution::hadronizeAndWriteMultiplicity(
+    Parameters *param, double a, double dkt, int bins, const double *n,
+    double *Nhgsl, int hbins) {
+    const double hadronizationStart = ipg::wallSeconds();
+    messager_ << "[Evolution::multiplicity]:  Hadronizing ... ";
+    messager_.flush("info");
+    double z, frac;
+    double mypt, kt, Ng;
+    int ik;
+    const int steps = 6000;
+    double dz = 0.95 / static_cast<double>(steps);
+    double zValues[steps + 1];
+    double zintegrand[steps + 1];
+    gsl_interp_accel *zacc = gsl_interp_accel_alloc();
+    gsl_spline *zspline = gsl_spline_alloc(gsl_interp_cspline, steps + 1);
+
+    for (int ih = 0; ih <= hbins; ih++) {
+        mypt = ih * (20. / static_cast<double>(hbins));
+
+        for (int iz = 0; iz <= steps; iz++) {
+            z = 0.05 + iz * dz;
+            zValues[iz] = z;
+
+            kt = mypt / z;
+
+            ik = static_cast<int>(
+                floor(kt * a / hbarc / dkt - 0.5 + 0.00000001));
+
+            frac = (kt - (ik + 0.5) * dkt / a * hbarc) / (dkt / a * hbarc);
+
+            if (ik + 1 < bins && ik >= 0)
+                Ng = ((1. - frac) * n[ik] + frac * n[ik + 1]) * a / hbarc * a
+                     / hbarc;  // to make dN/d^2k_T fo k_T in GeV
+            else
+                Ng = 0.;
+
+            if (param->getUsePseudoRapidity() == 0) {
+                zintegrand[iz] = 1. / (z * z) * Ng * kkp(7, 1, z, kt);
+            } else {
+                zintegrand[iz] =
+                    1. / (z * z) * Ng * 2.
+                    * (kkp(1, 1, z, kt) * cosh(param->getRapidity())
+                           / (sqrt(
+                               pow(cosh(param->getRapidity()), 2.)
+                               + m_pion * m_pion / (mypt * mypt)))
+                       + kkp(2, 1, z, kt) * cosh(param->getRapidity())
+                             / (sqrt(
+                                 pow(cosh(param->getRapidity()), 2.)
+                                 + m_kaon * m_kaon / (mypt * mypt)))
+                       + kkp(4, 1, z, kt) * cosh(param->getRapidity())
+                             / (sqrt(
+                                 pow(cosh(param->getRapidity()), 2.)
+                                 + m_proton * m_proton / (mypt * mypt))));
+            }
+        }
+
+        zValues[steps] = 1.;  // set exactly 1
+
+        gsl_spline_init(zspline, zValues, zintegrand, steps + 1);
+        Nhgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
+    }
+
+    gsl_spline_free(zspline);
+    gsl_interp_accel_free(zacc);
+
+    stringstream strmultHad_name;
+    strmultHad_name << "multiplicityHadrons" << param->getEventId() << ".dat";
+    string multHad_name;
+    multHad_name = strmultHad_name.str();
+
+    ofstream foutdNdpt(multHad_name.c_str(), std::ios::out);
+    for (int ih = 0; ih <= hbins; ih++) {
+        if (ih % 10 == 0)
+            foutdNdpt << ih * 20. / static_cast<double>(hbins) << " "
+                      << Nhgsl[ih] << " " << 0. << " " << 0. << " "
+                      << param->getTpp() << " " << param->getb()
+                      << endl;  // leaving out the L and H ones for now
+    }
+    foutdNdpt.close();
+
+    messager_ << "[Evolution::multiplicity]:  done.";
+    messager_.flush("info");
+
+    ipg::Profiler::instance().add(
+        "observables.gluon_multiplicity.hadronization",
+        ipg::wallSeconds() - hadronizationStart);
+}
+
 int Evolution::multiplicity(
     Lattice *lat, Group *group, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.gluon_multiplicity");
@@ -2420,7 +2508,6 @@ int Evolution::multiplicity(
 
     const int hbins = 2000;
     double Nhgsl[hbins + 1];
-    double Ng;
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.setup_bins", multiplicityPhaseStart);
@@ -2499,90 +2586,7 @@ int Evolution::multiplicity(
 
     // compute hadrons using fragmentation function
     if (it == itmax && param->getWriteOutputs() == 3) {
-        const double hadronizationStart = ipg::wallSeconds();
-        messager_ << "[Evolution::multiplicity]:  Hadronizing ... ";
-        messager_.flush("info");
-        double z, frac;
-        double mypt, kt;
-        int ik;
-        const int steps = 6000;
-        double dz = 0.95 / static_cast<double>(steps);
-        double zValues[steps + 1];
-        double zintegrand[steps + 1];
-        gsl_interp_accel *zacc = gsl_interp_accel_alloc();
-        gsl_spline *zspline = gsl_spline_alloc(gsl_interp_cspline, steps + 1);
-
-        for (int ih = 0; ih <= hbins; ih++) {
-            mypt = ih * (20. / static_cast<double>(hbins));
-
-            for (int iz = 0; iz <= steps; iz++) {
-                z = 0.05 + iz * dz;
-                zValues[iz] = z;
-
-                kt = mypt / z;
-
-                ik = static_cast<int>(
-                    floor(kt * a / hbarc / dkt - 0.5 + 0.00000001));
-
-                frac = (kt - (ik + 0.5) * dkt / a * hbarc) / (dkt / a * hbarc);
-
-                if (ik + 1 < bins && ik >= 0)
-                    Ng = ((1. - frac) * n[ik] + frac * n[ik + 1]) * a / hbarc
-                         * a / hbarc;  // to make dN/d^2k_T fo k_T in GeV
-                else
-                    Ng = 0.;
-
-                if (param->getUsePseudoRapidity() == 0) {
-                    zintegrand[iz] = 1. / (z * z) * Ng * kkp(7, 1, z, kt);
-                } else {
-                    zintegrand[iz] =
-                        1. / (z * z) * Ng * 2.
-                        * (kkp(1, 1, z, kt) * cosh(param->getRapidity())
-                               / (sqrt(
-                                   pow(cosh(param->getRapidity()), 2.)
-                                   + m_pion * m_pion / (mypt * mypt)))
-                           + kkp(2, 1, z, kt) * cosh(param->getRapidity())
-                                 / (sqrt(
-                                     pow(cosh(param->getRapidity()), 2.)
-                                     + m_kaon * m_kaon / (mypt * mypt)))
-                           + kkp(4, 1, z, kt) * cosh(param->getRapidity())
-                                 / (sqrt(
-                                     pow(cosh(param->getRapidity()), 2.)
-                                     + m_proton * m_proton / (mypt * mypt))));
-                }
-            }
-
-            zValues[steps] = 1.;  // set exactly 1
-
-            gsl_spline_init(zspline, zValues, zintegrand, steps + 1);
-            Nhgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
-        }
-
-        gsl_spline_free(zspline);
-        gsl_interp_accel_free(zacc);
-
-        stringstream strmultHad_name;
-        strmultHad_name << "multiplicityHadrons" << param->getEventId()
-                        << ".dat";
-        string multHad_name;
-        multHad_name = strmultHad_name.str();
-
-        ofstream foutdNdpt(multHad_name.c_str(), std::ios::out);
-        for (int ih = 0; ih <= hbins; ih++) {
-            if (ih % 10 == 0)
-                foutdNdpt << ih * 20. / static_cast<double>(hbins) << " "
-                          << Nhgsl[ih] << " " << 0. << " " << 0. << " "
-                          << param->getTpp() << " " << param->getb()
-                          << endl;  // leaving out the L and H ones for now
-        }
-        foutdNdpt.close();
-
-        messager_ << "[Evolution::multiplicity]:  done.";
-        messager_.flush("info");
-
-        ipg::Profiler::instance().add(
-            "observables.gluon_multiplicity.hadronization",
-            ipg::wallSeconds() - hadronizationStart);
+        hadronizeAndWriteMultiplicity(param, a, dkt, bins, n, Nhgsl, hbins);
         multiplicityPhaseStart = ipg::wallSeconds();
     }
 

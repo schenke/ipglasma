@@ -49,6 +49,13 @@ class Evolution {
     void writeEvolvedFields(Lattice *lat, Parameters *param, int it);
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
+    // multiplicity()'s writeOutputs==3 hadronization step: convolves the
+    // binned gluon spectrum n[] with the KKP fragmentation function to get
+    // a hadron p_T spectrum, writing multiplicityHadrons<id>.dat. Nhgsl
+    // (length hbins+1) is scratch/output space owned by the caller.
+    void hadronizeAndWriteMultiplicity(
+        Parameters *param, double a, double dkt, int bins, const double *n,
+        double *Nhgsl, int hbins);
 
     void writeGluonMultiplicityTarget(
         Parameters *param, int it, double a, double dtau, double dNPrimary,

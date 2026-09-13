@@ -391,7 +391,7 @@ double Glauber::vInterpolate(double x, double *Vx, double *Vy, int ymax) {
                   << " is outside the tabulated range [" << Vx[0] << ", "
                   << Vx[ymax] << "]. This should never happen -- exiting.";
         messager_.flush("error");
-        exit(0);
+        exit(1);
     }
 
     /* we only deal with evenly spaced Vx */

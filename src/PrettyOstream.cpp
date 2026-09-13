@@ -61,7 +61,7 @@ void PrettyOstream::debug(string message) {
 //! This function output warning message
 void PrettyOstream::warning(string message) {
     std::lock_guard<std::mutex> lock(ttyMutex);
-    cout << BOLD << YELLOW << "[Warning] " << message << RESET << endl;
+    cout << BOLD << ORANGE << "[Warning] " << message << RESET << endl;
 }
 
 //! This function output error message

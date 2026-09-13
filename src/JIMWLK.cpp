@@ -130,7 +130,6 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     double a = length / Ngrid_;
     double lat_m = m * a * fmgev;
     double bessel_argument = lat_m * lat_r;
-    // double bes = std::cyl_bessel_k(1, bessel_argument);
     // use gsl bessel function to be compatible with the AppleClang compiler
     // (assumes the GSL error handler was already disabled by the caller,
     // since this runs once per cell from initializeK())

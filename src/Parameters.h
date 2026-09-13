@@ -213,8 +213,6 @@ class Parameters {
     double m_jimwlk_;
     double mu0_jimwlk_;
     double LambdaQCD_jimwlk_;
-    // int steps_jimwlk;
-    // int measureSteps_jimwlk;
     double ds_jimwlk_;
     double x0_jimwlk_;  // Bjorken-x at the initial condition of the JIMLWK
                         // evolution
@@ -510,8 +508,6 @@ class Parameters {
     double getJimwlk_x_projectile() { return jimwlk_x1_; }
     void setJimwlk_x_target(double x) { jimwlk_x2_ = x; }
     double getJimwlk_x_target() { return jimwlk_x2_; }
-    // void setMeasureSteps_jimwlk(int x) { measureSteps_jimwlk = x; };
-    // int getMeasureSteps_jimwlk() { return measureSteps_jimwlk; }
     void setDs_jimwlk(double x) { ds_jimwlk_ = x; }
     double getDs_jimwlk() { return ds_jimwlk_; }
     void setJimwlk_alphas(double as) { jimwlk_alphas_ = as; }

@@ -179,8 +179,6 @@ double Random::gauss(double mean, double width) {
     // from the previous step. this saves lots of time.
     double fac, rsq, v1, v2;
 
-    // if(idum<0) iset_=0;
-
     if (iset_ == 0) {
         do {
             v1 = 2.0 * genrand64_real3() - 1.0;

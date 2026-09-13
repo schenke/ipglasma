@@ -691,10 +691,6 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
     // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
     // now evolve phi and U to time tau=dtau.
-    if (param->getWriteOutputs() == 5) {
-        // Save the initialized forward-light-cone state at tau=0+.
-        // writeEvolvedFields(lat, param, 0);
-    }
     {
         IPG_PROFILE_SCOPE("evolution.initial_coordinate_half_step");
         evolvePhi(lat, param, dtau, 0.);
@@ -755,9 +751,6 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
         if (finalTmunuMeasurement) {
             tmunu(lat, param, it);
-            if (param->getWriteOutputs() == 5) {
-                // writeEvolvedFields(lat, param, it);
-            }
             // Hydro flow fields are optional. Tmunu output remains available
             // through the lightweight writer when the expensive eigen solve is
             // disabled.
@@ -771,7 +764,6 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
         if (intermediateTmunuMeasurement) {
             tmunu(lat, param, it);
-            // writeEvolvedFields(lat, param, it);
             //  Preserve the historical intermediate-time finalFlag=false path
             //  when hydro output is enabled.
             if (param->getWriteEpsilonUHydro() != 0) {
@@ -1316,15 +1308,6 @@ void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
                 lat->cells[pos]->setTetaeta(0.);
                 continue;
             }
-            // clean up numerical noise outside the interaction region
-            // if (lat->cells[pos]->getg2mu2A() < 1e-12
-            //    || lat->cells[pos]->getg2mu2B() < 1e-12) {
-            //    lat->cells[pos]->setEpsilon(0.);
-            //    lat->cells[pos]->setTtautau(0.);
-            //    lat->cells[pos]->setTxx(0.);
-            //    lat->cells[pos]->setTyy(0.);
-            //    lat->cells[pos]->setTetaeta(0.);
-            //} else {
             lat->cells[pos]->setEpsilon(
                 lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
             lat->cells[pos]->setTtautau(
@@ -1333,7 +1316,6 @@ void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
             lat->cells[pos]->setTyy(lat->cells[pos]->getTyy() * 1 / pow(a, 4.));
             lat->cells[pos]->setTetaeta(
                 lat->cells[pos]->getTetaeta() * 1 / pow(a, 6.));
-            //}
         }
 
         // T^\tau x, T^\tau y
@@ -1771,7 +1753,6 @@ void Evolution::eccentricity(
             {
                 weight = 0.;
             } else {
-                // weight = lat->cells[pos]->getEpsilon() * gfactor;
                 weight =
                     (lat->cells[pos]->getEpsilon() * lat->cells[pos]->getutau()
                      * gfactor);
@@ -1939,7 +1920,6 @@ void Evolution::eccentricity(
             {
                 weight = 0.;
             } else {
-                // weight = lat->cells[pos]->getEpsilon() * gfactor;
                 weight =
                     (lat->cells[pos]->getEpsilon() * lat->cells[pos]->getutau()
                      * gfactor);
@@ -2109,7 +2089,6 @@ void Evolution::eccentricity(
             {
                 weight = 0.;
             } else {
-                // weight = lat->cells[pos]->getEpsilon() * gfactor;
                 weight =
                     (lat->cells[pos]->getEpsilon() * lat->cells[pos]->getutau()
                      * gfactor);
@@ -2821,17 +2800,8 @@ int Evolution::multiplicity(
     }
 
     const int hbins = 2000;
-    // double Nh[hbins+1], Eh[hbins+1], Ehgsl[hbins+1], NhL[hbins+1],
-    // NhLgsl[hbins+1], NhH[hbins+1], NhHgsl[hbins+1];
     double Nhgsl[hbins + 1];
     double Ng;
-    // for (int ih=0; ih<=hbins; ih++)
-    //   {
-    //     Nh[ih]=0.;
-    //     Eh[ih]=0.;
-    //     NhL[ih]=0.;
-    //     NhH[ih]=0.;
-    //   }
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.setup_bins", multiplicityPhaseStart);
@@ -3360,9 +3330,6 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.bin_postprocess",
         multiplicityPhaseStart);
 
-    //  double dNdetaHadrons, dNdetaHadronsCut, dNdetaHadronsCut2;
-    //  double dEdetaHadrons, dEdetaHadronsCut, dEdetaHadronsCut2;
-
     // compute hadrons using fragmentation function
     if (it == itmax && param->getWriteOutputs() == 3) {
         const double hadronizationStart = ipg::wallSeconds();
@@ -3375,9 +3342,6 @@ int Evolution::multiplicity(
         double dz = 0.95 / static_cast<double>(steps);
         double zValues[steps + 1];
         double zintegrand[steps + 1];
-        // double Ezintegrand[steps+1];
-        // double Lzintegrand[steps+1];
-        // double Hzintegrand[steps+1];
         gsl_interp_accel *zacc = gsl_interp_accel_alloc();
         gsl_spline *zspline = gsl_spline_alloc(gsl_interp_cspline, steps + 1);
 
@@ -3403,9 +3367,6 @@ int Evolution::multiplicity(
 
                 if (param->getUsePseudoRapidity() == 0) {
                     zintegrand[iz] = 1. / (z * z) * Ng * kkp(7, 1, z, kt);
-                    // Ezintegrand[iz] = mypt * 1./(z*z) * Ng * kkp(7,1,z,kt);
-                    // Lzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt/2.);
-                    // Hzintegrand[iz] = 1./(z*z) * Ng * kkp(7,1,z,kt*2.);
                 } else {
                     zintegrand[iz] =
                         1. / (z * z) * Ng * 2.
@@ -3421,24 +3382,6 @@ int Evolution::multiplicity(
                                  / (sqrt(
                                      pow(cosh(param->getRapidity()), 2.)
                                      + m_proton * m_proton / (mypt * mypt))));
-
-                    // Ezintegrand[iz] =  mypt * 1./(z*z) * Ng *
-                    // 	2. *
-                    // (kkp(1,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-                    // 	      +kkp(2,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-                    // 	      +kkp(4,1,z,kt)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
-
-                    // Lzintegrand[iz] =  1./(z*z) * Ng *
-                    // 	2. *
-                    // (kkp(1,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-                    // 	      +kkp(2,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-                    // 	      +kkp(4,1,z,kt/2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
-
-                    // Hzintegrand[iz] =  1./(z*z) * Ng *
-                    // 	2. *
-                    // (kkp(1,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_pion*m_pion/(mypt*mypt)))
-                    // 	      +kkp(2,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_kaon*m_kaon/(mypt*mypt)))
-                    // 	      +kkp(4,1,z,kt*2.)*cosh(param->getRapidity())/(sqrt(pow(cosh(param->getRapidity()),2.)+m_proton*m_proton/(mypt*mypt))));
                 }
             }
 
@@ -3446,12 +3389,6 @@ int Evolution::multiplicity(
 
             gsl_spline_init(zspline, zValues, zintegrand, steps + 1);
             Nhgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
-
-            //	  gsl_spline_init (zspline, zValues, Lzintegrand, steps+1);
-            // NhLgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
-
-            // gsl_spline_init (zspline, zValues, Hzintegrand, steps+1);
-            // NhHgsl[ih] = gsl_spline_eval_integ(zspline, 0.05, 1., zacc);
         }
 
         gsl_spline_free(zspline);
@@ -3476,34 +3413,6 @@ int Evolution::multiplicity(
         messager_ << "[Evolution::multiplicity]:  done.";
         messager_.flush("info");
 
-        // integrate over pT using gsl
-        double pt[hbins + 1];
-        double integrand[hbins + 1];
-        double Eintegrand[hbins + 1];
-        for (int ih = 0; ih <= hbins; ih++) {
-            pt[ih] = ih * 20. / static_cast<double>(hbins);
-            integrand[ih] = Nhgsl[ih] * pt[ih];
-            Eintegrand[ih] = Nhgsl[ih] * pt[ih] * pt[ih];
-        }
-
-        gsl_interp_accel *ptacc = gsl_interp_accel_alloc();
-        gsl_spline *ptspline = gsl_spline_alloc(gsl_interp_cspline, hbins + 1);
-        gsl_spline_init(ptspline, pt, integrand, hbins + 1);
-        //   dNdetaHadrons = 2*M_PI*gsl_spline_eval_integ(ptspline, 0.25, 19.,
-        //   ptacc);
-        // dNdetaHadronsCut = 2*M_PI*gsl_spline_eval_integ(ptspline, 3., 19.,
-        // ptacc); dNdetaHadronsCut2 =
-        // 2*M_PI*gsl_spline_eval_integ(ptspline, 6., 19., ptacc);
-
-        gsl_spline_init(ptspline, pt, Eintegrand, hbins + 1);
-        // dEdetaHadrons = 2*M_PI*gsl_spline_eval_integ(ptspline, 0.25, 19.,
-        // ptacc); dEdetaHadronsCut =
-        // 2*M_PI*gsl_spline_eval_integ(ptspline, 3., 19., ptacc);
-        // dEdetaHadronsCut2 = 2*M_PI*gsl_spline_eval_integ(ptspline, 6., 19.,
-        // ptacc);
-
-        gsl_spline_free(ptspline);
-        gsl_interp_accel_free(ptacc);
         ipg::Profiler::instance().add(
             "observables.gluon_multiplicity.hadronization",
             ipg::wallSeconds() - hadronizationStart);

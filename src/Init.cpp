@@ -912,93 +912,18 @@ void Init::setColorChargeDensity(
         "[Init::setColorChargeDensity]: set color charge density ...");
 
     const int N = param->getSize();
-    const double L = param->getL();
-    const double a = L / N;  // lattice spacing in fm
-
-    int pos, posA, posB;
-    const int A1 = nucleusA_.size();
-    const int A2 = nucleusB_.size();
+    const double a = param->getL() / N;  // lattice spacing in fm
 
     double rapidityA = 0.;
     double rapidityB = 0.;
-    if (param->getUsePseudoRapidity() == 0) {
-        rapidityA = param->getRapidityA();
-        rapidityB = param->getRapidityB();
-    } else {
-        // when using pseudorapidity as input convert to rapidity here.
-        // later include Jacobian in multiplicity and energy
-        messager_ << "[Init::setColorChargeDensity]: Using pseudorapidity "
-                  << param->getRapidityA() << ", " << param->getRapidityB();
-        messager_.flush("info");
-        double m = param->getJacobianm();  // in GeV
-        double P =
-            0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
-        rapidityA =
-            0.5
-            * log(
-                sqrt(pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
-                + sinh(param->getRapidityA())
-                      / (sqrt(
-                             pow(cosh(param->getRapidityA()), 2.)
-                             + m * m / (P * P))
-                         - sinh(param->getRapidityA())));
-        rapidityB =
-            0.5
-            * log(
-                sqrt(pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
-                + sinh(param->getRapidityB())
-                      / (sqrt(
-                             pow(cosh(param->getRapidityB()), 2.)
-                             + m * m / (P * P))
-                         - sinh(param->getRapidityB())));
-        messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
-                  << rapidityA << ", " << rapidityB;
-        messager_.flush("info");
-    }
+    computeEffectiveRapidities(param, rapidityA, rapidityB);
 
     double nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
 
     param->setQsmuRatioB(param->getQsmuRatio());
 
     if (param->getUseNucleus() == 0) {
-        if (param->getUseGaussian() == 1) {
-            double sigmax = 0.35;
-            double sigmay = 0.5;
-            for (int ix = 0; ix < N; ix++)  // loop over all positions
-            {
-                double x = ix * L / double(N) - L / 2.;
-                for (int iy = 0; iy < N; iy++) {
-                    double y = iy * L / double(N) - L / 2.;
-                    int localpos = ix * N + iy;
-                    double envelope = exp(
-                                          -(x * x / (2. * sigmax * sigmax)
-                                            + y * y / (2. * sigmay * sigmay)))
-                                      / (2. * M_PI * sigmax * sigmay);
-                    lat->cells[localpos]->setg2mu2A(
-                        envelope * param->getg2mu() * param->getg2mu()
-                        / param->getg() / param->getg());
-                    lat->cells[localpos]->setg2mu2B(
-                        envelope * param->getg2mu() * param->getg2mu()
-                        / param->getg() / param->getg());
-                }
-            }
-        } else {
-            for (int ix = 0; ix < N; ix++)  // loop over all positions
-            {
-                for (int iy = 0; iy < N; iy++) {
-                    int localpos = ix * N + iy;
-                    lat->cells[localpos]->setg2mu2A(
-                        param->getg2mu() * param->getg2mu() / param->getg()
-                        / param->getg());
-                    lat->cells[localpos]->setg2mu2B(
-                        param->getg2mu() * param->getg2mu() / param->getg()
-                        / param->getg());
-                }
-            }
-        }
-        param->setSuccess(1);
-        messager_.info(
-            "[Init::setColorChargeDensity]: constant color charge density set");
+        setConstantColorChargeDensity(lat, param);
         return;
     }
 
@@ -1008,6 +933,110 @@ void Init::setColorChargeDensity(
         lat->cells[ipos]->setg2mu2B(0.);
     }
 
+    sampleNucleonAnisotropyAngles(param, random);
+    sampleConstituentQuarkGeometry(param, random);
+
+    // test what a smooth Woods-Saxon would give
+    if (param->getUseSmoothNucleus() == 1) {
+        computeSmoothNucleusThickness(lat, param, glauber);
+    } else {
+        // Non-smooth nucleus add all T_p's (new in version 1.2)
+        computeThicknessFromNucleons(lat, param, nucleiInAverage);
+    }
+
+// get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+#pragma omp parallel for
+    for (int ipos = 0; ipos < N * N; ipos++) {
+        computeCellColorCharge(lat, param, ipos, a, rapidityA, rapidityB);
+    }
+    messager_.info(
+        "[Init::setColorChargeDensity]: Color charge densities for nucleus A "
+        "and B set. ");
+}
+
+void Init::computeEffectiveRapidities(
+    Parameters *param, double &rapidityA, double &rapidityB) {
+    if (param->getUsePseudoRapidity() == 0) {
+        rapidityA = param->getRapidityA();
+        rapidityB = param->getRapidityB();
+        return;
+    }
+    // when using pseudorapidity as input convert to rapidity here.
+    // later include Jacobian in multiplicity and energy
+    messager_ << "[Init::setColorChargeDensity]: Using pseudorapidity "
+              << param->getRapidityA() << ", " << param->getRapidityB();
+    messager_.flush("info");
+    double m = param->getJacobianm();  // in GeV
+    double P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
+    rapidityA =
+        0.5
+        * log(
+            sqrt(pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
+            + sinh(param->getRapidityA())
+                  / (sqrt(
+                         pow(cosh(param->getRapidityA()), 2.)
+                         + m * m / (P * P))
+                     - sinh(param->getRapidityA())));
+    rapidityB =
+        0.5
+        * log(
+            sqrt(pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
+            + sinh(param->getRapidityB())
+                  / (sqrt(
+                         pow(cosh(param->getRapidityB()), 2.)
+                         + m * m / (P * P))
+                     - sinh(param->getRapidityB())));
+    messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
+              << rapidityA << ", " << rapidityB;
+    messager_.flush("info");
+}
+
+void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
+    const int N = param->getSize();
+    const double L = param->getL();
+    if (param->getUseGaussian() == 1) {
+        double sigmax = 0.35;
+        double sigmay = 0.5;
+        for (int ix = 0; ix < N; ix++)  // loop over all positions
+        {
+            double x = ix * L / double(N) - L / 2.;
+            for (int iy = 0; iy < N; iy++) {
+                double y = iy * L / double(N) - L / 2.;
+                int localpos = ix * N + iy;
+                double envelope = exp(
+                                      -(x * x / (2. * sigmax * sigmax)
+                                        + y * y / (2. * sigmay * sigmay)))
+                                  / (2. * M_PI * sigmax * sigmay);
+                lat->cells[localpos]->setg2mu2A(
+                    envelope * param->getg2mu() * param->getg2mu()
+                    / param->getg() / param->getg());
+                lat->cells[localpos]->setg2mu2B(
+                    envelope * param->getg2mu() * param->getg2mu()
+                    / param->getg() / param->getg());
+            }
+        }
+    } else {
+        for (int ix = 0; ix < N; ix++)  // loop over all positions
+        {
+            for (int iy = 0; iy < N; iy++) {
+                int localpos = ix * N + iy;
+                lat->cells[localpos]->setg2mu2A(
+                    param->getg2mu() * param->getg2mu() / param->getg()
+                    / param->getg());
+                lat->cells[localpos]->setg2mu2B(
+                    param->getg2mu() * param->getg2mu() / param->getg()
+                    / param->getg());
+            }
+        }
+    }
+    param->setSuccess(1);
+    messager_.info(
+        "[Init::setColorChargeDensity]: constant color charge density set");
+}
+
+void Init::sampleNucleonAnisotropyAngles(Parameters *param, Random *random) {
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
     double xi = param->getProtonAnisotropy();
     if (xi != 0.) {
         for (int i = 0; i < A1; i++) {
@@ -1026,7 +1055,11 @@ void Init::setColorChargeDensity(
             nucleusB_.at(i).phi = 0.;
         }
     }
+}
 
+void Init::sampleConstituentQuarkGeometry(Parameters *param, Random *random) {
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
     const int NqFlag = param->getUseConstituentQuarkProton();
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
     xq1_.clear();
@@ -1068,169 +1101,169 @@ void Init::setColorChargeDensity(
         sampleQsNormalization(random, param, Npartons, gauss_array);
         gauss2_.push_back(gauss_array);
     }
+}
 
-    // test what a smooth Woods-Saxon would give
-    if (param->getUseSmoothNucleus() == 1) {
-        messager_ << "[Init::setColorChargeDensity]: Using smooth nucleus for "
-                     "test purposes. "
-                     "Does not "
-                     "include "
-                     "deformation.";
-        messager_.flush("info");
-        double xA, xB;
-        double y;
-        double T;
-        double localpos;
-        double normA = 0.;
-        double normB = 0.;
-        double bb = param->getb();
-        double r = 0.;
-        for (int ix = 0; ix < N; ix++)  // loop over all positions
-        {
-            xA = -L / 2. + a * ix - bb / 2.;
-            xB = -L / 2. + a * ix + bb / 2.;
-            for (int iy = 0; iy < N; iy++) {
-                y = -L / 2. + a * iy;
+void Init::computeSmoothNucleusThickness(
+    Lattice *lat, Parameters *param, Glauber *glauber) {
+    messager_ << "[Init::setColorChargeDensity]: Using smooth nucleus for "
+                 "test purposes. "
+                 "Does not "
+                 "include "
+                 "deformation.";
+    messager_.flush("info");
+    const int N = param->getSize();
+    const double L = param->getL();
+    const double a = L / N;
+    double xA, xB;
+    double y;
+    double T;
+    double localpos;
+    double normA = 0.;
+    double normB = 0.;
+    double bb = param->getb();
+    double r = 0.;
+    for (int ix = 0; ix < N; ix++)  // loop over all positions
+    {
+        xA = -L / 2. + a * ix - bb / 2.;
+        xB = -L / 2. + a * ix + bb / 2.;
+        for (int iy = 0; iy < N; iy++) {
+            y = -L / 2. + a * iy;
 
-                localpos = ix * N + iy;
-
-                // nucleus A
-                r = sqrt(xA * xA + y * y);
-                T = glauber->interNuTInST(r);
-                lat->cells[localpos]->setTpA(T);
-
-                normA += T * a * a;
-
-                // nucleus B
-                r = sqrt(xB * xB + y * y);
-                T = glauber->interNuPInSP(r);
-                lat->cells[localpos]->setTpB(T);
-
-                normB += T * a * a;
-
-                // remove potential stuff outside the interaction region
-                if (lat->cells[localpos]->getTpA() < 0.001
-                    || lat->cells[localpos]->getTpB() < 0.001) {
-                    lat->cells[localpos]->setTpA(0.);
-                    lat->cells[localpos]->setTpB(0.);
-                }
-            }
-        }
-        for (int ix = 0; ix < N; ix++)  // loop over all positions
-        {
-            for (int iy = 0; iy < N; iy++) {
-                localpos = ix * N + iy;
-                lat->cells[localpos]->setTpA(
-                    lat->cells[localpos]->getTpA() / normA
-                    * glauber->nucleusA1() * hbarc * hbarc);
-                lat->cells[localpos]->setTpB(
-                    lat->cells[localpos]->getTpB() / normB
-                    * glauber->nucleusA2() * hbarc * hbarc);
-            }
-        }
-
-        param->setSuccess(1);
-    } else {
-        // Non-smooth nucleus add all T_p's (new in version 1.2)
-
-#pragma omp parallel for
-        for (int ipos = 0; ipos < N * N; ipos++) {
-            // loop over all positions
-            int iy = ipos % N;
-            int ix = ipos / N;
-            double x = -L / 2. + a * ix;
-            double y = -L / 2. + a * iy;
+            localpos = ix * N + iy;
 
             // nucleus A
-            lat->cells[ipos]->setTpA(0.);
-            for (int i = 0; i < A1; i++) {
-                double xm = nucleusA_.at(i).x;
-                double ym = nucleusA_.at(i).y;
+            r = sqrt(xA * xA + y * y);
+            T = glauber->interNuTInST(r);
+            lat->cells[localpos]->setTpA(T);
 
-                double T = 0.;
-                double bp2 = 0.;
-                if (param->getUseConstituentQuarkProton() > 0) {
-                    for (unsigned int iq = 0; iq < xq1_[i].size(); iq++) {
-                        bp2 = (xm + xq1_[i][iq] - x) * (xm + xq1_[i][iq] - x)
-                              + (ym + yq1_[i][iq] - y) * (ym + yq1_[i][iq] - y);
-                        bp2 /= hbarc * hbarc;
-
-                        T += exp(-bp2 / (2. * BGq1_[i][iq]))
-                             / (2. * M_PI * BGq1_[i][iq])
-                             / (static_cast<double>(xq1_[i].size()))
-                             * gauss1_[i][iq];  // I removed the 2/3 here
-                                                // to make it a bit bigger
-                    }
-                } else {
-                    const double BG = param->getBG();
-                    double phi = nucleusA_.at(i).phi;
-
-                    bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                          + xi
-                                * pow(
-                                    (xm - x) * cos(phi) + (ym - y) * sin(phi),
-                                    2.);
-                    bp2 /= hbarc * hbarc;
-                    T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                        * gauss1_[i][0];  // T_p in this cell for the
-                                          // current nucleon
-                }
-                lat->cells[ipos]->setTpA(
-                    lat->cells[ipos]->getTpA()
-                    + T / nucleiInAverage);  // add up all T_p
-            }
+            normA += T * a * a;
 
             // nucleus B
-            lat->cells[ipos]->setTpB(0.);
-            for (int i = 0; i < A2; i++) {
-                double xm = nucleusB_.at(i).x;
-                double ym = nucleusB_.at(i).y;
+            r = sqrt(xB * xB + y * y);
+            T = glauber->interNuPInSP(r);
+            lat->cells[localpos]->setTpB(T);
 
-                double T = 0.;
-                double bp2 = 0.;
-                if (param->getUseConstituentQuarkProton() > 0) {
-                    T = 0.;
-                    for (unsigned int iq = 0; iq < xq2_[i].size(); iq++) {
-                        bp2 = (xm + xq2_[i][iq] - x) * (xm + xq2_[i][iq] - x)
-                              + (ym + yq2_[i][iq] - y) * (ym + yq2_[i][iq] - y);
-                        bp2 /= hbarc * hbarc;
+            normB += T * a * a;
 
-                        T += exp(-bp2 / (2. * BGq2_[i][iq]))
-                             / (2. * M_PI * BGq2_[i][iq])
-                             / (static_cast<double>(xq2_[i].size()))
-                             * gauss2_[i][iq];
-                    }
-                } else {
-                    const double BG = param->getBG();
-                    double phi = nucleusB_.at(i).phi;
-
-                    bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                          + xi
-                                * pow(
-                                    (xm - x) * cos(phi) + (ym - y) * sin(phi),
-                                    2.);
-                    bp2 /= hbarc * hbarc;
-
-                    T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                        * gauss2_[i][0];  // T_p in this cell for the
-                                          // current nucleon
-                }
-
-                lat->cells[ipos]->setTpB(
-                    lat->cells[ipos]->getTpB()
-                    + T / nucleiInAverage);  // add up all T_p
+            // remove potential stuff outside the interaction region
+            if (lat->cells[localpos]->getTpA() < 0.001
+                || lat->cells[localpos]->getTpB() < 0.001) {
+                lat->cells[localpos]->setTpA(0.);
+                lat->cells[localpos]->setTpB(0.);
             }
         }
     }
+    for (int ix = 0; ix < N; ix++)  // loop over all positions
+    {
+        for (int iy = 0; iy < N; iy++) {
+            localpos = ix * N + iy;
+            lat->cells[localpos]->setTpA(
+                lat->cells[localpos]->getTpA() / normA * glauber->nucleusA1()
+                * hbarc * hbarc);
+            lat->cells[localpos]->setTpB(
+                lat->cells[localpos]->getTpB() / normB * glauber->nucleusA2()
+                * hbarc * hbarc);
+        }
+    }
 
-// get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+    param->setSuccess(1);
+}
+
+void Init::computeThicknessFromNucleons(
+    Lattice *lat, Parameters *param, double nucleiInAverage) {
+    const int N = param->getSize();
+    const double L = param->getL();
+    const double a = L / N;
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+    const double xi = param->getProtonAnisotropy();
+
 #pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
-        computeCellColorCharge(lat, param, ipos, a, rapidityA, rapidityB);
+        // loop over all positions
+        int iy = ipos % N;
+        int ix = ipos / N;
+        double x = -L / 2. + a * ix;
+        double y = -L / 2. + a * iy;
+
+        // nucleus A
+        lat->cells[ipos]->setTpA(0.);
+        for (int i = 0; i < A1; i++) {
+            double xm = nucleusA_.at(i).x;
+            double ym = nucleusA_.at(i).y;
+
+            double T = 0.;
+            double bp2 = 0.;
+            if (param->getUseConstituentQuarkProton() > 0) {
+                for (unsigned int iq = 0; iq < xq1_[i].size(); iq++) {
+                    bp2 = (xm + xq1_[i][iq] - x) * (xm + xq1_[i][iq] - x)
+                          + (ym + yq1_[i][iq] - y) * (ym + yq1_[i][iq] - y);
+                    bp2 /= hbarc * hbarc;
+
+                    T += exp(-bp2 / (2. * BGq1_[i][iq]))
+                         / (2. * M_PI * BGq1_[i][iq])
+                         / (static_cast<double>(xq1_[i].size()))
+                         * gauss1_[i][iq];  // I removed the 2/3 here
+                                            // to make it a bit bigger
+                }
+            } else {
+                const double BG = param->getBG();
+                double phi = nucleusA_.at(i).phi;
+
+                bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
+                      + xi
+                            * pow(
+                                (xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
+                bp2 /= hbarc * hbarc;
+                T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
+                    * gauss1_[i][0];  // T_p in this cell for the
+                                      // current nucleon
+            }
+            lat->cells[ipos]->setTpA(
+                lat->cells[ipos]->getTpA()
+                + T / nucleiInAverage);  // add up all T_p
+        }
+
+        // nucleus B
+        lat->cells[ipos]->setTpB(0.);
+        for (int i = 0; i < A2; i++) {
+            double xm = nucleusB_.at(i).x;
+            double ym = nucleusB_.at(i).y;
+
+            double T = 0.;
+            double bp2 = 0.;
+            if (param->getUseConstituentQuarkProton() > 0) {
+                T = 0.;
+                for (unsigned int iq = 0; iq < xq2_[i].size(); iq++) {
+                    bp2 = (xm + xq2_[i][iq] - x) * (xm + xq2_[i][iq] - x)
+                          + (ym + yq2_[i][iq] - y) * (ym + yq2_[i][iq] - y);
+                    bp2 /= hbarc * hbarc;
+
+                    T += exp(-bp2 / (2. * BGq2_[i][iq]))
+                         / (2. * M_PI * BGq2_[i][iq])
+                         / (static_cast<double>(xq2_[i].size()))
+                         * gauss2_[i][iq];
+                }
+            } else {
+                const double BG = param->getBG();
+                double phi = nucleusB_.at(i).phi;
+
+                bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
+                      + xi
+                            * pow(
+                                (xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
+                bp2 /= hbarc * hbarc;
+
+                T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
+                    * gauss2_[i][0];  // T_p in this cell for the
+                                      // current nucleon
+            }
+
+            lat->cells[ipos]->setTpB(
+                lat->cells[ipos]->getTpB()
+                + T / nucleiInAverage);  // add up all T_p
+        }
     }
-    messager_.info(
-        "[Init::setColorChargeDensity]: Color charge densities for nucleus A "
-        "and B set. ");
 }
 
 // This function compute the collision geometry quantities, such as

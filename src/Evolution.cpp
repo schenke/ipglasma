@@ -330,6 +330,669 @@ inline void makeTmunuTracelessDifference(
     out -= (out.trace() / 3.0) * one;
 }
 
+struct TmunuPlaquetteScratch {
+    Matrix UDx;
+    Matrix UDy;
+    Matrix Uplaq;
+};
+
+// Precomputes the spatial plaquette U_x(x) U_y(x+xhat) U_x(x+yhat)^dagger
+// U_y(x)^dagger at every cell into lat->Uy1, consumed by
+// tmunuDiagonalMagneticTeam below. The outermost ring is a nonphysical guard
+// region (Tmunu's stencils need a genuine one-cell neighborhood), so it gets
+// the identity instead of a clamped, gauge-noncovariant plaquette.
+void tmunuPlaquetteTeam(
+    Lattice *lat, int N, const Matrix &one, TmunuPlaquetteScratch &scratch) {
+    int pos, posX, posY;
+#pragma omp for
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            pos = i * N + j;
+            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+                lat->Uy1[pos] = one;
+                continue;
+            }
+
+            posX = lat->pospX[pos];
+            posY = lat->pospY[pos];
+
+            scratch.UDx = lat->Ux[posY];
+            scratch.UDy = lat->Uy[pos];
+            scratch.UDx.conjg();
+            scratch.UDy.conjg();
+
+            scratch.Uplaq =
+                lat->Ux[pos] * (lat->Uy[posX] * (scratch.UDx * scratch.UDy));
+            lat->Uy1[pos] = (scratch.Uplaq);
+        }
+    }
+}
+
+struct TmunuDiagonalElectricScratch {
+    Matrix E1;
+    Matrix E2;
+    Matrix E1p;
+    Matrix E2p;
+    Matrix pi;
+    Matrix piX;
+    Matrix piY;
+    Matrix piXY;
+};
+
+// T^tautau, T^xx, T^yy, T^etaeta: electric (E, pi) contribution. Sets each
+// field outright (rather than adding to it) since this runs before
+// tmunuDiagonalMagneticTeam, which adds the magnetic/gradient contribution
+// on top.
+void tmunuDiagonalElectricTeam(
+    Lattice *lat, int N, int it, double dtau, double g,
+    TmunuDiagonalElectricScratch &scratch) {
+    int pos, posX, posY, posXY;
+#pragma omp for
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            pos = i * N + j;
+            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+                lat->cells[pos]->setTtautau(0.);
+                lat->cells[pos]->setTxx(0.);
+                lat->cells[pos]->setTyy(0.);
+                lat->cells[pos]->setTetaeta(0.);
+                continue;
+            }
+            posX = lat->pospX[pos];
+            posY = lat->pospY[pos];
+
+            posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+
+            scratch.E1 = lat->U[pos];
+            scratch.E2 = lat->U2[pos];
+            scratch.E1p = lat->U[posY];
+            scratch.E2p = lat->U2[posX];  // shift y value in x direction
+
+            scratch.pi = lat->Ux2[pos];
+            scratch.piX = lat->Ux2[posX];
+            scratch.piY = lat->Ux2[posY];
+            scratch.piXY = lat->Ux2[posXY];
+
+            // These observables only need traces of matrix squares.
+            // Computing the complete 3x3 products here used to create 32
+            // Matrix temporaries per site (the same eight traces repeated
+            // for four tensor components).  Evaluate each SU(3) trace once
+            // and reuse it.
+            const double e1Sq = su3::traceSquare(scratch.E1).real();
+            const double e1pSq = su3::traceSquare(scratch.E1p).real();
+            const double e2Sq = su3::traceSquare(scratch.E2).real();
+            const double e2pSq = su3::traceSquare(scratch.E2p).real();
+            const double piSq = su3::traceSquare(scratch.pi).real();
+            const double piXSq = su3::traceSquare(scratch.piX).real();
+            const double piYSq = su3::traceSquare(scratch.piY).real();
+            const double piXYSq = su3::traceSquare(scratch.piXY).real();
+
+            const double invTau2 = 1. / (it * dtau) / (it * dtau);
+            const double electricPrefactor = g * g / (it * dtau) / (it * dtau);
+            const double eSum = e1Sq + e1pSq + e2Sq + e2pSq;
+            const double piSum = piSq + piXSq + piYSq + piXYSq;
+
+            lat->cells[pos]->setTtautau(
+                electricPrefactor * eSum / 2. + piSum / 4.);
+            lat->cells[pos]->setTxx(
+                electricPrefactor * (-e1Sq - e1pSq + e2Sq + e2pSq) / 2.
+                + piSum / 4.);
+            lat->cells[pos]->setTyy(
+                electricPrefactor * (e1Sq + e1pSq - e2Sq - e2pSq) / 2.
+                + piSum / 4.);
+            lat->cells[pos]->setTetaeta(
+                invTau2 * (electricPrefactor * eSum / 2. - piSum / 4.));
+        }
+    }
+}
+
+struct TmunuDiagonalMagneticScratch {
+    Matrix Uplaq;
+    Matrix phi;
+    Matrix phiX;
+    Matrix phiY;
+    Matrix phiXY;
+    Matrix Ux;
+    Matrix Uy;
+    Matrix UDx;
+    Matrix UDy;
+    Matrix phiTildeX;
+    Matrix phiTildeY;
+    Matrix phiTildeXY1;
+    Matrix phiTildeXY2;
+};
+
+// T^tautau, T^xx, T^yy, T^etaeta: adds the magnetic (plaquette) and gradient
+// (phi) contribution on top of whatever tmunuDiagonalElectricTeam set
+// (0 at the boundary, the electric part elsewhere).
+void tmunuDiagonalMagneticTeam(
+    Lattice *lat, int N, int it, double dtau, double g,
+    TmunuDiagonalMagneticScratch &scratch) {
+    int pos, posX, posY, posXY;
+#pragma omp for
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            pos = i * N + j;
+            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+                continue;
+            }
+
+            posX = lat->pospX[pos];
+            posY = lat->pospY[pos];
+
+            posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+
+            scratch.Uplaq = lat->Uy1[pos];
+
+            scratch.phi = lat->Uy2[pos];
+            scratch.phiX = lat->Uy2[posX];
+            scratch.phiY = lat->Uy2[posY];
+            scratch.phiXY = lat->Uy2[posXY];
+
+            scratch.Ux = lat->Ux[pos];
+            scratch.Uy = lat->Uy[pos];
+            scratch.UDx = scratch.Ux;
+            scratch.UDx.conjg();
+            scratch.UDy = scratch.Uy;
+            scratch.UDy.conjg();
+
+            scratch.phiTildeX = scratch.Ux * scratch.phiX * scratch.UDx;
+            scratch.phiTildeY = scratch.Uy * scratch.phiY * scratch.UDy;
+
+            // same at one up in the other direction
+            scratch.Ux = lat->Ux[posY];
+            scratch.Uy = lat->Uy[posX];
+            scratch.UDx = scratch.Ux;
+            scratch.UDx.conjg();
+            scratch.UDy = scratch.Uy;
+            scratch.UDy.conjg();
+
+            scratch.phiTildeXY1 = scratch.Ux * scratch.phiXY * scratch.UDx;
+            scratch.phiTildeXY2 = scratch.Uy * scratch.phiXY * scratch.UDy;
+
+            // The four covariant-gradient square traces are likewise shared
+            // by all diagonal tensor components.  Evaluate (A-B)^2 directly
+            // in the trace kernel, avoiding both subtraction and product
+            // Matrix temporaries.
+            const double gradX0 =
+                su3::traceDifferenceSquare(scratch.phi, scratch.phiTildeX)
+                    .real();
+            const double gradX1 =
+                su3::traceDifferenceSquare(scratch.phiY, scratch.phiTildeXY1)
+                    .real();
+            const double gradY0 =
+                su3::traceDifferenceSquare(scratch.phi, scratch.phiTildeY)
+                    .real();
+            const double gradY1 =
+                su3::traceDifferenceSquare(scratch.phiX, scratch.phiTildeXY2)
+                    .real();
+            const double invTau2 = 1. / (it * dtau) / (it * dtau);
+            const double gradientPrefactor = 0.5 / (it * dtau) / (it * dtau);
+            const double plaquetteEnergy =
+                2. / pow(g, 2.) * (3.0 - su3::trace(scratch.Uplaq).real());
+
+            lat->cells[pos]->setTtautau(
+                lat->cells[pos]->getTtautau() + plaquetteEnergy
+                + gradientPrefactor * (gradX0 + gradX1 + gradY0 + gradY1));
+
+            lat->cells[pos]->setTxx(
+                lat->cells[pos]->getTxx() + plaquetteEnergy
+                + gradientPrefactor * (gradX0 + gradX1 - gradY0 - gradY1));
+
+            lat->cells[pos]->setTyy(
+                lat->cells[pos]->getTyy() + plaquetteEnergy
+                + gradientPrefactor * (-gradX0 - gradX1 + gradY0 + gradY1));
+
+            lat->cells[pos]->setTetaeta(
+                lat->cells[pos]->getTetaeta()
+                + invTau2
+                      * (-plaquetteEnergy
+                         + gradientPrefactor
+                               * (gradX0 + gradX1 + gradY0 + gradY1)));
+        }
+    }
+}
+
+struct TmunuOffDiagonalScratch {
+    Matrix Ux;
+    Matrix Uy;
+    Matrix UxmX;
+    Matrix UymY;
+    Matrix UDx;
+    Matrix UDy;
+    Matrix UDxmX;
+    Matrix UDymY;
+    Matrix UDxmXpY;
+    Matrix UDxpXpY;
+    Matrix UxpX;
+    Matrix UxpY;
+    Matrix UDxpY;
+    Matrix UxpXpY;
+    Matrix UDypXmY;
+    Matrix UypY;
+    Matrix UypX;
+    Matrix UDypX;
+    Matrix UypXpY;
+    Matrix UDypXpY;
+    Matrix UymX;
+    Matrix UxmXpY;
+    Matrix UxmY;
+    Matrix UDxmY;
+    Matrix UypXmY;
+    Matrix UDyp2X;
+    Matrix Uyp2X;
+    Matrix UDxpX;
+    Matrix Uxp2Y;
+    Matrix UDxp2Y;
+    Matrix UDypY;
+    Matrix UDymX;
+    Matrix E1;
+    Matrix E2;
+    Matrix E1p;
+    Matrix E2p;
+    Matrix pi;
+    Matrix piX;
+    Matrix piY;
+    Matrix piXY;
+    Matrix phi;
+    Matrix phiX;
+    Matrix phiY;
+    Matrix phiXY;
+    Matrix phimX;
+    Matrix phimY;
+    Matrix phi2XY;
+    Matrix phiX2Y;
+    Matrix phi2X;
+    Matrix phi2Y;
+    Matrix phimXpY;
+    Matrix phipXmY;
+    Matrix chainA;
+    Matrix chainB;
+    Matrix xMinus0;
+    Matrix xMinusM;
+    Matrix xMinusP;
+    Matrix xMinusT;
+    Matrix xMinusSum0;
+    Matrix xMinusSum1;
+    Matrix yPlus0;
+    Matrix yPlusM;
+    Matrix yPlusP;
+    Matrix yPlusT;
+    Matrix yPlusSum0;
+    Matrix yPlusSum1;
+    Matrix covGradX0;
+    Matrix covGradY0;
+    Matrix gradXAtY;
+    Matrix gradYAtX;
+    Matrix gradXAtYToPos;
+    Matrix gradYAtXToPos;
+    Matrix E1AtYToPos;
+    Matrix E2AtXToPos;
+};
+
+// T^taux, T^tauy, T^taueta, T^xy, T^xeta, T^yeta.
+void tmunuOffDiagonalTeam(
+    Lattice *lat, int N, int it, double dtau, double g, double a,
+    const Matrix &one, TmunuOffDiagonalScratch &scratch) {
+    int pos, posX, posY, posmX, posmY, posXY, posmXpY, pospXmY, pos2X, pos2Y,
+        posX2Y, pos2XY;
+#pragma omp for
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++) {
+                pos = i * N + j;
+                if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+                    lat->cells[pos]->setTtaux(0.);
+                    lat->cells[pos]->setTtauy(0.);
+                    lat->cells[pos]->setTtaueta(0.);
+                    lat->cells[pos]->setTxy(0.);
+                    lat->cells[pos]->setTxeta(0.);
+                    lat->cells[pos]->setTyeta(0.);
+                    continue;
+                }
+                posX = lat->pospX[pos];
+                posY = lat->pospY[pos];
+                posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+
+                posmX = lat->posmX[pos];
+                posmY = lat->posmY[pos];
+
+                posmXpY = lat->posmXpY[pos];
+                pospXmY = lat->pospXmY[pos];
+
+                pos2X = std::min(N - 1, i + 2) * N + j;
+                pos2Y = i * N + std::min(N - 1, j + 2);
+
+                pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
+                posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
+
+                scratch.E1 = lat->U[pos];
+                scratch.E2 = lat->U2[pos];
+                scratch.E1p = lat->U[posY];   // shift x value in y direction
+                scratch.E2p = lat->U2[posX];  // shift y value in x direction
+
+                scratch.pi = lat->Ux2[pos];
+                scratch.piX = lat->Ux2[posX];
+                scratch.piY = lat->Ux2[posY];
+                scratch.piXY = lat->Ux2[posXY];
+
+                scratch.phi = lat->Uy2[pos];
+                scratch.phimX = lat->Uy2[posmX];
+                scratch.phiX = lat->Uy2[posX];
+                scratch.phimY = lat->Uy2[posmY];
+                scratch.phiY = lat->Uy2[posY];
+                scratch.phiXY = lat->Uy2[posXY];
+                scratch.phimXpY = lat->Uy2[posmXpY];
+                scratch.phipXmY = lat->Uy2[pospXmY];
+                scratch.phi2X = lat->Uy2[pos2X];
+                scratch.phi2XY = lat->Uy2[pos2XY];
+                scratch.phi2Y = lat->Uy2[pos2Y];
+                scratch.phiX2Y = lat->Uy2[posX2Y];
+
+                scratch.Ux = lat->Ux[pos];
+                scratch.UDx = scratch.Ux;
+                scratch.UDx.conjg();
+
+                scratch.UxmX = lat->Ux[posmX];
+                scratch.UDxmX = lat->Ux[posmX];
+                scratch.UDxmX.conjg();
+                scratch.UxmXpY = lat->Ux[posmXpY];
+                scratch.UDxmXpY = lat->Ux[posmXpY];
+                scratch.UDxmXpY.conjg();
+
+                scratch.UxpX = lat->Ux[posX];
+                scratch.UxpY = lat->Ux[posY];
+                scratch.UDxpX = scratch.UxpX;
+                scratch.UDxpX.conjg();
+                scratch.UDxpY = scratch.UxpY;
+                scratch.UDxpY.conjg();
+
+                scratch.UxpXpY = lat->Ux[posXY];
+                scratch.UDxpXpY = lat->Ux[posXY];
+                scratch.UDxpXpY.conjg();
+                scratch.UxmXpY = lat->Ux[posmXpY];
+                scratch.UDxmXpY = scratch.UxmXpY;
+                scratch.UDxmXpY.conjg();
+
+                scratch.Uy = lat->Uy[pos];
+                scratch.UDy = scratch.Uy;
+                scratch.UDy.conjg();
+
+                scratch.UymY = lat->Uy[posmY];
+                scratch.UDymY = lat->Uy[posmY];
+                scratch.UDymY.conjg();
+                scratch.UypXmY = lat->Uy[pospXmY];
+                scratch.UDypXmY = lat->Uy[pospXmY];
+                scratch.UDypXmY.conjg();
+
+                scratch.UypY = lat->Uy[posY];
+                scratch.UypX = lat->Uy[posX];
+                scratch.UDypX = scratch.UypX;
+                scratch.UDypX.conjg();
+
+                scratch.UDypY = lat->Uy[posY];
+                scratch.UDypY.conjg();
+
+                scratch.UDxpX = lat->Ux[posX];
+                scratch.UDxpX.conjg();
+
+                scratch.Uyp2X = lat->Uy[pos2X];
+                scratch.UDyp2X = scratch.Uyp2X;
+                scratch.UDyp2X.conjg();
+                scratch.Uxp2Y = lat->Ux[pos2Y];
+                scratch.UDxp2Y = scratch.Uxp2Y;
+                scratch.UDxp2Y.conjg();
+
+                scratch.UypXpY = lat->Uy[posXY];
+                scratch.UDypXpY = lat->Uy[posXY];
+                scratch.UDypXpY.conjg();
+                scratch.UymX = lat->Uy[posmX];
+                scratch.UDymX = scratch.UymX;
+                scratch.UDymX.conjg();
+                scratch.UxmY = lat->Ux[posmY];
+                scratch.UDxmY = scratch.UxmY;
+                scratch.UDxmY.conjg();
+                scratch.UypXmY = lat->Uy[pospXmY];
+
+                // Cache the repeated four-link magnetic structures once per
+                // site. The historical expressions recomputed every four-link
+                // chain once for the matrix difference and again for its trace
+                // subtraction, then repeated the same structures in
+                // Txeta/Tyeta. Preserve the original product ordering, but
+                // materialize each traceless difference only once and reuse it
+                // below.
+                scratch.chainA =
+                    scratch.Uy * scratch.UxpY * scratch.UDypX * scratch.UDx;
+                scratch.chainB =
+                    scratch.Ux * scratch.UypX * scratch.UDxpY * scratch.UDy;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.xMinus0);
+
+                scratch.chainA =
+                    scratch.UDxmX * scratch.UymX * scratch.UxmXpY * scratch.UDy;
+                scratch.chainB =
+                    scratch.Uy * scratch.UDxmXpY * scratch.UDymX * scratch.UxmX;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.xMinusM);
+
+                scratch.chainA =
+                    scratch.UypX * scratch.UxpXpY * scratch.UDyp2X
+                    * scratch.UDxpX;
+                scratch.chainB =
+                    scratch.UxpX * scratch.Uyp2X * scratch.UDxpXpY
+                    * scratch.UDypX;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.xMinusP);
+
+                scratch.chainA =
+                    scratch.UDx * scratch.Uy * scratch.UxpY * scratch.UDypX;
+                scratch.chainB =
+                    scratch.UypX * scratch.UDxpY * scratch.UDy * scratch.Ux;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.xMinusT);
+
+                scratch.xMinusSum0 = scratch.xMinus0 + scratch.xMinusM;
+                scratch.xMinusSum1 = scratch.xMinusP + scratch.xMinusT;
+
+                // The first y-oriented difference is the opposite orientation
+                // of scratch.xMinus0 and can be reused by a sign flip.
+                scratch.yPlus0 = (-1.) * scratch.xMinus0;
+
+                scratch.chainA =
+                    scratch.UDymY * scratch.UxmY * scratch.UypXmY * scratch.UDx;
+                scratch.chainB =
+                    scratch.Ux * scratch.UDypXmY * scratch.UDxmY * scratch.UymY;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.yPlusM);
+
+                scratch.chainA =
+                    scratch.UxpY * scratch.UypXpY * scratch.UDxp2Y
+                    * scratch.UDypY;
+                scratch.chainB =
+                    scratch.UypY * scratch.Uxp2Y * scratch.UDypXpY
+                    * scratch.UDxpY;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.yPlusP);
+
+                scratch.chainA =
+                    scratch.UDy * scratch.Ux * scratch.UypX * scratch.UDxpY;
+                scratch.chainB =
+                    scratch.UxpY * scratch.UDypX * scratch.UDx * scratch.Uy;
+                makeTmunuTracelessDifference(
+                    scratch.chainA, scratch.chainB, one, scratch.yPlusT);
+
+                scratch.yPlusSum0 = scratch.yPlus0 + scratch.yPlusM;
+                scratch.yPlusSum1 = scratch.yPlusP + scratch.yPlusT;
+
+                // Cache covariant scalar gradients shared by Txy, Ttaueta,
+                // Txeta, and Tyeta.
+                scratch.covGradX0 =
+                    scratch.Ux * scratch.phiX * scratch.UDx - scratch.phi;
+                scratch.covGradY0 =
+                    scratch.Uy * scratch.phiY * scratch.UDy - scratch.phi;
+                scratch.gradXAtY =
+                    scratch.UxpY * scratch.phiXY * scratch.UDxpY - scratch.phiY;
+                scratch.gradYAtX =
+                    scratch.UypX * scratch.phiXY * scratch.UDypX - scratch.phiX;
+                scratch.gradXAtYToPos =
+                    scratch.Uy * scratch.gradXAtY * scratch.UDy;
+                scratch.gradYAtXToPos =
+                    scratch.Ux * scratch.gradYAtX * scratch.UDx;
+
+                scratch.chainA =
+                    scratch.E2 * scratch.xMinusSum0
+                    + scratch.E2p * scratch.xMinusSum1;
+                const complex<double> ttauxPiTrace =
+                    su3::traceABCD(
+                        scratch.pi, scratch.Ux, scratch.phiX, scratch.UDx)
+                    - su3::traceABCD(
+                        scratch.pi, scratch.UDxmX, scratch.phimX, scratch.UxmX)
+                    + su3::traceABCD(
+                        scratch.piY, scratch.UxpY, scratch.phiXY,
+                        scratch.UDxpY)
+                    - su3::traceABCD(
+                        scratch.piY, scratch.UDxmXpY, scratch.phimXpY,
+                        scratch.UxmXpY)
+                    + su3::traceABCD(
+                        scratch.piX, scratch.UxpX, scratch.phi2X,
+                        scratch.UDxpX)
+                    - su3::traceABCD(
+                        scratch.piX, scratch.UDx, scratch.phi, scratch.Ux)
+                    + su3::traceABCD(
+                        scratch.piXY, scratch.UxpXpY, scratch.phi2XY,
+                        scratch.UDxpXpY)
+                    - su3::traceABCD(
+                        scratch.piXY, scratch.UDxpY, scratch.phiY,
+                        scratch.UxpY);
+                lat->cells[pos]->setTtaux(
+                    +2. / (it * dtau) / 8. * scratch.chainA.trace().imag()
+                    - 2. / 8. / (it * dtau) * ttauxPiTrace.real());
+
+                scratch.chainA =
+                    scratch.E1 * scratch.yPlusSum0
+                    + scratch.E1p * scratch.yPlusSum1;
+                const complex<double> ttauyPiTrace =
+                    su3::traceABCD(
+                        scratch.pi, scratch.Uy, scratch.phiY, scratch.UDy)
+                    - su3::traceABCD(
+                        scratch.pi, scratch.UDymY, scratch.phimY, scratch.UymY)
+                    + su3::traceABCD(
+                        scratch.piX, scratch.UypX, scratch.phiXY,
+                        scratch.UDypX)
+                    - su3::traceABCD(
+                        scratch.piX, scratch.UDypXmY, scratch.phipXmY,
+                        scratch.UypXmY)
+                    + su3::traceABCD(
+                        scratch.piY, scratch.UypY, scratch.phi2Y,
+                        scratch.UDypY)
+                    - su3::traceABCD(
+                        scratch.piY, scratch.UDy, scratch.phi, scratch.Uy)
+                    + su3::traceABCD(
+                        scratch.piXY, scratch.UypXpY, scratch.phiX2Y,
+                        scratch.UDypXpY)
+                    - su3::traceABCD(
+                        scratch.piXY, scratch.UDypX, scratch.phiX,
+                        scratch.UypX);
+                lat->cells[pos]->setTtauy(
+                    +2. / (it * dtau) / 8. * scratch.chainA.trace().imag()
+                    - 2. / 8. / (it * dtau) * ttauyPiTrace.real());
+
+                const complex<double> ttauetaTrace =
+                    su3::traceAB(scratch.E1, scratch.covGradX0)
+                    + su3::traceAB(scratch.E1p, scratch.gradXAtY)
+                    + su3::traceAB(scratch.E2, scratch.covGradY0)
+                    + su3::traceAB(scratch.E2p, scratch.gradYAtX);
+                lat->cells[pos]->setTtaueta(
+                    g / (it * dtau) / (it * dtau) / (it * dtau)
+                    * ttauetaTrace.real());
+
+                scratch.E1AtYToPos = scratch.Uy * scratch.E1p * scratch.UDy;
+                scratch.E2AtXToPos = scratch.Ux * scratch.E2p * scratch.UDx;
+                scratch.chainA =
+                    -1. / 4. * g * g * (scratch.E1 + scratch.E1AtYToPos)
+                        * (scratch.E2 + scratch.E2AtXToPos)
+                    + 1. / 4.
+                          * (scratch.covGradX0 * scratch.covGradY0
+                             + scratch.gradXAtYToPos * scratch.covGradY0
+                             + scratch.covGradX0 * scratch.gradYAtXToPos
+                             + scratch.gradXAtYToPos * scratch.gradYAtXToPos);
+                lat->cells[pos]->setTxy(
+                    2. / (it * dtau) / (it * dtau)
+                    * scratch.chainA.trace().real());
+
+                const complex<double> txetaElectricTrace =
+                    su3::traceAB(scratch.E1, scratch.pi)
+                    + su3::traceABCD(
+                        scratch.E1, scratch.Ux, scratch.piX, scratch.UDx)
+                    + su3::traceAB(scratch.E1p, scratch.piY)
+                    + su3::traceABCD(
+                        scratch.E1p, scratch.UxpY, scratch.piXY,
+                        scratch.UDxpY);
+                scratch.chainA =
+                    scratch.xMinusSum0 * scratch.covGradY0
+                    + scratch.xMinusSum1 * scratch.gradYAtX;
+                lat->cells[pos]->setTxeta(
+                    -2. / (it * dtau) / (it * dtau)
+                    * (1. / 4. * g * txetaElectricTrace.real()
+                       - 1. / 8. / g * scratch.chainA.trace().imag()));
+
+                const complex<double> tyetaElectricTrace =
+                    su3::traceAB(scratch.E2, scratch.pi)
+                    + su3::traceABCD(
+                        scratch.E2, scratch.Uy, scratch.piY, scratch.UDy)
+                    + su3::traceAB(scratch.E2p, scratch.piX)
+                    + su3::traceABCD(
+                        scratch.E2p, scratch.UypX, scratch.piXY,
+                        scratch.UDypX);
+                scratch.chainA =
+                    scratch.yPlusSum0 * scratch.covGradX0
+                    + scratch.yPlusSum1 * scratch.gradXAtY;
+                lat->cells[pos]->setTyeta(
+                    -2. / (it * dtau) / (it * dtau)
+                    * (1. / 4. * g * tyetaElectricTrace.real()
+                       - 1. / 8. / g * scratch.chainA.trace().imag()));
+
+                lat->cells[pos]->setTtaux(
+                    lat->cells[pos]->getTtaux() * 1 / pow(a, 4.));
+                lat->cells[pos]->setTtauy(
+                    lat->cells[pos]->getTtauy() * 1 / pow(a, 4.));
+                lat->cells[pos]->setTtaueta(
+                    lat->cells[pos]->getTtaueta() * 1 / pow(a, 5.));
+                lat->cells[pos]->setTxy(
+                    lat->cells[pos]->getTxy() * 1 / pow(a, 4.));
+                lat->cells[pos]->setTxeta(
+                    lat->cells[pos]->getTxeta() * 1 / pow(a, 5.));
+                lat->cells[pos]->setTyeta(
+                    lat->cells[pos]->getTyeta() * 1 / pow(a, 5.));
+            }
+        }
+}
+
+// epsilon = T^tautau (before lattice-unit rescaling), then rescales
+// T^tautau/T^xx/T^yy/T^etaeta and epsilon from lattice to physical units.
+void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
+#pragma omp for
+    for (int pos = 0; pos < N * N; pos++) {
+        const int i = pos / N;
+        const int j = pos - i * N;
+        if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+            lat->cells[pos]->setEpsilon(0.);
+            lat->cells[pos]->setTtautau(0.);
+            lat->cells[pos]->setTxx(0.);
+            lat->cells[pos]->setTyy(0.);
+            lat->cells[pos]->setTetaeta(0.);
+            continue;
+        }
+        lat->cells[pos]->setEpsilon(
+            lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTtautau(
+            lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTxx(lat->cells[pos]->getTxx() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTyy(lat->cells[pos]->getTyy() * 1 / pow(a, 4.));
+        lat->cells[pos]->setTetaeta(
+            lat->cells[pos]->getTetaeta() * 1 / pow(a, 6.));
+    }
+}
+
 }  // namespace
 
 void Evolution::evolveU(
@@ -1032,10 +1695,6 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
 void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.Tmunu");
-    double averageTtautau = 0.;
-    double averageTtaueta = 0.;
-    double averageTxx = 0.;
-
     int N = param->getSize();
     double L = param->getL();
     double a = L / N;  // lattice spacing in fm
@@ -1045,542 +1704,20 @@ void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
 
 #pragma omp parallel
     {
-        int pos, posX, posY, posmX, posmY, posXY, posmXpY, pospXmY, pos2X,
-            pos2Y, posX2Y, pos2XY;
-        Matrix Ux;
-        Matrix Uy;
-        Matrix UxmX;
-        Matrix UymY;
-        Matrix UDx;
-        Matrix UDy;
-        Matrix UDxmX;
-        Matrix UDymY;
-        Matrix UDxmXpY;
-        Matrix UDxpXpY;
-        Matrix UxpX;
-        Matrix UxpY;
-        Matrix UDxpY;
-        Matrix UxpXpY;
-        Matrix UDypXmY;
-        Matrix UypY;
-        Matrix UypX;
-        Matrix UDypX;
-        Matrix UypXpY;
-        Matrix UDypXpY;
-        Matrix UymX;
-        Matrix UxmXpY;
-        Matrix UxmY;
-        Matrix UDxmY;
-        Matrix UypXmY;
-        Matrix UDyp2X;
-        Matrix Uyp2X;
-        Matrix UDxpX;
-        Matrix Uxp2Y;
-        Matrix UDxp2Y;
-        Matrix UDypY;
-        Matrix UDymX;
-        Matrix Uplaq, UplaqD, Uplaq1, Uplaq1D, Uplaq2;
-        Matrix E1;
-        Matrix E2;
-        Matrix E1p;
-        Matrix E2p;
-        Matrix pi;
-        Matrix piX;
-        Matrix piY;
-        Matrix piXY;
-        Matrix phi;
-        Matrix phiX;
-        Matrix phiY;
-        Matrix phiXY;
-        Matrix phimX;
-        Matrix phimY;
-        Matrix phi2XY;
-        Matrix phiX2Y;
-        Matrix phi2X;
-        Matrix phi2Y;
-        Matrix phimXpY;
-        Matrix phipXmY;
-        Matrix phiTildeX;
-        Matrix phiTildeY;
-        Matrix phiTildeXY1;
-        Matrix phiTildeXY2;
-        Matrix chainA;
-        Matrix chainB;
-        Matrix xMinus0;
-        Matrix xMinusM;
-        Matrix xMinusP;
-        Matrix xMinusT;
-        Matrix xMinusSum0;
-        Matrix xMinusSum1;
-        Matrix yPlus0;
-        Matrix yPlusM;
-        Matrix yPlusP;
-        Matrix yPlusT;
-        Matrix yPlusSum0;
-        Matrix yPlusSum1;
-        Matrix covGradX0;
-        Matrix covGradY0;
-        Matrix gradXAtY;
-        Matrix gradYAtX;
-        Matrix gradXAtYToPos;
-        Matrix gradYAtXToPos;
-        Matrix E1AtYToPos;
-        Matrix E2AtXToPos;
+        TmunuPlaquetteScratch plaquetteScratch;
+        tmunuPlaquetteTeam(lat, N, one, plaquetteScratch);
 
-        // set plaquette in every cell
-#pragma omp for
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                pos = i * N + j;
+        TmunuDiagonalElectricScratch electricScratch;
+        tmunuDiagonalElectricTeam(lat, N, it, dtau, g, electricScratch);
 
-                // Tmunu uses centered/forward/backward stencils that require a
-                // genuine one-cell neighborhood.  Treat the outermost lattice
-                // cells as a nonphysical guard region instead of constructing
-                // clamped, gauge-noncovariant boundary plaquettes.
-                if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
-                    lat->Uy1[pos] = one;
-                    continue;
-                }
+        TmunuDiagonalMagneticScratch magneticScratch;
+        tmunuDiagonalMagneticTeam(lat, N, it, dtau, g, magneticScratch);
 
-                posX = lat->pospX[pos];
-                posY = lat->pospY[pos];
+        tmunuNormalizeDiagonalTeam(lat, N, a);
 
-                UDx = lat->Ux[posY];
-                UDy = lat->Uy[pos];
-                UDx.conjg();
-                UDy.conjg();
-
-                Uplaq = lat->Ux[pos] * (lat->Uy[posX] * (UDx * UDy));
-                lat->Uy1[pos] = (Uplaq);
-            }
-        }
-
-        // T^\tau\tau, Txx, Tyy, Tetaeta:
-        // electric part:
-#pragma omp for
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                pos = i * N + j;
-                if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
-                    lat->cells[pos]->setTtautau(0.);
-                    lat->cells[pos]->setTxx(0.);
-                    lat->cells[pos]->setTyy(0.);
-                    lat->cells[pos]->setTetaeta(0.);
-                    continue;
-                }
-                posX = lat->pospX[pos];
-                posY = lat->pospY[pos];
-
-                posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
-
-                E1 = lat->U[pos];
-                E2 = lat->U2[pos];
-                E1p = lat->U[posY];
-                E2p = lat->U2[posX];  // shift y value in x direction
-
-                pi = lat->Ux2[pos];
-                piX = lat->Ux2[posX];
-                piY = lat->Ux2[posY];
-                piXY = lat->Ux2[posXY];
-
-                // These observables only need traces of matrix squares.
-                // Computing the complete 3x3 products here used to create 32
-                // Matrix temporaries per site (the same eight traces repeated
-                // for four tensor components).  Evaluate each SU(3) trace once
-                // and reuse it.
-                const double e1Sq = su3::traceSquare(E1).real();
-                const double e1pSq = su3::traceSquare(E1p).real();
-                const double e2Sq = su3::traceSquare(E2).real();
-                const double e2pSq = su3::traceSquare(E2p).real();
-                const double piSq = su3::traceSquare(pi).real();
-                const double piXSq = su3::traceSquare(piX).real();
-                const double piYSq = su3::traceSquare(piY).real();
-                const double piXYSq = su3::traceSquare(piXY).real();
-
-                const double invTau2 = 1. / (it * dtau) / (it * dtau);
-                const double electricPrefactor =
-                    g * g / (it * dtau) / (it * dtau);
-                const double eSum = e1Sq + e1pSq + e2Sq + e2pSq;
-                const double piSum = piSq + piXSq + piYSq + piXYSq;
-
-                lat->cells[pos]->setTtautau(
-                    electricPrefactor * eSum / 2. + piSum / 4.);
-                lat->cells[pos]->setTxx(
-                    electricPrefactor * (-e1Sq - e1pSq + e2Sq + e2pSq) / 2.
-                    + piSum / 4.);
-                lat->cells[pos]->setTyy(
-                    electricPrefactor * (e1Sq + e1pSq - e2Sq - e2pSq) / 2.
-                    + piSum / 4.);
-                lat->cells[pos]->setTetaeta(
-                    invTau2 * (electricPrefactor * eSum / 2. - piSum / 4.));
-            }
-        }
-
-#pragma omp for
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                pos = i * N + j;
-                if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
-                    continue;
-                }
-
-                posX = lat->pospX[pos];
-                posY = lat->pospY[pos];
-
-                posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
-
-                Uplaq = lat->Uy1[pos];
-
-                phi = lat->Uy2[pos];
-                phiX = lat->Uy2[posX];
-                phiY = lat->Uy2[posY];
-                phiXY = lat->Uy2[posXY];
-
-                Ux = lat->Ux[pos];
-                Uy = lat->Uy[pos];
-                UDx = Ux;
-                UDx.conjg();
-                UDy = Uy;
-                UDy.conjg();
-
-                phiTildeX = Ux * phiX * UDx;
-                phiTildeY = Uy * phiY * UDy;
-
-                // same at one up in the other direction
-                Ux = lat->Ux[posY];
-                Uy = lat->Uy[posX];
-                UDx = Ux;
-                UDx.conjg();
-                UDy = Uy;
-                UDy.conjg();
-
-                phiTildeXY1 = Ux * phiXY * UDx;
-                phiTildeXY2 = Uy * phiXY * UDy;
-
-                // The four covariant-gradient square traces are likewise shared
-                // by all diagonal tensor components.  Evaluate (A-B)^2 directly
-                // in the trace kernel, avoiding both subtraction and product
-                // Matrix temporaries.
-                const double gradX0 =
-                    su3::traceDifferenceSquare(phi, phiTildeX).real();
-                const double gradX1 =
-                    su3::traceDifferenceSquare(phiY, phiTildeXY1).real();
-                const double gradY0 =
-                    su3::traceDifferenceSquare(phi, phiTildeY).real();
-                const double gradY1 =
-                    su3::traceDifferenceSquare(phiX, phiTildeXY2).real();
-                const double invTau2 = 1. / (it * dtau) / (it * dtau);
-                const double gradientPrefactor =
-                    0.5 / (it * dtau) / (it * dtau);
-                const double plaquetteEnergy =
-                    2. / pow(g, 2.) * (3.0 - su3::trace(Uplaq).real());
-
-                lat->cells[pos]->setTtautau(
-                    lat->cells[pos]->getTtautau() + plaquetteEnergy
-                    + gradientPrefactor * (gradX0 + gradX1 + gradY0 + gradY1));
-
-                lat->cells[pos]->setTxx(
-                    lat->cells[pos]->getTxx() + plaquetteEnergy
-                    + gradientPrefactor * (gradX0 + gradX1 - gradY0 - gradY1));
-
-                lat->cells[pos]->setTyy(
-                    lat->cells[pos]->getTyy() + plaquetteEnergy
-                    + gradientPrefactor * (-gradX0 - gradX1 + gradY0 + gradY1));
-
-                lat->cells[pos]->setTetaeta(
-                    lat->cells[pos]->getTetaeta()
-                    + invTau2
-                          * (-plaquetteEnergy
-                             + gradientPrefactor
-                                   * (gradX0 + gradX1 + gradY0 + gradY1)));
-            }
-        }
-
-#pragma omp for
-        for (pos = 0; pos < N * N; pos++) {
-            const int i = pos / N;
-            const int j = pos - i * N;
-            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
-                lat->cells[pos]->setEpsilon(0.);
-                lat->cells[pos]->setTtautau(0.);
-                lat->cells[pos]->setTxx(0.);
-                lat->cells[pos]->setTyy(0.);
-                lat->cells[pos]->setTetaeta(0.);
-                continue;
-            }
-            lat->cells[pos]->setEpsilon(
-                lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTtautau(
-                lat->cells[pos]->getTtautau() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTxx(lat->cells[pos]->getTxx() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTyy(lat->cells[pos]->getTyy() * 1 / pow(a, 4.));
-            lat->cells[pos]->setTetaeta(
-                lat->cells[pos]->getTetaeta() * 1 / pow(a, 6.));
-        }
-
-        // T^\tau x, T^\tau y
-#pragma omp for reduction(+ : averageTtautau, averageTtaueta, averageTxx)
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                pos = i * N + j;
-                if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
-                    lat->cells[pos]->setTtaux(0.);
-                    lat->cells[pos]->setTtauy(0.);
-                    lat->cells[pos]->setTtaueta(0.);
-                    lat->cells[pos]->setTxy(0.);
-                    lat->cells[pos]->setTxeta(0.);
-                    lat->cells[pos]->setTyeta(0.);
-                    continue;
-                }
-                posX = lat->pospX[pos];
-                posY = lat->pospY[pos];
-                posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
-
-                posmX = lat->posmX[pos];
-                posmY = lat->posmY[pos];
-
-                posmXpY = lat->posmXpY[pos];
-                pospXmY = lat->pospXmY[pos];
-
-                pos2X = std::min(N - 1, i + 2) * N + j;
-                pos2Y = i * N + std::min(N - 1, j + 2);
-
-                pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
-                posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
-
-                E1 = lat->U[pos];
-                E2 = lat->U2[pos];
-                E1p = lat->U[posY];   // shift x value in y direction
-                E2p = lat->U2[posX];  // shift y value in x direction
-
-                pi = lat->Ux2[pos];
-                piX = lat->Ux2[posX];
-                piY = lat->Ux2[posY];
-                piXY = lat->Ux2[posXY];
-
-                phi = lat->Uy2[pos];
-                phimX = lat->Uy2[posmX];
-                phiX = lat->Uy2[posX];
-                phimY = lat->Uy2[posmY];
-                phiY = lat->Uy2[posY];
-                phiXY = lat->Uy2[posXY];
-                phimXpY = lat->Uy2[posmXpY];
-                phipXmY = lat->Uy2[pospXmY];
-                phi2X = lat->Uy2[pos2X];
-                phi2XY = lat->Uy2[pos2XY];
-                phi2Y = lat->Uy2[pos2Y];
-                phiX2Y = lat->Uy2[posX2Y];
-
-                Ux = lat->Ux[pos];
-                UDx = Ux;
-                UDx.conjg();
-
-                UxmX = lat->Ux[posmX];
-                UDxmX = lat->Ux[posmX];
-                UDxmX.conjg();
-                UxmXpY = lat->Ux[posmXpY];
-                UDxmXpY = lat->Ux[posmXpY];
-                UDxmXpY.conjg();
-
-                UxpX = lat->Ux[posX];
-                UxpY = lat->Ux[posY];
-                UDxpX = UxpX;
-                UDxpX.conjg();
-                UDxpY = UxpY;
-                UDxpY.conjg();
-
-                UxpXpY = lat->Ux[posXY];
-                UDxpXpY = lat->Ux[posXY];
-                UDxpXpY.conjg();
-                UxmXpY = lat->Ux[posmXpY];
-                UDxmXpY = UxmXpY;
-                UDxmXpY.conjg();
-
-                Uy = lat->Uy[pos];
-                UDy = Uy;
-                UDy.conjg();
-
-                UymY = lat->Uy[posmY];
-                UDymY = lat->Uy[posmY];
-                UDymY.conjg();
-                UypXmY = lat->Uy[pospXmY];
-                UDypXmY = lat->Uy[pospXmY];
-                UDypXmY.conjg();
-
-                UypY = lat->Uy[posY];
-                UypX = lat->Uy[posX];
-                UDypX = UypX;
-                UDypX.conjg();
-
-                UDypY = lat->Uy[posY];
-                UDypY.conjg();
-
-                UDxpX = lat->Ux[posX];
-                UDxpX.conjg();
-
-                Uyp2X = lat->Uy[pos2X];
-                UDyp2X = Uyp2X;
-                UDyp2X.conjg();
-                Uxp2Y = lat->Ux[pos2Y];
-                UDxp2Y = Uxp2Y;
-                UDxp2Y.conjg();
-
-                UypXpY = lat->Uy[posXY];
-                UDypXpY = lat->Uy[posXY];
-                UDypXpY.conjg();
-                UymX = lat->Uy[posmX];
-                UDymX = UymX;
-                UDymX.conjg();
-                UxmY = lat->Ux[posmY];
-                UDxmY = UxmY;
-                UDxmY.conjg();
-                UypXmY = lat->Uy[pospXmY];
-
-                // Cache the repeated four-link magnetic structures once per
-                // site. The historical expressions recomputed every four-link
-                // chain once for the matrix difference and again for its trace
-                // subtraction, then repeated the same structures in
-                // Txeta/Tyeta. Preserve the original product ordering, but
-                // materialize each traceless difference only once and reuse it
-                // below.
-                chainA = Uy * UxpY * UDypX * UDx;
-                chainB = Ux * UypX * UDxpY * UDy;
-                makeTmunuTracelessDifference(chainA, chainB, one, xMinus0);
-
-                chainA = UDxmX * UymX * UxmXpY * UDy;
-                chainB = Uy * UDxmXpY * UDymX * UxmX;
-                makeTmunuTracelessDifference(chainA, chainB, one, xMinusM);
-
-                chainA = UypX * UxpXpY * UDyp2X * UDxpX;
-                chainB = UxpX * Uyp2X * UDxpXpY * UDypX;
-                makeTmunuTracelessDifference(chainA, chainB, one, xMinusP);
-
-                chainA = UDx * Uy * UxpY * UDypX;
-                chainB = UypX * UDxpY * UDy * Ux;
-                makeTmunuTracelessDifference(chainA, chainB, one, xMinusT);
-
-                xMinusSum0 = xMinus0 + xMinusM;
-                xMinusSum1 = xMinusP + xMinusT;
-
-                // The first y-oriented difference is the opposite orientation
-                // of xMinus0 and can be reused by a sign flip.
-                yPlus0 = (-1.) * xMinus0;
-
-                chainA = UDymY * UxmY * UypXmY * UDx;
-                chainB = Ux * UDypXmY * UDxmY * UymY;
-                makeTmunuTracelessDifference(chainA, chainB, one, yPlusM);
-
-                chainA = UxpY * UypXpY * UDxp2Y * UDypY;
-                chainB = UypY * Uxp2Y * UDypXpY * UDxpY;
-                makeTmunuTracelessDifference(chainA, chainB, one, yPlusP);
-
-                chainA = UDy * Ux * UypX * UDxpY;
-                chainB = UxpY * UDypX * UDx * Uy;
-                makeTmunuTracelessDifference(chainA, chainB, one, yPlusT);
-
-                yPlusSum0 = yPlus0 + yPlusM;
-                yPlusSum1 = yPlusP + yPlusT;
-
-                // Cache covariant scalar gradients shared by Txy, Ttaueta,
-                // Txeta, and Tyeta.
-                covGradX0 = Ux * phiX * UDx - phi;
-                covGradY0 = Uy * phiY * UDy - phi;
-                gradXAtY = UxpY * phiXY * UDxpY - phiY;
-                gradYAtX = UypX * phiXY * UDypX - phiX;
-                gradXAtYToPos = Uy * gradXAtY * UDy;
-                gradYAtXToPos = Ux * gradYAtX * UDx;
-
-                chainA = E2 * xMinusSum0 + E2p * xMinusSum1;
-                const complex<double> ttauxPiTrace =
-                    su3::traceABCD(pi, Ux, phiX, UDx)
-                    - su3::traceABCD(pi, UDxmX, phimX, UxmX)
-                    + su3::traceABCD(piY, UxpY, phiXY, UDxpY)
-                    - su3::traceABCD(piY, UDxmXpY, phimXpY, UxmXpY)
-                    + su3::traceABCD(piX, UxpX, phi2X, UDxpX)
-                    - su3::traceABCD(piX, UDx, phi, Ux)
-                    + su3::traceABCD(piXY, UxpXpY, phi2XY, UDxpXpY)
-                    - su3::traceABCD(piXY, UDxpY, phiY, UxpY);
-                lat->cells[pos]->setTtaux(
-                    +2. / (it * dtau) / 8. * chainA.trace().imag()
-                    - 2. / 8. / (it * dtau) * ttauxPiTrace.real());
-
-                chainA = E1 * yPlusSum0 + E1p * yPlusSum1;
-                const complex<double> ttauyPiTrace =
-                    su3::traceABCD(pi, Uy, phiY, UDy)
-                    - su3::traceABCD(pi, UDymY, phimY, UymY)
-                    + su3::traceABCD(piX, UypX, phiXY, UDypX)
-                    - su3::traceABCD(piX, UDypXmY, phipXmY, UypXmY)
-                    + su3::traceABCD(piY, UypY, phi2Y, UDypY)
-                    - su3::traceABCD(piY, UDy, phi, Uy)
-                    + su3::traceABCD(piXY, UypXpY, phiX2Y, UDypXpY)
-                    - su3::traceABCD(piXY, UDypX, phiX, UypX);
-                lat->cells[pos]->setTtauy(
-                    +2. / (it * dtau) / 8. * chainA.trace().imag()
-                    - 2. / 8. / (it * dtau) * ttauyPiTrace.real());
-
-                const complex<double> ttauetaTrace =
-                    su3::traceAB(E1, covGradX0) + su3::traceAB(E1p, gradXAtY)
-                    + su3::traceAB(E2, covGradY0) + su3::traceAB(E2p, gradYAtX);
-                lat->cells[pos]->setTtaueta(
-                    g / (it * dtau) / (it * dtau) / (it * dtau)
-                    * ttauetaTrace.real());
-
-                E1AtYToPos = Uy * E1p * UDy;
-                E2AtXToPos = Ux * E2p * UDx;
-                chainA =
-                    -1. / 4. * g * g * (E1 + E1AtYToPos) * (E2 + E2AtXToPos)
-                    + 1. / 4.
-                          * (covGradX0 * covGradY0 + gradXAtYToPos * covGradY0
-                             + covGradX0 * gradYAtXToPos
-                             + gradXAtYToPos * gradYAtXToPos);
-                lat->cells[pos]->setTxy(
-                    2. / (it * dtau) / (it * dtau) * chainA.trace().real());
-
-                const complex<double> txetaElectricTrace =
-                    su3::traceAB(E1, pi) + su3::traceABCD(E1, Ux, piX, UDx)
-                    + su3::traceAB(E1p, piY)
-                    + su3::traceABCD(E1p, UxpY, piXY, UDxpY);
-                chainA = xMinusSum0 * covGradY0 + xMinusSum1 * gradYAtX;
-                lat->cells[pos]->setTxeta(
-                    -2. / (it * dtau) / (it * dtau)
-                    * (1. / 4. * g * txetaElectricTrace.real()
-                       - 1. / 8. / g * chainA.trace().imag()));
-
-                const complex<double> tyetaElectricTrace =
-                    su3::traceAB(E2, pi) + su3::traceABCD(E2, Uy, piY, UDy)
-                    + su3::traceAB(E2p, piX)
-                    + su3::traceABCD(E2p, UypX, piXY, UDypX);
-                chainA = yPlusSum0 * covGradX0 + yPlusSum1 * gradXAtY;
-                lat->cells[pos]->setTyeta(
-                    -2. / (it * dtau) / (it * dtau)
-                    * (1. / 4. * g * tyetaElectricTrace.real()
-                       - 1. / 8. / g * chainA.trace().imag()));
-
-                lat->cells[pos]->setTtaux(
-                    lat->cells[pos]->getTtaux() * 1 / pow(a, 4.));
-                lat->cells[pos]->setTtauy(
-                    lat->cells[pos]->getTtauy() * 1 / pow(a, 4.));
-                lat->cells[pos]->setTtaueta(
-                    lat->cells[pos]->getTtaueta() * 1 / pow(a, 5.));
-                lat->cells[pos]->setTxy(
-                    lat->cells[pos]->getTxy() * 1 / pow(a, 4.));
-                lat->cells[pos]->setTxeta(
-                    lat->cells[pos]->getTxeta() * 1 / pow(a, 5.));
-                lat->cells[pos]->setTyeta(
-                    lat->cells[pos]->getTyeta() * 1 / pow(a, 5.));
-
-                averageTtautau += lat->cells[pos]->getTtautau()
-                                  * lat->cells[pos]->getTtautau();
-                averageTtaueta += lat->cells[pos]->getTtaueta()
-                                  * lat->cells[pos]->getTtaueta();
-                averageTxx +=
-                    lat->cells[pos]->getTxx() * lat->cells[pos]->getTxx();
-            }
-        }
+        TmunuOffDiagonalScratch offDiagonalScratch;
+        tmunuOffDiagonalTeam(lat, N, it, dtau, g, a, one, offDiagonalScratch);
     }  // omp parallel
-    averageTtautau /= double(N);
-    averageTtaueta /= double(N);
-    averageTxx /= double(N);
 }
 
 void Evolution::u(Lattice *lat, Parameters *param, int it, bool finalFlag) {

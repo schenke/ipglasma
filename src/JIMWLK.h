@@ -34,21 +34,30 @@ class JIMWLK {
 
     bool initializedK_ = false;
     bool initializedNoise_ = false;
-    std::vector<std::complex<double> > **K_;  // data type matches FFT.h
+
+    // K_storage_ owns the per-cell 2-vectors; K_ is a pointer-per-cell view
+    // over it (data type matches FFT.h's T** interface).
+    std::vector<std::vector<std::complex<double> > > K_storage_;
+    std::vector<std::vector<std::complex<double> > *> K_;
 
     // xi_/xi2_/CKxi_ are pointer-per-cell views into one contiguous
     // backing buffer each (xi_data_/xi2_data_/CKxi_data_), so the hot
     // per-cell loops in evolutionStep() get cache-friendly, sequential
     // access instead of chasing Ncells_ independent heap allocations.
-    std::complex<double> **xi_;    // noise
-    std::complex<double> **xi2_;   // noise
-    std::complex<double> **CKxi_;  // noise
-    std::complex<double> *xi_data_;
-    std::complex<double> *xi2_data_;
-    std::complex<double> *CKxi_data_;
+    std::vector<std::complex<double> *> xi_;    // noise
+    std::vector<std::complex<double> *> xi2_;   // noise
+    std::vector<std::complex<double> *> CKxi_;  // noise
+    std::vector<std::complex<double> > xi_data_;
+    std::vector<std::complex<double> > xi2_data_;
+    std::vector<std::complex<double> > CKxi_data_;
 
-    Matrix **VxsiVx_;
-    Matrix **VxsiVy_;
+    // VxsiVx_/VxsiVy_ likewise own their Ncells_ Matrix storage via
+    // *Storage_ and expose a pointer-per-cell view for FFT::fftn's T**
+    // interface.
+    std::vector<Matrix> VxsiVxStorage_;
+    std::vector<Matrix> VxsiVyStorage_;
+    std::vector<Matrix *> VxsiVx_;
+    std::vector<Matrix *> VxsiVy_;
     Matrix zero_ = Matrix(0.);
 
     // Persistent scratch for the per-step bulk noise draw in
@@ -59,7 +68,7 @@ class JIMWLK {
   public:
     JIMWLK() = delete;
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);
-    ~JIMWLK();
+    ~JIMWLK() = default;
 
     void initializeK();
     double getMassRegulator(const double x, const double y) const;

@@ -77,6 +77,15 @@ class Init {
         double rapidityA, double rapidityB);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
+    // Determines Npart/Ncoll from the (already-sampled) nucleon positions,
+    // writes NcollList*.dat/NpartList*.dat, and sets param->setNpart.
+    // Returns false if useFixedNpart is set and this event's Npart doesn't
+    // match, signaling the caller to abort and resample.
+    bool determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll);
+    // Sets param's running-coupling alpha_s from whichever Qs choice
+    // param->getRunWithQs() selects, or a fixed value if running coupling
+    // is disabled or alpha_s runs with k_T instead.
+    void computeAndSetRunningAlphaS(Parameters *param);
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
     void setV(Lattice *lat, Parameters *param, Random *random);
     void readVFromFile(Lattice *lat, Parameters *param, int format);

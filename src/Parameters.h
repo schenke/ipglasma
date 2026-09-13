@@ -234,132 +234,132 @@ class Parameters {
     void setSubNucleonParamSet(int paramSet) { subNucleonParamSet_ = paramSet; }
     int getSubNucleonParamSet() const { return (subNucleonParamSet_); }
     void setSeed(unsigned long long int x) { seed_ = x; }
-    unsigned long long int getSeed() { return seed_; }
+    unsigned long long int getSeed() const { return seed_; }
     void setNy(int x) { Ny_ = x; }
-    int getNy() { return Ny_; }
+    int getNy() const { return Ny_; }
     void setSize(int x) { size_ = x; }
-    int getSize() { return size_; }
+    int getSize() const { return size_; }
     void setProtonAnisotropy(double x) { protonAnisotropy_ = x; }
-    double getProtonAnisotropy() { return protonAnisotropy_; }
+    double getProtonAnisotropy() const { return protonAnisotropy_; }
 
     void setSizeOutput(int x) { sizeOutput_ = x; }
-    int getSizeOutput() { return sizeOutput_; }
+    int getSizeOutput() const { return sizeOutput_; }
     void setEtaSizeOutput(int x) { etaSizeOutput_ = x; }
-    int getEtaSizeOutput() { return etaSizeOutput_; }
+    int getEtaSizeOutput() const { return etaSizeOutput_; }
     void setDetaOutput(double x) { detaOutput_ = x; }
-    double getDetaOutput() { return detaOutput_; }
+    double getDetaOutput() const { return detaOutput_; }
 
     void setAverageOverNuclei(int x) { averageOverNuclei_ = x; }
-    int getAverageOverNuclei() { return averageOverNuclei_; }
+    int getAverageOverNuclei() const { return averageOverNuclei_; }
     void setg2mu(double x) { g2mu_ = x; }
-    double getg2mu() { return g2mu_; }
+    double getg2mu() const { return g2mu_; }
     void setMode(int x) { mode_ = x; };
-    int getMode() { return mode_; }
+    int getMode() const { return mode_; }
     void setRunningCoupling(int x) { runningCoupling_ = x; };
-    int getRunningCoupling() { return runningCoupling_; }
+    int getRunningCoupling() const { return runningCoupling_; }
     void setg(double x) { g_ = x; }
-    double getg() { return g_; }
+    double getg() const { return g_; }
     void setSigmaNN(double x) { sigmaNN_ = x; }
-    double getSigmaNN() { return sigmaNN_; }
+    double getSigmaNN() const { return sigmaNN_; }
     void setb(double x) { b_ = x; }
     double getb() const { return b_; }
     void setPhiRP(double x) { phiRP_ = x; }
     double getPhiRP() const { return phiRP_; }
     void setbmin(double x) { bmin_ = x; }
-    double getbmin() { return bmin_; }
+    double getbmin() const { return bmin_; }
     void setbmax(double x) { bmax_ = x; }
-    double getbmax() { return bmax_; }
+    double getbmax() const { return bmax_; }
     void setTarget(std::string x) { target_ = x; }
-    std::string getTarget() { return target_; }
+    std::string getTarget() const { return target_; }
     void setProjectile(std::string x) { projectile_ = x; }
-    std::string getProjectile() { return projectile_; }
+    std::string getProjectile() const { return projectile_; }
     void setL(double x) { L_ = x; }
-    double getL() { return L_; }
+    double getL() const { return L_; }
     void setLOutput(double x) { LOutput_ = x; }
-    double getLOutput() { return LOutput_; }
+    double getLOutput() const { return LOutput_; }
     void setm(double x) { m_ = x; }
-    double getm() { return m_; }
+    double getm() const { return m_; }
     void setJacobianm(double x) { Jacobianm_ = x; }
-    double getJacobianm() { return Jacobianm_; }
+    double getJacobianm() const { return Jacobianm_; }
     void setQsmuRatio(double x) { QsmuRatio_ = x; }
-    double getQsmuRatio() { return QsmuRatio_; }
+    double getQsmuRatio() const { return QsmuRatio_; }
     void setQsmuRatioB(double x) { QsmuRatioB_ = x; }
-    double getQsmuRatioB() { return QsmuRatioB_; }
+    double getQsmuRatioB() const { return QsmuRatioB_; }
     void setRapidityA(double x) { rapidityA_ = x; }
     double getRapidityA() const { return rapidityA_; }
     void setRapidityB(double x) { rapidityB_ = x; }
     double getRapidityB() const { return rapidityB_; }
     double getRapidity() const { return (rapidityA_ + rapidityB_) / 2.; }
     void setMaxtime(double x) { maxtime_ = x; }
-    double getMaxtime() { return maxtime_; }
+    double getMaxtime() const { return maxtime_; }
     void setdtau(double x) { dtau_ = x; }
-    double getdtau() { return dtau_; }
+    double getdtau() const { return dtau_; }
     void setNpart(int x) { Npart_ = x; };
-    int getNpart() { return Npart_; }
+    int getNpart() const { return Npart_; }
     void setAverageQs(double x) { averageQs_ = x; }
-    double getAverageQs() { return averageQs_; }
+    double getAverageQs() const { return averageQs_; }
     void setAverageQsAvg(double x) { averageQsAvg_ = x; }
-    double getAverageQsAvg() { return averageQsAvg_; }
+    double getAverageQsAvg() const { return averageQsAvg_; }
     void setAverageQsmin(double x) { averageQsmin_ = x; }
-    double getAverageQsmin() { return averageQsmin_; }
+    double getAverageQsmin() const { return averageQsmin_; }
     void setalphas(double x) { alphas_ = x; }
-    double getalphas() { return alphas_; }
+    double getalphas() const { return alphas_; }
     void setRandomSeed(unsigned long long int x) { randomSeed_ = x; };
-    unsigned long long int getRandomSeed() { return randomSeed_; }
+    unsigned long long int getRandomSeed() const { return randomSeed_; }
     void setUseTimeForSeed(int x) { useTimeForSeed_ = x; };
-    int getUseTimeForSeed() { return useTimeForSeed_; }
+    int getUseTimeForSeed() const { return useTimeForSeed_; }
     void setUseSeedList(int x) { useSeedList_ = x; };
-    int getUseSeedList() { return useSeedList_; }
+    int getUseSeedList() const { return useSeedList_; }
     void setNucleusQsTableFileName(std::string x) {
         nucleusQsTableFileName_ = x;
     }
-    std::string getNucleusQsTableFileName() { return nucleusQsTableFileName_; }
+    std::string getNucleusQsTableFileName() const { return nucleusQsTableFileName_; }
     void setBG(double x) { BG_ = x; }
-    double getBG() { return BG_; }
+    double getBG() const { return BG_; }
     void setBGq(double x) { BGq_ = x; }
-    double getBGq() { return BGq_; }
+    double getBGq() const { return BGq_; }
     void setBGqVar(double BGqVar) { BGqVar_ = BGqVar; }
-    double getBGqVar() { return BGqVar_; }
+    double getBGqVar() const { return BGqVar_; }
     void setOmega(double x) { omega_ = x; }
     double getOmega() const { return omega_; }
     void setDqmin(double dq_min) { dq_min_ = dq_min; }
-    double getDqmin() { return dq_min_; }
+    double getDqmin() const { return dq_min_; }
     void setMuZero(double x) { muZero_ = x; }
-    double getMuZero() { return muZero_; }
+    double getMuZero() const { return muZero_; }
     void setc(double x) { c_ = x; }
-    double getc() { return c_; }
+    double getc() const { return c_; }
     void setRoots(double x) { roots_ = x; }
-    double getRoots() { return roots_; }
+    double getRoots() const { return roots_; }
     void setUseFluctuatingx(int x) { useFluctuatingx_ = x; }
-    int getUseFluctuatingx() { return useFluctuatingx_; }
+    int getUseFluctuatingx() const { return useFluctuatingx_; }
     void setRunWithThisFactorTimesQs(double x) {
         runWithThisFactorTimesQs_ = x;
     };
-    double getRunWithThisFactorTimesQs() { return runWithThisFactorTimesQs_; }
+    double getRunWithThisFactorTimesQs() const { return runWithThisFactorTimesQs_; }
     void setxFromThisFactorTimesQs(double x) { xFromThisFactorTimesQs_ = x; };
-    double getxFromThisFactorTimesQs() { return xFromThisFactorTimesQs_; }
+    double getxFromThisFactorTimesQs() const { return xFromThisFactorTimesQs_; }
     void setTpp(double x) { Tpp_ = x; }
-    double getTpp() { return Tpp_; }
+    double getTpp() const { return Tpp_; }
     void setUseFixedNpart(int x) { useFixedNpart_ = x; }
-    int getUseFixedNpart() { return useFixedNpart_; }
+    int getUseFixedNpart() const { return useFixedNpart_; }
     void setArea(double x) { area_ = x; }
-    double getArea() { return area_; }
+    double getArea() const { return area_; }
     void setPsi(double x) { psi_ = x; }
-    double getPsi() { return psi_; }
+    double getPsi() const { return psi_; }
     void setSmearingWidth(double x) { smearingWidth_ = x; }
-    double getSmearingWidth() { return smearingWidth_; }
+    double getSmearingWidth() const { return smearingWidth_; }
     void setMPIRank(int x) { MPIrank_ = x; }
-    int getMPIRank() { return MPIrank_; }
+    int getMPIRank() const { return MPIrank_; }
     void setEventId(int x) { event_id_ = x; }
-    int getEventId() { return event_id_; }
+    int getEventId() const { return event_id_; }
     void setMPISize(int x) { MPIsize_ = x; }
-    int getMPISize() { return MPIsize_; }
+    int getMPISize() const { return MPIsize_; }
     void setSuccess(int x) { success_ = x; }
-    int getSuccess() { return success_; }
+    int getSuccess() const { return success_; }
     void setRmax(double x) { rmax_ = x; }
-    double getRmax() { return rmax_; }
+    double getRmax() const { return rmax_; }
     void setUVdamp(double x) { UVdamp_ = x; }
-    double getUVdamp() { return UVdamp_; }
+    double getUVdamp() const { return UVdamp_; }
     void setSetWSDeformParams(int x) {
         if (x == 0)
             setWSDeformParams_ = false;
@@ -404,73 +404,73 @@ class Parameters {
 
     // switches:
     void setUseNucleus(int x) { useNucleus_ = x; };
-    int getUseNucleus() { return useNucleus_; }
+    int getUseNucleus() const { return useNucleus_; }
     void setUseGaussian(int x) { useGaussian_ = x; };
-    int getUseGaussian() { return useGaussian_; }
+    int getUseGaussian() const { return useGaussian_; }
     void setlightNucleusOption(int x) { lightNucleusOption_ = x; };
-    int getlightNucleusOption() { return lightNucleusOption_; }
+    int getlightNucleusOption() const { return lightNucleusOption_; }
     void setPolarizationProjectile(int x) { polarizationFlagProjectile_ = x; };
-    int getPolarizationProjectile() { return polarizationFlagProjectile_; }
+    int getPolarizationProjectile() const { return polarizationFlagProjectile_; }
     void setPolarizationTarget(int x) { polarizationFlagTarget_ = x; };
-    int getPolarizationTarget() { return polarizationFlagTarget_; }
+    int getPolarizationTarget() const { return polarizationFlagTarget_; }
     void setPolarizationProjectileJz(double x) { polJzProjectile_ = x; };
-    double getPolarizationProjectileJz() { return polJzProjectile_; }
+    double getPolarizationProjectileJz() const { return polJzProjectile_; }
     void setPolarizationTargetJz(double x) { polJzTarget_ = x; };
-    double getPolarizationTargetJz() { return polJzTarget_; }
+    double getPolarizationTargetJz() const { return polJzTarget_; }
     void setRunWithQs(int x) { runWithQs_ = x; };
-    int getRunWithQs() { return runWithQs_; }
+    int getRunWithQs() const { return runWithQs_; }
     void setRunWithkt(int x) { runWithkt_ = x; };
-    int getRunWithkt() { return runWithkt_; }
+    int getRunWithkt() const { return runWithkt_; }
     void setRunWithLocalQs(int x) { runWithLocalQs_ = x; };
-    int getRunWithLocalQs() { return runWithLocalQs_; }
+    int getRunWithLocalQs() const { return runWithLocalQs_; }
     void setLinearb(int x) { linearb_ = x; };
-    int getLinearb() { return linearb_; }
+    int getLinearb() const { return linearb_; }
     void setWriteOutputs(int x) { writeOutputs_ = x; };
-    int getWriteOutputs() { return writeOutputs_; }
+    int getWriteOutputs() const { return writeOutputs_; }
     void setWriteEpsilonUHydro(int x) { writeEpsilonUHydro_ = x; };
-    int getWriteEpsilonUHydro() { return writeEpsilonUHydro_; }
+    int getWriteEpsilonUHydro() const { return writeEpsilonUHydro_; }
     void setWriteTmunuBinary(int x) { writeTmunuBinary_ = x; };
-    int getWriteTmunuBinary() { return writeTmunuBinary_; }
+    int getWriteTmunuBinary() const { return writeTmunuBinary_; }
     void setWriteOutputsToHDF5(int x) { writeOutputsToHDF5_ = x; };
-    int getWriteOutputsToHDF5() { return writeOutputsToHDF5_; }
+    int getWriteOutputsToHDF5() const { return writeOutputsToHDF5_; }
     void setWriteWilsonLines(int x) { writeWilsonLines_ = x; }
-    int getWriteWilsonLines() { return writeWilsonLines_; }
+    int getWriteWilsonLines() const { return writeWilsonLines_; }
     void setReadInitialWilsonLines(int x) { readInitialWilsonLines_ = x; }
-    int getReadInitialWilsonLines() { return readInitialWilsonLines_; }
+    int getReadInitialWilsonLines() const { return readInitialWilsonLines_; }
     void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile_ = x; }
-    int getNucleonPositionsFromFile() { return nucleonPositionsFromFile_; }
+    int getNucleonPositionsFromFile() const { return nucleonPositionsFromFile_; }
     void setNuclearConfigurationsPath(std::string x) {
         nuclearConfigurationsPath_ = x;
     }
-    std::string getNuclearConfigurationsPath() {
+    std::string getNuclearConfigurationsPath() const {
         return nuclearConfigurationsPath_;
     }
     void setInverseQsForMaxTime(int x) { inverseQsForMaxTime_ = x; };
-    int getInverseQsForMaxTime() { return inverseQsForMaxTime_; }
+    int getInverseQsForMaxTime() const { return inverseQsForMaxTime_; }
     void setSmearQs(int x) { smearQs_ = x; }
-    int getSmearQs() { return smearQs_; }
+    int getSmearQs() const { return smearQs_; }
     void setReadMultFromFile(int x) { readMultFromFile_ = x; }
-    int getReadMultFromFile() { return readMultFromFile_; }
+    int getReadMultFromFile() const { return readMultFromFile_; }
     void setGaussianWounding(int x) { gaussianWounding_ = x; }
-    int getGaussianWounding() { return gaussianWounding_; }
+    int getGaussianWounding() const { return gaussianWounding_; }
     void setUsePseudoRapidity(int x) { usePseudoRapidity_ = x; }
-    int getUsePseudoRapidity() { return usePseudoRapidity_; }
+    int getUsePseudoRapidity() const { return usePseudoRapidity_; }
     void setUseConstituentQuarkProton(int x) { useConstituentQuarkProton_ = x; }
-    int getUseConstituentQuarkProton() { return useConstituentQuarkProton_; }
+    int getUseConstituentQuarkProton() const { return useConstituentQuarkProton_; }
     void setNqBase(double NqBase) { NqBase_ = NqBase; }
-    double getNqBase() { return NqBase_; }
+    double getNqBase() const { return NqBase_; }
     void setNqFluc(double NqFluc) { NqFluc_ = NqFluc; }
-    double getNqFluc() { return NqFluc_; }
+    double getNqFluc() const { return NqFluc_; }
     void setUseSmoothNucleus(int x) { useSmoothNucleus_ = x; }
-    int getUseSmoothNucleus() { return useSmoothNucleus_; }
+    int getUseSmoothNucleus() const { return useSmoothNucleus_; }
     void setShiftConstituentQuarkProtonOrigin(int x) {
         shiftConstituentQuarkProtonOrigin_ = x;
     }
-    int getShiftConstituentQuarkProtonOrigin() {
+    int getShiftConstituentQuarkProtonOrigin() const {
         return shiftConstituentQuarkProtonOrigin_;
     }
     void setMinimumQs2ST(int x) { minimumQs2ST_ = x; }
-    int getMinimumQs2ST() { return minimumQs2ST_; }
+    int getMinimumQs2ST() const { return minimumQs2ST_; }
 
     void setComputeGluonMultiplicity(int x) {
         if (x == 0) {
@@ -491,9 +491,9 @@ class Parameters {
 
     // JIMWLK functions
     void setm_jimwlk(double x) { m_jimwlk_ = x; };
-    double getm_jimwlk() { return m_jimwlk_; }
+    double getm_jimwlk() const { return m_jimwlk_; }
     void setMu0_jimwlk(double x) { mu0_jimwlk_ = x; }
-    double getMu0_jimwlk() { return mu0_jimwlk_; }
+    double getMu0_jimwlk() const { return mu0_jimwlk_; }
     void setSimpleLangevin(int x) {
         if (x == 0) {
             simpleLangevin_ = false;
@@ -503,17 +503,17 @@ class Parameters {
     }
     bool getSimpleLangevin() const { return simpleLangevin_; }
     void setLambdaQCD_jimwlk(double x) { LambdaQCD_jimwlk_ = x; }
-    double getLambdaQCD_jimwlk() { return LambdaQCD_jimwlk_; }
+    double getLambdaQCD_jimwlk() const { return LambdaQCD_jimwlk_; }
     void setJimwlk_x_projectile(double x) { jimwlk_x1_ = x; }
-    double getJimwlk_x_projectile() { return jimwlk_x1_; }
+    double getJimwlk_x_projectile() const { return jimwlk_x1_; }
     void setJimwlk_x_target(double x) { jimwlk_x2_ = x; }
-    double getJimwlk_x_target() { return jimwlk_x2_; }
+    double getJimwlk_x_target() const { return jimwlk_x2_; }
     void setDs_jimwlk(double x) { ds_jimwlk_ = x; }
-    double getDs_jimwlk() { return ds_jimwlk_; }
+    double getDs_jimwlk() const { return ds_jimwlk_; }
     void setJimwlk_alphas(double as) { jimwlk_alphas_ = as; }
-    double getJimwlk_alphas() { return jimwlk_alphas_; }
+    double getJimwlk_alphas() const { return jimwlk_alphas_; }
     void setJimwlk_x0(double x) { x0_jimwlk_ = x; }
-    double getJimwlk_x0() { return x0_jimwlk_; }
+    double getJimwlk_x0() const { return x0_jimwlk_; }
     bool getUseJIMWLK() const { return useJIMWLK_; }
     void setUseJIMWLK(int x) {
         if (x == 0) {
@@ -523,14 +523,14 @@ class Parameters {
         }
     }
     void setxSnapshotList(std::vector<double> xList) { xSnapshotList_ = xList; }
-    std::vector<double> getxSnapshotList() { return xSnapshotList_; }
+    std::vector<double> getxSnapshotList() const { return xSnapshotList_; }
     void setSaveSnapshots(int x) {
         if (x == 0)
             saveSnapshots_ = false;
         else
             saveSnapshots_ = true;
     }
-    bool getSaveSnapshots() { return saveSnapshots_; }
+    bool getSaveSnapshots() const { return saveSnapshots_; }
 
     /*
      * Checks if the parameters are valid. Returns true if they are, false

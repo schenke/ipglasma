@@ -106,8 +106,8 @@ TEST_CASE(
     int nn[2] = {N, N};
     Init init(nn);
 
-    std::vector<double> kernel =
-        init.computeWilsonLineMomentumKernel(N, N * N, /*m=*/0.0, /*UVdamp=*/0.0);
+    std::vector<double> kernel = init.computeWilsonLineMomentumKernel(
+        N, N * N, /*m=*/0.0, /*UVdamp=*/0.0);
     REQUIRE(kernel.size() == static_cast<std::size_t>(N * N));
 
     // pos=0 -> (i=0,j=0): kx=ky=-pi, kt2 = 4*(sin(-pi/2)^2*2) = 8.
@@ -321,8 +321,12 @@ TEST_CASE(
                     for (int col = 0; col < 3; ++col) {
                         double re = 1000. * ix + 100. * iy + 10. * row + col;
                         double im = -re;
-                        out.write(reinterpret_cast<const char *>(&re), sizeof(double));
-                        out.write(reinterpret_cast<const char *>(&im), sizeof(double));
+                        out.write(
+                            reinterpret_cast<const char *>(&re),
+                            sizeof(double));
+                        out.write(
+                            reinterpret_cast<const char *>(&im),
+                            sizeof(double));
                     }
                 }
             }
@@ -337,7 +341,9 @@ TEST_CASE(
     // (round-half-to-even or away-from-zero both give 2 here).
     for (int iy = 0; iy < N; ++iy) {
         const int pos = 2 * N + iy;
-        CHECK(lat2.U2[pos].get(0).real() == doctest::Approx(0. + 10. * 0 + iy * 100.));
+        CHECK(
+            lat2.U2[pos].get(0).real()
+            == doctest::Approx(0. + 10. * 0 + iy * 100.));
     }
 }
 
@@ -467,8 +473,8 @@ TEST_CASE(
     // A1=A2=1 ("p"): sampleTAWoodsSaxon places both nucleons at the origin
     // deterministically, with no random draws.
     glauber.initGlauber(
-        4.2, "p", "p", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0.,
-        0., 0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
+        4.2, "p", "p", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0., 0.,
+        0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
     param.setAverageOverNuclei(1);
     init.sampleTAWoodsSaxon(&param, &random, &glauber);
 

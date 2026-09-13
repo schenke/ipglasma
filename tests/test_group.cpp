@@ -1,6 +1,5 @@
-#include "doctest.h"
-
 #include "Group.h"
+#include "doctest.h"
 
 TEST_CASE("Group: fundamental-rep generators are Hermitian and traceless") {
     Group group;

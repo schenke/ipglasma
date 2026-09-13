@@ -1,11 +1,10 @@
-#include "doctest.h"
-
 #include <cstdio>
 #include <fstream>
 #include <string>
 #include <vector>
 
 #include "Parameters.h"
+#include "doctest.h"
 
 namespace {
 // Parameters' default constructor does not initialize every member (no
@@ -38,14 +37,17 @@ TEST_CASE("Parameters::ValidParameters: rejects a non-positive lattice size") {
     CHECK(param.ValidParameters() == false);
 }
 
-TEST_CASE("Parameters::ValidParameters: rejects an invalid Wilson-line format") {
+TEST_CASE(
+    "Parameters::ValidParameters: rejects an invalid Wilson-line format") {
     Parameters param;
     makeValidBaseline(param);
-    param.setWriteWilsonLines(3);  // only 0 (off), 1 (text), 2 (binary) are valid
+    param.setWriteWilsonLines(
+        3);  // only 0 (off), 1 (text), 2 (binary) are valid
     CHECK(param.ValidParameters() == false);
 }
 
-TEST_CASE("Parameters::ValidParameters: writeWilsonLines=0 is valid by itself") {
+TEST_CASE(
+    "Parameters::ValidParameters: writeWilsonLines=0 is valid by itself") {
     Parameters param;
     makeValidBaseline(param);
     param.setWriteWilsonLines(0);
@@ -62,7 +64,8 @@ TEST_CASE(
     CHECK(param.ValidParameters() == false);
 }
 
-TEST_CASE("Parameters: int-to-bool coercing setters treat any nonzero as true") {
+TEST_CASE(
+    "Parameters: int-to-bool coercing setters treat any nonzero as true") {
     // setSaveSnapshots/setForceDmin/setComputeGluonMultiplicity/... all
     // share the same "x == 0 -> false, else -> true" pattern; this checks
     // a representative sample rather than every one of them individually.
@@ -104,7 +107,9 @@ class TempCsvFile {
 };
 }  // namespace
 
-TEST_CASE("Parameters::loadPosteriorParameterSetsFromFile parses a CSV, skipping the header") {
+TEST_CASE(
+    "Parameters::loadPosteriorParameterSetsFromFile parses a CSV, skipping the "
+    "header") {
     TempCsvFile file(
         "m,BG,BGq,smearingWidth,NqBase,QsmuRatio,dqmin\n"
         "0.4,3.3,0.3,0.6,3,0.643,0.2\n"

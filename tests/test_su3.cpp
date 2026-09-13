@@ -1,7 +1,6 @@
-#include "doctest.h"
-
 #include "Matrix.h"
 #include "SU3.h"
+#include "doctest.h"
 
 namespace {
 Matrix fromMatrix3(const su3::Matrix3 &m) {
@@ -115,6 +114,7 @@ TEST_CASE("su3::traceABC matches (a*b*c).trace()") {
 }
 
 TEST_CASE("su3::traceABCD matches (a*b*c*d).trace()") {
-    Matrix a = makeA(), b = makeB(), c = makeA() + makeB(), d = makeB() - makeA();
+    Matrix a = makeA(), b = makeB(), c = makeA() + makeB(),
+           d = makeB() - makeA();
     CHECK(closeTo(su3::traceABCD(a, b, c, d), (a * b * c * d).trace(), 1e-12));
 }

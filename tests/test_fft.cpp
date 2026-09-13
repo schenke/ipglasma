@@ -1,11 +1,10 @@
-#include "doctest.h"
-
 #include <cmath>
 #include <complex>
 #include <vector>
 
 #include "FFT.h"
 #include "Matrix.h"
+#include "doctest.h"
 
 TEST_CASE("FFT::fftnComplexArray: forward+backward recovers the input") {
     const int nn[2] = {8, 8};
@@ -32,7 +31,8 @@ TEST_CASE("FFT::fftnComplexArray: forward+backward recovers the input") {
     }
 }
 
-TEST_CASE("FFT::fftnArray: forward+backward recovers the input (position-major)") {
+TEST_CASE(
+    "FFT::fftnArray: forward+backward recovers the input (position-major)") {
     // fftnArray uses the opposite layout from fftnComplexArray: data[pos]
     // is itself a contiguous mDim-length array (one per lattice site),
     // matching how JIMWLK's noise arrays are laid out.
@@ -62,7 +62,8 @@ TEST_CASE("FFT::fftnArray: forward+backward recovers the input (position-major)"
 
     for (int pos = 0; pos < ntot; ++pos) {
         for (int k = 0; k < mDim; ++k) {
-            CHECK(std::abs(recoveredPtrs[pos][k] - originalPtrs[pos][k]) < 1e-10);
+            CHECK(
+                std::abs(recoveredPtrs[pos][k] - originalPtrs[pos][k]) < 1e-10);
         }
     }
 }
@@ -96,7 +97,8 @@ TEST_CASE("FFT::fftn<Matrix>: forward+backward recovers the input") {
 
     for (int pos = 0; pos < ntot; ++pos) {
         for (int k = 0; k < 9; ++k) {
-            CHECK(std::abs(recovered[pos].get(k) - original[pos].get(k)) < 1e-10);
+            CHECK(
+                std::abs(recovered[pos].get(k) - original[pos].get(k)) < 1e-10);
         }
     }
 }

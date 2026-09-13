@@ -1,12 +1,11 @@
-#include "doctest.h"
-
 #include <string>
 
 #include "Glauber.h"
+#include "doctest.h"
 
 namespace {
 Nucleus lookup(const std::string &name) {
-    Nucleus nucleus{};
+    Nucleus nucleus {};
     Glauber glauber;
     glauber.findNucleusData(
         &nucleus, name, /*setWSDeformParams=*/false, 0., 0., 0., 0., 0., 0.,
@@ -36,7 +35,7 @@ TEST_CASE("Glauber::findNucleusData: known species have the right A/Z") {
 }
 
 TEST_CASE("Glauber::findNucleusData: setWSDeformParams overrides beta2/R_WS") {
-    Nucleus nucleus{};
+    Nucleus nucleus {};
     Glauber glauber;
     glauber.findNucleusData(
         &nucleus, "Pb", /*setWSDeformParams=*/true, 7.5, 0.6, 0.11, 0.0, 0.0,
@@ -59,23 +58,29 @@ namespace {
 // without needing a hand-derived reference number.
 double anumForProfile(Glauber &glauber, Nucleus &nucleus) {
     switch (nucleus.anumFunc) {
-        case 1: return glauber.anum2HO();
-        case 2: return glauber.anum3Gauss(nucleus.R_WS);
-        case 3: return glauber.anum3Fermi(nucleus.R_WS);
-        case 8: return glauber.anumHulthen();
-        default: return -1.0;  // unreachable for the species used below
+        case 1:
+            return glauber.anum2HO();
+        case 2:
+            return glauber.anum3Gauss(nucleus.R_WS);
+        case 3:
+            return glauber.anum3Fermi(nucleus.R_WS);
+        case 8:
+            return glauber.anumHulthen();
+        default:
+            return -1.0;  // unreachable for the species used below
     }
 }
 }  // namespace
 
-TEST_CASE("Glauber::calcRho: solved rho_WS reproduces A for every density profile") {
+TEST_CASE(
+    "Glauber::calcRho: solved rho_WS reproduces A for every density profile") {
     // One species per density-profile branch calcRho dispatches on.
     for (const char *name : {"Pb", "S", "C", "d"}) {
-        Nucleus nucleus{};
+        Nucleus nucleus {};
         Glauber glauber;
         glauber.findNucleusData(
-            &nucleus, name, /*setWSDeformParams=*/false, 0., 0., 0., 0., 0.,
-            0., /*forceDminFlag=*/false, 0., 0., 0.);
+            &nucleus, name, /*setWSDeformParams=*/false, 0., 0., 0., 0., 0., 0.,
+            /*forceDminFlag=*/false, 0., 0., 0.);
 
         glauber.calcRho(&nucleus);
 

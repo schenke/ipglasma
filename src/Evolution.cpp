@@ -637,334 +637,314 @@ void tmunuOffDiagonalTeam(
     int pos, posX, posY, posmX, posmY, posXY, posmXpY, pospXmY, pos2X, pos2Y,
         posX2Y, pos2XY;
 #pragma omp for
-        for (int i = 0; i < N; i++) {
-            for (int j = 0; j < N; j++) {
-                pos = i * N + j;
-                if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
-                    lat->cells[pos]->setTtaux(0.);
-                    lat->cells[pos]->setTtauy(0.);
-                    lat->cells[pos]->setTtaueta(0.);
-                    lat->cells[pos]->setTxy(0.);
-                    lat->cells[pos]->setTxeta(0.);
-                    lat->cells[pos]->setTyeta(0.);
-                    continue;
-                }
-                posX = lat->pospX[pos];
-                posY = lat->pospY[pos];
-                posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
-
-                posmX = lat->posmX[pos];
-                posmY = lat->posmY[pos];
-
-                posmXpY = lat->posmXpY[pos];
-                pospXmY = lat->pospXmY[pos];
-
-                pos2X = std::min(N - 1, i + 2) * N + j;
-                pos2Y = i * N + std::min(N - 1, j + 2);
-
-                pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
-                posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
-
-                scratch.E1 = lat->U[pos];
-                scratch.E2 = lat->U2[pos];
-                scratch.E1p = lat->U[posY];   // shift x value in y direction
-                scratch.E2p = lat->U2[posX];  // shift y value in x direction
-
-                scratch.pi = lat->Ux2[pos];
-                scratch.piX = lat->Ux2[posX];
-                scratch.piY = lat->Ux2[posY];
-                scratch.piXY = lat->Ux2[posXY];
-
-                scratch.phi = lat->Uy2[pos];
-                scratch.phimX = lat->Uy2[posmX];
-                scratch.phiX = lat->Uy2[posX];
-                scratch.phimY = lat->Uy2[posmY];
-                scratch.phiY = lat->Uy2[posY];
-                scratch.phiXY = lat->Uy2[posXY];
-                scratch.phimXpY = lat->Uy2[posmXpY];
-                scratch.phipXmY = lat->Uy2[pospXmY];
-                scratch.phi2X = lat->Uy2[pos2X];
-                scratch.phi2XY = lat->Uy2[pos2XY];
-                scratch.phi2Y = lat->Uy2[pos2Y];
-                scratch.phiX2Y = lat->Uy2[posX2Y];
-
-                scratch.Ux = lat->Ux[pos];
-                scratch.UDx = scratch.Ux;
-                scratch.UDx.conjg();
-
-                scratch.UxmX = lat->Ux[posmX];
-                scratch.UDxmX = lat->Ux[posmX];
-                scratch.UDxmX.conjg();
-                scratch.UxmXpY = lat->Ux[posmXpY];
-                scratch.UDxmXpY = lat->Ux[posmXpY];
-                scratch.UDxmXpY.conjg();
-
-                scratch.UxpX = lat->Ux[posX];
-                scratch.UxpY = lat->Ux[posY];
-                scratch.UDxpX = scratch.UxpX;
-                scratch.UDxpX.conjg();
-                scratch.UDxpY = scratch.UxpY;
-                scratch.UDxpY.conjg();
-
-                scratch.UxpXpY = lat->Ux[posXY];
-                scratch.UDxpXpY = lat->Ux[posXY];
-                scratch.UDxpXpY.conjg();
-                scratch.UxmXpY = lat->Ux[posmXpY];
-                scratch.UDxmXpY = scratch.UxmXpY;
-                scratch.UDxmXpY.conjg();
-
-                scratch.Uy = lat->Uy[pos];
-                scratch.UDy = scratch.Uy;
-                scratch.UDy.conjg();
-
-                scratch.UymY = lat->Uy[posmY];
-                scratch.UDymY = lat->Uy[posmY];
-                scratch.UDymY.conjg();
-                scratch.UypXmY = lat->Uy[pospXmY];
-                scratch.UDypXmY = lat->Uy[pospXmY];
-                scratch.UDypXmY.conjg();
-
-                scratch.UypY = lat->Uy[posY];
-                scratch.UypX = lat->Uy[posX];
-                scratch.UDypX = scratch.UypX;
-                scratch.UDypX.conjg();
-
-                scratch.UDypY = lat->Uy[posY];
-                scratch.UDypY.conjg();
-
-                scratch.UDxpX = lat->Ux[posX];
-                scratch.UDxpX.conjg();
-
-                scratch.Uyp2X = lat->Uy[pos2X];
-                scratch.UDyp2X = scratch.Uyp2X;
-                scratch.UDyp2X.conjg();
-                scratch.Uxp2Y = lat->Ux[pos2Y];
-                scratch.UDxp2Y = scratch.Uxp2Y;
-                scratch.UDxp2Y.conjg();
-
-                scratch.UypXpY = lat->Uy[posXY];
-                scratch.UDypXpY = lat->Uy[posXY];
-                scratch.UDypXpY.conjg();
-                scratch.UymX = lat->Uy[posmX];
-                scratch.UDymX = scratch.UymX;
-                scratch.UDymX.conjg();
-                scratch.UxmY = lat->Ux[posmY];
-                scratch.UDxmY = scratch.UxmY;
-                scratch.UDxmY.conjg();
-                scratch.UypXmY = lat->Uy[pospXmY];
-
-                // Cache the repeated four-link magnetic structures once per
-                // site. The historical expressions recomputed every four-link
-                // chain once for the matrix difference and again for its trace
-                // subtraction, then repeated the same structures in
-                // Txeta/Tyeta. Preserve the original product ordering, but
-                // materialize each traceless difference only once and reuse it
-                // below.
-                scratch.chainA =
-                    scratch.Uy * scratch.UxpY * scratch.UDypX * scratch.UDx;
-                scratch.chainB =
-                    scratch.Ux * scratch.UypX * scratch.UDxpY * scratch.UDy;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.xMinus0);
-
-                scratch.chainA =
-                    scratch.UDxmX * scratch.UymX * scratch.UxmXpY * scratch.UDy;
-                scratch.chainB =
-                    scratch.Uy * scratch.UDxmXpY * scratch.UDymX * scratch.UxmX;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.xMinusM);
-
-                scratch.chainA =
-                    scratch.UypX * scratch.UxpXpY * scratch.UDyp2X
-                    * scratch.UDxpX;
-                scratch.chainB =
-                    scratch.UxpX * scratch.Uyp2X * scratch.UDxpXpY
-                    * scratch.UDypX;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.xMinusP);
-
-                scratch.chainA =
-                    scratch.UDx * scratch.Uy * scratch.UxpY * scratch.UDypX;
-                scratch.chainB =
-                    scratch.UypX * scratch.UDxpY * scratch.UDy * scratch.Ux;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.xMinusT);
-
-                scratch.xMinusSum0 = scratch.xMinus0 + scratch.xMinusM;
-                scratch.xMinusSum1 = scratch.xMinusP + scratch.xMinusT;
-
-                // The first y-oriented difference is the opposite orientation
-                // of scratch.xMinus0 and can be reused by a sign flip.
-                scratch.yPlus0 = (-1.) * scratch.xMinus0;
-
-                scratch.chainA =
-                    scratch.UDymY * scratch.UxmY * scratch.UypXmY * scratch.UDx;
-                scratch.chainB =
-                    scratch.Ux * scratch.UDypXmY * scratch.UDxmY * scratch.UymY;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.yPlusM);
-
-                scratch.chainA =
-                    scratch.UxpY * scratch.UypXpY * scratch.UDxp2Y
-                    * scratch.UDypY;
-                scratch.chainB =
-                    scratch.UypY * scratch.Uxp2Y * scratch.UDypXpY
-                    * scratch.UDxpY;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.yPlusP);
-
-                scratch.chainA =
-                    scratch.UDy * scratch.Ux * scratch.UypX * scratch.UDxpY;
-                scratch.chainB =
-                    scratch.UxpY * scratch.UDypX * scratch.UDx * scratch.Uy;
-                makeTmunuTracelessDifference(
-                    scratch.chainA, scratch.chainB, one, scratch.yPlusT);
-
-                scratch.yPlusSum0 = scratch.yPlus0 + scratch.yPlusM;
-                scratch.yPlusSum1 = scratch.yPlusP + scratch.yPlusT;
-
-                // Cache covariant scalar gradients shared by Txy, Ttaueta,
-                // Txeta, and Tyeta.
-                scratch.covGradX0 =
-                    scratch.Ux * scratch.phiX * scratch.UDx - scratch.phi;
-                scratch.covGradY0 =
-                    scratch.Uy * scratch.phiY * scratch.UDy - scratch.phi;
-                scratch.gradXAtY =
-                    scratch.UxpY * scratch.phiXY * scratch.UDxpY - scratch.phiY;
-                scratch.gradYAtX =
-                    scratch.UypX * scratch.phiXY * scratch.UDypX - scratch.phiX;
-                scratch.gradXAtYToPos =
-                    scratch.Uy * scratch.gradXAtY * scratch.UDy;
-                scratch.gradYAtXToPos =
-                    scratch.Ux * scratch.gradYAtX * scratch.UDx;
-
-                scratch.chainA =
-                    scratch.E2 * scratch.xMinusSum0
-                    + scratch.E2p * scratch.xMinusSum1;
-                const complex<double> ttauxPiTrace =
-                    su3::traceABCD(
-                        scratch.pi, scratch.Ux, scratch.phiX, scratch.UDx)
-                    - su3::traceABCD(
-                        scratch.pi, scratch.UDxmX, scratch.phimX, scratch.UxmX)
-                    + su3::traceABCD(
-                        scratch.piY, scratch.UxpY, scratch.phiXY,
-                        scratch.UDxpY)
-                    - su3::traceABCD(
-                        scratch.piY, scratch.UDxmXpY, scratch.phimXpY,
-                        scratch.UxmXpY)
-                    + su3::traceABCD(
-                        scratch.piX, scratch.UxpX, scratch.phi2X,
-                        scratch.UDxpX)
-                    - su3::traceABCD(
-                        scratch.piX, scratch.UDx, scratch.phi, scratch.Ux)
-                    + su3::traceABCD(
-                        scratch.piXY, scratch.UxpXpY, scratch.phi2XY,
-                        scratch.UDxpXpY)
-                    - su3::traceABCD(
-                        scratch.piXY, scratch.UDxpY, scratch.phiY,
-                        scratch.UxpY);
-                lat->cells[pos]->setTtaux(
-                    +2. / (it * dtau) / 8. * scratch.chainA.trace().imag()
-                    - 2. / 8. / (it * dtau) * ttauxPiTrace.real());
-
-                scratch.chainA =
-                    scratch.E1 * scratch.yPlusSum0
-                    + scratch.E1p * scratch.yPlusSum1;
-                const complex<double> ttauyPiTrace =
-                    su3::traceABCD(
-                        scratch.pi, scratch.Uy, scratch.phiY, scratch.UDy)
-                    - su3::traceABCD(
-                        scratch.pi, scratch.UDymY, scratch.phimY, scratch.UymY)
-                    + su3::traceABCD(
-                        scratch.piX, scratch.UypX, scratch.phiXY,
-                        scratch.UDypX)
-                    - su3::traceABCD(
-                        scratch.piX, scratch.UDypXmY, scratch.phipXmY,
-                        scratch.UypXmY)
-                    + su3::traceABCD(
-                        scratch.piY, scratch.UypY, scratch.phi2Y,
-                        scratch.UDypY)
-                    - su3::traceABCD(
-                        scratch.piY, scratch.UDy, scratch.phi, scratch.Uy)
-                    + su3::traceABCD(
-                        scratch.piXY, scratch.UypXpY, scratch.phiX2Y,
-                        scratch.UDypXpY)
-                    - su3::traceABCD(
-                        scratch.piXY, scratch.UDypX, scratch.phiX,
-                        scratch.UypX);
-                lat->cells[pos]->setTtauy(
-                    +2. / (it * dtau) / 8. * scratch.chainA.trace().imag()
-                    - 2. / 8. / (it * dtau) * ttauyPiTrace.real());
-
-                const complex<double> ttauetaTrace =
-                    su3::traceAB(scratch.E1, scratch.covGradX0)
-                    + su3::traceAB(scratch.E1p, scratch.gradXAtY)
-                    + su3::traceAB(scratch.E2, scratch.covGradY0)
-                    + su3::traceAB(scratch.E2p, scratch.gradYAtX);
-                lat->cells[pos]->setTtaueta(
-                    g / (it * dtau) / (it * dtau) / (it * dtau)
-                    * ttauetaTrace.real());
-
-                scratch.E1AtYToPos = scratch.Uy * scratch.E1p * scratch.UDy;
-                scratch.E2AtXToPos = scratch.Ux * scratch.E2p * scratch.UDx;
-                scratch.chainA =
-                    -1. / 4. * g * g * (scratch.E1 + scratch.E1AtYToPos)
-                        * (scratch.E2 + scratch.E2AtXToPos)
-                    + 1. / 4.
-                          * (scratch.covGradX0 * scratch.covGradY0
-                             + scratch.gradXAtYToPos * scratch.covGradY0
-                             + scratch.covGradX0 * scratch.gradYAtXToPos
-                             + scratch.gradXAtYToPos * scratch.gradYAtXToPos);
-                lat->cells[pos]->setTxy(
-                    2. / (it * dtau) / (it * dtau)
-                    * scratch.chainA.trace().real());
-
-                const complex<double> txetaElectricTrace =
-                    su3::traceAB(scratch.E1, scratch.pi)
-                    + su3::traceABCD(
-                        scratch.E1, scratch.Ux, scratch.piX, scratch.UDx)
-                    + su3::traceAB(scratch.E1p, scratch.piY)
-                    + su3::traceABCD(
-                        scratch.E1p, scratch.UxpY, scratch.piXY,
-                        scratch.UDxpY);
-                scratch.chainA =
-                    scratch.xMinusSum0 * scratch.covGradY0
-                    + scratch.xMinusSum1 * scratch.gradYAtX;
-                lat->cells[pos]->setTxeta(
-                    -2. / (it * dtau) / (it * dtau)
-                    * (1. / 4. * g * txetaElectricTrace.real()
-                       - 1. / 8. / g * scratch.chainA.trace().imag()));
-
-                const complex<double> tyetaElectricTrace =
-                    su3::traceAB(scratch.E2, scratch.pi)
-                    + su3::traceABCD(
-                        scratch.E2, scratch.Uy, scratch.piY, scratch.UDy)
-                    + su3::traceAB(scratch.E2p, scratch.piX)
-                    + su3::traceABCD(
-                        scratch.E2p, scratch.UypX, scratch.piXY,
-                        scratch.UDypX);
-                scratch.chainA =
-                    scratch.yPlusSum0 * scratch.covGradX0
-                    + scratch.yPlusSum1 * scratch.gradXAtY;
-                lat->cells[pos]->setTyeta(
-                    -2. / (it * dtau) / (it * dtau)
-                    * (1. / 4. * g * tyetaElectricTrace.real()
-                       - 1. / 8. / g * scratch.chainA.trace().imag()));
-
-                lat->cells[pos]->setTtaux(
-                    lat->cells[pos]->getTtaux() * 1 / pow(a, 4.));
-                lat->cells[pos]->setTtauy(
-                    lat->cells[pos]->getTtauy() * 1 / pow(a, 4.));
-                lat->cells[pos]->setTtaueta(
-                    lat->cells[pos]->getTtaueta() * 1 / pow(a, 5.));
-                lat->cells[pos]->setTxy(
-                    lat->cells[pos]->getTxy() * 1 / pow(a, 4.));
-                lat->cells[pos]->setTxeta(
-                    lat->cells[pos]->getTxeta() * 1 / pow(a, 5.));
-                lat->cells[pos]->setTyeta(
-                    lat->cells[pos]->getTyeta() * 1 / pow(a, 5.));
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            pos = i * N + j;
+            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+                lat->cells[pos]->setTtaux(0.);
+                lat->cells[pos]->setTtauy(0.);
+                lat->cells[pos]->setTtaueta(0.);
+                lat->cells[pos]->setTxy(0.);
+                lat->cells[pos]->setTxeta(0.);
+                lat->cells[pos]->setTyeta(0.);
+                continue;
             }
+            posX = lat->pospX[pos];
+            posY = lat->pospY[pos];
+            posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+
+            posmX = lat->posmX[pos];
+            posmY = lat->posmY[pos];
+
+            posmXpY = lat->posmXpY[pos];
+            pospXmY = lat->pospXmY[pos];
+
+            pos2X = std::min(N - 1, i + 2) * N + j;
+            pos2Y = i * N + std::min(N - 1, j + 2);
+
+            pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
+            posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
+
+            scratch.E1 = lat->U[pos];
+            scratch.E2 = lat->U2[pos];
+            scratch.E1p = lat->U[posY];   // shift x value in y direction
+            scratch.E2p = lat->U2[posX];  // shift y value in x direction
+
+            scratch.pi = lat->Ux2[pos];
+            scratch.piX = lat->Ux2[posX];
+            scratch.piY = lat->Ux2[posY];
+            scratch.piXY = lat->Ux2[posXY];
+
+            scratch.phi = lat->Uy2[pos];
+            scratch.phimX = lat->Uy2[posmX];
+            scratch.phiX = lat->Uy2[posX];
+            scratch.phimY = lat->Uy2[posmY];
+            scratch.phiY = lat->Uy2[posY];
+            scratch.phiXY = lat->Uy2[posXY];
+            scratch.phimXpY = lat->Uy2[posmXpY];
+            scratch.phipXmY = lat->Uy2[pospXmY];
+            scratch.phi2X = lat->Uy2[pos2X];
+            scratch.phi2XY = lat->Uy2[pos2XY];
+            scratch.phi2Y = lat->Uy2[pos2Y];
+            scratch.phiX2Y = lat->Uy2[posX2Y];
+
+            scratch.Ux = lat->Ux[pos];
+            scratch.UDx = scratch.Ux;
+            scratch.UDx.conjg();
+
+            scratch.UxmX = lat->Ux[posmX];
+            scratch.UDxmX = lat->Ux[posmX];
+            scratch.UDxmX.conjg();
+            scratch.UxmXpY = lat->Ux[posmXpY];
+            scratch.UDxmXpY = lat->Ux[posmXpY];
+            scratch.UDxmXpY.conjg();
+
+            scratch.UxpX = lat->Ux[posX];
+            scratch.UxpY = lat->Ux[posY];
+            scratch.UDxpX = scratch.UxpX;
+            scratch.UDxpX.conjg();
+            scratch.UDxpY = scratch.UxpY;
+            scratch.UDxpY.conjg();
+
+            scratch.UxpXpY = lat->Ux[posXY];
+            scratch.UDxpXpY = lat->Ux[posXY];
+            scratch.UDxpXpY.conjg();
+            scratch.UxmXpY = lat->Ux[posmXpY];
+            scratch.UDxmXpY = scratch.UxmXpY;
+            scratch.UDxmXpY.conjg();
+
+            scratch.Uy = lat->Uy[pos];
+            scratch.UDy = scratch.Uy;
+            scratch.UDy.conjg();
+
+            scratch.UymY = lat->Uy[posmY];
+            scratch.UDymY = lat->Uy[posmY];
+            scratch.UDymY.conjg();
+            scratch.UypXmY = lat->Uy[pospXmY];
+            scratch.UDypXmY = lat->Uy[pospXmY];
+            scratch.UDypXmY.conjg();
+
+            scratch.UypY = lat->Uy[posY];
+            scratch.UypX = lat->Uy[posX];
+            scratch.UDypX = scratch.UypX;
+            scratch.UDypX.conjg();
+
+            scratch.UDypY = lat->Uy[posY];
+            scratch.UDypY.conjg();
+
+            scratch.UDxpX = lat->Ux[posX];
+            scratch.UDxpX.conjg();
+
+            scratch.Uyp2X = lat->Uy[pos2X];
+            scratch.UDyp2X = scratch.Uyp2X;
+            scratch.UDyp2X.conjg();
+            scratch.Uxp2Y = lat->Ux[pos2Y];
+            scratch.UDxp2Y = scratch.Uxp2Y;
+            scratch.UDxp2Y.conjg();
+
+            scratch.UypXpY = lat->Uy[posXY];
+            scratch.UDypXpY = lat->Uy[posXY];
+            scratch.UDypXpY.conjg();
+            scratch.UymX = lat->Uy[posmX];
+            scratch.UDymX = scratch.UymX;
+            scratch.UDymX.conjg();
+            scratch.UxmY = lat->Ux[posmY];
+            scratch.UDxmY = scratch.UxmY;
+            scratch.UDxmY.conjg();
+            scratch.UypXmY = lat->Uy[pospXmY];
+
+            // Cache the repeated four-link magnetic structures once per
+            // site. The historical expressions recomputed every four-link
+            // chain once for the matrix difference and again for its trace
+            // subtraction, then repeated the same structures in
+            // Txeta/Tyeta. Preserve the original product ordering, but
+            // materialize each traceless difference only once and reuse it
+            // below.
+            scratch.chainA =
+                scratch.Uy * scratch.UxpY * scratch.UDypX * scratch.UDx;
+            scratch.chainB =
+                scratch.Ux * scratch.UypX * scratch.UDxpY * scratch.UDy;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.xMinus0);
+
+            scratch.chainA =
+                scratch.UDxmX * scratch.UymX * scratch.UxmXpY * scratch.UDy;
+            scratch.chainB =
+                scratch.Uy * scratch.UDxmXpY * scratch.UDymX * scratch.UxmX;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.xMinusM);
+
+            scratch.chainA =
+                scratch.UypX * scratch.UxpXpY * scratch.UDyp2X * scratch.UDxpX;
+            scratch.chainB =
+                scratch.UxpX * scratch.Uyp2X * scratch.UDxpXpY * scratch.UDypX;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.xMinusP);
+
+            scratch.chainA =
+                scratch.UDx * scratch.Uy * scratch.UxpY * scratch.UDypX;
+            scratch.chainB =
+                scratch.UypX * scratch.UDxpY * scratch.UDy * scratch.Ux;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.xMinusT);
+
+            scratch.xMinusSum0 = scratch.xMinus0 + scratch.xMinusM;
+            scratch.xMinusSum1 = scratch.xMinusP + scratch.xMinusT;
+
+            // The first y-oriented difference is the opposite orientation
+            // of scratch.xMinus0 and can be reused by a sign flip.
+            scratch.yPlus0 = (-1.) * scratch.xMinus0;
+
+            scratch.chainA =
+                scratch.UDymY * scratch.UxmY * scratch.UypXmY * scratch.UDx;
+            scratch.chainB =
+                scratch.Ux * scratch.UDypXmY * scratch.UDxmY * scratch.UymY;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.yPlusM);
+
+            scratch.chainA =
+                scratch.UxpY * scratch.UypXpY * scratch.UDxp2Y * scratch.UDypY;
+            scratch.chainB =
+                scratch.UypY * scratch.Uxp2Y * scratch.UDypXpY * scratch.UDxpY;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.yPlusP);
+
+            scratch.chainA =
+                scratch.UDy * scratch.Ux * scratch.UypX * scratch.UDxpY;
+            scratch.chainB =
+                scratch.UxpY * scratch.UDypX * scratch.UDx * scratch.Uy;
+            makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one, scratch.yPlusT);
+
+            scratch.yPlusSum0 = scratch.yPlus0 + scratch.yPlusM;
+            scratch.yPlusSum1 = scratch.yPlusP + scratch.yPlusT;
+
+            // Cache covariant scalar gradients shared by Txy, Ttaueta,
+            // Txeta, and Tyeta.
+            scratch.covGradX0 =
+                scratch.Ux * scratch.phiX * scratch.UDx - scratch.phi;
+            scratch.covGradY0 =
+                scratch.Uy * scratch.phiY * scratch.UDy - scratch.phi;
+            scratch.gradXAtY =
+                scratch.UxpY * scratch.phiXY * scratch.UDxpY - scratch.phiY;
+            scratch.gradYAtX =
+                scratch.UypX * scratch.phiXY * scratch.UDypX - scratch.phiX;
+            scratch.gradXAtYToPos = scratch.Uy * scratch.gradXAtY * scratch.UDy;
+            scratch.gradYAtXToPos = scratch.Ux * scratch.gradYAtX * scratch.UDx;
+
+            scratch.chainA = scratch.E2 * scratch.xMinusSum0
+                             + scratch.E2p * scratch.xMinusSum1;
+            const complex<double> ttauxPiTrace =
+                su3::traceABCD(
+                    scratch.pi, scratch.Ux, scratch.phiX, scratch.UDx)
+                - su3::traceABCD(
+                    scratch.pi, scratch.UDxmX, scratch.phimX, scratch.UxmX)
+                + su3::traceABCD(
+                    scratch.piY, scratch.UxpY, scratch.phiXY, scratch.UDxpY)
+                - su3::traceABCD(
+                    scratch.piY, scratch.UDxmXpY, scratch.phimXpY,
+                    scratch.UxmXpY)
+                + su3::traceABCD(
+                    scratch.piX, scratch.UxpX, scratch.phi2X, scratch.UDxpX)
+                - su3::traceABCD(
+                    scratch.piX, scratch.UDx, scratch.phi, scratch.Ux)
+                + su3::traceABCD(
+                    scratch.piXY, scratch.UxpXpY, scratch.phi2XY,
+                    scratch.UDxpXpY)
+                - su3::traceABCD(
+                    scratch.piXY, scratch.UDxpY, scratch.phiY, scratch.UxpY);
+            lat->cells[pos]->setTtaux(
+                +2. / (it * dtau) / 8. * scratch.chainA.trace().imag()
+                - 2. / 8. / (it * dtau) * ttauxPiTrace.real());
+
+            scratch.chainA = scratch.E1 * scratch.yPlusSum0
+                             + scratch.E1p * scratch.yPlusSum1;
+            const complex<double> ttauyPiTrace =
+                su3::traceABCD(
+                    scratch.pi, scratch.Uy, scratch.phiY, scratch.UDy)
+                - su3::traceABCD(
+                    scratch.pi, scratch.UDymY, scratch.phimY, scratch.UymY)
+                + su3::traceABCD(
+                    scratch.piX, scratch.UypX, scratch.phiXY, scratch.UDypX)
+                - su3::traceABCD(
+                    scratch.piX, scratch.UDypXmY, scratch.phipXmY,
+                    scratch.UypXmY)
+                + su3::traceABCD(
+                    scratch.piY, scratch.UypY, scratch.phi2Y, scratch.UDypY)
+                - su3::traceABCD(
+                    scratch.piY, scratch.UDy, scratch.phi, scratch.Uy)
+                + su3::traceABCD(
+                    scratch.piXY, scratch.UypXpY, scratch.phiX2Y,
+                    scratch.UDypXpY)
+                - su3::traceABCD(
+                    scratch.piXY, scratch.UDypX, scratch.phiX, scratch.UypX);
+            lat->cells[pos]->setTtauy(
+                +2. / (it * dtau) / 8. * scratch.chainA.trace().imag()
+                - 2. / 8. / (it * dtau) * ttauyPiTrace.real());
+
+            const complex<double> ttauetaTrace =
+                su3::traceAB(scratch.E1, scratch.covGradX0)
+                + su3::traceAB(scratch.E1p, scratch.gradXAtY)
+                + su3::traceAB(scratch.E2, scratch.covGradY0)
+                + su3::traceAB(scratch.E2p, scratch.gradYAtX);
+            lat->cells[pos]->setTtaueta(
+                g / (it * dtau) / (it * dtau) / (it * dtau)
+                * ttauetaTrace.real());
+
+            scratch.E1AtYToPos = scratch.Uy * scratch.E1p * scratch.UDy;
+            scratch.E2AtXToPos = scratch.Ux * scratch.E2p * scratch.UDx;
+            scratch.chainA =
+                -1. / 4. * g * g * (scratch.E1 + scratch.E1AtYToPos)
+                    * (scratch.E2 + scratch.E2AtXToPos)
+                + 1. / 4.
+                      * (scratch.covGradX0 * scratch.covGradY0
+                         + scratch.gradXAtYToPos * scratch.covGradY0
+                         + scratch.covGradX0 * scratch.gradYAtXToPos
+                         + scratch.gradXAtYToPos * scratch.gradYAtXToPos);
+            lat->cells[pos]->setTxy(
+                2. / (it * dtau) / (it * dtau) * scratch.chainA.trace().real());
+
+            const complex<double> txetaElectricTrace =
+                su3::traceAB(scratch.E1, scratch.pi)
+                + su3::traceABCD(
+                    scratch.E1, scratch.Ux, scratch.piX, scratch.UDx)
+                + su3::traceAB(scratch.E1p, scratch.piY)
+                + su3::traceABCD(
+                    scratch.E1p, scratch.UxpY, scratch.piXY, scratch.UDxpY);
+            scratch.chainA = scratch.xMinusSum0 * scratch.covGradY0
+                             + scratch.xMinusSum1 * scratch.gradYAtX;
+            lat->cells[pos]->setTxeta(
+                -2. / (it * dtau) / (it * dtau)
+                * (1. / 4. * g * txetaElectricTrace.real()
+                   - 1. / 8. / g * scratch.chainA.trace().imag()));
+
+            const complex<double> tyetaElectricTrace =
+                su3::traceAB(scratch.E2, scratch.pi)
+                + su3::traceABCD(
+                    scratch.E2, scratch.Uy, scratch.piY, scratch.UDy)
+                + su3::traceAB(scratch.E2p, scratch.piX)
+                + su3::traceABCD(
+                    scratch.E2p, scratch.UypX, scratch.piXY, scratch.UDypX);
+            scratch.chainA = scratch.yPlusSum0 * scratch.covGradX0
+                             + scratch.yPlusSum1 * scratch.gradXAtY;
+            lat->cells[pos]->setTyeta(
+                -2. / (it * dtau) / (it * dtau)
+                * (1. / 4. * g * tyetaElectricTrace.real()
+                   - 1. / 8. / g * scratch.chainA.trace().imag()));
+
+            lat->cells[pos]->setTtaux(
+                lat->cells[pos]->getTtaux() * 1 / pow(a, 4.));
+            lat->cells[pos]->setTtauy(
+                lat->cells[pos]->getTtauy() * 1 / pow(a, 4.));
+            lat->cells[pos]->setTtaueta(
+                lat->cells[pos]->getTtaueta() * 1 / pow(a, 5.));
+            lat->cells[pos]->setTxy(lat->cells[pos]->getTxy() * 1 / pow(a, 4.));
+            lat->cells[pos]->setTxeta(
+                lat->cells[pos]->getTxeta() * 1 / pow(a, 5.));
+            lat->cells[pos]->setTyeta(
+                lat->cells[pos]->getTyeta() * 1 / pow(a, 5.));
         }
+    }
 }
 
 // epsilon = T^tautau (before lattice-unit rescaling), then rescales
@@ -1003,14 +983,12 @@ double computeRunningCouplingGfactor(
     double c, double muZero) {
     double g2mu2A, g2mu2B, alphas = 0., Qs = 0.;
     if (param->getRunningCoupling()) {
-        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-            && pos % N < N - 1) {
+        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1) {
             g2mu2A = lat->cells[pos]->getg2mu2A();
         } else
             g2mu2A = 0;
 
-        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0
-            && pos % N < N - 1) {
+        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1) {
             g2mu2B = lat->cells[pos]->getg2mu2B();
         } else
             g2mu2B = 0;
@@ -1018,79 +996,72 @@ double computeRunningCouplingGfactor(
         if (param->getRunWithQs() == 2) {
             if (g2mu2A > g2mu2B)
                 Qs = sqrt(
-                    g2mu2A * param->getQsmuRatio()
-                    * param->getQsmuRatio() / a / a * hbarc * hbarc
-                    * param->getg() * param->getg());
+                    g2mu2A * param->getQsmuRatio() * param->getQsmuRatio() / a
+                    / a * hbarc * hbarc * param->getg() * param->getg());
             else
                 Qs = sqrt(
-                    g2mu2B * param->getQsmuRatio()
-                    * param->getQsmuRatio() / a / a * hbarc * hbarc
-                    * param->getg() * param->getg());
+                    g2mu2B * param->getQsmuRatio() * param->getQsmuRatio() / a
+                    / a * hbarc * hbarc * param->getg() * param->getg());
         } else if (param->getRunWithQs() == 0) {
             if (g2mu2A < g2mu2B)
                 Qs = sqrt(
-                    g2mu2A * param->getQsmuRatio()
-                    * param->getQsmuRatio() / a / a * hbarc * hbarc
-                    * param->getg() * param->getg());
+                    g2mu2A * param->getQsmuRatio() * param->getQsmuRatio() / a
+                    / a * hbarc * hbarc * param->getg() * param->getg());
             else
                 Qs = sqrt(
-                    g2mu2B * param->getQsmuRatio()
-                    * param->getQsmuRatio() / a / a * hbarc * hbarc
-                    * param->getg() * param->getg());
+                    g2mu2B * param->getQsmuRatio() * param->getQsmuRatio() / a
+                    / a * hbarc * hbarc * param->getg() * param->getg());
         } else if (param->getRunWithQs() == 1) {
             Qs = sqrt(
                 (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                * param->getQsmuRatio() / a / a * hbarc * hbarc
-                * param->getg() * param->getg());
+                * param->getQsmuRatio() / a / a * hbarc * hbarc * param->getg()
+                * param->getg());
         }
 
         if (param->getRunWithLocalQs() == 1) {
             // 3 flavors
-            alphas = 4. * M_PI
-                     / (9.
-                        * log(pow(
-                            pow(muZero / 0.2, 2. / c)
-                                + pow(
-                                    param->getRunWithThisFactorTimesQs()
-                                        * Qs / 0.2,
-                                    2. / c),
-                            c)));
+            alphas =
+                4. * M_PI
+                / (9.
+                   * log(pow(
+                       pow(muZero / 0.2, 2. / c)
+                           + pow(
+                               param->getRunWithThisFactorTimesQs() * Qs / 0.2,
+                               2. / c),
+                       c)));
             return g * g / (4. * M_PI * alphas);
             // run with the local (in transverse plane) coupling
         } else {
             if (param->getRunWithQs() == 0)
-                alphas =
-                    4. * M_PI
-                    / (9.
-                       * log(pow(
-                           pow(muZero / 0.2, 2. / c)
-                               + pow(
-                                   param->getRunWithThisFactorTimesQs()
-                                       * param->getAverageQsmin() / 0.2,
-                                   2. / c),
-                           c)));
+                alphas = 4. * M_PI
+                         / (9.
+                            * log(pow(
+                                pow(muZero / 0.2, 2. / c)
+                                    + pow(
+                                        param->getRunWithThisFactorTimesQs()
+                                            * param->getAverageQsmin() / 0.2,
+                                        2. / c),
+                                c)));
             else if (param->getRunWithQs() == 1)
-                alphas =
-                    4. * M_PI
-                    / (9.
-                       * log(pow(
-                           pow(muZero / 0.2, 2. / c)
-                               + pow(
-                                   param->getRunWithThisFactorTimesQs()
-                                       * param->getAverageQsAvg() / 0.2,
-                                   2. / c),
-                           c)));
+                alphas = 4. * M_PI
+                         / (9.
+                            * log(pow(
+                                pow(muZero / 0.2, 2. / c)
+                                    + pow(
+                                        param->getRunWithThisFactorTimesQs()
+                                            * param->getAverageQsAvg() / 0.2,
+                                        2. / c),
+                                c)));
             else if (param->getRunWithQs() == 2)
-                alphas =
-                    4. * M_PI
-                    / (9.
-                       * log(pow(
-                           pow(muZero / 0.2, 2. / c)
-                               + pow(
-                                   param->getRunWithThisFactorTimesQs()
-                                       * param->getAverageQs() / 0.2,
-                                   2. / c),
-                           c)));
+                alphas = 4. * M_PI
+                         / (9.
+                            * log(
+                                pow(pow(muZero / 0.2, 2. / c)
+                                        + pow(
+                                            param->getRunWithThisFactorTimesQs()
+                                                * param->getAverageQs() / 0.2,
+                                            2. / c),
+                                    c)));
 
             return g * g / (4. * M_PI * alphas);
         }
@@ -1127,46 +1098,45 @@ void prepareSpectrumField(
 // occupancy into counter[]; only one of the three spectrum passes needs to,
 // since all three share the same k_T grid.
 void accumulateGluonSpectrum(
-    Parameters *param, int N, int it, double dtau, double g, double a,
-    double c, double muZero, double dkt, int bins,
-    const std::vector<Matrix *> &E1, bool useElectricNormalization,
-    bool accumulateCounter, double &dNdeta, double &dEdeta, double *n,
-    double *E, double *n2, int *counter) {
+    Parameters *param, int N, int it, double dtau, double g, double a, double c,
+    double muZero, double dkt, int bins, const std::vector<Matrix *> &E1,
+    bool useElectricNormalization, bool accumulateCounter, double &dNdeta,
+    double &dEdeta, double *n, double *E, double *n2, int *counter) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             double nkt = 0.;
             int pos = i * N + j;
             int npos = (N - i) * N + (N - j);
 
-            double kx = 2. * M_PI
-                        * (-0.5
-                           + static_cast<double>(i) / static_cast<double>(N));
-            double ky = 2. * M_PI
-                        * (-0.5
-                           + static_cast<double>(j) / static_cast<double>(N));
-            double kt2 = 4.
-                         * (sin(kx / 2.) * sin(kx / 2.)
-                            + sin(ky / 2.) * sin(ky / 2.));
-            double omega2 = 4.
-                            * (sin(kx / 2.) * sin(kx / 2.)
-                               + sin(ky / 2.)
-                                     * sin(ky / 2.));  // lattice dispersion
-                                                        // relation (this is
-                                                        // omega squared)
+            double kx =
+                2. * M_PI
+                * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
+            double ky =
+                2. * M_PI
+                * (-0.5 + static_cast<double>(j) / static_cast<double>(N));
+            double kt2 =
+                4.
+                * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
+            double omega2 =
+                4.
+                * (sin(kx / 2.) * sin(kx / 2.)
+                   + sin(ky / 2.) * sin(ky / 2.));  // lattice dispersion
+                                                    // relation (this is
+                                                    // omega squared)
 
             // i=0 or j=0 have no negative k_T value available
             if (i != 0 && j != 0) {
                 if (omega2 != 0) {
                     if (useElectricNormalization) {
-                        nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                              * (g * g / ((it - 0.5) * dtau)
-                                 * ((((*E1[pos]) * (*E1[npos])).trace())
-                                        .real()));
+                        nkt =
+                            2. / sqrt(omega2) / static_cast<double>(N * N)
+                            * (g * g / ((it - 0.5) * dtau)
+                               * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     } else {
-                        nkt = 2. / sqrt(omega2) / static_cast<double>(N * N)
-                              * (((it - 0.5) * dtau)
-                                 * ((((*E1[pos]) * (*E1[npos])).trace())
-                                        .real()));
+                        nkt =
+                            2. / sqrt(omega2) / static_cast<double>(N * N)
+                            * (((it - 0.5) * dtau)
+                               * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     }
                     if (param->getRunWithkt() == 1) {
                         nkt *=
@@ -1192,9 +1162,9 @@ void accumulateGluonSpectrum(
                         n[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2) * 2 * M_PI
                                  * sqrt(kt2) * dkt * N * N / M_PI / M_PI / 2.
                                  / 2.;
-                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2
-                                 / M_PI / sqrt(kt2) * 2 * M_PI * sqrt(kt2)
-                                 * dkt * N * N / M_PI / M_PI / 2. / 2.;
+                        E[ik] += sqrt(omega2) * hbarc / a * nkt / dkt / 2 / M_PI
+                                 / sqrt(kt2) * 2 * M_PI * sqrt(kt2) * dkt * N
+                                 * N / M_PI / M_PI / 2. / 2.;
                         n2[ik] += nkt / dkt / 2 / M_PI / sqrt(kt2);
                         // dividing by bin size; bin is dkt times Jacobian
                         // k(=ik*dkt) times 2Pi in phi times the correct
@@ -1636,13 +1606,13 @@ void Evolution::writeEpsilonInitialPlot(Lattice *lat, Parameters *param) {
                 double alphas =
                     4. * M_PI
                     / (9.
-                       * log(pow(
-                           pow(muZero / 0.2, 2. / c)
-                               + pow(
-                                   param->getRunWithThisFactorTimesQs() * Qs
-                                       / 0.2,
-                                   2. / c),
-                           c)));
+                       * log(
+                           pow(pow(muZero / 0.2, 2. / c)
+                                   + pow(
+                                       param->getRunWithThisFactorTimesQs() * Qs
+                                           / 0.2,
+                                       2. / c),
+                               c)));
                 gfactor = g * g / (4. * M_PI * alphas);
                 // run with the local (in transverse plane) coupling
             } else
@@ -1658,8 +1628,7 @@ void Evolution::writeEpsilonInitialPlot(Lattice *lat, Parameters *param) {
     foutEps.close();
 }
 
-void Evolution::writeEpsilonIntermediatePlot(
-    Lattice *lat, Parameters *param) {
+void Evolution::writeEpsilonIntermediatePlot(Lattice *lat, Parameters *param) {
     const int N = param->getSize();
     const double L = param->getL();
     const double a = L / N;  // lattice spacing in fm
@@ -1668,8 +1637,7 @@ void Evolution::writeEpsilonIntermediatePlot(
     const double c = param->getc();
 
     stringstream streInt_name;
-    streInt_name << "epsilonIntermediatePlot" << param->getEventId()
-                 << ".dat";
+    streInt_name << "epsilonIntermediatePlot" << param->getEventId() << ".dat";
     string eInt_name;
     eInt_name = streInt_name.str();
 
@@ -1680,8 +1648,8 @@ void Evolution::writeEpsilonIntermediatePlot(
             int pos = ix * N + iy;
             double x = -L / 2. + a * ix;
             double y = -L / 2. + a * iy;
-            const double gfactor =
-                computeRunningCouplingGfactor(lat, param, pos, N, a, g, c, muZero);
+            const double gfactor = computeRunningCouplingGfactor(
+                lat, param, pos, N, a, g, c, muZero);
 
             foutEps2 << x << " " << y << " "
                      << hbarc * gfactor * abs(lat->cells[pos]->getEpsilon())
@@ -1899,17 +1867,17 @@ AnisotropyResult computeRotatedAnisotropy(Lattice *lat, int N, double Psi) {
             int pos = (ix)*N + (iy);
 
             double TxxRot = cos(Psi)
-                                 * (cos(Psi) * lat->cells[pos]->getTxx()
-                                    - sin(Psi) * lat->cells[pos]->getTxy())
-                             - sin(Psi)
-                                   * (cos(Psi) * lat->cells[pos]->getTxy()
-                                      - sin(Psi) * lat->cells[pos]->getTyy());
+                                * (cos(Psi) * lat->cells[pos]->getTxx()
+                                   - sin(Psi) * lat->cells[pos]->getTxy())
+                            - sin(Psi)
+                                  * (cos(Psi) * lat->cells[pos]->getTxy()
+                                     - sin(Psi) * lat->cells[pos]->getTyy());
             double TyyRot = sin(Psi)
-                                 * (sin(Psi) * lat->cells[pos]->getTxx()
-                                    + cos(Psi) * lat->cells[pos]->getTxy())
-                             + cos(Psi)
-                                   * (sin(Psi) * lat->cells[pos]->getTxy()
-                                      + cos(Psi) * lat->cells[pos]->getTyy());
+                                * (sin(Psi) * lat->cells[pos]->getTxx()
+                                   + cos(Psi) * lat->cells[pos]->getTxy())
+                            + cos(Psi)
+                                  * (sin(Psi) * lat->cells[pos]->getTxy()
+                                     + cos(Psi) * lat->cells[pos]->getTyy());
 
             num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
             den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
@@ -2217,8 +2185,7 @@ void Evolution::eccentricity(
                 computeRotatedAnisotropy(lat, N, Psi);
             foutAniso << it * a * param->getdtau() << " "
                       << result.num / result.den << " "
-                      << result.num2 / result.den2 << " angle=" << Psi
-                      << endl;
+                      << result.num2 / result.den2 << " angle=" << Psi << endl;
         }
 
         foutAniso.close();
@@ -2513,8 +2480,8 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.setup_bins", multiplicityPhaseStart);
 
     accumulateGluonSpectrum(
-        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, true,
-        dNdeta, dEdeta, n, E, n2, counter);
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, true, dNdeta,
+        dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.spectrum_E1", multiplicityPhaseStart);
@@ -2530,8 +2497,8 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.fft_E2", multiplicityPhaseStart);
 
     accumulateGluonSpectrum(
-        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, false,
-        dNdeta, dEdeta, n, E, n2, counter);
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, false, dNdeta,
+        dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
         "observables.gluon_multiplicity.spectrum_E2", multiplicityPhaseStart);

@@ -67,7 +67,8 @@ TEST_CASE(
     std::remove("epsilonInitialPlot0.dat");
     evo.writeEpsilonInitialPlot(&lat, &param);
 
-    std::vector<EpsilonPlotRow> rows = readEpsilonPlot("epsilonInitialPlot0.dat");
+    std::vector<EpsilonPlotRow> rows =
+        readEpsilonPlot("epsilonInitialPlot0.dat");
     std::remove("epsilonInitialPlot0.dat");
     REQUIRE(rows.size() == static_cast<std::size_t>(N * N));
 

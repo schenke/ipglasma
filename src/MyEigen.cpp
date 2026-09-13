@@ -55,9 +55,8 @@ void closeBufferedTextOutput(ofstream &output, const string &filename) {
 // the edges. takeAbs replicates call sites that previously wrapped each
 // sample in abs() before blending (epsilon, g2mu2A, g2mu2B).
 double interpolateCellField(
-    Lattice *lat, int pos1, int pos2, int pos3, int pos4, int N,
-    double fracx, double fracy, double (Cell::*getter)() const,
-    bool takeAbs = false) {
+    Lattice *lat, int pos1, int pos2, int pos3, int pos4, int N, double fracx,
+    double fracy, double (Cell::*getter)() const, bool takeAbs = false) {
     double x1 = 0.;
     if (pos1 >= 0 && pos1 < N * N && pos2 >= 0 && pos2 < N * N) {
         double v1 = (lat->cells[pos1]->*getter)();
@@ -89,8 +88,8 @@ double interpolateCellField(
 // averageuy, averageueta, averageeps, and count are OpenMP reduction
 // accumulators in the caller.
 void solveFlowVelocityAtCell(
-    Lattice *lat, int pos, int si, int sj, int N, int it, double dtau,
-    double a, gsl_vector_complex *eval_ws, gsl_matrix_complex *evec_ws,
+    Lattice *lat, int pos, int si, int sj, int N, int it, double dtau, double a,
+    gsl_vector_complex *eval_ws, gsl_matrix_complex *evec_ws,
     gsl_eigen_nonsymmv_workspace *w_ws, double &averageux, double &averageuy,
     double &averageueta, double &averageeps, int &count) {
     // Flow velocity defaults to the local rest frame (0,0,0,1):
@@ -148,8 +147,7 @@ void solveFlowVelocityAtCell(
         foundU = 0;
         for (i = 0; i < 4; i++) {
             gsl_complex eval_i = gsl_vector_complex_get(eval, i);
-            gsl_vector_complex_view evec_i =
-                gsl_matrix_complex_column(evec, i);
+            gsl_vector_complex_view evec_i = gsl_matrix_complex_column(evec, i);
 
             GSL_SET_COMPLEX(&square, 0, 0);
             GSL_SET_COMPLEX(&tau2, a * it * dtau * a * it * dtau, 0);
@@ -166,8 +164,7 @@ void solveFlowVelocityAtCell(
                 else if (j < 3)
                     square = gsl_complex_sub(square, gsl_complex_mul(z, z));
                 else
-                    square =
-                        gsl_complex_sub(square, gsl_complex_mul(z_aux, z));
+                    square = gsl_complex_sub(square, gsl_complex_mul(z_aux, z));
             }
 
             GSL_SET_COMPLEX(
@@ -193,8 +190,7 @@ void solveFlowVelocityAtCell(
                 else if (j < 3)
                     square = gsl_complex_sub(square, gsl_complex_mul(z, z));
                 else
-                    square =
-                        gsl_complex_sub(square, gsl_complex_mul(z_aux, z));
+                    square = gsl_complex_sub(square, gsl_complex_mul(z_aux, z));
             }
             changeSign = 0;
             // for the time-like eigenvector do the following (this
@@ -559,11 +555,11 @@ double MyEigen::writeHydroText(
                         1. + resultux * resultux + resultuy * resultuy
                         + tau0 * tau0 * resultueta * resultueta);
 
-                    Etot += abs(hbarc * resultE * gfactor) * ha * ha * it
-                            * dtau * a;
+                    Etot += abs(hbarc * resultE * gfactor) * ha * ha * it * dtau
+                            * a;
                     if (abs(hbarc * resultE * gfactor) > 0.0000000001) {
-                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta
-                                 << " " << x << " " << y << " "
+                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
+                                 << x << " " << y << " "
                                  << abs(hbarc * resultE * gfactor) << " "
                                  << resultutau << " " << resultux << " "
                                  << resultuy << " " << resultueta << " "
@@ -578,21 +574,20 @@ double MyEigen::writeHydroText(
                                  << resultpiyeta * gfactor << " "
                                  << resultpietaeta * gfactor << '\n';
                     } else {
-                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta
-                                 << " " << x << " " << y << " " << 0. << " "
-                                 << 1. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << '\n';
+                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
+                                 << x << " " << y << " " << 0. << " " << 1.
+                                 << " " << 0. << " " << 0. << " " << 0. << " "
+                                 << 0. << " " << 0. << " " << 0. << " " << 0.
+                                 << " " << 0. << " " << 0. << " " << 0. << " "
+                                 << 0. << " " << 0. << " " << 0. << '\n';
                     }
                 } else {
                     foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
-                             << x << " " << y << " " << 0. << " " << 1.
-                             << " " << 0. << " " << 0. << " " << 0. << " "
-                             << 0. << " " << 0. << " " << 0. << " " << 0.
-                             << " " << 0. << " " << 0. << " " << 0. << " "
-                             << 0. << " " << 0. << " " << 0. << '\n';
+                             << x << " " << y << " " << 0. << " " << 1. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << '\n';
                 }
             }
         }
@@ -735,10 +730,9 @@ void MyEigen::writeRawTmunu(
                     foutEps1 << '\n';
                 }
             } else {
-                double values[10] = {smallEps, smallEps / 2., smallEps / 2.,
-                                      0.0,      0.0,           0.0,
-                                      0.0,      0.0,           0.0,
-                                      0.0};
+                double values[10] = {
+                    smallEps, smallEps / 2., smallEps / 2., 0.0, 0.0,
+                    0.0,      0.0,           0.0,           0.0, 0.0};
                 if (writeBinaryTmunu) {
                     const std::size_t offset =
                         static_cast<std::size_t>(ix) * 10u;
@@ -886,17 +880,17 @@ void MyEigen::writeJazma(
                     foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
                              << x << " " << y << " "
                              << g2mu2A * g2mu2B / Jaztot * Etot << " " << 1.
-                             << " " << 0. << " " << 0. << " " << 0. << " "
-                             << 0. << " " << 0. << " " << 0. << " " << 0.
-                             << " " << 0. << " " << 0. << " " << 0. << " "
-                             << 0. << " " << 0. << " " << 0. << endl;
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << endl;
                 } else {
                     foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
-                             << x << " " << y << " " << 0. << " " << 1.
-                             << " " << 0. << " " << 0. << " " << 0. << " "
-                             << 0. << " " << 0. << " " << 0. << " " << 0.
-                             << " " << 0. << " " << 0. << " " << 0. << " "
-                             << 0. << " " << 0. << " " << 0. << endl;
+                             << x << " " << y << " " << 0. << " " << 1. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << endl;
                 }
             }
         }

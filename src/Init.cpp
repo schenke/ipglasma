@@ -1301,23 +1301,17 @@ void Init::setColorChargeDensity(
 
 // This function compute the collision geometry quantities, such as
 // Npart, Ncoll, averageQs, etc.
-void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
+// Determines Npart/Ncoll from the (already-sampled) nucleon positions in
+// nucleusA_/nucleusB_, writes NcollList*.dat/NpartList*.dat, and sets
+// param->setNpart. Returns false (having called param->setSuccess(0)) if
+// useFixedNpart is set and this event's Npart doesn't match, signaling the
+// caller to abort and resample.
+bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
     const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
     const double b = param->getb();
     const double phiRP = param->getPhiRP();
-    double averageQs = 0.;
-    double averageQs2 = 0.;
-    double averageQs2Avg = 0.;
-    double averageQs2min = 0.;
-    double averageQs2min2 = 0.;
-    int Npart = 0;
-    int Ncoll = 0;
-
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    const double L = param->getL();
-    const int N = param->getSize();
-    const double a = L / N;  // lattice spacing in fm
 
     // Determine Npart, Ncoll. Do this only during the first stage, as in
     // the 2nd stage nuclei are shifted to b=0
@@ -1439,13 +1433,100 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
                       << param->getUseFixedNpart() << "; resampling.";
             messager_.flush("info");
             param->setSuccess(0);
-            return;
+            return false;
         }
     } else {
         // Smooth nucleus
         Npart = 2;
         Ncoll = 2;
         param->setNpart(Npart);
+    }
+    return true;
+}
+
+// Sets param's running-coupling alpha_s from whichever Qs choice
+// param->getRunWithQs() selects (max/min/avg), or a fixed value when
+// running coupling is disabled or alpha_s runs with k_T instead (handled
+// per-cell elsewhere via computeRunningCouplingGfactor).
+void Init::computeAndSetRunningAlphaS(Parameters *param) {
+    double alphas = 0.;
+    if (param->getRunningCoupling() && param->getRunWithkt() == 0) {
+        if (param->getRunWithQs() == 2) {
+            messager_
+                << "[Init::computeCollisionGeometryQuantities]: running with "
+                << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
+            messager_.flush("info");
+            alphas = 12. * M_PI
+                     / ((27.) * 2.
+                        * log(
+                            param->getRunWithThisFactorTimesQs()
+                            * param->getAverageQs() / 0.2));  // 3 flavors
+            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
+                      << param->getRunWithThisFactorTimesQs()
+                      << " Qs_max)=" << alphas;
+            messager_.flush("info");
+        } else if (param->getRunWithQs() == 0) {
+            messager_
+                << "[Init::computeCollisionGeometryQuantities]: running with "
+                << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
+            messager_.flush("info");
+            alphas = 12. * M_PI
+                     / ((27.) * 2.
+                        * log(
+                            param->getRunWithThisFactorTimesQs()
+                            * param->getAverageQsmin() / 0.2));  // 3 flavors
+            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
+                      << param->getRunWithThisFactorTimesQs()
+                      << " Qs_min)=" << alphas;
+            messager_.flush("info");
+        } else if (param->getRunWithQs() == 1) {
+            messager_
+                << "[Init::computeCollisionGeometryQuantities]: running with "
+                << param->getRunWithThisFactorTimesQs() << " <Q_s>";
+            messager_.flush("info");
+            alphas = 12. * M_PI
+                     / ((27.) * 2.
+                        * log(
+                            param->getRunWithThisFactorTimesQs()
+                            * param->getAverageQsAvg() / 0.2));  // 3 flavors
+            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
+                      << param->getRunWithThisFactorTimesQs()
+                      << " <Qs>)=" << alphas;
+            messager_.flush("info");
+        }
+    } else if (param->getRunningCoupling() && param->getRunWithkt() == 1) {
+        messager_.info(
+            "[Init::computeCollisionGeometryQuantities]: Multiplicity with "
+            "running alpha_s(k_T)");
+    } else {
+        messager_.info(
+            "[Init::computeCollisionGeometryQuantities]: Using fixed alpha_s");
+        alphas = param->getg() * param->getg() / 4. / M_PI;
+    }
+    param->setalphas(alphas);
+}
+
+void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
+    double averageQs = 0.;
+    double averageQs2 = 0.;
+    double averageQs2Avg = 0.;
+    double averageQs2min = 0.;
+    double averageQs2min2 = 0.;
+    int Npart = 0;
+    int Ncoll = 0;
+
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+    const double L = param->getL();
+    const int N = param->getSize();
+    const double a = L / N;  // lattice spacing in fm
+    const double b = param->getb();
+    const double phiRP = param->getPhiRP();
+
+    // Determine Npart, Ncoll only during the first stage, as in the 2nd
+    // stage nuclei are shifted to b=0.
+    if (!determineNpartAndNcoll(param, Npart, Ncoll)) {
+        return;
     }
 
     int count = 0;
@@ -1637,65 +1718,11 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
                   / param->getRoots()));
     messager_.flush("info");
 
-    double alphas = 0.;
-    if (param->getRunningCoupling() && param->getRunWithkt() == 0) {
-        if (param->getRunWithQs() == 2) {
-            messager_
-                << "[Init::computeCollisionGeometryQuantities]: running with "
-                << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
-            messager_.flush("info");
-            alphas = 12. * M_PI
-                     / ((27.) * 2.
-                        * log(
-                            param->getRunWithThisFactorTimesQs()
-                            * param->getAverageQs() / 0.2));  // 3 flavors
-            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
-                      << param->getRunWithThisFactorTimesQs()
-                      << " Qs_max)=" << alphas;
-            messager_.flush("info");
-        } else if (param->getRunWithQs() == 0) {
-            messager_
-                << "[Init::computeCollisionGeometryQuantities]: running with "
-                << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
-            messager_.flush("info");
-            alphas = 12. * M_PI
-                     / ((27.) * 2.
-                        * log(
-                            param->getRunWithThisFactorTimesQs()
-                            * param->getAverageQsmin() / 0.2));  // 3 flavors
-            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
-                      << param->getRunWithThisFactorTimesQs()
-                      << " Qs_min)=" << alphas;
-            messager_.flush("info");
-        } else if (param->getRunWithQs() == 1) {
-            messager_
-                << "[Init::computeCollisionGeometryQuantities]: running with "
-                << param->getRunWithThisFactorTimesQs() << " <Q_s>";
-            messager_.flush("info");
-            alphas = 12. * M_PI
-                     / ((27.) * 2.
-                        * log(
-                            param->getRunWithThisFactorTimesQs()
-                            * param->getAverageQsAvg() / 0.2));  // 3 flavors
-            messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
-                      << param->getRunWithThisFactorTimesQs()
-                      << " <Qs>)=" << alphas;
-            messager_.flush("info");
-        }
-    } else if (param->getRunningCoupling() && param->getRunWithkt() == 1) {
-        messager_.info(
-            "[Init::computeCollisionGeometryQuantities]: Multiplicity with "
-            "running alpha_s(k_T)");
-    } else {
-        messager_.info(
-            "[Init::computeCollisionGeometryQuantities]: Using fixed alpha_s");
-        alphas = param->getg() * param->getg() / 4. / M_PI;
-    }
-    param->setalphas(alphas);
+    computeAndSetRunningAlphaS(param);
 
     if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0
         && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
-        && alphas > 0 && Npart >= 2
+        && param->getalphas() > 0 && Npart >= 2
         && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
         param->setSuccess(1);
 

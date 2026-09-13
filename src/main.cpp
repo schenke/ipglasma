@@ -67,7 +67,8 @@ int main(int argc, char *argv[]) {
     int h5Flag = 0;
     PrettyOstream messager;
 
-    Parameters *param = new Parameters();
+    Parameters paramStorage;
+    Parameters *param = &paramStorage;
     param->setMPIRank(rank);
     param->setMPISize(size);
     Setup setup;
@@ -83,7 +84,8 @@ int main(int argc, char *argv[]) {
     }
 
     // initialize random generator using time and seed from input file
-    Random *random = new Random();
+    Random randomStorage;
+    Random *random = &randomStorage;
     unsigned long long int rnum;
     if (param->getUseSeedList() == 0) {
         if (param->getUseTimeForSeed() == 1) {
@@ -308,9 +310,6 @@ int main(int argc, char *argv[]) {
 
         ipg::Profiler::instance().endEvent();
     }
-
-    delete random;
-    delete param;
 
     if (h5Flag == 1 && rank == 0) {
         int status = 0;

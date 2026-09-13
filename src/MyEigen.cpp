@@ -81,6 +81,270 @@ double interpolateCellField(
     return (1. - fracy) * x1 + fracy * x2;
 }
 
+// Solves for the local flow velocity u^mu and energy density at one lattice
+// cell by diagonalizing T^mu_nu (Landau matching), then fills in that cell's
+// u^mu, epsilon, and pi^munu. Reads only lat->cells[pos]'s T^munu and writes
+// only lat->cells[pos], so it is safe to call from an OpenMP-parallel loop
+// over pos with eval/evec/w_ws as thread-private GSL workspace. averageux,
+// averageuy, averageueta, averageeps, and count are OpenMP reduction
+// accumulators in the caller.
+void solveFlowVelocityAtCell(
+    Lattice *lat, int pos, int si, int sj, int N, int it, double dtau,
+    double a, gsl_vector_complex *eval_ws, gsl_matrix_complex *evec_ws,
+    gsl_eigen_nonsymmv_workspace *w_ws, double &averageux, double &averageuy,
+    double &averageueta, double &averageeps, int &count) {
+    // Flow velocity defaults to the local rest frame (0,0,0,1):
+    // zero spatial flow, u^tau = 1. (See note in the serial
+    // version: this also removes the old cross-cell carryover bug.)
+    double ux = 0., uy = 0., ueta = 0., utau = 1.;
+    double eps = 0.;
+    int changeSign;
+    int foundU;
+    gsl_complex square;
+    gsl_complex factor;
+    gsl_complex euklidiansquare;
+    gsl_complex z_aux;
+    gsl_complex tau2;
+
+    GSL_SET_COMPLEX(&square, 0, 0);
+    // one upper, one lower index
+    double data[] = {
+        lat->cells[pos]->getTtautau(),
+        -lat->cells[pos]->getTtaux(),
+        -lat->cells[pos]->getTtauy(),
+        -(it * dtau * a) * (it * dtau * a) * lat->cells[pos]->getTtaueta(),
+        lat->cells[pos]->getTtaux(),
+        -lat->cells[pos]->getTxx(),
+        -lat->cells[pos]->getTxy(),
+        -(it * dtau * a) * (it * dtau * a) * lat->cells[pos]->getTxeta(),
+        lat->cells[pos]->getTtauy(),
+        -lat->cells[pos]->getTxy(),
+        -lat->cells[pos]->getTyy(),
+        -(it * dtau * a) * (it * dtau * a) * lat->cells[pos]->getTyeta(),
+        lat->cells[pos]->getTtaueta(),
+        -lat->cells[pos]->getTxeta(),
+        -lat->cells[pos]->getTyeta(),
+        -(it * dtau * a) * (it * dtau * a) * lat->cells[pos]->getTetaeta()};
+
+    gsl_matrix_view m = gsl_matrix_view_array(data, 4, 4);  // matrix
+
+    gsl_vector_complex *eval = eval_ws;
+    gsl_matrix_complex *evec = evec_ws;
+
+    gsl_eigen_nonsymmv(
+        &m.matrix, eval, evec,
+        w_ws);  // solve for eigenvalues and eigenvectors (without
+                // 'v' only compute eigenvalues)
+
+    // set to 'zero'
+    lat->cells[pos]->setEpsilon(lat->cells[pos]->getTtautau());
+    lat->cells[pos]->setutau(1.);
+    lat->cells[pos]->setux(0.);
+    lat->cells[pos]->setuy(0.);
+    lat->cells[pos]->setueta(0.);
+
+    {  // output:
+        int i;
+        foundU = 0;
+        for (i = 0; i < 4; i++) {
+            gsl_complex eval_i = gsl_vector_complex_get(eval, i);
+            gsl_vector_complex_view evec_i =
+                gsl_matrix_complex_column(evec, i);
+
+            GSL_SET_COMPLEX(&square, 0, 0);
+            GSL_SET_COMPLEX(&tau2, a * it * dtau * a * it * dtau, 0);
+            GSL_SET_COMPLEX(&euklidiansquare, 0, 0);
+
+            for (int j = 0; j < 4; ++j) {
+                gsl_complex z = gsl_vector_complex_get(&evec_i.vector, j);
+                z_aux = gsl_complex_mul(tau2, z);
+                euklidiansquare =
+                    gsl_complex_add(euklidiansquare, gsl_complex_mul(z, z));
+
+                if (j == 0)
+                    square = gsl_complex_add(square, gsl_complex_mul(z, z));
+                else if (j < 3)
+                    square = gsl_complex_sub(square, gsl_complex_mul(z, z));
+                else
+                    square =
+                        gsl_complex_sub(square, gsl_complex_mul(z_aux, z));
+            }
+
+            GSL_SET_COMPLEX(
+                &factor,
+                sqrt(abs(GSL_REAL(euklidiansquare) / GSL_REAL(square))), 0);
+            if (GSL_REAL(square) > 0) {
+                eps = GSL_REAL(eval_i);
+                if (abs(GSL_IMAG(eval_i)) > 0.001 && si > 0 && sj > 0
+                    && si < N - 5 && sj < N - 5) {
+                    eps = lat->cells[pos]->getTtautau();
+                }
+            }
+
+            GSL_SET_COMPLEX(&square, 0, 0);
+
+            for (int j = 0; j < 4; ++j) {
+                gsl_complex z = gsl_vector_complex_get(&evec_i.vector, j);
+                z = gsl_complex_mul(z, factor);
+                z_aux = gsl_complex_mul(tau2, z);
+
+                if (j == 0)
+                    square = gsl_complex_add(square, gsl_complex_mul(z, z));
+                else if (j < 3)
+                    square = gsl_complex_sub(square, gsl_complex_mul(z, z));
+                else
+                    square =
+                        gsl_complex_sub(square, gsl_complex_mul(z_aux, z));
+            }
+            changeSign = 0;
+            // for the time-like eigenvector do the following (this
+            // is the flow velocity)
+            if (GSL_REAL(square) > 0) {
+                foundU += 1;
+                for (int j = 0; j < 4; ++j) {
+                    gsl_complex z = gsl_vector_complex_get(&evec_i.vector, j);
+                    z = gsl_complex_mul(z, factor);
+
+                    if (j == 0 && GSL_REAL(z) < 0) {
+                        changeSign = 1;
+                        GSL_SET_COMPLEX(
+                            &z, -1. * GSL_REAL(z), -1. * GSL_IMAG(z));
+                    }
+
+                    if (j > 0 && changeSign == 1) {
+                        GSL_SET_COMPLEX(
+                            &z, -1. * GSL_REAL(z), -1. * GSL_IMAG(z));
+                    }
+
+                    if (j == 0) {
+                        if (eps > 0.1)
+                            utau = GSL_REAL(z);
+                        else
+                            utau = 1.;
+                    }
+                    if (j == 1) {
+                        if (eps > 0.1)
+                            ux = GSL_REAL(z);
+                        else
+                            ux = 0.;
+                    }
+                    if (j == 2) {
+                        if (eps > 0.1)
+                            uy = GSL_REAL(z);
+                        else
+                            uy = 0.;
+                    }
+                    if (j == 3) {
+                        if (eps > 0.1)
+                            ueta = GSL_REAL(z);
+                        else
+                            ueta = 0.;
+                    }
+                    if (abs(GSL_IMAG(z)) > 0.001 && eps > 0.001 && si > 10
+                        && sj > 10 && si < N - 10 && sj < N - 10) {
+                        utau = 1.;
+                        ux = 0.;
+                        uy = 0.;
+                        ueta = 0.;
+                        eps = lat->cells[pos]->getTtautau();
+                    }
+                }
+
+                lat->cells[pos]->setutau(utau);
+                lat->cells[pos]->setux(ux);
+                lat->cells[pos]->setuy(uy);
+                lat->cells[pos]->setueta(ueta);
+                lat->cells[pos]->setEpsilon(eps);
+
+                averageux += ux * ux * eps;
+                averageuy += uy * uy * eps;
+                averageueta +=
+                    ueta * ueta * eps * it * dtau * a * it * dtau * a;
+                averageeps += eps;
+
+                count++;
+            }
+        }
+    }
+
+    // write Tmunu in case no u was found
+    if (foundU == 0) {
+        if (si == N / 2 && sj == N / 2) {
+            // A fresh, stack-local instance: this runs inside
+            // an omp parallel region, and PrettyOstream is not
+            // thread-safe to share.
+            PrettyOstream localMessager;
+            localMessager << "[MyEigen::flowVelocity4DImpl]: No "
+                             "physical flow velocity found at "
+                             "site ("
+                          << si << ", " << sj
+                          << "). T^munu and the best-guess "
+                             "velocity there:\n\n"
+                          << lat->cells[pos]->getTtautau() << " "
+                          << lat->cells[pos]->getTtaux() << " "
+                          << lat->cells[pos]->getTtauy() << " "
+                          << lat->cells[pos]->getTtaueta() << "\n"
+                          << lat->cells[pos]->getTtaux() << " "
+                          << lat->cells[pos]->getTxx() << " "
+                          << lat->cells[pos]->getTxy() << " "
+                          << lat->cells[pos]->getTxeta() << "\n"
+                          << lat->cells[pos]->getTtauy() << " "
+                          << lat->cells[pos]->getTxy() << " "
+                          << lat->cells[pos]->getTyy() << " "
+                          << lat->cells[pos]->getTyeta() << "\n"
+                          << lat->cells[pos]->getTtaueta() << " "
+                          << lat->cells[pos]->getTxeta() << " "
+                          << lat->cells[pos]->getTyeta() << " "
+                          << lat->cells[pos]->getTetaeta() << "\n"
+                          << "ux=" << ux << "\n"
+                          << "uy=" << uy << "\n"
+                          << "ueta=" << ueta;
+            localMessager.flush("warning");
+        }
+    }
+
+    // compute pi^{\mu\nu}
+    if (utau == 1 && ux == 0 && uy == 0 && ueta == 0) {
+        lat->cells[pos]->setpitautau(0.);
+        lat->cells[pos]->setpixx(0.);
+        lat->cells[pos]->setpiyy(0.);
+        lat->cells[pos]->setpietaeta(0.);
+
+        lat->cells[pos]->setpitaux(0.);
+        lat->cells[pos]->setpitauy(0.);
+        lat->cells[pos]->setpitaueta(0.);
+
+        lat->cells[pos]->setpixeta(0.);
+        lat->cells[pos]->setpixy(0.);
+        lat->cells[pos]->setpiyeta(0.);
+    } else {
+        lat->cells[pos]->setpitautau(
+            lat->cells[pos]->getTtautau() - 4. / 3. * eps * utau * utau
+            + eps / 3.);
+        lat->cells[pos]->setpixx(
+            lat->cells[pos]->getTxx() - 4. / 3. * eps * ux * ux - eps / 3.);
+        lat->cells[pos]->setpiyy(
+            lat->cells[pos]->getTyy() - 4. / 3. * eps * uy * uy - eps / 3.);
+        lat->cells[pos]->setpietaeta(
+            lat->cells[pos]->getTetaeta() - 4. / 3. * eps * ueta * ueta
+            - eps / 3. / it / dtau / a / it / dtau / a);
+
+        lat->cells[pos]->setpitaux(
+            lat->cells[pos]->getTtaux() - 4. / 3. * eps * utau * ux);
+        lat->cells[pos]->setpitauy(
+            lat->cells[pos]->getTtauy() - 4. / 3. * eps * utau * uy);
+        lat->cells[pos]->setpitaueta(
+            lat->cells[pos]->getTtaueta() - 4. / 3. * eps * utau * ueta);
+
+        lat->cells[pos]->setpixeta(
+            lat->cells[pos]->getTxeta() - 4. / 3. * eps * ux * ueta);
+        lat->cells[pos]->setpixy(
+            lat->cells[pos]->getTxy() - 4. / 3. * eps * ux * uy);
+        lat->cells[pos]->setpiyeta(
+            lat->cells[pos]->getTyeta() - 4. / 3. * eps * uy * ueta);
+    }
+}
+
 bool binaryTmunuEnabled(Parameters *param) {
     const bool inputDefault = param->getWriteTmunuBinary() != 0;
     const char *value = std::getenv("IPGLASMA_BINARY_TMUNU");
@@ -205,282 +469,9 @@ void MyEigen::flowVelocity4DImpl(
                 const int si = posLoop / N;
                 const int sj = posLoop % N;
                 const int pos = posLoop;
-                // Flow velocity defaults to the local rest frame (0,0,0,1):
-                // zero spatial flow, u^tau = 1. (See note in the serial
-                // version: this also removes the old cross-cell carryover bug.)
-                double ux = 0., uy = 0., ueta = 0., utau = 1.;
-                double eps = 0.;
-                int changeSign;
-                int foundU;
-                gsl_complex square;
-                gsl_complex factor;
-                gsl_complex euklidiansquare;
-                gsl_complex z_aux;
-                gsl_complex tau2;
-
-                GSL_SET_COMPLEX(&square, 0, 0);
-                // one upper, one lower index
-                double data[] = {
-                    lat->cells[pos]->getTtautau(),
-                    -lat->cells[pos]->getTtaux(),
-                    -lat->cells[pos]->getTtauy(),
-                    -(it * dtau * a) * (it * dtau * a)
-                        * lat->cells[pos]->getTtaueta(),
-                    lat->cells[pos]->getTtaux(),
-                    -lat->cells[pos]->getTxx(),
-                    -lat->cells[pos]->getTxy(),
-                    -(it * dtau * a) * (it * dtau * a)
-                        * lat->cells[pos]->getTxeta(),
-                    lat->cells[pos]->getTtauy(),
-                    -lat->cells[pos]->getTxy(),
-                    -lat->cells[pos]->getTyy(),
-                    -(it * dtau * a) * (it * dtau * a)
-                        * lat->cells[pos]->getTyeta(),
-                    lat->cells[pos]->getTtaueta(),
-                    -lat->cells[pos]->getTxeta(),
-                    -lat->cells[pos]->getTyeta(),
-                    -(it * dtau * a) * (it * dtau * a)
-                        * lat->cells[pos]->getTetaeta()};
-
-                gsl_matrix_view m =
-                    gsl_matrix_view_array(data, 4, 4);  // matrix
-
-                gsl_vector_complex *eval = eval_ws;
-                gsl_matrix_complex *evec = evec_ws;
-
-                gsl_eigen_nonsymmv(
-                    &m.matrix, eval, evec,
-                    w_ws);  // solve for eigenvalues and eigenvectors (without
-                            // 'v' only compute eigenvalues)
-
-                // set to 'zero'
-                lat->cells[pos]->setEpsilon(lat->cells[pos]->getTtautau());
-                lat->cells[pos]->setutau(1.);
-                lat->cells[pos]->setux(0.);
-                lat->cells[pos]->setuy(0.);
-                lat->cells[pos]->setueta(0.);
-
-                {  // output:
-                    int i;
-                    foundU = 0;
-                    for (i = 0; i < 4; i++) {
-                        gsl_complex eval_i = gsl_vector_complex_get(eval, i);
-                        gsl_vector_complex_view evec_i =
-                            gsl_matrix_complex_column(evec, i);
-
-                        GSL_SET_COMPLEX(&square, 0, 0);
-                        GSL_SET_COMPLEX(
-                            &tau2, a * it * dtau * a * it * dtau, 0);
-                        GSL_SET_COMPLEX(&euklidiansquare, 0, 0);
-
-                        for (int j = 0; j < 4; ++j) {
-                            gsl_complex z =
-                                gsl_vector_complex_get(&evec_i.vector, j);
-                            z_aux = gsl_complex_mul(tau2, z);
-                            euklidiansquare = gsl_complex_add(
-                                euklidiansquare, gsl_complex_mul(z, z));
-
-                            if (j == 0)
-                                square = gsl_complex_add(
-                                    square, gsl_complex_mul(z, z));
-                            else if (j < 3)
-                                square = gsl_complex_sub(
-                                    square, gsl_complex_mul(z, z));
-                            else
-                                square = gsl_complex_sub(
-                                    square, gsl_complex_mul(z_aux, z));
-                        }
-
-                        GSL_SET_COMPLEX(
-                            &factor,
-                            sqrt(abs(
-                                GSL_REAL(euklidiansquare) / GSL_REAL(square))),
-                            0);
-                        if (GSL_REAL(square) > 0) {
-                            eps = GSL_REAL(eval_i);
-                            if (abs(GSL_IMAG(eval_i)) > 0.001 && si > 0
-                                && sj > 0 && si < N - 5 && sj < N - 5) {
-                                eps = lat->cells[pos]->getTtautau();
-                            }
-                        }
-
-                        GSL_SET_COMPLEX(&square, 0, 0);
-
-                        for (int j = 0; j < 4; ++j) {
-                            gsl_complex z =
-                                gsl_vector_complex_get(&evec_i.vector, j);
-                            z = gsl_complex_mul(z, factor);
-                            z_aux = gsl_complex_mul(tau2, z);
-
-                            if (j == 0)
-                                square = gsl_complex_add(
-                                    square, gsl_complex_mul(z, z));
-                            else if (j < 3)
-                                square = gsl_complex_sub(
-                                    square, gsl_complex_mul(z, z));
-                            else
-                                square = gsl_complex_sub(
-                                    square, gsl_complex_mul(z_aux, z));
-                        }
-                        changeSign = 0;
-                        // for the time-like eigenvector do the following (this
-                        // is the flow velocity)
-                        if (GSL_REAL(square) > 0) {
-                            foundU += 1;
-                            for (int j = 0; j < 4; ++j) {
-                                gsl_complex z =
-                                    gsl_vector_complex_get(&evec_i.vector, j);
-                                z = gsl_complex_mul(z, factor);
-
-                                if (j == 0 && GSL_REAL(z) < 0) {
-                                    changeSign = 1;
-                                    GSL_SET_COMPLEX(
-                                        &z, -1. * GSL_REAL(z),
-                                        -1. * GSL_IMAG(z));
-                                }
-
-                                if (j > 0 && changeSign == 1) {
-                                    GSL_SET_COMPLEX(
-                                        &z, -1. * GSL_REAL(z),
-                                        -1. * GSL_IMAG(z));
-                                }
-
-                                if (j == 0) {
-                                    if (eps > 0.1)
-                                        utau = GSL_REAL(z);
-                                    else
-                                        utau = 1.;
-                                }
-                                if (j == 1) {
-                                    if (eps > 0.1)
-                                        ux = GSL_REAL(z);
-                                    else
-                                        ux = 0.;
-                                }
-                                if (j == 2) {
-                                    if (eps > 0.1)
-                                        uy = GSL_REAL(z);
-                                    else
-                                        uy = 0.;
-                                }
-                                if (j == 3) {
-                                    if (eps > 0.1)
-                                        ueta = GSL_REAL(z);
-                                    else
-                                        ueta = 0.;
-                                }
-                                if (abs(GSL_IMAG(z)) > 0.001 && eps > 0.001
-                                    && si > 10 && sj > 10 && si < N - 10
-                                    && sj < N - 10) {
-                                    utau = 1.;
-                                    ux = 0.;
-                                    uy = 0.;
-                                    ueta = 0.;
-                                    eps = lat->cells[pos]->getTtautau();
-                                }
-                            }
-
-                            lat->cells[pos]->setutau(utau);
-                            lat->cells[pos]->setux(ux);
-                            lat->cells[pos]->setuy(uy);
-                            lat->cells[pos]->setueta(ueta);
-                            lat->cells[pos]->setEpsilon(eps);
-
-                            averageux += ux * ux * eps;
-                            averageuy += uy * uy * eps;
-                            averageueta += ueta * ueta * eps * it * dtau * a
-                                           * it * dtau * a;
-                            averageeps += eps;
-
-                            count++;
-                        }
-                    }
-                }
-
-                // write Tmunu in case no u was found
-                if (foundU == 0) {
-                    if (si == N / 2 && sj == N / 2) {
-                        // A fresh, stack-local instance: this runs inside
-                        // an omp parallel region, and PrettyOstream is not
-                        // thread-safe to share.
-                        PrettyOstream localMessager;
-                        localMessager << "[MyEigen::flowVelocity4DImpl]: No "
-                                         "physical flow velocity found at "
-                                         "site ("
-                                      << si << ", " << sj
-                                      << "). T^munu and the best-guess "
-                                         "velocity there:\n\n"
-                                      << lat->cells[pos]->getTtautau() << " "
-                                      << lat->cells[pos]->getTtaux() << " "
-                                      << lat->cells[pos]->getTtauy() << " "
-                                      << lat->cells[pos]->getTtaueta() << "\n"
-                                      << lat->cells[pos]->getTtaux() << " "
-                                      << lat->cells[pos]->getTxx() << " "
-                                      << lat->cells[pos]->getTxy() << " "
-                                      << lat->cells[pos]->getTxeta() << "\n"
-                                      << lat->cells[pos]->getTtauy() << " "
-                                      << lat->cells[pos]->getTxy() << " "
-                                      << lat->cells[pos]->getTyy() << " "
-                                      << lat->cells[pos]->getTyeta() << "\n"
-                                      << lat->cells[pos]->getTtaueta() << " "
-                                      << lat->cells[pos]->getTxeta() << " "
-                                      << lat->cells[pos]->getTyeta() << " "
-                                      << lat->cells[pos]->getTetaeta() << "\n"
-                                      << "ux=" << ux << "\n"
-                                      << "uy=" << uy << "\n"
-                                      << "ueta=" << ueta;
-                        localMessager.flush("warning");
-                    }
-                }
-
-                // compute pi^{\mu\nu}
-                if (utau == 1 && ux == 0 && uy == 0 && ueta == 0) {
-                    lat->cells[pos]->setpitautau(0.);
-                    lat->cells[pos]->setpixx(0.);
-                    lat->cells[pos]->setpiyy(0.);
-                    lat->cells[pos]->setpietaeta(0.);
-
-                    lat->cells[pos]->setpitaux(0.);
-                    lat->cells[pos]->setpitauy(0.);
-                    lat->cells[pos]->setpitaueta(0.);
-
-                    lat->cells[pos]->setpixeta(0.);
-                    lat->cells[pos]->setpixy(0.);
-                    lat->cells[pos]->setpiyeta(0.);
-                } else {
-                    lat->cells[pos]->setpitautau(
-                        lat->cells[pos]->getTtautau()
-                        - 4. / 3. * eps * utau * utau + eps / 3.);
-                    lat->cells[pos]->setpixx(
-                        lat->cells[pos]->getTxx() - 4. / 3. * eps * ux * ux
-                        - eps / 3.);
-                    lat->cells[pos]->setpiyy(
-                        lat->cells[pos]->getTyy() - 4. / 3. * eps * uy * uy
-                        - eps / 3.);
-                    lat->cells[pos]->setpietaeta(
-                        lat->cells[pos]->getTetaeta()
-                        - 4. / 3. * eps * ueta * ueta
-                        - eps / 3. / it / dtau / a / it / dtau / a);
-
-                    lat->cells[pos]->setpitaux(
-                        lat->cells[pos]->getTtaux()
-                        - 4. / 3. * eps * utau * ux);
-                    lat->cells[pos]->setpitauy(
-                        lat->cells[pos]->getTtauy()
-                        - 4. / 3. * eps * utau * uy);
-                    lat->cells[pos]->setpitaueta(
-                        lat->cells[pos]->getTtaueta()
-                        - 4. / 3. * eps * utau * ueta);
-
-                    lat->cells[pos]->setpixeta(
-                        lat->cells[pos]->getTxeta()
-                        - 4. / 3. * eps * ux * ueta);
-                    lat->cells[pos]->setpixy(
-                        lat->cells[pos]->getTxy() - 4. / 3. * eps * ux * uy);
-                    lat->cells[pos]->setpiyeta(
-                        lat->cells[pos]->getTyeta()
-                        - 4. / 3. * eps * uy * ueta);
-                }
+                solveFlowVelocityAtCell(
+                    lat, pos, si, sj, N, it, dtau, a, eval_ws, evec_ws, w_ws,
+                    averageux, averageuy, averageueta, averageeps, count);
             }  // omp for over posLoop
 
             gsl_eigen_nonsymmv_free(w_ws);

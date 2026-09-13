@@ -4,9 +4,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
+#include <cmath>
 #include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <string>
 
@@ -14,255 +16,83 @@
 
 using std::string;
 
+namespace {
+
+// U and Xe's beta2 historically defaults to whatever the caller passed in
+// (see findNucleusData's beta2 parameter) rather than a fixed literal, so
+// their table row uses this sentinel instead of a numeric default.
+constexpr double kUseCallerBeta2 = std::numeric_limits<double>::quiet_NaN();
+
+// One row per supported nucleus name. funcCode selects the density
+// function (anum2HO/anum3Gauss/anum3Fermi/anumHulthen family) and is
+// assigned identically to all three of nucleus->anumFunc/
+// anumFuncIntegrand/densityFunc (1=2HO or readFromFile, 2=3Gauss,
+// 3=3Fermi, 8=Hulthen).
+struct NucleusTemplate {
+    const char *name;
+    int A, Z;
+    double R_WS, w_WS, a_WS;
+    double beta2, beta3, beta4, gamma;
+    int funcCode;
+};
+
+const NucleusTemplate kNucleusTemplates[] = {
+    {"Au", 197, 79, 6.37, 0, 0.535, -0.13, 0., -0.03, 0., 3},
+    {"Pb", 208, 82, 6.62, 0., 0.546, 0.0, 0., 0.0, 0., 3},
+    {"p", 1, 1, 1., 0., 1., 0.0, 0., 0.0, 0., 3},
+    {"He3", 3, 2, 0, 0, 0, 0.0, 0., 0.0, 0., 1},
+    {"He4", 4, 2, 0, 0, 0, 0.0, 0., 0.0, 0., 1},
+    {"d", 2, 1, 1.0, 1.18, 0.228, 0.0, 0., 0.0, 0., 8},
+    {"C", 12, 6, 2.44, 1.403, 1.635, 0.0, 0., 0.0, 0., 1},
+    {"O", 16, 8, 2.608, -0.051, 0.513, -0.01, 0., -0.122, 0., 3},
+    {"Ne", 20, 10, 2.8, 0.0, 0.57, 0.0, 0., 0.0, 0., 3},
+    {"Ne22", 22, 10, 2.782, 0.0, 0.549, 0.0, 0., 0.0, 0., 3},
+    {"S", 32, 16, 2.54, 0.16, 2.191, 0.0, 0., 0.0, 0., 2},
+    {"Ar", 40, 18, 3.61, 0.0, 0.516, 0.1668, 0., 0.00695, 0., 3},
+    {"W", 184, 74, 6.51, 0, 0.535, 0.0, 0., 0.0, 0., 3},
+    {"Al", 27, 13, 3.07, 0, 0.519, 0.0, 0., 0.0, 0., 3},
+    {"Ca", 40, 20, 3.766, -0.161, 0.586, 0.0, 0., 0.0, 0., 3},
+    {"Cu", 63, 29, 4.163, 0, 0.606, 0.162, 0., 0.006, 0., 3},
+    {"Fe", 56, 26, 4.106, 0, 0.519, 0.0, 0., 0.0, 0., 3},
+    {"Pt", 195, 78, 6.78, 0, 0.54, 0.0, 0., 0.0, 0., 3},
+    {"U", 238, 92, 6.81, 0, 0.55, kUseCallerBeta2, 0., 0.093, 0., 3},
+    {"Ru", 96, 44, 5.085, 0, 0.46, 0.158, 0., 0.0, 0., 3},
+    {"Zr", 96, 40, 5.02, 0, 0.46, 0.0, 0., 0.0, 0., 3},
+    {"Xe", 129, 54, 5.42, 0, 0.57, kUseCallerBeta2, 0., -0.003, 0., 3},
+};
+
+}  // namespace
+
 void Glauber::findNucleusData(
     Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,
     double a_WS, double beta2, double beta3, double beta4, double gamma,
     bool forceDminFlag, double d_min, double dR_np, double da_np) {
-    string densityFunction;
-    if (name.compare("Au") == 0) {
-        nucleus->A = 197;
-        nucleus->Z = 79;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 6.37;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.535;
-        nucleus->beta2 = -0.13;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = -0.03;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Pb") == 0) {
-        nucleus->A = 208;
-        nucleus->Z = 82;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 6.62;
-        nucleus->w_WS = 0.;
-        nucleus->a_WS = 0.546;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("p") == 0) {
-        nucleus->A = 1;
-        nucleus->Z = 1;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 1.;
-        nucleus->w_WS = 0.;
-        nucleus->a_WS = 1.;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("He3") == 0) {
-        nucleus->A = 3;
-        nucleus->Z = 2;
-        densityFunction = "readFromFile";
-        nucleus->R_WS = 0;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("He4") == 0) {
-        nucleus->A = 4;
-        nucleus->Z = 2;
-        densityFunction = "readFromFile";
-        nucleus->R_WS = 0;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("d") == 0) {
-        nucleus->A = 2;
-        nucleus->Z = 1;
-        densityFunction = "Hulthen";
-        nucleus->R_WS = 1.0;
-        nucleus->w_WS = 1.18;
-        nucleus->a_WS = 0.228;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("C") == 0) {
-        nucleus->A = 12;
-        nucleus->Z = 6;
-        densityFunction = "2HO";
-        nucleus->R_WS = 2.44;
-        nucleus->w_WS = 1.403;
-        nucleus->a_WS = 1.635;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("O") == 0) {
-        nucleus->A = 16;
-        nucleus->Z = 8;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 2.608;
-        nucleus->w_WS = -0.051;
-        nucleus->a_WS = 0.513;
-        nucleus->beta2 = -0.01;  // from arXiv:1508.06294
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = -0.122;  // from arXiv:1508.06294
-        nucleus->gamma = 0.;
-    } else if (name.compare("Ne") == 0) {
-        nucleus->A = 20;
-        nucleus->Z = 10;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 2.8;
-        nucleus->w_WS = 0.0;
-        nucleus->a_WS = 0.57;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Ne22") == 0) {
-        nucleus->A = 22;
-        nucleus->Z = 10;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 2.782;
-        nucleus->w_WS = 0.0;
-        nucleus->a_WS = 0.549;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("S") == 0) {
-        nucleus->A = 32;
-        nucleus->Z = 16;
-        densityFunction = "3Gauss";
-        nucleus->R_WS = 2.54;
-        nucleus->w_WS = 0.16;
-        nucleus->a_WS = 2.191;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Ar") == 0) {
-        nucleus->A = 40;
-        nucleus->Z = 18;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 3.61;
-        nucleus->w_WS = 0.0;
-        nucleus->a_WS = 0.516;
-        nucleus->beta2 = 0.1668;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.00695;
-        nucleus->gamma = 0.;
-    } else if (name.compare("W") == 0) {
-        nucleus->A = 184;
-        nucleus->Z = 74;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 6.51;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.535;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Al") == 0) {
-        nucleus->A = 27;
-        nucleus->Z = 13;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 3.07;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.519;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Ca") == 0) {
-        nucleus->A = 40;
-        nucleus->Z = 20;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 3.766;
-        nucleus->w_WS = -0.161;
-        nucleus->a_WS = 0.586;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Cu") == 0) {
-        nucleus->A = 63;
-        nucleus->Z = 29;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 4.163;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.606;
-        nucleus->beta2 = 0.162;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.006;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Fe") == 0) {
-        nucleus->A = 56;
-        nucleus->Z = 26;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 4.106;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.519;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Pt") == 0) {
-        nucleus->A = 195;
-        nucleus->Z = 78;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 6.78;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.54;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("U") == 0) {
-        nucleus->A = 238;
-        nucleus->Z = 92;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 6.81;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.55;
-        nucleus->beta2 = beta2;  // 0.28
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.093;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Ru") == 0) {
-        nucleus->A = 96;
-        nucleus->Z = 44;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 5.085;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.46;
-        nucleus->beta2 = 0.158;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Zr") == 0) {
-        nucleus->A = 96;
-        nucleus->Z = 40;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 5.02;
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.46;
-        nucleus->beta2 = 0.0;
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = 0.0;
-        nucleus->gamma = 0.;
-    } else if (name.compare("Xe") == 0) {
-        nucleus->A = 129;
-        nucleus->Z = 54;
-        densityFunction = "3Fermi";
-        nucleus->R_WS = 5.42;  // 5.36       // new values from arXiv:1508.06294
-        nucleus->w_WS = 0;
-        nucleus->a_WS = 0.57;  // 0.590;     // new values from arXiv:1508.06294
-        // nucleus->beta2 = 0.162;  // from arXiv:1508.06294
-        nucleus->beta2 = beta2;  // can be modified by the user
-        nucleus->beta3 = 0.;
-        nucleus->beta4 = -0.003;  // from arXiv:1508.06294
-        nucleus->gamma = 0.;
+    const NucleusTemplate *tmpl = nullptr;
+    for (const auto &candidate : kNucleusTemplates) {
+        if (name == candidate.name) {
+            tmpl = &candidate;
+            break;
+        }
     }
+    if (tmpl == nullptr) {
+        messager_ << "[Glauber::findNucleusData]: Unknown nucleus name \""
+                  << name << "\". Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+
+    nucleus->A = tmpl->A;
+    nucleus->Z = tmpl->Z;
+    nucleus->R_WS = tmpl->R_WS;
+    nucleus->w_WS = tmpl->w_WS;
+    nucleus->a_WS = tmpl->a_WS;
+    nucleus->beta2 = std::isnan(tmpl->beta2) ? beta2 : tmpl->beta2;
+    nucleus->beta3 = tmpl->beta3;
+    nucleus->beta4 = tmpl->beta4;
+    nucleus->gamma = tmpl->gamma;
+    nucleus->anumFunc = tmpl->funcCode;
+    nucleus->anumFuncIntegrand = tmpl->funcCode;
+    nucleus->densityFunc = tmpl->funcCode;
 
     nucleus->rho_WS = nucleus->R_WS;
 
@@ -282,28 +112,6 @@ void Glauber::findNucleusData(
     }
     nucleus->forceDminFlag = forceDminFlag;
     nucleus->d_min = d_min;
-
-    if (densityFunction.compare("2HO") == 0) {
-        nucleus->anumFunc = 1;           // anum2HO;
-        nucleus->anumFuncIntegrand = 1;  // anum2HOInt;
-        nucleus->densityFunc = 1;        // nuInt2HO;
-    } else if (densityFunction.compare("3Gauss") == 0) {
-        nucleus->anumFunc = 2;           // anum3Gauss;
-        nucleus->anumFuncIntegrand = 2;  // anum3GaussInt;
-        nucleus->densityFunc = 2;        // nuInt3Gauss;
-    } else if (densityFunction.compare("3Fermi") == 0) {
-        nucleus->anumFunc = 3;           // anum3Fermi;
-        nucleus->anumFuncIntegrand = 3;  // anum3FermiInt;
-        nucleus->densityFunc = 3;        // nuInt3Fermi;
-    } else if (densityFunction.compare("Hulthen") == 0) {
-        nucleus->anumFunc = 8;           // anumHulthen;
-        nucleus->anumFuncIntegrand = 8;  // AnumHulthenInt;
-        nucleus->densityFunc = 8;        // nuIntHulthen;
-    } else if (densityFunction.compare("readFromFile") == 0) {
-        nucleus->anumFunc = 1;
-        nucleus->anumFuncIntegrand = 1;
-        nucleus->densityFunc = 1;
-    }
 }
 
 void Glauber::printGlauberData() {

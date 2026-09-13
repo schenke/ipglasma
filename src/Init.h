@@ -128,6 +128,16 @@ class Init {
         double averageQs2min2, int count);
     void setV(Lattice *lat, Parameters *param, Random *random);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
+    // readVFromFile's format==1/format==2 branches, each called once for
+    // the projectile's Wilson line file and once for the target's; role
+    // selects the sign of the b/2 shift and (format 1 only) which side of
+    // the lattice out-of-bounds indices are dropped on.
+    void readWilsonLineText(
+        const std::string &fileName, Parameters *param, NucleusRole role,
+        std::vector<Matrix> &U);
+    void readWilsonLineBinary(
+        const std::string &fileName, Parameters *param, NucleusRole role,
+        std::vector<Matrix> &U);
 
     Matrix getUfromExponent(std::vector<double> &Q);
     bool findUInForwardLightcone(

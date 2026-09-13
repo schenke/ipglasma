@@ -27,6 +27,17 @@ class Evolution {
     ~Evolution() { delete fft_; }
 
     void run(Lattice *lat, Group *group, Parameters *param);
+    // run()'s writeOutputs==3 epsilon-plot writers.
+    // NOTE: this one computes its running-coupling factor via only the
+    // "local Qs" formula, unconditionally -- unlike
+    // writeEpsilonIntermediatePlot and computeRunningCouplingGfactor, it
+    // never checks getRunWithLocalQs(). Preserved exactly as found; this
+    // looks like a pre-existing inconsistency, not something to silently
+    // change while extracting it.
+    void writeEpsilonInitialPlot(Lattice *lat, Parameters *param);
+    // Uses the same formula as computeRunningCouplingGfactor (an
+    // anonymous-namespace free function further up in Evolution.cpp).
+    void writeEpsilonIntermediatePlot(Lattice *lat, Parameters *param);
     void evolveU(Lattice *lat, Parameters *param, double dtau, double tau);
     void evolvePhi(Lattice *lat, Parameters *param, double dtau, double tau);
     void evolvePi(Lattice *lat, Parameters *param, double dtau, double tau);

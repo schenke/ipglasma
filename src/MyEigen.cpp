@@ -769,195 +769,36 @@ void MyEigen::flowVelocity4DImpl(
                     fracx = (x - xlow) / a;
                     fracy = (y - ylow) / a;
 
-                    // ---------------------T^tautau----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTtautau())
-                             + fracx * (lat->cells[pos2]->getTtautau()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTtautau())
-                             + fracx * (lat->cells[pos4]->getTtautau()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultT00 = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^taux----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTtaux())
-                             + fracx * (lat->cells[pos2]->getTtaux()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTtaux())
-                             + fracx * (lat->cells[pos4]->getTtaux()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultT0x = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^tauy----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTtauy())
-                             + fracx * (lat->cells[pos2]->getTtauy()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTtauy())
-                             + fracx * (lat->cells[pos4]->getTtauy()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultT0y = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^taueta----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTtaueta())
-                             + fracx * (lat->cells[pos2]->getTtaueta()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTtaueta())
-                             + fracx * (lat->cells[pos4]->getTtaueta()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultT0eta = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^xx----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTxx())
-                             + fracx * (lat->cells[pos2]->getTxx()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTxx())
-                             + fracx * (lat->cells[pos4]->getTxx()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultTxx = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^xy----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTxy())
-                             + fracx * (lat->cells[pos2]->getTxy()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTxy())
-                             + fracx * (lat->cells[pos4]->getTxy()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultTxy = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^xeta----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTxeta())
-                             + fracx * (lat->cells[pos2]->getTxeta()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTxeta())
-                             + fracx * (lat->cells[pos4]->getTxeta()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultTxeta = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^yy----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTyy())
-                             + fracx * (lat->cells[pos2]->getTyy()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTyy())
-                             + fracx * (lat->cells[pos4]->getTyy()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultTyy = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^yeta----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTyeta())
-                             + fracx * (lat->cells[pos2]->getTyeta()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTyeta())
-                             + fracx * (lat->cells[pos4]->getTyeta()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultTyeta = (1. - fracy) * x1 + fracy * x2;
-
-                    // ---------------------T^etaeta----------------------- //
-                    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0
-                        && pos2 < N * N) {
-                        x1 =
-                            ((1 - fracx) * (lat->cells[pos1]->getTetaeta())
-                             + fracx * (lat->cells[pos2]->getTetaeta()));
-                    } else {
-                        x1 = 0.;
-                    }
-                    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                        && pos4 < N * N) {
-                        x2 =
-                            ((1 - fracx) * (lat->cells[pos3]->getTetaeta())
-                             + fracx * (lat->cells[pos4]->getTetaeta()));
-                    } else {
-                        x2 = 0.;
-                    }
-                    resultTetaeta = (1. - fracy) * x1 + fracy * x2;
+                    resultT00 = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTtautau);
+                    resultT0x = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTtaux);
+                    resultT0y = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTtauy);
+                    resultT0eta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTtaueta);
+                    resultTxx = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTxx);
+                    resultTxy = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTxy);
+                    resultTxeta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTxeta);
+                    resultTyy = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTyy);
+                    resultTyeta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTyeta);
+                    resultTetaeta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getTetaeta);
 
                     double values[10];
                     if (resultT00 * gfactor * hbarc > smallEps) {
@@ -1060,53 +901,19 @@ void MyEigen::flowVelocity4DImpl(
                         ylow = -L / 2. + a * ypos;
 
                         fracx = (x - xlow) / a;
+                        fracy = (y - ylow) / a;
 
                         pos1 = xpos * N + ypos;
                         pos2 = xposUp * N + ypos;
                         pos3 = xpos * N + yposUp;
                         pos4 = xposUp * N + yposUp;
 
-                        // -----------------------------g2mu2A----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 =
-                                (1 - fracx) * abs(lat->cells[pos1]->getg2mu2A())
-                                + fracx * abs(lat->cells[pos2]->getg2mu2A());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 =
-                                (1 - fracx) * abs(lat->cells[pos3]->getg2mu2A())
-                                + fracx * abs(lat->cells[pos4]->getg2mu2A());
-                        else
-                            x2 = 0.;
-
-                        fracy = (y - ylow) / a;
-
-                        g2mu2A = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------g2mu2B----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 =
-                                (1 - fracx) * abs(lat->cells[pos1]->getg2mu2B())
-                                + fracx * abs(lat->cells[pos2]->getg2mu2B());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 =
-                                (1 - fracx) * abs(lat->cells[pos3]->getg2mu2B())
-                                + fracx * abs(lat->cells[pos4]->getg2mu2B());
-                        else
-                            x2 = 0.;
-
-                        g2mu2B = (1. - fracy) * x1 + fracy * x2;
+                        g2mu2A = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getg2mu2A, true);
+                        g2mu2B = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getg2mu2B, true);
 
                         Jaztot += g2mu2A * g2mu2B * ha * ha * it * dtau
                                   * a;  // same units as in Etot above
@@ -1155,53 +962,19 @@ void MyEigen::flowVelocity4DImpl(
                         ylow = -L / 2. + a * ypos;
 
                         fracx = (x - xlow) / a;
+                        fracy = (y - ylow) / a;
 
                         pos1 = xpos * N + ypos;
                         pos2 = xposUp * N + ypos;
                         pos3 = xpos * N + yposUp;
                         pos4 = xposUp * N + yposUp;
 
-                        // -----------------------------g2mu2A----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 =
-                                (1 - fracx) * abs(lat->cells[pos1]->getg2mu2A())
-                                + fracx * abs(lat->cells[pos2]->getg2mu2A());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 =
-                                (1 - fracx) * abs(lat->cells[pos3]->getg2mu2A())
-                                + fracx * abs(lat->cells[pos4]->getg2mu2A());
-                        else
-                            x2 = 0.;
-
-                        fracy = (y - ylow) / a;
-
-                        g2mu2A = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------g2mu2B----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 =
-                                (1 - fracx) * abs(lat->cells[pos1]->getg2mu2B())
-                                + fracx * abs(lat->cells[pos2]->getg2mu2B());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 =
-                                (1 - fracx) * abs(lat->cells[pos3]->getg2mu2B())
-                                + fracx * abs(lat->cells[pos4]->getg2mu2B());
-                        else
-                            x2 = 0.;
-
-                        g2mu2B = (1. - fracy) * x1 + fracy * x2;
+                        g2mu2A = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getg2mu2A, true);
+                        g2mu2B = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getg2mu2B, true);
 
                         foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
                                  << x << " " << y << " "

@@ -2662,11 +2662,12 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.gauge_fix", multiplicityPhaseStart);
     // gauge is fixed
 
-    Matrix **E1;
-    E1 = new Matrix *[N * N];
-
+    // E1Storage owns the N*N scratch matrices; E1 is a pointer-per-cell
+    // view over it for FFT::fftn's T** interface.
+    std::vector<Matrix> E1Storage(N * N, Matrix(0.));
+    std::vector<Matrix *> E1(N * N);
     for (int i = 0; i < N * N; i++) {
-        E1[i] = new Matrix(0.);
+        E1[i] = &E1Storage[i];
     }
     addPhaseAndRestart(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
@@ -2788,7 +2789,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.prepare_E1", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft_->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1.data(), E1.data(), nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E1", multiplicityPhaseStart);
 
@@ -2983,7 +2984,7 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E2", multiplicityPhaseStart);
 
-    fft_->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1.data(), E1.data(), nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E2", multiplicityPhaseStart);
 
@@ -3170,7 +3171,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.prepare_pi", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft_->fftn(E1, E1, nn, 1);
+    fft_->fftn(E1.data(), E1.data(), nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_pi", multiplicityPhaseStart);
 
@@ -3467,10 +3468,6 @@ int Evolution::multiplicity(
                   << param->getMPIRank()
                   << ". Restarting with new random number...";
         messager_.flush("warning");
-        for (int i = 0; i < N * N; i++) {
-            delete E1[i];
-        }
-        delete[] E1;
         addPhaseAndRestart(
             "observables.gluon_multiplicity.cleanup", multiplicityPhaseStart);
         return 0;
@@ -3506,11 +3503,6 @@ int Evolution::multiplicity(
     }
     addPhaseAndRestart("output.gluon_multiplicity", multiplicityPhaseStart);
 
-    for (int i = 0; i < N * N; i++) {
-        delete E1[i];
-    }
-
-    delete[] E1;
     addPhaseAndRestart(
         "observables.gluon_multiplicity.cleanup", multiplicityPhaseStart);
 

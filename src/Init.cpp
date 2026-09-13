@@ -97,403 +97,337 @@ void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
 // target nuclei. Both nuclei are centered at the origin.
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
-    ReturnValue rv, rv2;
     messager_.info("[Init::sampleTA]: Sampling nucleon positions ... ");
 
-    if (param->getNucleonPositionsFromFile() == 0) {
-        if (param->getAverageOverNuclei() > 1) {
-            if ((glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
-                messager_ << "[Init::sampleTA]: Averaging over nuclei is not "
-                             "supported for collisions involving protons. "
-                             "Exiting.";
-                messager_.flush("error");
-                exit(1);
-            }
-        }
-
-        int A1 = glauber->nucleusA1();  // projectile
-        int A2 = glauber->nucleusA2();  // target
-        int Z1 = glauber->nucleusZ1();  // projectile
-        int Z2 = glauber->nucleusZ2();  // target
-
-        if (A1 == 1) {
-            rv.x = 0.;
-            rv.y = 0;
-            rv.z = 0;
-            rv.collided = 0;
-            rv.proton = 1;
-            nucleusA_.push_back(rv);
-        } else if (A1 == 2) {
-            // deuteron
-            rv = glauber->sampleTARejection(random, NucleusRole::Projectile);
-            // we sample the neutron proton distance, so distance to the center
-            // needs to be divided by 2
-            rv.x = rv.x / 2.;
-            rv.y = rv.y / 2.;
-            rv.z = 0.;
-            rv.proton = 1;
-            rv.collided = 0;
-            nucleusA_.push_back(rv);
-            // other nucleon is 180 degrees rotated:
-            rv.x = -rv.x;
-            rv.y = -rv.y;
-            rv.z = -rv.z;
-            rv.proton = 0;
-            rv.collided = 0;
-            nucleusA_.push_back(rv);
-        } else {
-            generateNucleusConfiguration(
-                random, A1, Z1, glauber->getGlauberData().projectile.a_WS,
-                glauber->getGlauberData().projectile.R_WS,
-                glauber->getGlauberData().projectile.beta2,
-                glauber->getGlauberData().projectile.beta3,
-                glauber->getGlauberData().projectile.beta4,
-                glauber->getGlauberData().projectile.gamma,
-                glauber->getGlauberData().projectile.forceDminFlag,
-                glauber->getGlauberData().projectile.d_min,
-                glauber->getGlauberData().projectile.dR_np,
-                glauber->getGlauberData().projectile.da_np, nucleusA_);
-        }
-
-        if (A2 == 1) {
-            rv2.x = 0.;
-            rv2.y = 0;
-            rv2.z = 0;
-            rv2.collided = 0;
-            rv2.proton = 1;
-            nucleusB_.push_back(rv2);
-        } else if (A2 == 2) {
-            // deuteron
-            rv = glauber->sampleTARejection(random, NucleusRole::Target);
-            // we sample the neutron proton distance, so distance to the center
-            // needs to be divided by 2
-
-            rv.x = rv.x / 2.;
-            rv.y = rv.y / 2.;
-            rv.z = 0.;
-            rv.proton = 1;
-            rv.collided = 0;
-            nucleusB_.push_back(rv);
-
-            // other nucleon is 180 degrees rotated:
-            rv.x = -rv.x;
-            rv.y = -rv.y;
-            rv.z = -rv.z;
-            rv.proton = 0;
-            rv.collided = 0;
-            nucleusB_.push_back(rv);
-        } else {
-            generateNucleusConfiguration(
-                random, A2, Z2, glauber->getGlauberData().target.a_WS,
-                glauber->getGlauberData().target.R_WS,
-                glauber->getGlauberData().target.beta2,
-                glauber->getGlauberData().target.beta3,
-                glauber->getGlauberData().target.beta4,
-                glauber->getGlauberData().target.gamma,
-                glauber->getGlauberData().target.forceDminFlag,
-                glauber->getGlauberData().target.d_min,
-                glauber->getGlauberData().target.dR_np,
-                glauber->getGlauberData().target.da_np, nucleusB_);
-        }
-    } else if (param->getNucleonPositionsFromFile() == 1) {
-        if (nucleonPosArrA_.size() > 0) {
-            double ran2 = random->genrand64_real3();
-            int nucleusNumber = static_cast<int>(ran2 * nucleonPosArrA_.size());
-            messager_ << "[Init::sampleTA]: using nucleus Number = "
-                      << nucleusNumber;
-            messager_.flush("info");
-            for (int iA = 0; iA < glauber->nucleusA1(); iA++) {
-                rv.x = nucleonPosArrA_[nucleusNumber][3 * iA];
-                rv.y = nucleonPosArrA_[nucleusNumber][3 * iA + 1];
-                rv.z = nucleonPosArrA_[nucleusNumber][3 * iA + 2];
-                rv.collided = 0;
-                nucleusA_.push_back(rv);
-            }
-            assignProtons(random, nucleusA_, glauber->nucleusZ1());
-            recenterNucleus(nucleusA_);
-        } else {
-            // no configurations, sample with Woods-Saxon
-            messager_
-                << "[Init::sampleTA]: configuration file for A = "
-                << glauber->nucleusA1()
-                << " is not available, generate the nucleus configuration "
-                << "using Woods-Saxon distribution instead.";
-            messager_.flush("info");
-
-            generateNucleusConfiguration(
-                random, glauber->nucleusA1(), glauber->nucleusZ1(),
-                glauber->getGlauberData().projectile.a_WS,
-                glauber->getGlauberData().projectile.R_WS,
-                glauber->getGlauberData().projectile.beta2,
-                glauber->getGlauberData().projectile.beta3,
-                glauber->getGlauberData().projectile.beta4,
-                glauber->getGlauberData().projectile.gamma,
-                glauber->getGlauberData().projectile.forceDminFlag,
-                glauber->getGlauberData().projectile.d_min,
-                glauber->getGlauberData().projectile.dR_np,
-                glauber->getGlauberData().projectile.da_np, nucleusA_);
-        }
-
-        if (nucleonPosArrB_.size() > 0) {
-            double ran2 = random->genrand64_real3();
-            int nucleusNumber = static_cast<int>(ran2 * nucleonPosArrB_.size());
-            messager_ << "[Init::sampleTA]: using nucleus Number = "
-                      << nucleusNumber;
-            messager_.flush("info");
-            for (int iA = 0; iA < glauber->nucleusA2(); iA++) {
-                rv.x = nucleonPosArrB_[nucleusNumber][3 * iA];
-                rv.y = nucleonPosArrB_[nucleusNumber][3 * iA + 1];
-                rv.z = nucleonPosArrB_[nucleusNumber][3 * iA + 2];
-                rv.collided = 0;
-                nucleusB_.push_back(rv);
-            }
-            assignProtons(random, nucleusB_, glauber->nucleusZ2());
-            recenterNucleus(nucleusB_);
-        } else {
-            // no configurations, sample with Woods-Saxon
-            messager_
-                << "[Init::sampleTA]: configuration file for A = "
-                << glauber->nucleusA2()
-                << " is not available, generate the nucleus configuration "
-                << "using Woods-Saxon distribution instead.";
-            messager_.flush("info");
-            generateNucleusConfiguration(
-                random, glauber->nucleusA2(), glauber->nucleusZ2(),
-                glauber->getGlauberData().target.a_WS,
-                glauber->getGlauberData().target.R_WS,
-                glauber->getGlauberData().target.beta2,
-                glauber->getGlauberData().target.beta3,
-                glauber->getGlauberData().target.beta4,
-                glauber->getGlauberData().target.gamma,
-                glauber->getGlauberData().target.forceDminFlag,
-                glauber->getGlauberData().target.d_min,
-                glauber->getGlauberData().target.dR_np,
-                glauber->getGlauberData().target.da_np, nucleusB_);
-        }
-    } else if (param->getNucleonPositionsFromFile() == 2) {
-        // Read in Alvioli's nucleon positions including correlations
-        if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
-            messager_ << "[Init::sampleTA]: nucleonPositionsFromFile == 2 only "
-                         "works when both nuclei are Pb-208, or when the "
-                         "projectile is a proton and the target is Pb-208. "
-                         "Exiting.";
-            messager_.flush("error");
-            exit(1);
-        }
-
-        messager_
-            << "[Init::sampleTA]: Retrieving nucleon positions from Alvioli's "
-               "correlated Pb-208 configuration files.";
-        messager_.flush("info");
-
-        // generate the file name
-        double ran =
-            random->genrand64_real3();  // sample the file name uniformly
-        int fileNumber = static_cast<int>(ran * 10 + 1);
-
-        stringstream str_file;
-        str_file.str("");
-        if (fileNumber < 10) {
-            str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-0";
-        } else {
-            str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-";
-        }
-        str_file << fileNumber;
-        str_file << ".dat";
-        string fileName = str_file.str();
-
-        // open the file
-        ifstream fin;
-        fin.open(fileName.c_str());
-        if (!fin) {
-            messager_ << "[Init::sampleTA]: File " << fileName
-                      << " not found. Trying alternative location:";
-            messager_.flush("warning");
-            str_file.str("");
-            if (fileNumber < 10)
-                str_file << "./Alvioli-Pb208/pb208-0";
-            else
-                str_file << "./Alvioli-Pb208/pb208-";
-            str_file << fileNumber;
-            str_file << ".dat";
-            fileName = str_file.str();
-            fin.open(fileName.c_str());
-        }
-
-        if (!fin) {
-            messager_ << "[Init::sampleTA]: File " << fileName
-                      << " not found. Exiting.";
-            messager_.flush("error");
-            exit(1);
-        }
-
-        messager_ << "[Init::sampleTA]: Reading nucleon positions for nucleus "
-                     "A from file "
-                  << fileName << " ... ";
-        messager_.flush("info");
-
-        // sample the position in the file
-        // sample the position in the file uniformly (10,000 events per file)
-        double ran2 = random->genrand64_real3();
-        int nucleusNumber = static_cast<int>(ran2 * 10000);
-        messager_ << "[Init::sampleTA]: Nucleus Number = " << nucleusNumber;
-        messager_.flush("info");
-
-        int A = 0;
-        int A2 = 0;
-        double dummy;
-
-        // go to the correct line in the file
-        fin.seekg(std::ios::beg);
-        for (int i = 0; i < (nucleusNumber)*glauber->nucleusA1(); ++i) {
-            fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        }
-        // am now at the correct line in the file
-
-        // start reading one nucleus (208 positions)
-        if (glauber->nucleusA1() == 1) {
-            rv.x = 0;
-            rv.y = 0;
-            rv.z = 0;
-            rv.collided = 0;
-            nucleusA_.push_back(rv);
-            A = 1;
-        } else {
-            while (A < glauber->nucleusA1()) {
-                if (!fin.eof()) {
-                    fin >> rv.x;
-                    fin >> rv.y;
-                    fin >> rv.z;
-                    fin >> dummy;  // don't care about isospin
-                    rv.collided = 0;
-                    nucleusA_.push_back(rv);
-                    A++;
-                }
-            }
-        }
-        fin.close();
-        // do the second nucleus (Target)
-
-        // generate the file name
-        ran = random->genrand64_real3();  // sample the file name uniformly
-        fileNumber = static_cast<int>(ran * 10 + 1);
-
-        str_file.str("");
-        if (fileNumber < 10)
-            str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-0";
-        else
-            str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-";
-        str_file << fileNumber;
-        str_file << ".dat";
-        fileName = str_file.str();
-
-        // open the file
-        fin.open(fileName.c_str());
-        if (!fin) {
-            messager_ << "[Init::sampleTA]: File " << fileName
-                      << " not found. Trying alternative location:";
-            messager_.flush("warning");
-            str_file.str("");
-            if (fileNumber < 10)
-                str_file << "./Alvioli-Pb208/pb208-0";
-            else
-                str_file << "./Alvioli-Pb208/pb208-";
-            str_file << fileNumber;
-            str_file << ".dat";
-            fileName = str_file.str();
-            fin.open(fileName.c_str());
-        }
-
-        if (!fin) {
-            messager_ << "[Init::sampleTA]: File " << fileName
-                      << " not found. Exiting.";
-            messager_.flush("error");
-            exit(1);
-        }
-
-        messager_ << "[Init::sampleTA]: Reading nucleon positions for nucleus "
-                     "B from file "
-                  << fileName << " ... ";
-        messager_.flush("info");
-
-        // sample the position in the file
-        ran2 = random->genrand64_real3();  // sample the position in the file
-                                           // uniformly (10,000 events per file)
-        nucleusNumber = static_cast<int>(ran2 * 10000);
-        messager_ << "[Init::sampleTA]: Nucleus Number = " << nucleusNumber;
-        messager_.flush("info");
-
-        // go to the correct line in the file
-        fin.seekg(std::ios::beg);
-        for (int i = 0; i < (nucleusNumber)*glauber->nucleusA2(); ++i) {
-            fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        }
-        // am now at the correct line in the file
-
-        // start reading one nucleus (208 positions)
-        if (glauber->nucleusA2() == 1) {
-            rv.x = 0;
-            rv.y = 0;
-            rv.z = 0;
-            rv.collided = 0;
-            nucleusB_.push_back(rv);
-            A2 = 1;
-        } else {
-            while (A2 < glauber->nucleusA2()) {
-                if (!fin.eof()) {
-                    fin >> rv.x;
-                    fin >> rv.y;
-                    fin >> rv.z;   // don't care about z direction
-                    fin >> dummy;  // don't care about isospin
-                    rv.collided = 0;
-                    nucleusB_.push_back(rv);
-                    A2++;
-                }
-            }
-        }
-
-        fin.close();
-
-        // The files provide only coordinates.
-        // Assign proton/neutron labels
-        assignProtons(random, nucleusA_, glauber->nucleusZ1());
-        assignProtons(random, nucleusB_, glauber->nucleusZ2());
+    const int nucleonPositionsFromFile = param->getNucleonPositionsFromFile();
+    if (nucleonPositionsFromFile == 0) {
+        sampleTAWoodsSaxon(param, random, glauber);
+    } else if (nucleonPositionsFromFile == 1) {
+        sampleTAFromConfigFiles(random, glauber);
+    } else if (nucleonPositionsFromFile == 2) {
+        sampleTAFromAlvioliFiles(random, glauber);
     } else {
         messager_ << "[Init::sampleTA]: nucleonPositionsFromFile must be 0 "
                      "(sample nucleons), 1, or 2 (read from files) -- you "
                      "chose "
-                  << param->getNucleonPositionsFromFile() << ". Exiting.";
+                  << nucleonPositionsFromFile << ". Exiting.";
         messager_.flush("error");
         exit(1);
     }
 
     // global rotation of the nucleus
-    if (param->getPolarizationProjectile() == 0) {
-        rotateNucleus3D(random, nucleusA_);
-    } else if (param->getPolarizationProjectile() == 1) {
-        // longitudinal polarization only rotates phi randomly
-        double phi = 2. * M_PI * random->genrand64_real3();
-        double theta = 0;
-        rotateNucleus(phi, theta, nucleusA_);
-    } else if (param->getPolarizationProjectile() == 2) {
-        // transverse polarization rotates J to +y axis
-        double phi = M_PI / 2;
-        double theta = M_PI / 2;
-        rotateNucleus(phi, theta, nucleusA_);
+    applyPolarizationRotation(
+        random, param->getPolarizationProjectile(), nucleusA_);
+    applyPolarizationRotation(
+        random, param->getPolarizationTarget(), nucleusB_);
+}
+
+void Init::sampleTAWoodsSaxon(
+    Parameters *param, Random *random, Glauber *glauber) {
+    ReturnValue rv, rv2;
+    if (param->getAverageOverNuclei() > 1) {
+        if ((glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
+            messager_ << "[Init::sampleTA]: Averaging over nuclei is not "
+                         "supported for collisions involving protons. "
+                         "Exiting.";
+            messager_.flush("error");
+            exit(1);
+        }
     }
 
-    if (param->getPolarizationTarget() == 0) {
-        rotateNucleus3D(random, nucleusB_);
-    } else if (param->getPolarizationTarget() == 1) {
+    int A1 = glauber->nucleusA1();  // projectile
+    int A2 = glauber->nucleusA2();  // target
+    int Z1 = glauber->nucleusZ1();  // projectile
+    int Z2 = glauber->nucleusZ2();  // target
+
+    if (A1 == 1) {
+        rv.x = 0.;
+        rv.y = 0;
+        rv.z = 0;
+        rv.collided = 0;
+        rv.proton = 1;
+        nucleusA_.push_back(rv);
+    } else if (A1 == 2) {
+        // deuteron
+        rv = glauber->sampleTARejection(random, NucleusRole::Projectile);
+        // we sample the neutron proton distance, so distance to the center
+        // needs to be divided by 2
+        rv.x = rv.x / 2.;
+        rv.y = rv.y / 2.;
+        rv.z = 0.;
+        rv.proton = 1;
+        rv.collided = 0;
+        nucleusA_.push_back(rv);
+        // other nucleon is 180 degrees rotated:
+        rv.x = -rv.x;
+        rv.y = -rv.y;
+        rv.z = -rv.z;
+        rv.proton = 0;
+        rv.collided = 0;
+        nucleusA_.push_back(rv);
+    } else {
+        generateNucleusConfiguration(
+            random, A1, Z1, glauber->getGlauberData().projectile.a_WS,
+            glauber->getGlauberData().projectile.R_WS,
+            glauber->getGlauberData().projectile.beta2,
+            glauber->getGlauberData().projectile.beta3,
+            glauber->getGlauberData().projectile.beta4,
+            glauber->getGlauberData().projectile.gamma,
+            glauber->getGlauberData().projectile.forceDminFlag,
+            glauber->getGlauberData().projectile.d_min,
+            glauber->getGlauberData().projectile.dR_np,
+            glauber->getGlauberData().projectile.da_np, nucleusA_);
+    }
+
+    if (A2 == 1) {
+        rv2.x = 0.;
+        rv2.y = 0;
+        rv2.z = 0;
+        rv2.collided = 0;
+        rv2.proton = 1;
+        nucleusB_.push_back(rv2);
+    } else if (A2 == 2) {
+        // deuteron
+        rv = glauber->sampleTARejection(random, NucleusRole::Target);
+        // we sample the neutron proton distance, so distance to the center
+        // needs to be divided by 2
+
+        rv.x = rv.x / 2.;
+        rv.y = rv.y / 2.;
+        rv.z = 0.;
+        rv.proton = 1;
+        rv.collided = 0;
+        nucleusB_.push_back(rv);
+
+        // other nucleon is 180 degrees rotated:
+        rv.x = -rv.x;
+        rv.y = -rv.y;
+        rv.z = -rv.z;
+        rv.proton = 0;
+        rv.collided = 0;
+        nucleusB_.push_back(rv);
+    } else {
+        generateNucleusConfiguration(
+            random, A2, Z2, glauber->getGlauberData().target.a_WS,
+            glauber->getGlauberData().target.R_WS,
+            glauber->getGlauberData().target.beta2,
+            glauber->getGlauberData().target.beta3,
+            glauber->getGlauberData().target.beta4,
+            glauber->getGlauberData().target.gamma,
+            glauber->getGlauberData().target.forceDminFlag,
+            glauber->getGlauberData().target.d_min,
+            glauber->getGlauberData().target.dR_np,
+            glauber->getGlauberData().target.da_np, nucleusB_);
+    }
+}
+
+void Init::sampleTAFromConfigFiles(Random *random, Glauber *glauber) {
+    ReturnValue rv;
+    if (nucleonPosArrA_.size() > 0) {
+        double ran2 = random->genrand64_real3();
+        int nucleusNumber = static_cast<int>(ran2 * nucleonPosArrA_.size());
+        messager_ << "[Init::sampleTA]: using nucleus Number = "
+                  << nucleusNumber;
+        messager_.flush("info");
+        for (int iA = 0; iA < glauber->nucleusA1(); iA++) {
+            rv.x = nucleonPosArrA_[nucleusNumber][3 * iA];
+            rv.y = nucleonPosArrA_[nucleusNumber][3 * iA + 1];
+            rv.z = nucleonPosArrA_[nucleusNumber][3 * iA + 2];
+            rv.collided = 0;
+            nucleusA_.push_back(rv);
+        }
+        assignProtons(random, nucleusA_, glauber->nucleusZ1());
+        recenterNucleus(nucleusA_);
+    } else {
+        // no configurations, sample with Woods-Saxon
+        messager_
+            << "[Init::sampleTA]: configuration file for A = "
+            << glauber->nucleusA1()
+            << " is not available, generate the nucleus configuration "
+            << "using Woods-Saxon distribution instead.";
+        messager_.flush("info");
+
+        generateNucleusConfiguration(
+            random, glauber->nucleusA1(), glauber->nucleusZ1(),
+            glauber->getGlauberData().projectile.a_WS,
+            glauber->getGlauberData().projectile.R_WS,
+            glauber->getGlauberData().projectile.beta2,
+            glauber->getGlauberData().projectile.beta3,
+            glauber->getGlauberData().projectile.beta4,
+            glauber->getGlauberData().projectile.gamma,
+            glauber->getGlauberData().projectile.forceDminFlag,
+            glauber->getGlauberData().projectile.d_min,
+            glauber->getGlauberData().projectile.dR_np,
+            glauber->getGlauberData().projectile.da_np, nucleusA_);
+    }
+
+    if (nucleonPosArrB_.size() > 0) {
+        double ran2 = random->genrand64_real3();
+        int nucleusNumber = static_cast<int>(ran2 * nucleonPosArrB_.size());
+        messager_ << "[Init::sampleTA]: using nucleus Number = "
+                  << nucleusNumber;
+        messager_.flush("info");
+        for (int iA = 0; iA < glauber->nucleusA2(); iA++) {
+            rv.x = nucleonPosArrB_[nucleusNumber][3 * iA];
+            rv.y = nucleonPosArrB_[nucleusNumber][3 * iA + 1];
+            rv.z = nucleonPosArrB_[nucleusNumber][3 * iA + 2];
+            rv.collided = 0;
+            nucleusB_.push_back(rv);
+        }
+        assignProtons(random, nucleusB_, glauber->nucleusZ2());
+        recenterNucleus(nucleusB_);
+    } else {
+        // no configurations, sample with Woods-Saxon
+        messager_
+            << "[Init::sampleTA]: configuration file for A = "
+            << glauber->nucleusA2()
+            << " is not available, generate the nucleus configuration "
+            << "using Woods-Saxon distribution instead.";
+        messager_.flush("info");
+        generateNucleusConfiguration(
+            random, glauber->nucleusA2(), glauber->nucleusZ2(),
+            glauber->getGlauberData().target.a_WS,
+            glauber->getGlauberData().target.R_WS,
+            glauber->getGlauberData().target.beta2,
+            glauber->getGlauberData().target.beta3,
+            glauber->getGlauberData().target.beta4,
+            glauber->getGlauberData().target.gamma,
+            glauber->getGlauberData().target.forceDminFlag,
+            glauber->getGlauberData().target.d_min,
+            glauber->getGlauberData().target.dR_np,
+            glauber->getGlauberData().target.da_np, nucleusB_);
+    }
+}
+
+void Init::sampleTAFromAlvioliFiles(Random *random, Glauber *glauber) {
+    // Read in Alvioli's nucleon positions including correlations
+    if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
+        messager_ << "[Init::sampleTA]: nucleonPositionsFromFile == 2 only "
+                     "works when both nuclei are Pb-208, or when the "
+                     "projectile is a proton and the target is Pb-208. "
+                     "Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+
+    messager_
+        << "[Init::sampleTA]: Retrieving nucleon positions from Alvioli's "
+           "correlated Pb-208 configuration files.";
+    messager_.flush("info");
+
+    readOneAlvioliNucleus(random, glauber->nucleusA1(), "A", nucleusA_);
+    readOneAlvioliNucleus(random, glauber->nucleusA2(), "B", nucleusB_);
+
+    // The files provide only coordinates.
+    // Assign proton/neutron labels
+    assignProtons(random, nucleusA_, glauber->nucleusZ1());
+    assignProtons(random, nucleusB_, glauber->nucleusZ2());
+}
+
+void Init::readOneAlvioliNucleus(
+    Random *random, int nucleonCount, const std::string &label,
+    std::vector<ReturnValue> &nucleus) {
+    ReturnValue rv;
+
+    // generate the file name
+    double ran =
+        random->genrand64_real3();  // sample the file name uniformly
+    int fileNumber = static_cast<int>(ran * 10 + 1);
+
+    stringstream str_file;
+    str_file.str("");
+    if (fileNumber < 10) {
+        str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-0";
+    } else {
+        str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-";
+    }
+    str_file << fileNumber;
+    str_file << ".dat";
+    string fileName = str_file.str();
+
+    // open the file
+    ifstream fin;
+    fin.open(fileName.c_str());
+    if (!fin) {
+        messager_ << "[Init::sampleTA]: File " << fileName
+                  << " not found. Trying alternative location:";
+        messager_.flush("warning");
+        str_file.str("");
+        if (fileNumber < 10)
+            str_file << "./Alvioli-Pb208/pb208-0";
+        else
+            str_file << "./Alvioli-Pb208/pb208-";
+        str_file << fileNumber;
+        str_file << ".dat";
+        fileName = str_file.str();
+        fin.open(fileName.c_str());
+    }
+
+    if (!fin) {
+        messager_ << "[Init::sampleTA]: File " << fileName
+                  << " not found. Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+
+    messager_ << "[Init::sampleTA]: Reading nucleon positions for nucleus "
+              << label << " from file " << fileName << " ... ";
+    messager_.flush("info");
+
+    // sample the position in the file uniformly (10,000 events per file)
+    double ran2 = random->genrand64_real3();
+    int nucleusNumber = static_cast<int>(ran2 * 10000);
+    messager_ << "[Init::sampleTA]: Nucleus Number = " << nucleusNumber;
+    messager_.flush("info");
+
+    int A = 0;
+    double dummy;
+
+    // go to the correct line in the file
+    fin.seekg(std::ios::beg);
+    for (int i = 0; i < (nucleusNumber)*nucleonCount; ++i) {
+        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+    // am now at the correct line in the file
+
+    // start reading one nucleus (208 positions)
+    if (nucleonCount == 1) {
+        rv.x = 0;
+        rv.y = 0;
+        rv.z = 0;
+        rv.collided = 0;
+        nucleus.push_back(rv);
+        A = 1;
+    } else {
+        while (A < nucleonCount) {
+            if (!fin.eof()) {
+                fin >> rv.x;
+                fin >> rv.y;
+                fin >> rv.z;
+                fin >> dummy;  // don't care about isospin
+                rv.collided = 0;
+                nucleus.push_back(rv);
+                A++;
+            }
+        }
+    }
+    fin.close();
+}
+
+void Init::applyPolarizationRotation(
+    Random *random, int polarizationFlag, std::vector<ReturnValue> &nucleus) {
+    if (polarizationFlag == 0) {
+        rotateNucleus3D(random, nucleus);
+    } else if (polarizationFlag == 1) {
         // longitudinal polarization only rotates phi randomly
         double phi = 2. * M_PI * random->genrand64_real3();
         double theta = 0;
-        rotateNucleus(phi, theta, nucleusB_);
-    } else if (param->getPolarizationTarget() == 2) {
+        rotateNucleus(phi, theta, nucleus);
+    } else if (polarizationFlag == 2) {
         // transverse polarization rotates J to +y axis
         double phi = M_PI / 2;
         double theta = M_PI / 2;
-        rotateNucleus(phi, theta, nucleusB_);
+        rotateNucleus(phi, theta, nucleus);
     }
 }
 

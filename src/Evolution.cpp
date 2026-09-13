@@ -1943,6 +1943,46 @@ void Evolution::u(Lattice *lat, Parameters *param, int it, bool finalFlag) {
     myeigen.flowVelocity4D(lat, param, it, finalFlag);
 }
 
+namespace {
+struct AnisotropyResult {
+    double num;
+    double den;
+    double num2;
+    double den2;
+};
+
+// eccentricity()'s doAniso==1 branch samples this at ten values of Psi
+// (previously ten copy-pasted ~25-line blocks, differing only in Psi).
+AnisotropyResult computeRotatedAnisotropy(Lattice *lat, int N, double Psi) {
+    double num = 0., den = 0., num2 = 0., den2 = 0.;
+    for (int ix = 0; ix < N; ix++) {
+        for (int iy = 0; iy < N; iy++) {
+            int pos = (ix)*N + (iy);
+
+            double TxxRot = cos(Psi)
+                                 * (cos(Psi) * lat->cells[pos]->getTxx()
+                                    - sin(Psi) * lat->cells[pos]->getTxy())
+                             - sin(Psi)
+                                   * (cos(Psi) * lat->cells[pos]->getTxy()
+                                      - sin(Psi) * lat->cells[pos]->getTyy());
+            double TyyRot = sin(Psi)
+                                 * (sin(Psi) * lat->cells[pos]->getTxx()
+                                    + cos(Psi) * lat->cells[pos]->getTxy())
+                             + cos(Psi)
+                                   * (sin(Psi) * lat->cells[pos]->getTxy()
+                                      + cos(Psi) * lat->cells[pos]->getTyy());
+
+            num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
+            den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
+
+            num += TxxRot - TyyRot;
+            den += TxxRot + TyyRot;
+        }
+    }
+    return {num, den, num2, den2};
+}
+}  // namespace
+
 void Evolution::eccentricity(
     Lattice *lat, Parameters *param, int it, double cutoff, int doAniso) {
     IPG_PROFILE_SCOPE("observables.eccentricity");
@@ -2210,11 +2250,8 @@ void Evolution::eccentricity(
 
         ofstream foutAniso(aniso_name.c_str(), std::ios::app);
 
-        double TxxRot, TyyRot;
         double ux, uy, PsiU;
-        double num = 0., den = 0.;
         double unum = 0., uden = 0.;
-        double num2 = 0., den2 = 0.;
 
         for (int ix = 0; ix < N; ix++) {
             for (int iy = 0; iy < N; iy++) {
@@ -2228,349 +2265,22 @@ void Evolution::eccentricity(
 
         PsiU = atan2(unum, uden) / 2.;
 
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        double Psi = PsiU;  // param->getPsi();//-Pi/2.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
         foutAniso << "Psi2=" << Psi2 << ", cos(Psi2)=" << cos(Psi2)
                   << ", sin(Psi2)=" << sin(Psi2) << endl;
         foutAniso << "PsiU=" << PsiU << ", cos(PsiU)=" << cos(PsiU)
                   << ", sin(PsiU)=" << sin(PsiU) << endl;
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
 
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + M_PI / 8.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
+        // Sample the rotated-tensor anisotropy at Psi = PsiU + k*Pi/8 for
+        // k=0..9 (k=0: Psi = PsiU;  // param->getPsi();//-Pi/2.;).
+        for (int k = 0; k < 10; ++k) {
+            const double Psi = PsiU + static_cast<double>(k) * M_PI / 8.;
+            const AnisotropyResult result =
+                computeRotatedAnisotropy(lat, N, Psi);
+            foutAniso << it * a * param->getdtau() << " "
+                      << result.num / result.den << " "
+                      << result.num2 / result.den2 << " angle=" << Psi
+                      << endl;
         }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + M_PI / 4.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + 3. * M_PI / 8.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + M_PI / 2.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + 5. * M_PI / 8.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + 3. * M_PI / 4.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + 7. * M_PI / 8.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + M_PI;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
-
-        num = 0.;
-        den = 0.;
-        num2 = 0.;
-        den2 = 0.;
-        Psi = PsiU + 9. * M_PI / 8.;
-
-        for (int ix = 0; ix < N; ix++) {
-            for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
-
-                TxxRot = cos(Psi)
-                             * (cos(Psi) * lat->cells[pos]->getTxx()
-                                - sin(Psi) * lat->cells[pos]->getTxy())
-                         - sin(Psi)
-                               * (cos(Psi) * lat->cells[pos]->getTxy()
-                                  - sin(Psi) * lat->cells[pos]->getTyy());
-                TyyRot = sin(Psi)
-                             * (sin(Psi) * lat->cells[pos]->getTxx()
-                                + cos(Psi) * lat->cells[pos]->getTxy())
-                         + cos(Psi)
-                               * (sin(Psi) * lat->cells[pos]->getTxy()
-                                  + cos(Psi) * lat->cells[pos]->getTyy());
-
-                num2 += lat->cells[pos]->getTxx() - lat->cells[pos]->getTyy();
-                den2 += lat->cells[pos]->getTxx() + lat->cells[pos]->getTyy();
-
-                num += TxxRot - TyyRot;
-                den += TxxRot + TyyRot;
-            }
-        }
-
-        foutAniso << it * a * param->getdtau() << " " << num / den << " "
-                  << num2 / den2 << " angle=" << Psi << endl;
 
         foutAniso.close();
     }

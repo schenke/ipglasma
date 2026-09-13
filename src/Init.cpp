@@ -3416,7 +3416,7 @@ bool Init::findUInForwardLightcone(
         Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
         for (int ai = 0; ai < Nc2m1_; ai++) {
             complex<double> traceLoc =
-                Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
+                Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
             // minus trace if temp gives -F_ai
             auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
             Fa[ai] = imag(traceRes);
@@ -3437,7 +3437,7 @@ bool Init::findUInForwardLightcone(
             for (int ai = 0; ai < Nc2m1_; ai++) {
                 int countMe = ai * Nc2m1_ + bi;
                 complex<double> traceLoc =
-                    Mtemp.traceOfProdcutOfMatrix(group_ptr_->getT(ai), Mtemp);
+                    Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
                 Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
                 Mcheck += std::abs(Jab[countMe]);
                 if (Mcheck < 1e-15) {
@@ -3454,7 +3454,7 @@ bool Init::findUInForwardLightcone(
                 for (int ai = 0; ai < Nc2m1_; ai++) {
                     int countMe = ai * Nc2m1_ + bi;
                     complex<double> traceLoc =
-                        Mtemp.traceOfProdcutOfMatrix(MtempArr[ai], Mtemp);
+                        Mtemp.traceOfProductOfMatrix(MtempArr[ai], Mtemp);
                     auto traceRes = -2. * real(traceLoc);
                     Jab[countMe] = traceRes;
                 }

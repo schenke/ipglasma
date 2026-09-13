@@ -7,6 +7,7 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <memory>
 #include <sstream>
 #include <string>
 
@@ -562,7 +563,7 @@ double Glauber::interNuPInSP(double s) {
     static int ind = 0;
     static double up, down;
     static int maxi_num;
-    static double *vx, *vy;
+    static std::unique_ptr<double[]> vx, vy;
     ind++;
 
     if (glauberData_.projectile.A == 1) return 0.0;
@@ -572,14 +573,14 @@ double Glauber::interNuPInSP(double s) {
         up = 2.0 * glauberData_.sCutoff;
         down = 0.0;
         maxi_num = glauberData_.interMax;
-        vx = makeVx(down, up, maxi_num);
-        vy = makeVy(vx, maxi_num);
+        vx.reset(makeVx(down, up, maxi_num));
+        vy.reset(makeVy(vx.get(), maxi_num));
     } /* if ind */
 
     if (s > up)
         return 0.0;
     else {
-        y = vInterpolate(s, vx, vy, maxi_num);
+        y = vInterpolate(s, vx.get(), vy.get(), maxi_num);
         if (y < 0.0)
             return 0.0;
         else {
@@ -593,7 +594,7 @@ double Glauber::interNuTInST(double s) {
     static int ind = 0;
     static double up, down;
     static int maxi_num;
-    static double *vx, *vy;
+    static std::unique_ptr<double[]> vx, vy;
 
     ind++;
     if (glauberData_.target.A == 1) return 0.0;
@@ -605,14 +606,14 @@ double Glauber::interNuTInST(double s) {
         down = 0.0;
         maxi_num = glauberData_.interMax;
 
-        vx = makeVx(down, up, maxi_num);
-        vy = makeVy(vx, maxi_num);
+        vx.reset(makeVx(down, up, maxi_num));
+        vy.reset(makeVy(vx.get(), maxi_num));
     } /* if ind */
 
     if (s > up)
         return 0.0;
     else {
-        y = vInterpolate(s, vx, vy, maxi_num);
+        y = vInterpolate(s, vx.get(), vy.get(), maxi_num);
         if (y < 0.0)
             return 0.0;
         else

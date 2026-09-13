@@ -69,6 +69,12 @@ class Init {
     void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
 
     double getNuclearQs2(double T, double y);
+    // Sets g2mu2A/g2mu2B at one cell from its already-accumulated TpA/TpB,
+    // via getNuclearQs2 and (if enabled) the fluctuating-x iterative solve.
+    // Called from setColorChargeDensity's per-cell loop.
+    void computeCellColorCharge(
+        Lattice *lat, Parameters *param, int ipos, double a,
+        double rapidityA, double rapidityB);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);

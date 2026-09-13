@@ -1210,6 +1210,25 @@ void accumulateGluonSpectrum(
     }
 }
 
+// multiplicity()'s per-bin dN/dy, dE/dy weight: the phase-space factor
+// (ik+0.5)*dkt^2*2*pi, times a Jacobian ratio when the rapidity input is
+// actually a pseudorapidity (same factor computed identically three times
+// in the original -- unconditionally, and again inside the >3 and >6 GeV
+// cuts -- for both the usePseudoRapidity branches).
+double computeMultiplicityBinWeight(
+    Parameters *param, double m, int ik, double dkt, double a) {
+    const double base = (ik + 0.5) * dkt * dkt * 2. * M_PI;
+    if (param->getUsePseudoRapidity() == 0) {
+        return base;
+    }
+    return base * cosh(param->getRapidity())
+           / (sqrt(
+               pow(cosh(param->getRapidity()), 2.)
+               + m * m
+                     / (((ik + 0.5) * dkt / a * hbarc)
+                        * ((ik + 0.5) * dkt / a * hbarc))));
+}
+
 }  // namespace
 
 void Evolution::evolveU(
@@ -2456,79 +2475,20 @@ int Evolution::multiplicity(
         if (counter[ik] > 0) {
             n[ik] = n[ik] / static_cast<double>(counter[ik]);
             E[ik] = E[ik] / static_cast<double>(counter[ik]);
-            if (param->getUsePseudoRapidity() == 0) {
-                dNdeta2 += n[ik] * (ik + 0.5) * dkt * dkt * 2.
-                           * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
-                dEdeta2 += E[ik] * (ik + 0.5) * dkt * dkt * 2.
-                           * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
-                if (ik * dkt / a * hbarc > 3.)  //
-                {
-                    dNdetaCut += n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                    dEdetaCut += E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                }
-                if (ik * dkt / a * hbarc > 6.)  // large cut
-                {
-                    dNdetaCut2 += n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                    dEdetaCut2 += E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI;
-                }
-            } else {
-                dNdeta2 += n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                           * cosh(param->getRapidity())
-                           / (sqrt(
-                               pow(cosh(param->getRapidity()), 2.)
-                               + m * m
-                                     / (((ik + 0.5) * dkt / a * hbarc)
-                                        * ((ik + 0.5) * dkt / a
-                                           * hbarc))));  // integrate, gives a
-                                                         // ik*dkt*2pi*dkt
-                dEdeta2 += E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                           * cosh(param->getRapidity())
-                           / (sqrt(
-                               pow(cosh(param->getRapidity()), 2.)
-                               + m * m
-                                     / (((ik + 0.5) * dkt / a * hbarc)
-                                        * ((ik + 0.5) * dkt / a
-                                           * hbarc))));  // integrate, gives a
-                                                         // ik*dkt*2pi*dkt
-
-                if (ik * dkt / a * hbarc > 3.)  //
-                {
-                    dNdetaCut +=
-                        n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                    dEdetaCut +=
-                        E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                }
-                if (ik * dkt / a * hbarc > 6.)  // large cut
-                {
-                    dNdetaCut2 +=
-                        n[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                    dEdetaCut2 +=
-                        E[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                        * cosh(param->getRapidity())
-                        / (sqrt(
-                            pow(cosh(param->getRapidity()), 2.)
-                            + m * m
-                                  / (((ik + 0.5) * dkt / a * hbarc)
-                                     * ((ik + 0.5) * dkt / a * hbarc))));
-                }
+            // integrate, gives a ik*dkt*2pi*dkt
+            const double weight =
+                computeMultiplicityBinWeight(param, m, ik, dkt, a);
+            dNdeta2 += n[ik] * weight;
+            dEdeta2 += E[ik] * weight;
+            if (ik * dkt / a * hbarc > 3.)  //
+            {
+                dNdetaCut += n[ik] * weight;
+                dEdetaCut += E[ik] * weight;
+            }
+            if (ik * dkt / a * hbarc > 6.)  // large cut
+            {
+                dNdetaCut2 += n[ik] * weight;
+                dEdetaCut2 += E[ik] * weight;
             }
         }
     }

@@ -432,6 +432,477 @@ void MyEigen::writeTmunu4D(Lattice *lat, Parameters *param, int it) {
     flowVelocity4DImpl(lat, param, it, false, true);
 }
 
+double MyEigen::writeHydroText(
+    Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly,
+    int N, double L, double a, double dtau, double gfactor, int hx, int hy,
+    int heta, double hL, double deta, double ha, double tau0) {
+    double Etot = 0.;
+    if (tmunuOnly || param->getWriteOutputs() % 2 != 1) return Etot;
+
+    IPG_PROFILE_SCOPE("output.hydro_text");
+    stringstream streuH_name;
+    if (finalFlag) {
+        streuH_name << "epsilon-u-Hydro-TauHydro-" << param->getEventId()
+                    << ".dat";
+    } else {
+        streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
+                    << param->getEventId() << ".dat";
+    }
+    const string outputFilename = streuH_name.str();
+    vector<char> outputBuffer(kTextOutputBufferBytes);
+    ofstream foutEps2;
+    openBufferedTextOutput(foutEps2, outputBuffer, outputFilename);
+
+    foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
+             << " ymax= " << hy << " deta= " << deta << " dx= " << ha
+             << " dy= " << ha << " tau= " << tau0 << '\n';
+
+    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
+    double fracx, fracy, xlow, ylow, x, y;
+    double resultE, resultutau, resultux, resultuy, resultueta;
+    double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
+    double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy,
+        resultpietaeta;
+    double g2mu2A, g2mu2B;
+
+    for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
+    {
+        for (int ix = 0; ix < hx; ix++)  // loop over all positions
+        {
+            for (int iy = 0; iy < hy; iy++) {
+                x = -hL / 2. + ha * ix;
+                y = -hL / 2. + ha * iy;
+
+                if (std::abs(x) < (L / 2. - 0.5)
+                    && std::abs(y) < (L / 2. - 0.5)) {
+                    xpos = static_cast<int>(
+                        floor((x + L / 2.) / a + 0.0000000001));
+                    ypos = static_cast<int>(
+                        floor((y + L / 2.) / a + 0.0000000001));
+
+                    if (xpos < N - 1)
+                        xposUp = xpos + 1;
+                    else
+                        xposUp = xpos;
+
+                    if (ypos < N - 1)
+                        yposUp = ypos + 1;
+                    else
+                        yposUp = ypos;
+
+                    xlow = -L / 2. + a * xpos;
+                    ylow = -L / 2. + a * ypos;
+
+                    fracx = (x - xlow) / a;
+
+                    pos1 = xpos * N + ypos;
+                    pos2 = xposUp * N + ypos;
+                    pos3 = xpos * N + yposUp;
+                    pos4 = xposUp * N + yposUp;
+
+                    fracy = (y - ylow) / a;
+
+                    // Note: the interpolated utau computed here would be
+                    // immediately overwritten below by the u^mu
+                    // normalization condition, so it is intentionally
+                    // not interpolated at all.
+                    resultE = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getEpsilon, true);
+                    g2mu2A = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getg2mu2A, true);
+                    g2mu2B = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getg2mu2B, true);
+                    resultux = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getux);
+                    resultuy = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getuy);
+                    resultueta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getueta);
+                    resultpi00 = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpitautau);
+                    resultpi0x = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpitaux);
+                    resultpi0y = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpitauy);
+                    resultpi0eta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpitaueta);
+                    resultpixy = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpixy);
+                    resultpixeta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpixeta);
+                    resultpiyeta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpiyeta);
+                    resultpixx = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpixx);
+                    resultpiyy = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpiyy);
+                    resultpietaeta = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getpietaeta);
+
+                    resultutau = sqrt(
+                        1. + resultux * resultux + resultuy * resultuy
+                        + tau0 * tau0 * resultueta * resultueta);
+
+                    Etot += abs(hbarc * resultE * gfactor) * ha * ha * it
+                            * dtau * a;
+                    if (abs(hbarc * resultE * gfactor) > 0.0000000001) {
+                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta
+                                 << " " << x << " " << y << " "
+                                 << abs(hbarc * resultE * gfactor) << " "
+                                 << resultutau << " " << resultux << " "
+                                 << resultuy << " " << resultueta << " "
+                                 << resultpi00 * gfactor << " "
+                                 << resultpi0x * gfactor << " "
+                                 << resultpi0y * gfactor << " "
+                                 << resultpi0eta * gfactor << " "
+                                 << resultpixx * gfactor << " "
+                                 << resultpixy * gfactor << " "
+                                 << resultpixeta * gfactor << " "
+                                 << resultpiyy * gfactor << " "
+                                 << resultpiyeta * gfactor << " "
+                                 << resultpietaeta * gfactor << '\n';
+                    } else {
+                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta
+                                 << " " << x << " " << y << " " << 0. << " "
+                                 << 1. << " " << 0. << " " << 0. << " "
+                                 << 0. << " " << 0. << " " << 0. << " "
+                                 << 0. << " " << 0. << " " << 0. << " "
+                                 << 0. << " " << 0. << " " << 0. << " "
+                                 << 0. << " " << 0. << '\n';
+                    }
+                } else {
+                    foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
+                             << x << " " << y << " " << 0. << " " << 1.
+                             << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << '\n';
+                }
+            }
+        }
+        foutEps2 << '\n';
+    }
+
+    closeBufferedTextOutput(foutEps2, outputFilename);
+    messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot << " GeV";
+    messager_.flush("info");
+    return Etot;
+}
+
+void MyEigen::writeRawTmunu(
+    Lattice *lat, Parameters *param, int it, int N, double L, double a,
+    double dtau, double gfactor, int hx, int hy, int heta, double hL,
+    double deta, double ha, double tau0) {
+    if (static_cast<int>(param->getWriteOutputs() / 4) != 1) return;
+
+    double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
+    double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
+    const bool writeBinaryTmunu = binaryTmunuEnabled(param);
+    stringstream strTmunu_name;
+    strTmunu_name << "Tmunu-t" << it * dtau * a << "-" << param->getEventId()
+                  << (writeBinaryTmunu ? ".ipgt" : ".dat");
+    IPG_PROFILE_SCOPE(
+        writeBinaryTmunu ? "output.tmunu_binary" : "output.tmunu_text");
+    const string outputFilename = strTmunu_name.str();
+    ofstream foutEps1;
+    vector<char> outputBuffer;
+    vector<float> binaryRow;
+    if (writeBinaryTmunu) {
+        openTmunuBinaryOutput(
+            foutEps1, outputFilename, hx, hy, heta, tau0, deta, ha,
+            param->getEventId());
+        binaryRow.resize(static_cast<std::size_t>(hx) * 10u);
+    } else {
+        outputBuffer.resize(kTextOutputBufferBytes);
+        openBufferedTextOutput(foutEps1, outputBuffer, outputFilename);
+        foutEps1 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
+                 << " ymax= " << hy << " deta= " << deta << " dx= " << ha
+                 << " dy= " << ha << '\n';
+    }
+
+    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
+    double fracx, fracy, xlow, ylow, x, y;
+    // loop over all positions
+    for (int iy = 0; iy < hy; iy++) {
+        for (int ix = 0; ix < hx; ix++) {
+            x = -hL / 2. + ha * ix;
+            y = -hL / 2. + ha * iy;
+            if (abs(x) < L / 2. && abs(y) < L / 2.) {
+                xpos = static_cast<int>(floor((x + L / 2.) / a + 0.0000000001));
+                ypos = static_cast<int>(floor((y + L / 2.) / a + 0.0000000001));
+
+                if (xpos < N - 1) {
+                    xposUp = xpos + 1;
+                } else {
+                    xposUp = xpos;
+                }
+                if (ypos < N - 1) {
+                    yposUp = ypos + 1;
+                } else {
+                    yposUp = ypos;
+                }
+
+                xlow = -L / 2. + a * xpos;
+                ylow = -L / 2. + a * ypos;
+
+                pos1 = xpos * N + ypos;
+                pos2 = xposUp * N + ypos;
+                pos3 = xpos * N + yposUp;
+                pos4 = xposUp * N + yposUp;
+
+                fracx = (x - xlow) / a;
+                fracy = (y - ylow) / a;
+
+                resultT00 = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTtautau);
+                resultT0x = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTtaux);
+                resultT0y = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTtauy);
+                resultT0eta = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTtaueta);
+                resultTxx = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTxx);
+                resultTxy = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTxy);
+                resultTxeta = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTxeta);
+                resultTyy = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTyy);
+                resultTyeta = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTyeta);
+                resultTetaeta = interpolateCellField(
+                    lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                    &Cell::getTetaeta);
+
+                double values[10];
+                if (resultT00 * gfactor * hbarc > smallEps) {
+                    values[0] = resultT00 * gfactor * hbarc;
+                    values[1] = resultTxx * gfactor * hbarc;
+                    values[2] = resultTyy * gfactor * hbarc;
+                    values[3] = tau0 * tau0 * resultTetaeta * gfactor * hbarc;
+                    values[4] = -resultT0x * gfactor * hbarc;
+                    values[5] = -resultT0y * gfactor * hbarc;
+                    values[6] = -tau0 * resultT0eta * gfactor * hbarc;
+                    values[7] = -resultTxy * gfactor * hbarc;
+                    values[8] = -tau0 * resultTyeta * gfactor * hbarc;
+                    values[9] = -tau0 * resultTxeta * gfactor * hbarc;
+                } else {
+                    values[0] = smallEps;
+                    values[1] = smallEps / 2.;
+                    values[2] = smallEps / 2.;
+                    for (int component = 3; component < 10; ++component) {
+                        values[component] = 0.0;
+                    }
+                }
+                if (writeBinaryTmunu) {
+                    const std::size_t offset =
+                        static_cast<std::size_t>(ix) * 10u;
+                    for (int component = 0; component < 10; ++component) {
+                        binaryRow[offset + component] =
+                            static_cast<float>(values[component]);
+                    }
+                } else {
+                    foutEps1 << ix << " " << iy;
+                    for (int component = 0; component < 10; ++component) {
+                        foutEps1 << " " << values[component];
+                    }
+                    foutEps1 << '\n';
+                }
+            } else {
+                double values[10] = {smallEps, smallEps / 2., smallEps / 2.,
+                                      0.0,      0.0,           0.0,
+                                      0.0,      0.0,           0.0,
+                                      0.0};
+                if (writeBinaryTmunu) {
+                    const std::size_t offset =
+                        static_cast<std::size_t>(ix) * 10u;
+                    for (int component = 0; component < 10; ++component) {
+                        binaryRow[offset + component] =
+                            static_cast<float>(values[component]);
+                    }
+                } else {
+                    foutEps1 << ix << " " << iy;
+                    for (int component = 0; component < 10; ++component) {
+                        foutEps1 << " " << values[component];
+                    }
+                    foutEps1 << '\n';
+                }
+            }
+        }
+        if (writeBinaryTmunu) {
+            foutEps1.write(
+                reinterpret_cast<const char *>(binaryRow.data()),
+                static_cast<std::streamsize>(
+                    binaryRow.size() * sizeof(binaryRow[0])));
+        } else {
+            foutEps1 << '\n';
+        }
+    }
+    closeBufferedTextOutput(foutEps1, outputFilename);
+}
+
+void MyEigen::writeJazma(
+    Lattice *lat, Parameters *param, int it, double Etot, int N, double L,
+    double a, double dtau, int hx, int hy, int heta, double hL, double deta,
+    double ha) {
+    if (static_cast<int>((param->getWriteOutputs() % 4) / 2) != 1) return;
+
+    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
+    double fracx, fracy, xlow, ylow, x, y;
+    double g2mu2A, g2mu2B;
+
+    double Jaztot = 0.;
+    // Jazma output:
+    // compute sum first for normalization
+    for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
+    {
+        for (int ix = 0; ix < hx; ix++)  // loop over all positions
+        {
+            for (int iy = 0; iy < hy; iy++) {
+                x = -hL / 2. + ha * ix;
+                y = -hL / 2. + ha * iy;
+
+                if (abs(x) < L / 2. && abs(y) < L / 2.) {
+                    xpos = static_cast<int>(
+                        floor((x + L / 2.) / a + 0.0000000001));
+                    ypos = static_cast<int>(
+                        floor((y + L / 2.) / a + 0.0000000001));
+
+                    if (xpos < N - 1)
+                        xposUp = xpos + 1;
+                    else
+                        xposUp = xpos;
+
+                    if (ypos < N - 1)
+                        yposUp = ypos + 1;
+                    else
+                        yposUp = ypos;
+
+                    xlow = -L / 2. + a * xpos;
+                    ylow = -L / 2. + a * ypos;
+
+                    fracx = (x - xlow) / a;
+                    fracy = (y - ylow) / a;
+
+                    pos1 = xpos * N + ypos;
+                    pos2 = xposUp * N + ypos;
+                    pos3 = xpos * N + yposUp;
+                    pos4 = xposUp * N + yposUp;
+
+                    g2mu2A = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getg2mu2A, true);
+                    g2mu2B = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getg2mu2B, true);
+
+                    Jaztot += g2mu2A * g2mu2B * ha * ha * it * dtau
+                              * a;  // same units as in Etot above
+                }
+            }
+        }
+    }
+
+    stringstream strJaz_name;
+    strJaz_name << "Jazma-Hydro-t" << it * dtau * a << "-"
+                << param->getEventId() << ".dat";
+    std::string Jaz_name;
+    Jaz_name = strJaz_name.str();
+
+    ofstream foutEps3(Jaz_name.c_str(), std::ios::out);
+
+    foutEps3 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
+             << " ymax= " << hy << " deta= " << deta << " dx= " << ha
+             << " dy= " << ha << endl;
+
+    for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
+    {
+        for (int ix = 0; ix < hx; ix++)  // loop over all positions
+        {
+            for (int iy = 0; iy < hy; iy++) {
+                x = -hL / 2. + ha * ix;
+                y = -hL / 2. + ha * iy;
+
+                if (abs(x) < L / 2. && abs(y) < L / 2.) {
+                    xpos = static_cast<int>(
+                        floor((x + L / 2.) / a + 0.0000000001));
+                    ypos = static_cast<int>(
+                        floor((y + L / 2.) / a + 0.0000000001));
+
+                    if (xpos < N - 1)
+                        xposUp = xpos + 1;
+                    else
+                        xposUp = xpos;
+
+                    if (ypos < N - 1)
+                        yposUp = ypos + 1;
+                    else
+                        yposUp = ypos;
+
+                    xlow = -L / 2. + a * xpos;
+                    ylow = -L / 2. + a * ypos;
+
+                    fracx = (x - xlow) / a;
+                    fracy = (y - ylow) / a;
+
+                    pos1 = xpos * N + ypos;
+                    pos2 = xposUp * N + ypos;
+                    pos3 = xpos * N + yposUp;
+                    pos4 = xposUp * N + yposUp;
+
+                    g2mu2A = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getg2mu2A, true);
+                    g2mu2B = interpolateCellField(
+                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                        &Cell::getg2mu2B, true);
+
+                    foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
+                             << x << " " << y << " "
+                             << g2mu2A * g2mu2B / Jaztot * Etot << " " << 1.
+                             << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << endl;
+                } else {
+                    foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
+                             << x << " " << y << " " << 0. << " " << 1.
+                             << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << " " << 0.
+                             << " " << 0. << " " << 0. << " " << 0. << " "
+                             << 0. << " " << 0. << " " << 0. << endl;
+                }
+            }
+        }
+    }
+}
+
 void MyEigen::flowVelocity4DImpl(
     Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly) {
     int N = param->getSize();
@@ -486,8 +957,6 @@ void MyEigen::flowVelocity4DImpl(
         messager_.flush("info");
     }
 
-    double Etot = 0.;
-
     // output for hydro
     if (param->getWriteOutputs() <= 0) return;
 
@@ -525,467 +994,18 @@ void MyEigen::flowVelocity4DImpl(
             "the computed one.");
     }
 
-    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3;
-    double fracx, fracy, x1, x2;
-    double xlow, ylow;
-    int pos4;
-    double resultE, resultutau, resultux, resultuy, resultueta;
-    double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
-    double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy,
-        resultpietaeta;
-    double g2mu2A, g2mu2B;
-
     double tau0 = it * dtau * a;
+    double ha = hL / static_cast<double>(hx);
 
-    double ha;
-    ha = hL / static_cast<double>(hx);
-
-    stringstream streuH_name;
-    if (finalFlag) {
-        streuH_name << "epsilon-u-Hydro-TauHydro-" << param->getEventId()
-                    << ".dat";
-    } else {
-        streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
-                    << param->getEventId() << ".dat";
-    }
-
-    if (!tmunuOnly && param->getWriteOutputs() % 2 == 1) {
-        IPG_PROFILE_SCOPE("output.hydro_text");
-        const string outputFilename = streuH_name.str();
-        vector<char> outputBuffer(kTextOutputBufferBytes);
-        ofstream foutEps2;
-        openBufferedTextOutput(foutEps2, outputBuffer, outputFilename);
-
-        foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
-                 << " ymax= " << hy << " deta= " << deta << " dx= " << ha
-                 << " dy= " << ha << " tau= " << tau0 << '\n';
-
-        for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
-        {
-            for (int ix = 0; ix < hx; ix++)  // loop over all positions
-            {
-                for (int iy = 0; iy < hy; iy++) {
-                    x = -hL / 2. + ha * ix;
-                    y = -hL / 2. + ha * iy;
-
-                    if (std::abs(x) < (L / 2. - 0.5)
-                        && std::abs(y) < (L / 2. - 0.5)) {
-                        // if (std::abs(x) < L / 2. && std::abs(y) < L / 2.) {
-                        xpos = static_cast<int>(
-                            floor((x + L / 2.) / a + 0.0000000001));
-                        ypos = static_cast<int>(
-                            floor((y + L / 2.) / a + 0.0000000001));
-
-                        if (xpos < N - 1)
-                            xposUp = xpos + 1;
-                        else
-                            xposUp = xpos;
-
-                        if (ypos < N - 1)
-                            yposUp = ypos + 1;
-                        else
-                            yposUp = ypos;
-
-                        xlow = -L / 2. + a * xpos;
-                        ylow = -L / 2. + a * ypos;
-
-                        fracx = (x - xlow) / a;
-
-                        pos1 = xpos * N + ypos;
-                        pos2 = xposUp * N + ypos;
-                        pos3 = xpos * N + yposUp;
-                        pos4 = xposUp * N + yposUp;
-
-                        fracy = (y - ylow) / a;
-
-                        // Note: the interpolated utau computed here would be
-                        // immediately overwritten below by the u^mu
-                        // normalization condition, so it is intentionally
-                        // not interpolated at all.
-                        resultE = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getEpsilon, true);
-                        g2mu2A = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getg2mu2A, true);
-                        g2mu2B = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getg2mu2B, true);
-                        resultux = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getux);
-                        resultuy = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getuy);
-                        resultueta = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getueta);
-                        resultpi00 = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpitautau);
-                        resultpi0x = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpitaux);
-                        resultpi0y = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpitauy);
-                        resultpi0eta = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpitaueta);
-                        resultpixy = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpixy);
-                        resultpixeta = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpixeta);
-                        resultpiyeta = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpiyeta);
-                        resultpixx = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpixx);
-                        resultpiyy = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpiyy);
-                        resultpietaeta = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getpietaeta);
-
-                        resultutau = sqrt(
-                            1. + resultux * resultux + resultuy * resultuy
-                            + tau0 * tau0 * resultueta * resultueta);
-
-                        Etot += abs(hbarc * resultE * gfactor) * ha * ha * it
-                                * dtau * a;
-                        if (abs(hbarc * resultE * gfactor) > 0.0000000001) {
-                            foutEps2 << -(heta - 1) / 2. * deta + deta * ieta
-                                     << " " << x << " " << y << " "
-                                     << abs(hbarc * resultE * gfactor) << " "
-                                     << resultutau << " " << resultux << " "
-                                     << resultuy << " " << resultueta << " "
-                                     << resultpi00 * gfactor << " "
-                                     << resultpi0x * gfactor << " "
-                                     << resultpi0y * gfactor << " "
-                                     << resultpi0eta * gfactor << " "
-                                     << resultpixx * gfactor << " "
-                                     << resultpixy * gfactor << " "
-                                     << resultpixeta * gfactor << " "
-                                     << resultpiyy * gfactor << " "
-                                     << resultpiyeta * gfactor << " "
-                                     << resultpietaeta * gfactor << '\n';
-                        } else {
-                            foutEps2 << -(heta - 1) / 2. * deta + deta * ieta
-                                     << " " << x << " " << y << " " << 0. << " "
-                                     << 1. << " " << 0. << " " << 0. << " "
-                                     << 0. << " " << 0. << " " << 0. << " "
-                                     << 0. << " " << 0. << " " << 0. << " "
-                                     << 0. << " " << 0. << " " << 0. << " "
-                                     << 0. << " " << 0. << '\n';
-                        }
-                    } else {
-                        foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
-                                 << x << " " << y << " " << 0. << " " << 1.
-                                 << " " << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << " " << 0.
-                                 << " " << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << '\n';
-                    }
-                }
-            }
-            foutEps2 << '\n';
-        }
-
-        closeBufferedTextOutput(foutEps2, outputFilename);
-        messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot << " GeV";
-        messager_.flush("info");
-    }
-
-    if (static_cast<int>(param->getWriteOutputs() / 4) == 1) {
-        double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx,
-            resultTxy;
-        double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
-        const bool writeBinaryTmunu = binaryTmunuEnabled(param);
-        stringstream strTmunu_name;
-        strTmunu_name << "Tmunu-t" << it * dtau * a << "-"
-                      << param->getEventId()
-                      << (writeBinaryTmunu ? ".ipgt" : ".dat");
-        IPG_PROFILE_SCOPE(
-            writeBinaryTmunu ? "output.tmunu_binary" : "output.tmunu_text");
-        const string outputFilename = strTmunu_name.str();
-        ofstream foutEps1;
-        vector<char> outputBuffer;
-        vector<float> binaryRow;
-        if (writeBinaryTmunu) {
-            openTmunuBinaryOutput(
-                foutEps1, outputFilename, hx, hy, heta, tau0, deta, ha,
-                param->getEventId());
-            binaryRow.resize(static_cast<std::size_t>(hx) * 10u);
-        } else {
-            outputBuffer.resize(kTextOutputBufferBytes);
-            openBufferedTextOutput(foutEps1, outputBuffer, outputFilename);
-            foutEps1 << "# dummy " << 1 << " etamax= " << heta
-                     << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
-                     << " dx= " << ha << " dy= " << ha << '\n';
-        }
-        // loop over all positions
-        for (int iy = 0; iy < hy; iy++) {
-            for (int ix = 0; ix < hx; ix++) {
-                x = -hL / 2. + ha * ix;
-                y = -hL / 2. + ha * iy;
-                if (abs(x) < L / 2. && abs(y) < L / 2.) {
-                    xpos = static_cast<int>(
-                        floor((x + L / 2.) / a + 0.0000000001));
-                    ypos = static_cast<int>(
-                        floor((y + L / 2.) / a + 0.0000000001));
-
-                    if (xpos < N - 1) {
-                        xposUp = xpos + 1;
-                    } else {
-                        xposUp = xpos;
-                    }
-                    if (ypos < N - 1) {
-                        yposUp = ypos + 1;
-                    } else {
-                        yposUp = ypos;
-                    }
-
-                    xlow = -L / 2. + a * xpos;
-                    ylow = -L / 2. + a * ypos;
-
-                    pos1 = xpos * N + ypos;
-                    pos2 = xposUp * N + ypos;
-                    pos3 = xpos * N + yposUp;
-                    pos4 = xposUp * N + yposUp;
-
-                    fracx = (x - xlow) / a;
-                    fracy = (y - ylow) / a;
-
-                    resultT00 = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTtautau);
-                    resultT0x = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTtaux);
-                    resultT0y = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTtauy);
-                    resultT0eta = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTtaueta);
-                    resultTxx = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTxx);
-                    resultTxy = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTxy);
-                    resultTxeta = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTxeta);
-                    resultTyy = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTyy);
-                    resultTyeta = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTyeta);
-                    resultTetaeta = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getTetaeta);
-
-                    double values[10];
-                    if (resultT00 * gfactor * hbarc > smallEps) {
-                        values[0] = resultT00 * gfactor * hbarc;
-                        values[1] = resultTxx * gfactor * hbarc;
-                        values[2] = resultTyy * gfactor * hbarc;
-                        values[3] =
-                            tau0 * tau0 * resultTetaeta * gfactor * hbarc;
-                        values[4] = -resultT0x * gfactor * hbarc;
-                        values[5] = -resultT0y * gfactor * hbarc;
-                        values[6] = -tau0 * resultT0eta * gfactor * hbarc;
-                        values[7] = -resultTxy * gfactor * hbarc;
-                        values[8] = -tau0 * resultTyeta * gfactor * hbarc;
-                        values[9] = -tau0 * resultTxeta * gfactor * hbarc;
-                    } else {
-                        values[0] = smallEps;
-                        values[1] = smallEps / 2.;
-                        values[2] = smallEps / 2.;
-                        for (int component = 3; component < 10; ++component) {
-                            values[component] = 0.0;
-                        }
-                    }
-                    if (writeBinaryTmunu) {
-                        const std::size_t offset =
-                            static_cast<std::size_t>(ix) * 10u;
-                        for (int component = 0; component < 10; ++component) {
-                            binaryRow[offset + component] =
-                                static_cast<float>(values[component]);
-                        }
-                    } else {
-                        foutEps1 << ix << " " << iy;
-                        for (int component = 0; component < 10; ++component) {
-                            foutEps1 << " " << values[component];
-                        }
-                        foutEps1 << '\n';
-                    }
-                } else {
-                    double values[10] = {
-                        smallEps, smallEps / 2., smallEps / 2., 0.0, 0.0,
-                        0.0,      0.0,           0.0,           0.0, 0.0};
-                    if (writeBinaryTmunu) {
-                        const std::size_t offset =
-                            static_cast<std::size_t>(ix) * 10u;
-                        for (int component = 0; component < 10; ++component) {
-                            binaryRow[offset + component] =
-                                static_cast<float>(values[component]);
-                        }
-                    } else {
-                        foutEps1 << ix << " " << iy;
-                        for (int component = 0; component < 10; ++component) {
-                            foutEps1 << " " << values[component];
-                        }
-                        foutEps1 << '\n';
-                    }
-                }
-            }
-            if (writeBinaryTmunu) {
-                foutEps1.write(
-                    reinterpret_cast<const char *>(binaryRow.data()),
-                    static_cast<std::streamsize>(
-                        binaryRow.size() * sizeof(binaryRow[0])));
-            } else {
-                foutEps1 << '\n';
-            }
-        }
-        closeBufferedTextOutput(foutEps1, outputFilename);
-    }
-
+    const double Etot = writeHydroText(
+        lat, param, it, finalFlag, tmunuOnly, N, L, a, dtau, gfactor, hx, hy,
+        heta, hL, deta, ha, tau0);
+    writeRawTmunu(
+        lat, param, it, N, L, a, dtau, gfactor, hx, hy, heta, hL, deta, ha,
+        tau0);
     if (tmunuOnly) return;
+    writeJazma(lat, param, it, Etot, N, L, a, dtau, hx, hy, heta, hL, deta, ha);
 
-    if (static_cast<int>((param->getWriteOutputs() % 4) / 2) == 1) {
-        double Jaztot = 0.;
-        // Jazma output:
-        // compute sum first for normalization
-        for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
-        {
-            for (int ix = 0; ix < hx; ix++)  // loop over all positions
-            {
-                for (int iy = 0; iy < hy; iy++) {
-                    x = -hL / 2. + ha * ix;
-                    y = -hL / 2. + ha * iy;
-
-                    if (abs(x) < L / 2. && abs(y) < L / 2.) {
-                        xpos = static_cast<int>(
-                            floor((x + L / 2.) / a + 0.0000000001));
-                        ypos = static_cast<int>(
-                            floor((y + L / 2.) / a + 0.0000000001));
-
-                        if (xpos < N - 1)
-                            xposUp = xpos + 1;
-                        else
-                            xposUp = xpos;
-
-                        if (ypos < N - 1)
-                            yposUp = ypos + 1;
-                        else
-                            yposUp = ypos;
-
-                        xlow = -L / 2. + a * xpos;
-                        ylow = -L / 2. + a * ypos;
-
-                        fracx = (x - xlow) / a;
-                        fracy = (y - ylow) / a;
-
-                        pos1 = xpos * N + ypos;
-                        pos2 = xposUp * N + ypos;
-                        pos3 = xpos * N + yposUp;
-                        pos4 = xposUp * N + yposUp;
-
-                        g2mu2A = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getg2mu2A, true);
-                        g2mu2B = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getg2mu2B, true);
-
-                        Jaztot += g2mu2A * g2mu2B * ha * ha * it * dtau
-                                  * a;  // same units as in Etot above
-                    }
-                }
-            }
-        }
-
-        stringstream strJaz_name;
-        strJaz_name << "Jazma-Hydro-t" << it * dtau * a << "-"
-                    << param->getEventId() << ".dat";
-        std::string Jaz_name;
-        Jaz_name = strJaz_name.str();
-
-        ofstream foutEps3(Jaz_name.c_str(), std::ios::out);
-
-        foutEps3 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
-                 << " ymax= " << hy << " deta= " << deta << " dx= " << ha
-                 << " dy= " << ha << endl;
-
-        for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
-        {
-            for (int ix = 0; ix < hx; ix++)  // loop over all positions
-            {
-                for (int iy = 0; iy < hy; iy++) {
-                    x = -hL / 2. + ha * ix;
-                    y = -hL / 2. + ha * iy;
-
-                    if (abs(x) < L / 2. && abs(y) < L / 2.) {
-                        xpos = static_cast<int>(
-                            floor((x + L / 2.) / a + 0.0000000001));
-                        ypos = static_cast<int>(
-                            floor((y + L / 2.) / a + 0.0000000001));
-
-                        if (xpos < N - 1)
-                            xposUp = xpos + 1;
-                        else
-                            xposUp = xpos;
-
-                        if (ypos < N - 1)
-                            yposUp = ypos + 1;
-                        else
-                            yposUp = ypos;
-
-                        xlow = -L / 2. + a * xpos;
-                        ylow = -L / 2. + a * ypos;
-
-                        fracx = (x - xlow) / a;
-                        fracy = (y - ylow) / a;
-
-                        pos1 = xpos * N + ypos;
-                        pos2 = xposUp * N + ypos;
-                        pos3 = xpos * N + yposUp;
-                        pos4 = xposUp * N + yposUp;
-
-                        g2mu2A = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getg2mu2A, true);
-                        g2mu2B = interpolateCellField(
-                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                            &Cell::getg2mu2B, true);
-
-                        foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
-                                 << x << " " << y << " "
-                                 << g2mu2A * g2mu2B / Jaztot * Etot << " " << 1.
-                                 << " " << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << " " << 0.
-                                 << " " << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << endl;
-                    } else {
-                        foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
-                                 << x << " " << y << " " << 0. << " " << 1.
-                                 << " " << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << " " << 0.
-                                 << " " << 0. << " " << 0. << " " << 0. << " "
-                                 << 0. << " " << 0. << " " << 0. << endl;
-                    }
-                }
-            }
-        }
-    }
     messager_.info("[MyEigen::flowVelocity4DImpl]: Wrote outputs");
     // done output for hydro
 }

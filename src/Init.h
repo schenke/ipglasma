@@ -30,8 +30,6 @@ class Init {
 
     double const deltaYNuc_ = 0.25;  // for the new table
     FFT fft_;
-    //  Matrix** A;
-    //  Glauber *glauber;
     double Qs2Nuclear_[iTpmax_][iymaxNuc_];
     double Tlist_[iTpmax_];
 
@@ -76,9 +74,6 @@ class Init {
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
     void setV(Lattice *lat, Parameters *param, Random *random);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
-
-    // void eccentricity(Lattice *lat, Group *group, Parameters *param, Random
-    // *random, Glauber *glauber);
 
     Matrix getUfromExponent(std::vector<double> &Q);
     bool findUInForwardLightcone(

@@ -353,12 +353,6 @@ void MyEigen::flowVelocity4DImpl(
                             lat->cells[pos]->setueta(ueta);
                             lat->cells[pos]->setEpsilon(eps);
 
-                            // //clean up numerical noise outside the
-                            // interaction region if
-                            // (lat->cells[pos]->getg2mu2A() < 1e-12 ||
-                            //     lat->cells[pos]->getg2mu2B() < 1e-12)
-                            //   lat->cells[pos]->setEpsilon(0.);
-
                             averageux += ux * ux * eps;
                             averageuy += uy * uy * eps;
                             averageueta += ueta * ueta * eps * it * dtau * a
@@ -468,9 +462,6 @@ void MyEigen::flowVelocity4DImpl(
         messager_.flush("info");
     }
 
-    //  double maxtime = param->getMaxtime(); // maxtime is in fm
-    //  int itmax = static_cast<int>(floor(maxtime/(a*dtau)+1e-10));
-
     double Etot = 0.;
 
     // output for hydro
@@ -534,17 +525,12 @@ void MyEigen::flowVelocity4DImpl(
                     << param->getEventId() << ".dat";
     }
 
-    // stringstream strEtot_name;
-    // strEtot_name << "Etot-t" << it*dtau*a << "-" << param->getEventId() <<
-    // ".dat"; string Etot_name; Etot_name = strEtot_name.str();
-
     if (!tmunuOnly && param->getWriteOutputs() % 2 == 1) {
         IPG_PROFILE_SCOPE("output.hydro_text");
         const string outputFilename = streuH_name.str();
         vector<char> outputBuffer(kTextOutputBufferBytes);
         ofstream foutEps2;
         openBufferedTextOutput(foutEps2, outputBuffer, outputFilename);
-        //      ofstream foutEtot(Etot_name.c_str(),ios::out);
 
         foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
                  << " ymax= " << hy << " deta= " << deta << " dx= " << ha
@@ -578,9 +564,6 @@ void MyEigen::flowVelocity4DImpl(
 
                         xlow = -L / 2. + a * xpos;
                         ylow = -L / 2. + a * ypos;
-
-                        // xhigh = -L/2.+a*xposUp;
-                        // yhigh = -L/2.+a*yposUp;
 
                         fracx = (x - xlow) / a;
 
@@ -951,8 +934,6 @@ void MyEigen::flowVelocity4DImpl(
         messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot << " GeV";
         messager_.flush("info");
     }
-    //       foutEtot <<  Etot << endl;
-    // foutEtot.close();
 
     if (static_cast<int>(param->getWriteOutputs() / 4) == 1) {
         double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx,
@@ -1366,22 +1347,11 @@ void MyEigen::flowVelocity4DImpl(
         std::string Jaz_name;
         Jaz_name = strJaz_name.str();
 
-        // stringstream strtwo_name;
-        // strtwo_name << "twopointfct-t" << it*dtau*a << "-" <<
-        // param->getEventId()
-        // << ".dat"; string two_name; two_name = strtwo_name.str();
-
         ofstream foutEps3(Jaz_name.c_str(), std::ios::out);
 
         foutEps3 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
                  << " ymax= " << hy << " deta= " << deta << " dx= " << ha
                  << " dy= " << ha << endl;
-
-        // ofstream foutEps4(two_name.c_str(),ios::out);
-
-        // foutEps4 << "# dummy " << 1 << " etamax= " << heta
-        //          << " xmax= " << hx << " ymax= " << hy << " deta= " << deta
-        //          << " dx= " << ha << " dy= " << ha << endl;
 
         for (int ieta = 0; ieta < heta; ieta++)  // loop over all positions
         {
@@ -1459,11 +1429,6 @@ void MyEigen::flowVelocity4DImpl(
 
                         g2mu2B = (1. - fracy) * x1 + fracy * x2;
 
-                        // QsAsqr=
-                        // g2mu2A*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
-                        // QsBsqr=
-                        // g2mu2B*param->getQsmuRatio()*param->getQsmuRatio()/a/a*hbarc*hbarc*param->getg()*param->getg();
-
                         foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
                                  << x << " " << y << " "
                                  << g2mu2A * g2mu2B / Jaztot * Etot << " " << 1.
@@ -1471,35 +1436,6 @@ void MyEigen::flowVelocity4DImpl(
                                  << 0. << " " << 0. << " " << 0. << " " << 0.
                                  << " " << 0. << " " << 0. << " " << 0. << " "
                                  << 0. << " " << 0. << " " << 0. << endl;
-
-                        // // write two point and one point functions in
-                        // [1/fm^6] and [1/fm^4] from
-                        // https://arxiv.org/pdf/1902.07168.pdf if (QsAsqr>0
-                        // && QsBsqr>0)
-                        //   {
-                        //     foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " <<
-                        //     x << " " << y << " "
-                        //              << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.))
-                        //                                                                  +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.)))
-                        //              << " "
-                        //              << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc
-                        //              << " " << sqrt(QsAsqr) << " " <<
-                        //              sqrt(QsBsqr) << " "
-                        //              << 16.*PI/9.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc*(QsAsqr/hbarc/hbarc*log(QsBsqr/pow(param->getm(),2.)+1.)
-                        //                                                                  +QsBsqr/hbarc/hbarc*log(QsAsqr/pow(param->getm(),2.)+1.)) << endl;
-                        //     //        cout << QsAsqr << " " << QsBsqr << " "
-                        //     << " " << param->getm()*param->getm() << endl;
-                        //   }
-                        // else
-                        //   {
-                        //     foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " <<
-                        //     x << " " << y << " "
-                        //              << 0. << " "
-                        //              << 4./3.*QsAsqr*QsBsqr/hbarc/hbarc/hbarc/hbarc
-                        //              <<
-                        //       " " << sqrt(QsAsqr) << " " << sqrt(QsBsqr) << "
-                        //       " << 0. << endl;
-                        //   }
                     } else {
                         foutEps3 << -(heta - 1) / 2. * deta + deta * ieta << " "
                                  << x << " " << y << " " << 0. << " " << 1.
@@ -1507,11 +1443,6 @@ void MyEigen::flowVelocity4DImpl(
                                  << 0. << " " << 0. << " " << 0. << " " << 0.
                                  << " " << 0. << " " << 0. << " " << 0. << " "
                                  << 0. << " " << 0. << " " << 0. << endl;
-                        // foutEps4 << -(heta-1)/2.*deta+deta*ieta << " " << x
-                        // << " " << y
-                        // << " "
-                        //          << 0. << " " << 0. << " "  << 0. << " " <<
-                        //          0. << " " << 0. << endl;
                     }
                 }
             }

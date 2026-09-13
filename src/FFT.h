@@ -24,8 +24,6 @@ using std::vector;
 
 template <typename T>
 std::vector<T> operator+(const std::vector<T> &a, const std::vector<T> &b) {
-    // assert(a.size() == b.size());
-
     std::vector<T> result;
     result.reserve(a.size());
 
@@ -89,9 +87,6 @@ class FFT {
 
     // Constructor.
     FFT(const int nn[]) {
-        //      if(fftw_init_threads()==0)
-        //  cerr << "Error initializing multi-threaded fftw." << endl;
-        // fftw_plan_with_nthreads(omp_get_max_threads());
         input =
             (fftw_complex *)fftw_malloc(sizeof(fftw_complex) * nn[0] * nn[1]);
         output =
@@ -137,7 +132,6 @@ class FFT {
         fftw_free(output);
         fftw_free(inputMany);
         fftw_free(outputMany);
-        // fftw_cleanup_threads();
     };
     void fftnVector(
         vector<complex<double>> **data, vector<complex<double>> **outdata,

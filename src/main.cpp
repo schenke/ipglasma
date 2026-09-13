@@ -89,7 +89,6 @@ int main(int argc, char *argv[]) {
         if (param->getUseTimeForSeed() == 1) {
             std::random_device ran_dev;
             rnum = ran_dev();
-            // rnum = time(0) + param->getSeed() * 10000;
         } else {
             rnum = param->getSeed();
             messager << "[main::main]: Random seed = " << rnum + (rank * 1000)
@@ -100,9 +99,6 @@ int main(int argc, char *argv[]) {
         if (param->getUseTimeForSeed() == 1) {
             messager << "[main::main]: Random seed = "
                      << param->getRandomSeed();
-            //<< " made from time " << rnum - param->getSeed() - (rank * 1000)
-            //<< " and argument (+1000*rank) "
-            //<< param->getSeed() + (rank * 1000);
             messager.flush("info");
         }
         random->init_genrand64(rnum + rank * 1000);
@@ -205,156 +201,12 @@ int main(int argc, char *argv[]) {
                 100);
         }
 
-        // measure and output eccentricity, triangularity
-        // init.eccentricity(lat, &group, param, random, glauber);
-
         // initialize evolution object
         Evolution evolution(nn);
 
         // either read k_T spectrum from file or do a fresh start
         if (param->getReadMultFromFile() == 1) {
             evolution.readNkt(param);
-        } else {
-            // clean files
-            // stringstream strNpartdNdy_name;
-            // strNpartdNdy_name << "NpartdNdy" << rank << ".dat";
-            // string NpartdNdy_name;
-            // NpartdNdy_name = strNpartdNdy_name.str();
-
-            // ofstream foutNN(NpartdNdy_name.c_str(),ios::out);
-            // foutNN.close();
-
-            // stringstream strNpartdNdyH_name;
-            // strNpartdNdyH_name << "NpartdNdyHadrons" << rank << ".dat";
-            // string NpartdNdyH_name;
-            // NpartdNdyH_name = strNpartdNdyH_name.str();
-
-            // ofstream foutNNH(NpartdNdyH_name.c_str(),ios::out);
-            // foutNNH.close();
-
-            // stringstream strNpartdEdy_name;
-            // strNpartdEdy_name << "NpartdEdy" << param->getEventId() <<
-            // ".dat"; string NpartdEdy_name; NpartdEdy_name =
-            // strNpartdEdy_name.str();
-
-            // ofstream foutE(NpartdEdy_name.c_str(),ios::out);
-            // foutE.close();
-
-            // stringstream strdNdy_name;
-            // strdNdy_name << "dNdy" << param->getEventId() << ".dat";
-            // string dNdy_name;
-            // dNdy_name = strdNdy_name.str();
-
-            // ofstream foutN(dNdy_name.c_str(),ios::out);
-            // foutN.close();
-
-            // stringstream strCorr_name;
-            // strCorr_name << "Corr" << param->getEventId() << ".dat";
-            // string Corr_name;
-            // Corr_name = strCorr_name.str();
-
-            // ofstream foutCorr(Corr_name.c_str(),ios::out);
-            // foutCorr.close();
-
-            // stringstream strPhiMult_name;
-            // strPhiMult_name << "MultPhi" << param->getEventId() << ".dat";
-            // string PhiMult_name;
-            // PhiMult_name = strPhiMult_name.str();
-
-            // ofstream foutPhiMult(PhiMult_name.c_str(),ios::out);
-            // foutPhiMult.close();
-
-            // stringstream strPhi2ParticleMult_name;
-            // strPhi2ParticleMult_name << "MultPhi2Particle" <<
-            // param->getEventId()
-            // << ".dat"; string Phi2ParticleMult_name; Phi2ParticleMult_name =
-            // strPhi2ParticleMult_name.str();
-
-            // ofstream
-            // foutPhi2ParticleMult(Phi2ParticleMult_name.c_str(),ios::out);
-            // foutPhi2ParticleMult.close();
-
-            // stringstream strPhiMultHad_name;
-            // strPhiMultHad_name << "MultPhiHadrons" << param->getEventId() <<
-            // ".dat"; string PhiMultHad_name; PhiMultHad_name =
-            // strPhiMultHad_name.str();
-
-            // ofstream foutPhiMultHad(PhiMultHad_name.c_str(),ios::out);
-            // foutPhiMultHad.close();
-
-            // stringstream strPhi2ParticleMultHad_name;
-            // strPhi2ParticleMultHad_name << "MultPhiHadrons2Particle" <<
-            // param->getEventId() << ".dat"; string Phi2ParticleMultHad_name;
-            // Phi2ParticleMultHad_name = strPhi2ParticleMultHad_name.str();
-
-            // ofstream
-            // foutPhi2ParticleMultHad(Phi2ParticleMultHad_name.c_str(),ios::out);
-            // foutPhi2ParticleMultHad.close();
-
-            // stringstream strame_name;
-            // strame_name << "AverageMaximalEpsilon" << param->getEventId() <<
-            // ".dat"; string ame_name; ame_name = strame_name.str();
-
-            // ofstream foutEpsA(ame_name.c_str(),ios::out);
-            // foutEpsA.close();
-
-            // stringstream strepsx_name;
-            // strepsx_name << "eps-x" << param->getEventId() << ".dat";
-            // string epsx_name;
-            // epsx_name = strepsx_name.str();
-
-            // ofstream foutEpsX(epsx_name.c_str(),ios::out);
-            // foutEpsX.close();
-
-            // stringstream strdEdy_name;
-            // strdEdy_name << "dEdy" << param->getEventId() << ".dat";
-            // string dEdy_name;
-            // dEdy_name = strdEdy_name.str();
-
-            // ofstream foutdE(dEdy_name.c_str(),ios::out);
-            // foutdE.close();
-
-            // stringstream straniso_name;
-            // straniso_name << "anisotropy" << param->getEventId() << ".dat";
-            // string aniso_name;
-            // aniso_name = straniso_name.str();
-
-            // ofstream foutAni(aniso_name.c_str(),ios::out);
-            // foutAni.close();
-
-            // stringstream strecc_name;
-            // strecc_name << "eccentricities" << param->getEventId() << ".dat";
-            // string ecc_name;
-            // ecc_name = strecc_name.str();
-
-            // ofstream foutEcc(ecc_name.c_str(),ios::out);
-            // foutEcc.close();
-
-            // stringstream strmult_name;
-            // strmult_name << "multiplicity" << param->getEventId() << ".dat";
-            // string mult_name;
-            // mult_name = strmult_name.str();
-            // ofstream foutmult(mult_name.c_str(),ios::out);
-            // foutmult.close();
-
-            // stringstream strmult2_name;
-            // strmult2_name << "multiplicityCorr" << param->getEventId() <<
-            // ".dat"; string mult2_name; mult2_name = strmult2_name.str();
-            // ofstream foutmult2(mult2_name.c_str(),ios::out);
-            // foutmult2.close();
-
-            // stringstream strmult3_name;
-            // strmult3_name << "multiplicityCorrFromPhi" << param->getEventId()
-            // <<
-            // ".dat"; string mult3_name; mult3_name = strmult3_name.str();
-            // ofstream foutmult3(mult3_name.c_str(),ios::out);
-            // foutmult3.close();
-
-            // stringstream strmult4_name;
-            // strmult4_name << "multiplicityCorrFromPhiHadrons" <<
-            // param->getEventId() << ".dat"; string mult4_name; mult4_name =
-            // strmult4_name.str(); ofstream
-            // foutmult4(mult4_name.c_str(),ios::out); foutmult4.close();
         }
 
         // Keep the lattice lifetime inside this block so destruction is timed
@@ -659,9 +511,6 @@ int readInput(
     param->setg2mu(setup->dFind(file_name, "g2mu"));
     param->setMaxtime(setup->dFind(file_name, "maxtime"));
     double lattice_a = param->getL() / static_cast<double>(param->getSize());
-    // param->setdtau(setup->dFind(file_name, "dtau"));
-    //   int iTimeSteps = static_cast<int>(10 * param->getMaxtime() /
-    //   lattice_a) + 1;
     int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a);
     param->setdtau(param->getMaxtime() / (iTimeSteps * lattice_a));
     param->setRunWithQs(setup->iFind(file_name, "runWith0Min1Avg2MaxQs"));

@@ -19,7 +19,6 @@ struct ReturnValue {
     double phi;
     int collided;
     bool proton;
-    // int acceptances;
 };
 
 struct Nucleus {

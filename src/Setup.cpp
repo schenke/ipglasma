@@ -101,7 +101,6 @@ double Setup::dFind(string file_name, string st) {
     stm << s;
     s2 = stm.str();
     x = ::atof(s2.c_str());
-    // x << stm;
     return x;
 } /* dFind */
 

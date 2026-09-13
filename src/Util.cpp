@@ -31,7 +31,6 @@ char *char_malloc(int n1) {
 
     /* pointer to the n1 array */
     char_ptr = (char *)malloc(sizeof(char) * n1);
-    // char_ptr = new char[n1];
 
     std::strcpy(char_ptr, "");
     return char_ptr;

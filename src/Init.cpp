@@ -500,8 +500,6 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 void Init::readNuclearQs(Parameters *param) {
     IPG_PROFILE_SCOPE("initialization.read_qs_table");
     // steps in qs0 and Y in the file
-    // double y[iymaxNuc_];
-    // double qs0[ibmax];
     string dummy;
     string T, Qs;
     // open file
@@ -2087,7 +2085,6 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     }
 
     stringstream strVOne_name;
-    // strVOne_name << "V1-" << param->getMPIRank() << ".txt";
     strVOne_name << "V-"
                  << param->getEventId()
                         + 2 * param->getSeed() * param->getMPISize();
@@ -2096,7 +2093,6 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     VOne_name = strVOne_name.str();
 
     stringstream strVTwo_name;
-    // strVTwo_name << "V2-" << param->getMPIRank() << ".txt";
     strVTwo_name << "V-"
                  << param->getEventId()
                         + (1 + 2 * param->getSeed()) * param->getMPISize();
@@ -2809,19 +2805,12 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
 
 #pragma omp for
         for (int pos = 0; pos < N * N; pos++) {
-            // AM = (lat->U[pos]); //+lat->cells[pos]->getAetaP());
-            // AP = (lat->U2[pos]); //+lat->cells[pos]->getAetaP());
-
             // this is pi in lattice units as needed for the evolution. (later,
             // the a^4 gives the right units for the energy density
             lat->Ux2[pos] =
                 (complex<double>(0., -2. / param->getg()) * (lat->U[pos]));
             // factor -2 because I have A^eta (note the 1/8 before)
             // but want \pi (E^z).
-
-            // lat->Ux2[pos] = (complex<double>(0.,-1./param->getg())*(AM+AP));
-            // // factor -2 because I have A^eta (note the 1/8 before) but want
-            // \pi (E^z).
         }
 
         const Matrix zero(0.);

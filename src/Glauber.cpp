@@ -421,21 +421,11 @@ double *Glauber::makeVy(double *vx, int maxi_num) {
     int i;
     static double *vy;
 
-    // if(maxi_num > 200) di = 100;
-    // if(maxi_num <= 200) di = 20;
-
     vy = Util::vector_malloc(maxi_num + 1);
-
-    // ofstream data_file(st.c_str());
-
-    // data_file << "EndOfData" << endl;
 
     for (i = 0; i <= maxi_num; i++) {
         vy[i] = nuInS(vx[i]);
-        // data_file << vx[i] << " " << vy[i] << endl;
     }
-
-    // data_file.close();
 
     return vy;
 } /* makeVy */
@@ -445,7 +435,6 @@ double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
     int i;
     FILE *input;
     static char *s, *sx;
-    // int bytes_read;
     s = Util::char_malloc(120);
     sx = Util::char_malloc(120);
 
@@ -509,7 +498,6 @@ double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
     int i;
     FILE *input;
     static char *s, *sy;
-    // int bytes_read;
     s = Util::char_malloc(120);
     sy = Util::char_malloc(120);
 
@@ -677,7 +665,6 @@ double Glauber::anum3Fermi(double R_WS) {
     double up, down, a_WS, rho, f;
 
     a_WS = Nuc_WS_->a_WS;
-    // w_WS = Nuc_WS_->w_WS;
     rho = Nuc_WS_->rho_WS;
 
     /* to pass to Anumintegrand */
@@ -752,7 +739,6 @@ double Glauber::anum3Gauss(double R_WS) {
     double up, down, a_WS, rho, f;
 
     a_WS = Nuc_WS_->a_WS;
-    // w_WS = Nuc_WS_->w_WS;
     rho = Nuc_WS_->rho_WS;
 
     /* to pass to Anumintegrand */
@@ -832,7 +818,6 @@ double Glauber::anum2HO() {
     double up, down, a_WS, rho, f;
 
     a_WS = Nuc_WS_->a_WS;
-    // w_WS = Nuc_WS_->w_WS; /* take this to be alpha */
     rho = Nuc_WS_->rho_WS;
 
     down = 0.0;
@@ -875,7 +860,6 @@ double Glauber::nuInt2HO(double xi) {
 
     a_WS = Nuc_WS_->a_WS;
     w_WS = Nuc_WS_->w_WS;
-    // R_WS = Nuc_WS_->R_WS;
     rho = Nuc_WS_->rho_WS;
 
     /* xi = exp(-z*z/a/a), r = sqrt(z^2 + s^2) */
@@ -928,7 +912,6 @@ double Glauber::nuIntHulthen(double xi) {
 
     a_WS = Nuc_WS_->a_WS;
     b_WS = Nuc_WS_->w_WS;
-    // R_WS = Nuc_WS_->R_WS;
     rho = Nuc_WS_->rho_WS;
 
     /* xi = exp(-z a), r = sqrt(z^2 + s^2) */

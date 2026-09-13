@@ -20,13 +20,10 @@ using std::stringstream;
 // reads a string
 string Setup::stringFind(string file_name, string st) {
     string inputname = file_name;
-    string tmpfilename;
     string str = st;
 
     string s;
     string xstr;
-
-    tmpfilename = "input";
 
     int ind;
     // Check every call rather than gating on a static "already checked"
@@ -162,7 +159,7 @@ unsigned long long int Setup::uLLIFind(string file_name, string st) {
     f = dFind(file_name, st);
 
     return (unsigned long long int)(f + 0.5);
-} /* iFind */
+} /* uLLIFind */
 
 int Setup::isFile(string file_name) {
     FILE *temp;

@@ -3183,6 +3183,66 @@ int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
     return (std::max(1, Nq));
 }
 
+double Init::computeForwardLightconeResidual(
+    const Matrix &U1pU2, const Matrix &U1pU2dagger, const Matrix &Usol,
+    const Matrix &Usoldagger, const std::vector<complex<double>> &traceCache,
+    double *Fa) {
+    Matrix Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
+    double Fzero = 0.;
+    for (int ai = 0; ai < Nc2m1_; ai++) {
+        complex<double> traceLoc =
+            Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
+        // minus trace if temp gives -F_ai
+        auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
+        Fa[ai] = imag(traceRes);
+        Fzero += std::abs(Fa[ai]);
+    }
+    return Fzero;
+}
+
+void Init::computeForwardLightconeJacobian(
+    const Matrix &U0, const Matrix &U1pU2, const Matrix &Usoldagger,
+    std::vector<Matrix> &MtempArr, std::vector<double> &alpha, double *Jab) {
+    Matrix Mtemp(0.);
+
+    // numerical formula
+    bool JabGood = true;
+    for (int bi = 0; bi < Nc2m1_; bi++) {
+        double dalpha_bi =
+            (std::max(0.001, std::min(10., 0.01 * std::abs(alpha[bi]))));
+        alpha[bi] = alpha[bi] + dalpha_bi;
+        Mtemp = getUfromExponent(alpha) * U0;
+        Mtemp.conjg();
+        Mtemp = U1pU2 * (Mtemp - Usoldagger);
+        double Mcheck = 0.;
+        for (int ai = 0; ai < Nc2m1_; ai++) {
+            int countMe = ai * Nc2m1_ + bi;
+            complex<double> traceLoc =
+                Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
+            Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
+            Mcheck += std::abs(Jab[countMe]);
+            if (Mcheck < 1e-15) {
+                // avoid matrix to be singular
+                JabGood = false;
+            }
+        }
+        alpha[bi] = alpha[bi] - dalpha_bi;
+    }
+    if (!JabGood) {
+        // analytical approximated formula
+        for (int bi = 0; bi < Nc2m1_; bi++) {
+            Mtemp = group_ptr_->getT(bi) * Usoldagger;
+            for (int ai = 0; ai < Nc2m1_; ai++) {
+                int countMe = ai * Nc2m1_ + bi;
+                complex<double> traceLoc =
+                    Mtemp.traceOfProductOfMatrix(MtempArr[ai], Mtemp);
+                auto traceRes = -2. * real(traceLoc);
+                Jab[countMe] = traceRes;
+            }
+        }
+    }
+}
+
 bool Init::findUInForwardLightcone(
     Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed) {
     const int maxIterations = 2000;
@@ -3232,55 +3292,11 @@ bool Init::findUInForwardLightcone(
     while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
         iter++;
 
-        // compute function F that needs to be zero
-        Fzero = 0.;
-        Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
-        for (int ai = 0; ai < Nc2m1_; ai++) {
-            complex<double> traceLoc =
-                Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
-            // minus trace if temp gives -F_ai
-            auto traceRes = (-1.) * (traceCache[ai] + traceLoc);
-            Fa[ai] = imag(traceRes);
-            Fzero += std::abs(Fa[ai]);
-        }
+        Fzero = computeForwardLightconeResidual(
+            U1pU2, U1pU2dagger, Usol, Usoldagger, traceCache, Fa);
 
-        // compute Jacobian
-        // numerical formula
-        bool JabGood = true;
-        for (int bi = 0; bi < Nc2m1_; bi++) {
-            double dalpha_bi =
-                (std::max(0.001, std::min(10., 0.01 * std::abs(alpha[bi]))));
-            alpha[bi] = alpha[bi] + dalpha_bi;
-            Mtemp = getUfromExponent(alpha) * U0;
-            Mtemp.conjg();
-            Mtemp = U1pU2 * (Mtemp - Usoldagger);
-            double Mcheck = 0.;
-            for (int ai = 0; ai < Nc2m1_; ai++) {
-                int countMe = ai * Nc2m1_ + bi;
-                complex<double> traceLoc =
-                    Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
-                Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
-                Mcheck += std::abs(Jab[countMe]);
-                if (Mcheck < 1e-15) {
-                    // avoid matrix to be singular
-                    JabGood = false;
-                }
-            }
-            alpha[bi] = alpha[bi] - dalpha_bi;
-        }
-        if (!JabGood) {
-            // analytical approximated formula
-            for (int bi = 0; bi < Nc2m1_; bi++) {
-                Mtemp = group_ptr_->getT(bi) * Usoldagger;
-                for (int ai = 0; ai < Nc2m1_; ai++) {
-                    int countMe = ai * Nc2m1_ + bi;
-                    complex<double> traceLoc =
-                        Mtemp.traceOfProductOfMatrix(MtempArr[ai], Mtemp);
-                    auto traceRes = -2. * real(traceLoc);
-                    Jab[countMe] = traceRes;
-                }
-            }
-        }
+        computeForwardLightconeJacobian(
+            U0, U1pU2, Usoldagger, MtempArr, alpha, Jab);
 
         solveAxb(Jab, Fa, Dalpha);
 

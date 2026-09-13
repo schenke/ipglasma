@@ -76,31 +76,33 @@ void Random::init_genrand64(unsigned long long seed) {
              + mti_);
 }
 
-void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
+/* refills mt_[0..NN-1] with the next NN raw words and resets mti_ to 0 */
+void Random::twist() {
     static const unsigned long long mag01[2] = {0ULL, MATRIX_A};
+
+    if (mti_ == NN + 1) init_genrand64(5489ULL);
+
+    int i = 0;
+    unsigned long long x;
+    for (; i < NN - MM; ++i) {
+        x = (mt_[i] & UM) | (mt_[i + 1] & LM);
+        mt_[i] = mt_[i + MM] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+    }
+    for (; i < NN - 1; ++i) {
+        x = (mt_[i] & UM) | (mt_[i + 1] & LM);
+        mt_[i] =
+            mt_[i + (MM - NN)] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+    }
+    x = (mt_[NN - 1] & UM) | (mt_[0] & LM);
+    mt_[NN - 1] = mt_[MM - 1] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
+    mti_ = 0;
+}
+
+void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
     std::size_t produced = 0;
 
     while (produced < count) {
-        if (mti_ >= NN) {
-            if (mti_ == NN + 1) init_genrand64(5489ULL);
-
-            int i = 0;
-            unsigned long long x;
-            for (; i < NN - MM; ++i) {
-                x = (mt_[i] & UM) | (mt_[i + 1] & LM);
-                mt_[i] =
-                    mt_[i + MM] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
-            }
-            for (; i < NN - 1; ++i) {
-                x = (mt_[i] & UM) | (mt_[i + 1] & LM);
-                mt_[i] = mt_[i + (MM - NN)] ^ (x >> 1)
-                         ^ mag01[static_cast<int>(x & 1ULL)];
-            }
-            x = (mt_[NN - 1] & UM) | (mt_[0] & LM);
-            mt_[NN - 1] =
-                mt_[MM - 1] ^ (x >> 1) ^ mag01[static_cast<int>(x & 1ULL)];
-            mti_ = 0;
-        }
+        if (mti_ >= NN) twist();
 
         const std::size_t available = static_cast<std::size_t>(NN - mti_);
         const std::size_t remaining = count - produced;
@@ -113,40 +115,23 @@ void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
     }
 }
 
-/* generates a random number on [0, 2^64-1]-interval */
-unsigned long long Random::genrand64_int64(void) {
-    int i;
-    unsigned long long x;
-    static unsigned long long mag01[2] = {0ULL, MATRIX_A};
-
-    if (mti_ >= NN) { /* generate NN words at one time */
-
-        /* if init_genrand64() has not been called, */
-        /* a default initial seed is used     */
-        if (mti_ == NN + 1) init_genrand64(5489ULL);
-
-        for (i = 0; i < NN - MM; i++) {
-            x = (mt_[i] & UM) | (mt_[i + 1] & LM);
-            mt_[i] = mt_[i + MM] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
-        }
-        for (; i < NN - 1; i++) {
-            x = (mt_[i] & UM) | (mt_[i + 1] & LM);
-            mt_[i] = mt_[i + (MM - NN)] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
-        }
-        x = (mt_[NN - 1] & UM) | (mt_[0] & LM);
-        mt_[NN - 1] = mt_[MM - 1] ^ (x >> 1) ^ mag01[(int)(x & 1ULL)];
-
-        mti_ = 0;
-    }
-
-    x = mt_[mti_++];
-
+namespace {
+/* MT19937-64 tempering step, applied to one raw generator word */
+unsigned long long temperMT64(unsigned long long x) {
     x ^= (x >> 29) & 0x5555555555555555ULL;
     x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
     x ^= (x << 37) & 0xFFF7EEE000000000ULL;
     x ^= (x >> 43);
-
     return x;
+}
+}  // namespace
+
+/* generates a random number on [0, 2^64-1]-interval */
+unsigned long long Random::genrand64_int64(void) {
+    if (mti_ >= NN) /* generate NN words at one time */
+        twist();
+
+    return temperMT64(mt_[mti_++]);
 }
 
 /* generates a random number on [0, 2^63-1]-interval */
@@ -238,11 +223,7 @@ void Random::gaussBulk(
 
 #pragma omp parallel for
         for (std::size_t q = 0; q < uniformCount; ++q) {
-            unsigned long long x = bulkRawScratch_[q];
-            x ^= (x >> 29) & 0x5555555555555555ULL;
-            x ^= (x << 17) & 0x71D67FFFEDA60000ULL;
-            x ^= (x << 37) & 0xFFF7EEE000000000ULL;
-            x ^= (x >> 43);
+            const unsigned long long x = temperMT64(bulkRawScratch_[q]);
             uniforms[q] = ((x >> 12) + 0.5) * (1.0 / 4503599627370496.0);
         }
 

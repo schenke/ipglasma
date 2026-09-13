@@ -211,6 +211,17 @@ class Init {
         Parameters *param, double a, double averageQs2, double averageQs2Avg,
         double averageQs2min2, int count);
     void setV(Lattice *lat, Parameters *param, Random *random);
+    // setV's lattice Poisson/UV kernel: depends only on transverse momentum
+    // and run parameters, so it's computed once and reused for every
+    // longitudinal sheet of both nuclei.
+    std::vector<double> computeWilsonLineMomentumKernel(
+        int N, int sites, double m, double UVdamp);
+    // setV's per-site sqrt(g^2mu^2/Ny) scale, cached once per nucleus
+    // instead of being recomputed in every longitudinal sheet.
+    void computeWilsonLineColorChargeScales(
+        Lattice *lat, int sites, double g, double invNy,
+        std::vector<double> &colorChargeScaleA,
+        std::vector<double> &colorChargeScaleB);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
     // readVFromFile's format==1/format==2 branches, each called once for
     // the projectile's Wilson line file and once for the target's; role

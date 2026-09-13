@@ -1890,28 +1890,8 @@ void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
 }
 }  // namespace
 
-void Init::setV(Lattice *lat, Parameters *param, Random *random) {
-    IPG_PROFILE_SCOPE("initialization.wilson_lines");
-    messager_.info("[Init::setV]: Setting Wilson lines ...");
-    const int A1 = nucleusA_.size();
-    const int A2 = nucleusB_.size();
-
-    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
-    const int N = param->getSize();
-    const int Ny = param->getNy();
-    const int sites = N * N;
-    const int nn[2] = {N, N};
-    const double L = param->getL();
-    const double a = L / N;  // lattice spacing in fm
-    const double m = param->getm() * a / hbarc;
-    const double g = param->getg();
-    const double invNy = 1. / static_cast<double>(Ny);
-    double UVdamp = param->getUVdamp();  // GeV^-1
-    UVdamp = UVdamp / a * hbarc;
-
-    // The lattice Poisson/UV kernel depends only on transverse momentum and
-    // run parameters.  The historical implementation recomputed the same
-    // sin/sqrt/exp expressions for every longitudinal sheet of both nuclei.
+std::vector<double> Init::computeWilsonLineMomentumKernel(
+    int N, int sites, double m, double UVdamp) {
     std::vector<double> momentumKernel(static_cast<std::size_t>(sites));
 #pragma omp parallel for
     for (int pos = 0; pos < sites; ++pos) {
@@ -1935,6 +1915,48 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
                 (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
         }
     }
+    return momentumKernel;
+}
+
+void Init::computeWilsonLineColorChargeScales(
+    Lattice *lat, int sites, double g, double invNy,
+    std::vector<double> &colorChargeScaleA,
+    std::vector<double> &colorChargeScaleB) {
+    colorChargeScaleA.resize(static_cast<std::size_t>(sites));
+    colorChargeScaleB.resize(static_cast<std::size_t>(sites));
+#pragma omp parallel for
+    for (int pos = 0; pos < sites; ++pos) {
+        colorChargeScaleA[static_cast<std::size_t>(pos)] =
+            g * sqrt(lat->cells[pos]->getg2mu2A() * invNy);
+        colorChargeScaleB[static_cast<std::size_t>(pos)] =
+            g * sqrt(lat->cells[pos]->getg2mu2B() * invNy);
+    }
+}
+
+void Init::setV(Lattice *lat, Parameters *param, Random *random) {
+    IPG_PROFILE_SCOPE("initialization.wilson_lines");
+    messager_.info("[Init::setV]: Setting Wilson lines ...");
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+
+    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
+    const int N = param->getSize();
+    const int Ny = param->getNy();
+    const int sites = N * N;
+    const int nn[2] = {N, N};
+    const double L = param->getL();
+    const double a = L / N;  // lattice spacing in fm
+    const double m = param->getm() * a / hbarc;
+    const double g = param->getg();
+    const double invNy = 1. / static_cast<double>(Ny);
+    double UVdamp = param->getUVdamp();  // GeV^-1
+    UVdamp = UVdamp / a * hbarc;
+
+    // The lattice Poisson/UV kernel depends only on transverse momentum and
+    // run parameters.  The historical implementation recomputed the same
+    // sin/sqrt/exp expressions for every longitudinal sheet of both nuclei.
+    std::vector<double> momentumKernel =
+        computeWilsonLineMomentumKernel(N, sites, m, UVdamp);
 
     // rhoACoeffData owns the Nc2m1_*sites backing storage; rhoACoeff is a
     // pointer-per-component view over it for FFT::fftnComplexArray's T**
@@ -1967,15 +1989,10 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     // g2mu2 and Ny are fixed throughout Wilson-line construction.  Cache the
     // color-independent site scale once for each nucleus instead of repeating
     // the same sqrt in every longitudinal sheet.
-    std::vector<double> colorChargeScaleA(static_cast<std::size_t>(sites));
-    std::vector<double> colorChargeScaleB(static_cast<std::size_t>(sites));
-#pragma omp parallel for
-    for (int pos = 0; pos < sites; ++pos) {
-        colorChargeScaleA[static_cast<std::size_t>(pos)] =
-            g * sqrt(lat->cells[pos]->getg2mu2A() * invNy);
-        colorChargeScaleB[static_cast<std::size_t>(pos)] =
-            g * sqrt(lat->cells[pos]->getg2mu2B() * invNy);
-    }
+    std::vector<double> colorChargeScaleA;
+    std::vector<double> colorChargeScaleB;
+    computeWilsonLineColorChargeScales(
+        lat, sites, g, invNy, colorChargeScaleA, colorChargeScaleB);
 
     auto fillColorCharge = [&](const std::vector<double> &scale) {
         {
@@ -1999,88 +2016,53 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }
     };
 
-    // loop over longitudinal direction for nucleus A
-    for (int k = 0; k < Ny; k++) {
-        {
-            IPG_PROFILE_SCOPE("initialization.wilson_random");
-            fillColorCharge(colorChargeScaleA);
-        }
+    // loop over longitudinal direction, once for each nucleus
+    auto evolveNucleusWilsonLine =
+        [&](const std::vector<double> &colorChargeScale,
+            std::vector<Matrix> &U) {
+            for (int k = 0; k < Ny; k++) {
+                {
+                    IPG_PROFILE_SCOPE("initialization.wilson_random");
+                    fillColorCharge(colorChargeScale);
+                }
 
-        fft_.fftnComplexArray(
-            rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1_);
+                fft_.fftnComplexArray(
+                    rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1_);
 
-        {
-            IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
-            applyMomentumKernel();
-        }
+                {
+                    IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
+                    applyMomentumKernel();
+                }
 
-        fft_.fftnComplexArray(
-            rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1_);
+                fft_.fftnComplexArray(
+                    rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1_);
 
-        {
-            IPG_PROFILE_SCOPE("initialization.wilson_exponent");
+                {
+                    IPG_PROFILE_SCOPE("initialization.wilson_exponent");
 #pragma omp parallel
-            {
-                std::vector<double> in(Nc2m1_, 0.);
-                Matrix temp(1.);
-                Matrix tempNew(0.);
+                    {
+                        std::vector<double> in(Nc2m1_, 0.);
+                        Matrix temp(1.);
+                        Matrix tempNew(0.);
 
 #pragma omp for
-                for (int pos = 0; pos < sites; pos++) {
-                    for (int aa = 0; aa < Nc2m1_; aa++) {
-                        // expmCoeff calculates exp(i in[a] t[a]), so multiply
-                        // by -1 (not -i).
-                        in[aa] = -(rhoACoeff[aa][pos]).real();
+                        for (int pos = 0; pos < sites; pos++) {
+                            for (int aa = 0; aa < Nc2m1_; aa++) {
+                                // expmCoeff calculates exp(i in[a] t[a]), so
+                                // multiply by -1 (not -i).
+                                in[aa] = -(rhoACoeff[aa][pos]).real();
+                            }
+                            tempNew = getUfromExponent(in);
+                            temp = tempNew * U[pos];
+                            U[pos] = temp;
+                        }
                     }
-                    tempNew = getUfromExponent(in);
-                    temp = tempNew * lat->U[pos];
-                    lat->U[pos] = temp;
                 }
             }
-        }
-    }
+        };
 
-    // loop over longitudinal direction for nucleus B
-    for (int k = 0; k < Ny; k++) {
-        {
-            IPG_PROFILE_SCOPE("initialization.wilson_random");
-            fillColorCharge(colorChargeScaleB);
-        }
-
-        fft_.fftnComplexArray(
-            rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1_);
-
-        {
-            IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
-            applyMomentumKernel();
-        }
-
-        fft_.fftnComplexArray(
-            rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1_);
-
-        // The old nucleus-B block had its omp parallel directive commented
-        // out, leaving this expensive exponential/multiply pass effectively
-        // serial.  Match the nucleus-A implementation.
-        {
-            IPG_PROFILE_SCOPE("initialization.wilson_exponent");
-#pragma omp parallel
-            {
-                std::vector<double> in(Nc2m1_, 0.);
-                Matrix temp(1.);
-                Matrix tempNew(0.);
-
-#pragma omp for
-                for (int pos = 0; pos < sites; pos++) {
-                    for (int aa = 0; aa < Nc2m1_; aa++) {
-                        in[aa] = -(rhoACoeff[aa][pos]).real();
-                    }
-                    tempNew = getUfromExponent(in);
-                    temp = tempNew * lat->U2[pos];
-                    lat->U2[pos] = temp;
-                }
-            }
-        }
-    }
+    evolveNucleusWilsonLine(colorChargeScaleA, lat->U);
+    evolveNucleusWilsonLine(colorChargeScaleB, lat->U2);
 
     if (param->getWriteOutputs() == 5) {
         writeInitialWilsonTrainingData(lat, param);

@@ -7,7 +7,6 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
-#include <memory>
 #include <sstream>
 #include <string>
 
@@ -405,41 +404,32 @@ double Glauber::vInterpolate(double x, double *Vx, double *Vy, int ymax) {
 
 } /* vInterpolate */
 
-double *Glauber::makeVx(double down, double up, int maxi_num) {
-    static double dx, *vx;
-    int i;
-
-    vx = Util::vector_malloc(maxi_num + 1);
-    dx = (up - down) / maxi_num;
-    for (i = 0; i <= maxi_num; i++) {
+std::vector<double> Glauber::makeVx(double down, double up, int maxi_num) {
+    std::vector<double> vx(maxi_num + 1);
+    double dx = (up - down) / maxi_num;
+    for (int i = 0; i <= maxi_num; i++) {
         vx[i] = dx * i;
     }
     return vx;
 
 } /* makeVx */
 
-double *Glauber::makeVy(double *vx, int maxi_num) {
-    int i;
-    static double *vy;
+std::vector<double> Glauber::makeVy(const double *vx, int maxi_num) {
+    std::vector<double> vy(maxi_num + 1);
 
-    vy = Util::vector_malloc(maxi_num + 1);
-
-    for (i = 0; i <= maxi_num; i++) {
+    for (int i = 0; i <= maxi_num; i++) {
         vy[i] = nuInS(vx[i]);
     }
 
     return vy;
 } /* makeVy */
 
-double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
-    static double x, *vx;
-    int i;
+std::vector<double> Glauber::readInVx(
+    char *file_name, int maxi_num, int quiet) {
+    std::vector<double> vx(maxi_num + 1);
+    double x;
     FILE *input;
-    static char *s, *sx;
-    s = Util::char_malloc(120);
-    sx = Util::char_malloc(120);
-
-    vx = Util::vector_malloc(maxi_num + 1);
+    char s[120], sx[120];
 
     if (quiet == 1) {
         messager_ << "[Glauber::readInVx]: Reading in Vx from " << file_name
@@ -469,7 +459,7 @@ double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
         }
     }
 
-    for (i = 0; i <= maxi_num; i++) {
+    for (int i = 0; i <= maxi_num; i++) {
         if (fscanf(input, "%lf", &x) != 1) {
             messager_ << "[Glauber::readInVx]: File " << file_name
                       << " has fewer than " << maxi_num + 1
@@ -488,21 +478,16 @@ double *Glauber::readInVx(char *file_name, int maxi_num, int quiet) {
     }
     fclose(input);
 
-    Util::char_free(sx);
-    Util::char_free(s);
     return vx;
 
 } /* readInVx */
 
-double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
-    static double y, *vy;
-    int i;
+std::vector<double> Glauber::readInVy(
+    char *file_name, int maxi_num, int quiet) {
+    std::vector<double> vy(maxi_num + 1);
+    double y;
     FILE *input;
-    static char *s, *sy;
-    s = Util::char_malloc(120);
-    sy = Util::char_malloc(120);
-
-    vy = Util::vector_malloc(maxi_num + 1);
+    char s[120], sy[120];
 
     if (quiet == 1) {
         messager_ << "[Glauber::readInVy]: Reading in Vy from " << file_name
@@ -532,7 +517,7 @@ double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
         }
     }
 
-    for (i = 0; i <= maxi_num; i++) {
+    for (int i = 0; i <= maxi_num; i++) {
         if (fscanf(input, "%lf", &y) != 1) {
             messager_ << "[Glauber::readInVy]: File " << file_name
                       << " has fewer than " << maxi_num + 1
@@ -551,8 +536,6 @@ double *Glauber::readInVy(char *file_name, int maxi_num, int quiet) {
     }
     fclose(input);
 
-    Util::char_free(s);
-    Util::char_free(sy);
     return vy;
 } /* readInVy */
 
@@ -563,7 +546,7 @@ double Glauber::interNuPInSP(double s) {
     static int ind = 0;
     static double up, down;
     static int maxi_num;
-    static std::unique_ptr<double[]> vx, vy;
+    static std::vector<double> vx, vy;
     ind++;
 
     if (glauberData_.projectile.A == 1) return 0.0;
@@ -573,14 +556,14 @@ double Glauber::interNuPInSP(double s) {
         up = 2.0 * glauberData_.sCutoff;
         down = 0.0;
         maxi_num = glauberData_.interMax;
-        vx.reset(makeVx(down, up, maxi_num));
-        vy.reset(makeVy(vx.get(), maxi_num));
+        vx = makeVx(down, up, maxi_num);
+        vy = makeVy(vx.data(), maxi_num);
     } /* if ind */
 
     if (s > up)
         return 0.0;
     else {
-        y = vInterpolate(s, vx.get(), vy.get(), maxi_num);
+        y = vInterpolate(s, vx.data(), vy.data(), maxi_num);
         if (y < 0.0)
             return 0.0;
         else {
@@ -594,7 +577,7 @@ double Glauber::interNuTInST(double s) {
     static int ind = 0;
     static double up, down;
     static int maxi_num;
-    static std::unique_ptr<double[]> vx, vy;
+    static std::vector<double> vx, vy;
 
     ind++;
     if (glauberData_.target.A == 1) return 0.0;
@@ -606,14 +589,14 @@ double Glauber::interNuTInST(double s) {
         down = 0.0;
         maxi_num = glauberData_.interMax;
 
-        vx.reset(makeVx(down, up, maxi_num));
-        vy.reset(makeVy(vx.get(), maxi_num));
+        vx = makeVx(down, up, maxi_num);
+        vy = makeVy(vx.data(), maxi_num);
     } /* if ind */
 
     if (s > up)
         return 0.0;
     else {
-        y = vInterpolate(s, vx.get(), vy.get(), maxi_num);
+        y = vInterpolate(s, vx.data(), vy.data(), maxi_num);
         if (y < 0.0)
             return 0.0;
         else

@@ -2,6 +2,7 @@
 #define SRC_GLAUBER_H_
 
 #include <string>
+#include <vector>
 
 #include "PrettyOstream.h"
 #include "Random.h"
@@ -86,10 +87,10 @@ class Glauber {
         double *a, double *b, double *c, double *d, double *Vy, double h,
         int x_org);
     double vInterpolate(double x, double *Vx, double *Vy, int ymax);
-    double *makeVx(double down, double up, int maxi_num);
-    double *makeVy(double *vx, int maxi_num);
-    double *readInVx(char *file_name, int maxi_num, int quiet);
-    double *readInVy(char *file_name, int maxi_num, int quiet);
+    std::vector<double> makeVx(double down, double up, int maxi_num);
+    std::vector<double> makeVy(const double *vx, int maxi_num);
+    std::vector<double> readInVx(char *file_name, int maxi_num, int quiet);
+    std::vector<double> readInVy(char *file_name, int maxi_num, int quiet);
 
     double interNuPInSP(double s);
     double interNuTInST(double s);

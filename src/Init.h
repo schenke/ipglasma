@@ -237,6 +237,21 @@ class Init {
     Matrix getUfromExponent(std::vector<double> &Q);
     bool findUInForwardLightcone(
         Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
+    // findUInForwardLightcone's per-iteration steps.
+    // Computes F (the residual the Newton iteration drives to zero) into Fa,
+    // and returns Fzero = sum_a |F_a|.
+    double computeForwardLightconeResidual(
+        const Matrix &U1pU2, const Matrix &U1pU2dagger, const Matrix &Usol,
+        const Matrix &Usoldagger,
+        const std::vector<complex<double>> &traceCache, double *Fa);
+    // Computes the Jacobian dF/dalpha into Jab, via a numerical finite
+    // difference, falling back to an analytical approximation if the
+    // numerical one comes out singular. alpha is left unchanged on return
+    // (each finite-difference step adds then subtracts its own dalpha_bi).
+    void computeForwardLightconeJacobian(
+        const Matrix &U0, const Matrix &U1pU2, const Matrix &Usoldagger,
+        std::vector<Matrix> &MtempArr, std::vector<double> &alpha,
+        double *Jab);
 
     void readInNucleusConfigs(
         const int nucleusA, const int lightNucleusOption,

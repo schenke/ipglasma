@@ -95,6 +95,27 @@ class Init {
         double rapidityA, double rapidityB);
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
+    // Converts param's input rapidity to true rapidity when it's flagged
+    // as pseudorapidity, otherwise passes it through unchanged.
+    void computeEffectiveRapidities(
+        Parameters *param, double &rapidityA, double &rapidityB);
+    // setColorChargeDensity's useNucleus==0 (constant g^2mu background)
+    // branch; returns having already called param->setSuccess(1).
+    void setConstantColorChargeDensity(Lattice *lat, Parameters *param);
+    // Samples each nucleon's proton-anisotropy angle phi (or sets it to 0
+    // when protonAnisotropy is off).
+    void sampleNucleonAnisotropyAngles(Parameters *param, Random *random);
+    // Samples constituent-quark positions/widths (xq1_/yq1_/BGq1_ etc.) and
+    // each nucleon's Qs-normalization gauss factor, for both nuclei.
+    void sampleConstituentQuarkGeometry(Parameters *param, Random *random);
+    // setColorChargeDensity's useSmoothNucleus==1 branch: sets TpA/TpB from
+    // the smooth (undeformed) Woods-Saxon thickness functions.
+    void computeSmoothNucleusThickness(
+        Lattice *lat, Parameters *param, Glauber *glauber);
+    // setColorChargeDensity's default branch: sets TpA/TpB by summing each
+    // sampled nucleon's (constituent-quark or single-Gaussian) thickness.
+    void computeThicknessFromNucleons(
+        Lattice *lat, Parameters *param, double nucleiInAverage);
     // Determines Npart/Ncoll from the (already-sampled) nucleon positions,
     // writes NcollList*.dat/NpartList*.dat, and sets param->setNpart.
     // Returns false if useFixedNpart is set and this event's Npart doesn't

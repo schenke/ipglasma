@@ -105,6 +105,27 @@ class Init {
     // is disabled or alpha_s runs with k_T instead.
     void computeAndSetRunningAlphaS(Parameters *param);
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
+    // Scans the full lattice, accumulating the Qs/T_pp collision-geometry
+    // averages computeCollisionGeometryQuantities reports and stores.
+    void scanCollisionGeometry(
+        Lattice *lat, Parameters *param, int N, double a, double b,
+        double phiRP, double &averageQs, double &averageQs2,
+        double &averageQs2Avg, double &averageQs2min, double &averageQs2min2,
+        double &Tpp, int &count);
+    // Logs computeCollisionGeometryQuantities' N_part/N_coll/T_pp/Qs/alpha_s
+    // summary.
+    void logCollisionGeometryQuantities(
+        Parameters *param, int Npart, int Ncoll, double Tpp, double a,
+        double averageQs2, double averageQs2Avg, double averageQs2min,
+        double averageQs2min2, int count);
+    // Appends this event's usedParameters<id>.dat entry (called only when
+    // computeCollisionGeometryQuantities marks the event a success).
+    void writeUsedParametersFile(
+        Parameters *param, double phiRP, int Npart, int Ncoll);
+    // Writes this event's NgluonEstimators<id>.dat file.
+    void writeNgluonEstimatorsFile(
+        Parameters *param, double a, double averageQs2, double averageQs2Avg,
+        double averageQs2min2, int count);
     void setV(Lattice *lat, Parameters *param, Random *random);
     void readVFromFile(Lattice *lat, Parameters *param, int format);
 

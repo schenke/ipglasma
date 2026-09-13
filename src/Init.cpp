@@ -1441,16 +1441,9 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
 }
 
 void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
-    double averageQs = 0.;
-    double averageQs2 = 0.;
-    double averageQs2Avg = 0.;
-    double averageQs2min = 0.;
-    double averageQs2min2 = 0.;
     int Npart = 0;
     int Ncoll = 0;
 
-    const int A1 = nucleusA_.size();
-    const int A2 = nucleusB_.size();
     const double L = param->getL();
     const int N = param->getSize();
     const double a = L / N;  // lattice spacing in fm
@@ -1463,8 +1456,79 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         return;
     }
 
-    int count = 0;
+    double averageQs = 0.;
+    double averageQs2 = 0.;
+    double averageQs2Avg = 0.;
+    double averageQs2min = 0.;
+    double averageQs2min2 = 0.;
     double Tpp = 0.;
+    int count = 0;
+    scanCollisionGeometry(
+        lat, param, N, a, b, phiRP, averageQs, averageQs2, averageQs2Avg,
+        averageQs2min, averageQs2min2, Tpp, count);
+
+    if (count == 0) {
+        param->setAverageQs(0.);
+        param->setAverageQsAvg(0.);
+        param->setAverageQsmin(0.);
+        param->setTpp(Tpp);
+        param->setSuccess(0);
+        messager_.warning(
+            "[Init::computeCollisionGeometryQuantities]: Rejected event -- "
+            "no overlap region (count=0).");
+        return;
+    }
+
+    averageQs /= static_cast<double>(count) + 1e-16;
+    averageQs2 /= static_cast<double>(count) + 1e-16;
+    averageQs2Avg /= static_cast<double>(count) + 1e-16;
+    averageQs2min /= static_cast<double>(count) + 1e-16;
+
+    param->setAverageQs(sqrt(averageQs2));
+    param->setAverageQsAvg(sqrt(averageQs2Avg));
+    param->setAverageQsmin(sqrt(averageQs2min));
+    param->setTpp(Tpp);
+
+    logCollisionGeometryQuantities(
+        param, Npart, Ncoll, Tpp, a, averageQs2, averageQs2Avg, averageQs2min,
+        averageQs2min2, count);
+
+    computeAndSetRunningAlphaS(param);
+
+    if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0
+        && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
+        && param->getalphas() > 0 && Npart >= 2
+        && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
+        param->setSuccess(1);
+        writeUsedParametersFile(param, phiRP, Npart, Ncoll);
+    } else {
+        param->setSuccess(0);
+    }
+    if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) {
+        messager_ << "[Init::computeCollisionGeometryQuantities]: Rejected "
+                     "event -- Qsmin^2 S_T="
+                  << averageQs2min2 * a * a / hbarc / hbarc
+                  << " is below "
+                     "the "
+                     "minimum ("
+                  << param->getMinimumQs2ST() << ").";
+        messager_.flush("warning");
+    }
+
+    writeNgluonEstimatorsFile(
+        param, a, averageQs2, averageQs2Avg, averageQs2min2, count);
+}
+
+void Init::scanCollisionGeometry(
+    Lattice *lat, Parameters *param, int N, double a, double b, double phiRP,
+    double &averageQs, double &averageQs2, double &averageQs2Avg,
+    double &averageQs2min, double &averageQs2min2, double &Tpp, int &count) {
+    const double L = param->getL();
+    const int A1 = nucleusA_.size();
+    const int A2 = nucleusB_.size();
+
+    count = 0;
+    Tpp = 0.;
     for (int ipos = 0; ipos < N * N; ipos++) {
         // loop over all positions
         int check = 0;
@@ -1565,30 +1629,12 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
                / hbarc;  // now this quantity is in fm^-2
                          // remember: Tp is in GeV^2
     }
+}
 
-    if (count == 0) {
-        param->setAverageQs(0.);
-        param->setAverageQsAvg(0.);
-        param->setAverageQsmin(0.);
-        param->setTpp(Tpp);
-        param->setSuccess(0);
-        messager_.warning(
-            "[Init::computeCollisionGeometryQuantities]: Rejected event -- "
-            "no overlap region (count=0).");
-        return;
-    }
-
-    averageQs /= static_cast<double>(count) + 1e-16;
-    averageQs2 /= static_cast<double>(count) + 1e-16;
-    averageQs2Avg /= static_cast<double>(count) + 1e-16;
-    averageQs2min /= static_cast<double>(count) + 1e-16;
-
-    param->setAverageQs(sqrt(averageQs2));
-    param->setAverageQsAvg(sqrt(averageQs2Avg));
-    param->setAverageQsmin(sqrt(averageQs2min));
-
-    param->setTpp(Tpp);
-
+void Init::logCollisionGeometryQuantities(
+    Parameters *param, int Npart, int Ncoll, double Tpp, double a,
+    double averageQs2, double averageQs2Avg, double averageQs2min,
+    double averageQs2min2, int count) {
     messager_ << "[Init::computeCollisionGeometryQuantities]: N_part=" << Npart;
     messager_.flush("info");
     messager_ << "[Init::computeCollisionGeometryQuantities]: N_coll=" << Ncoll;
@@ -1651,55 +1697,41 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
                / (param->getAverageQsmin() * param->getxFromThisFactorTimesQs()
                   / param->getRoots()));
     messager_.flush("info");
+}
 
-    computeAndSetRunningAlphaS(param);
+void Init::writeUsedParametersFile(
+    Parameters *param, double phiRP, int Npart, int Ncoll) {
+    stringstream strup_name;
+    strup_name << "usedParameters" << param->getEventId() << ".dat";
+    string up_name;
+    up_name = strup_name.str();
 
-    if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0
-        && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
-        && param->getalphas() > 0 && Npart >= 2
-        && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
-        param->setSuccess(1);
+    ofstream fout1(up_name.c_str(), std::ios::app);
+    fout1 << " " << endl;
+    fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
+    fout1 << " " << endl;
+    fout1 << "b = " << param->getb() << " fm" << endl;
+    fout1 << "phiRP = " << phiRP << endl;
+    fout1 << "Npart = " << Npart << endl;
+    fout1 << "Ncoll = " << Ncoll << endl;
+    if (param->getRunningCoupling()) {
+        if (param->getRunWithQs() == 2)
+            fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
+        else if (param->getRunWithQs() == 1)
+            fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
+        else if (param->getRunWithQs() == 0)
+            fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
+        fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+              << " <Q_s>) = " << param->getalphas() << endl;
+    } else
+        fout1 << "using fixed coupling alpha_s=" << param->getalphas()
+              << endl;
+    fout1.close();
+}
 
-        stringstream strup_name;
-        strup_name << "usedParameters" << param->getEventId() << ".dat";
-        string up_name;
-        up_name = strup_name.str();
-
-        ofstream fout1(up_name.c_str(), std::ios::app);
-        fout1 << " " << endl;
-        fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
-        fout1 << " " << endl;
-        fout1 << "b = " << param->getb() << " fm" << endl;
-        fout1 << "phiRP = " << phiRP << endl;
-        fout1 << "Npart = " << Npart << endl;
-        fout1 << "Ncoll = " << Ncoll << endl;
-        if (param->getRunningCoupling()) {
-            if (param->getRunWithQs() == 2)
-                fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
-            else if (param->getRunWithQs() == 1)
-                fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
-            else if (param->getRunWithQs() == 0)
-                fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
-            fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
-                  << " <Q_s>) = " << param->getalphas() << endl;
-        } else
-            fout1 << "using fixed coupling alpha_s=" << param->getalphas()
-                  << endl;
-        fout1.close();
-    } else {
-        param->setSuccess(0);
-    }
-    if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) {
-        messager_ << "[Init::computeCollisionGeometryQuantities]: Rejected "
-                     "event -- Qsmin^2 S_T="
-                  << averageQs2min2 * a * a / hbarc / hbarc
-                  << " is below "
-                     "the "
-                     "minimum ("
-                  << param->getMinimumQs2ST() << ").";
-        messager_.flush("warning");
-    }
-
+void Init::writeNgluonEstimatorsFile(
+    Parameters *param, double a, double averageQs2, double averageQs2Avg,
+    double averageQs2min2, int count) {
     stringstream strNEst_name;
     strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";
     string NEst_name;

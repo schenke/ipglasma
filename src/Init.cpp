@@ -1908,9 +1908,14 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }
     }
 
-    complex<double> **rhoACoeff = new complex<double> *[Nc2m1_];
+    // rhoACoeffData owns the Nc2m1_*sites backing storage; rhoACoeff is a
+    // pointer-per-component view over it for FFT::fftnComplexArray's T**
+    // interface.
+    std::vector<complex<double> > rhoACoeffData(
+        static_cast<std::size_t>(Nc2m1_) * sites);
+    std::vector<complex<double> *> rhoACoeff(Nc2m1_);
     for (int i = 0; i < Nc2m1_; i++) {
-        rhoACoeff[i] = new complex<double>[sites];
+        rhoACoeff[i] = rhoACoeffData.data() + i * sites;
     }
 
     auto applyMomentumKernel = [&]() {
@@ -1973,14 +1978,16 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             fillColorCharge(colorChargeScaleA);
         }
 
-        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, 1, Nc2m1_);
+        fft_.fftnComplexArray(
+            rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1_);
 
         {
             IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
             applyMomentumKernel();
         }
 
-        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, -1, Nc2m1_);
+        fft_.fftnComplexArray(
+            rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1_);
 
         {
             IPG_PROFILE_SCOPE("initialization.wilson_exponent");
@@ -2012,14 +2019,16 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             fillColorCharge(colorChargeScaleB);
         }
 
-        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, 1, Nc2m1_);
+        fft_.fftnComplexArray(
+            rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1_);
 
         {
             IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
             applyMomentumKernel();
         }
 
-        fft_.fftnComplexArray(rhoACoeff, rhoACoeff, nn, -1, Nc2m1_);
+        fft_.fftnComplexArray(
+            rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1_);
 
         // The old nucleus-B block had its omp parallel directive commented
         // out, leaving this expensive exponential/multiply pass effectively
@@ -2045,10 +2054,6 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }
     }
 
-    for (int ic = 0; ic < Nc2m1_; ic++) {
-        delete[] rhoACoeff[ic];
-    }
-    delete[] rhoACoeff;
     if (param->getWriteOutputs() == 5) {
         writeInitialWilsonTrainingData(lat, param);
     }

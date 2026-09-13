@@ -2105,309 +2105,182 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
     messager_.flush("info");
 
     if (format == 1) {
-        int N = param->getSize();
-
-        double L = param->getL();
-        double a = L / static_cast<double>(N);
-
-        int nn[2];
-        nn[0] = N;
-        nn[1] = N;
-
-        Matrix temp(1.);
-
-        double Re[9], Im[9];
-        double dummy;
-
-        ifstream finV1(VOne_name.c_str(), std::ios::in);
-
-        if (!finV1) {
-            messager_ << "[Init::readVFromFile]: File " << VOne_name
-                      << " not found. Exiting.";
-            messager_.flush("error");
-            exit(1);
-        }
-
-        messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
-                  << VOne_name << " ...";
-        messager_.flush("info");
-
-        // set V for nucleus A
-        for (int i = 0; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1]; j++) {
-                finV1 >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1]
-                    >> Re[2] >> Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4]
-                    >> Re[5] >> Im[5] >> Re[6] >> Im[6] >> Re[7] >> Im[7]
-                    >> Re[8] >> Im[8];
-
-                temp.set(0, 0, complex<double>(Re[0], Im[0]));
-                temp.set(0, 1, complex<double>(Re[1], Im[1]));
-                temp.set(0, 2, complex<double>(Re[2], Im[2]));
-                temp.set(1, 0, complex<double>(Re[3], Im[3]));
-                temp.set(1, 1, complex<double>(Re[4], Im[4]));
-                temp.set(1, 2, complex<double>(Re[5], Im[5]));
-                temp.set(2, 0, complex<double>(Re[6], Im[6]));
-                temp.set(2, 1, complex<double>(Re[7], Im[7]));
-                temp.set(2, 2, complex<double>(Re[8], Im[8]));
-
-                double bb = param->getb();
-                a = L / static_cast<double>(N);
-
-                double xtemp = a * i - bb / 2.;
-                int ix = xtemp / a;
-
-                if (ix < 0) continue;
-
-                int pos = ix * N + j;
-                lat->U[pos] = (temp);
-            }
-        }
-
-        finV1.close();
-
-        ifstream finV2(VTwo_name.c_str(), std::ios::in);
-
-        if (!finV2) {
-            messager_ << "[Init::readVFromFile]: File " << VTwo_name
-                      << " not found. Exiting.";
-            messager_.flush("error");
-            exit(1);
-        }
-
-        messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
-                  << VTwo_name << " ...";
-        messager_.flush("info");
-
-        // set V for nucleus B
-        for (int i = 0; i < nn[0]; i++) {
-            for (int j = 0; j < nn[1]; j++) {
-                finV2 >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1]
-                    >> Re[2] >> Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4]
-                    >> Re[5] >> Im[5] >> Re[6] >> Im[6] >> Re[7] >> Im[7]
-                    >> Re[8] >> Im[8];
-
-                temp.set(0, 0, complex<double>(Re[0], Im[0]));
-                temp.set(0, 1, complex<double>(Re[1], Im[1]));
-                temp.set(0, 2, complex<double>(Re[2], Im[2]));
-                temp.set(1, 0, complex<double>(Re[3], Im[3]));
-                temp.set(1, 1, complex<double>(Re[4], Im[4]));
-                temp.set(1, 2, complex<double>(Re[5], Im[5]));
-                temp.set(2, 0, complex<double>(Re[6], Im[6]));
-                temp.set(2, 1, complex<double>(Re[7], Im[7]));
-                temp.set(2, 2, complex<double>(Re[8], Im[8]));
-
-                double bb = param->getb();
-                a = L / static_cast<double>(N);
-
-                double xtemp = a * i + bb / 2.;
-                int ix = xtemp / a;
-
-                if (ix >= N) continue;
-
-                int pos = ix * N + j;
-                lat->U2[pos] = (temp);
-            }
-        }
-
-        finV2.close();
+        readWilsonLineText(VOne_name, param, NucleusRole::Projectile, lat->U);
+        readWilsonLineText(VTwo_name, param, NucleusRole::Target, lat->U2);
     } else if (format == 2) {
-        std::ifstream InStream;
-        InStream.precision(15);
-        InStream.open(VOne_name.c_str(), std::ios::in | std::ios::binary);
-        int N;
-        int NcInFile;
-        double L, a, temp;
-
-        Matrix tempM(1.);
-
-        if (!InStream.good()) {
-            messager_ << "[Init::readVFromFile]: File " << VOne_name.c_str()
-                      << " does not exist!";
-            messager_.flush("error");
-            exit(1);
-        }
-
-        if (InStream.is_open()) {
-            // READING IN PARAMETERS
-            InStream.read(reinterpret_cast<char *>(&N), sizeof(int));
-            InStream.read(reinterpret_cast<char *>(&NcInFile), sizeof(int));
-            InStream.read(reinterpret_cast<char *>(&L), sizeof(double));
-            InStream.read(reinterpret_cast<char *>(&a), sizeof(double));
-            InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
-
-            if (N != param->getSize()) {
-                messager_ << "[Init::readVFromFile]: wrong lattice "
-                             "size, data is "
-                          << N << " but you have specified "
-                          << param->getSize();
-                messager_.flush("error");
-                exit(1);
-            }
-            if (std::abs(L - param->getL()) > 1e-5) {
-                messager_ << "[Init::readVFromFile]: wrong grid length, "
-                             "data has "
-                          << L << " but you have specified " << param->getL();
-                messager_.flush("error");
-                exit(1);
-            }
-
-            // READING ACTUAL DATA
-            double ValueBuffer;
-            int INPUT_CTR = 0;
-            double re, im;
-            re = 0.;
-            im = 0.;
-
-            while (InStream.read(
-                reinterpret_cast<char *>(&ValueBuffer), sizeof(double))) {
-                if (INPUT_CTR % 2 == 0)  // this is the real part
-                {
-                    re = ValueBuffer;
-                } else  // this is the imaginary part, write then to
-                        // variable //
-                {
-                    im = ValueBuffer;
-                    int TEMPINDX = ((INPUT_CTR - 1) / 2);
-                    int PositionIndx = TEMPINDX / 9;
-
-                    // PositionIndx enumerates (ix, iy) pairs in the
-                    // writer's ix-outer/iy-inner loop order (see
-                    // Lattice::writeWilsonLines), so dividing by N
-                    // recovers ix, and the remainder is iy.
-                    int ixRaw = PositionIndx / N;
-                    int iy = PositionIndx - N * ixRaw;
-
-                    double bb = param->getb();
-                    a = L / static_cast<double>(N);
-
-                    // shift here by half an impact parameter
-                    double xtemp = a * ixRaw - bb / 2.;
-
-                    int ix = round(xtemp / a);
-
-                    int MatrixIndx = TEMPINDX - PositionIndx * 9;
-                    int j = MatrixIndx / 3;
-                    int k = MatrixIndx - j * 3;
-
-                    int indx = N * ix + iy;
-                    if (indx >= N * N || indx < 0) {
-                        if (bb == 0) {
-                            messager_ << "[Init::readVFromFile]: datafile "
-                                      << VOne_name << " has an element " << indx
-                                      << " (iy=" << iy << ", ix=" << ix
-                                      << "), but the grid is N=" << N
-                                      << ". Element is (" << re << " + " << im
-                                      << "i), skipping it.";
-                            messager_.flush("warning");
-                        }
-                        INPUT_CTR++;
-                        continue;
-                    }
-                    lat->U[indx].set(j, k, complex<double>(re, im));
-                }
-                INPUT_CTR++;
-            }
-
-            InStream.close();
-
-            std::ifstream InStream2;
-            InStream2.precision(15);
-            InStream2.open(VTwo_name.c_str(), std::ios::in | std::ios::binary);
-            if (!InStream2.good()) {
-                messager_ << "[Init::readVFromFile]: File " << VTwo_name.c_str()
-                          << " does not exist!";
-                messager_.flush("error");
-                exit(1);
-            }
-
-            INPUT_CTR = 0;
-            if (InStream2.is_open()) {
-                // READING IN PARAMETERS
-                InStream2.read(reinterpret_cast<char *>(&N), sizeof(int));
-                InStream2.read(
-                    reinterpret_cast<char *>(&NcInFile), sizeof(int));
-                InStream2.read(reinterpret_cast<char *>(&L), sizeof(double));
-                InStream2.read(reinterpret_cast<char *>(&a), sizeof(double));
-                InStream2.read(reinterpret_cast<char *>(&temp), sizeof(double));
-
-                if (N != param->getSize()) {
-                    messager_ << "[Init::readVFromFile]: wrong lattice "
-                                 "size, data is "
-                              << N << " but you have specified "
-                              << param->getSize();
-                    messager_.flush("error");
-                    exit(1);
-                }
-                if (std::abs(L - param->getL()) > 1e-5) {
-                    messager_ << "[Init::readVFromFile]: wrong grid length, "
-                                 "data has "
-                              << L << " but you have specified "
-                              << param->getL();
-                    messager_.flush("error");
-                    exit(1);
-                }
-
-                // READING ACTUAL DATA
-                while (InStream2.read(
-                    reinterpret_cast<char *>(&ValueBuffer), sizeof(double))) {
-                    if (INPUT_CTR % 2 == 0)  // this is the real part
-                    {
-                        re = ValueBuffer;
-                    } else  // this is the imaginary part, write then to
-                            // variable //
-                    {
-                        im = ValueBuffer;
-
-                        int TEMPINDX = ((INPUT_CTR - 1) / 2);
-                        int PositionIndx = TEMPINDX / 9;
-
-                        // PositionIndx enumerates (ix, iy) pairs in the
-                        // writer's ix-outer/iy-inner loop order (see
-                        // Lattice::writeWilsonLines), so dividing by N
-                        // recovers ix, and the remainder is iy.
-                        int ixRaw = PositionIndx / N;
-                        int iy = PositionIndx - N * ixRaw;
-
-                        double bb = param->getb();
-                        a = L / static_cast<double>(N);
-
-                        // shift here by half an impact parameter
-                        double xtemp = a * ixRaw + bb / 2.;
-
-                        int ix = round(xtemp / a);
-
-                        int MatrixIndx = TEMPINDX - PositionIndx * 9;
-                        int j = MatrixIndx / 3;
-                        int k = MatrixIndx - j * 3;
-
-                        int indx = N * ix + iy;
-
-                        if (indx >= N * N || indx < 0) {
-                            if (bb == 0) {
-                                messager_
-                                    << "[Init::readVFromFile]: datafile "
-                                    << VTwo_name << " has an element " << indx
-                                    << " (iy=" << iy << ", ix=" << ix
-                                    << "), but the grid is N=" << N
-                                    << ". Element is (" << re << " + " << im
-                                    << "i), skipping it.";
-                                messager_.flush("warning");
-                            }
-                            INPUT_CTR++;
-                            continue;
-                        }
-                        lat->U2[indx].set(j, k, complex<double>(re, im));
-                    }
-                    INPUT_CTR++;
-                }
-                InStream2.close();
-            }
-        }
+        readWilsonLineBinary(VOne_name, param, NucleusRole::Projectile, lat->U);
+        readWilsonLineBinary(VTwo_name, param, NucleusRole::Target, lat->U2);
     }
 
     messager_ << "[Init::readVFromFile]: Wilson lines V_A and V_B set on rank "
               << param->getMPIRank() << ". ";
     messager_.flush("info");
+}
+
+void Init::readWilsonLineText(
+    const std::string &fileName, Parameters *param, NucleusRole role,
+    std::vector<Matrix> &U) {
+    const bool isProjectile = (role == NucleusRole::Projectile);
+    int N = param->getSize();
+
+    double L = param->getL();
+    double a = L / static_cast<double>(N);
+
+    Matrix temp(1.);
+
+    double Re[9], Im[9];
+    double dummy;
+
+    ifstream fin(fileName.c_str(), std::ios::in);
+
+    if (!fin) {
+        messager_ << "[Init::readVFromFile]: File " << fileName
+                  << " not found. Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+
+    messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
+              << fileName << " ...";
+    messager_.flush("info");
+
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            fin >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1] >> Re[2]
+                >> Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4] >> Re[5] >> Im[5]
+                >> Re[6] >> Im[6] >> Re[7] >> Im[7] >> Re[8] >> Im[8];
+
+            temp.set(0, 0, complex<double>(Re[0], Im[0]));
+            temp.set(0, 1, complex<double>(Re[1], Im[1]));
+            temp.set(0, 2, complex<double>(Re[2], Im[2]));
+            temp.set(1, 0, complex<double>(Re[3], Im[3]));
+            temp.set(1, 1, complex<double>(Re[4], Im[4]));
+            temp.set(1, 2, complex<double>(Re[5], Im[5]));
+            temp.set(2, 0, complex<double>(Re[6], Im[6]));
+            temp.set(2, 1, complex<double>(Re[7], Im[7]));
+            temp.set(2, 2, complex<double>(Re[8], Im[8]));
+
+            double bb = param->getb();
+            a = L / static_cast<double>(N);
+
+            double xtemp = isProjectile ? (a * i - bb / 2.) : (a * i + bb / 2.);
+            int ix = xtemp / a;
+
+            if (isProjectile) {
+                if (ix < 0) continue;
+            } else {
+                if (ix >= N) continue;
+            }
+
+            int pos = ix * N + j;
+            U[pos] = (temp);
+        }
+    }
+
+    fin.close();
+}
+
+void Init::readWilsonLineBinary(
+    const std::string &fileName, Parameters *param, NucleusRole role,
+    std::vector<Matrix> &U) {
+    const bool isProjectile = (role == NucleusRole::Projectile);
+    std::ifstream InStream;
+    InStream.precision(15);
+    InStream.open(fileName.c_str(), std::ios::in | std::ios::binary);
+    int N;
+    int NcInFile;
+    double L, a, temp;
+
+    if (!InStream.good()) {
+        messager_ << "[Init::readVFromFile]: File " << fileName.c_str()
+                  << " does not exist!";
+        messager_.flush("error");
+        exit(1);
+    }
+
+    if (!InStream.is_open()) return;
+
+    // READING IN PARAMETERS
+    InStream.read(reinterpret_cast<char *>(&N), sizeof(int));
+    InStream.read(reinterpret_cast<char *>(&NcInFile), sizeof(int));
+    InStream.read(reinterpret_cast<char *>(&L), sizeof(double));
+    InStream.read(reinterpret_cast<char *>(&a), sizeof(double));
+    InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
+
+    if (N != param->getSize()) {
+        messager_ << "[Init::readVFromFile]: wrong lattice "
+                     "size, data is "
+                  << N << " but you have specified " << param->getSize();
+        messager_.flush("error");
+        exit(1);
+    }
+    if (std::abs(L - param->getL()) > 1e-5) {
+        messager_ << "[Init::readVFromFile]: wrong grid length, "
+                     "data has "
+                  << L << " but you have specified " << param->getL();
+        messager_.flush("error");
+        exit(1);
+    }
+
+    // READING ACTUAL DATA
+    double ValueBuffer;
+    int INPUT_CTR = 0;
+    double re, im;
+    re = 0.;
+    im = 0.;
+
+    while (InStream.read(
+        reinterpret_cast<char *>(&ValueBuffer), sizeof(double))) {
+        if (INPUT_CTR % 2 == 0)  // this is the real part
+        {
+            re = ValueBuffer;
+        } else  // this is the imaginary part, write then to
+                // variable //
+        {
+            im = ValueBuffer;
+            int TEMPINDX = ((INPUT_CTR - 1) / 2);
+            int PositionIndx = TEMPINDX / 9;
+
+            // PositionIndx enumerates (ix, iy) pairs in the
+            // writer's ix-outer/iy-inner loop order (see
+            // Lattice::writeWilsonLines), so dividing by N
+            // recovers ix, and the remainder is iy.
+            int ixRaw = PositionIndx / N;
+            int iy = PositionIndx - N * ixRaw;
+
+            double bb = param->getb();
+            a = L / static_cast<double>(N);
+
+            // shift here by half an impact parameter
+            double xtemp =
+                isProjectile ? (a * ixRaw - bb / 2.) : (a * ixRaw + bb / 2.);
+
+            int ix = round(xtemp / a);
+
+            int MatrixIndx = TEMPINDX - PositionIndx * 9;
+            int j = MatrixIndx / 3;
+            int k = MatrixIndx - j * 3;
+
+            int indx = N * ix + iy;
+            if (indx >= N * N || indx < 0) {
+                if (bb == 0) {
+                    messager_ << "[Init::readVFromFile]: datafile "
+                              << fileName << " has an element " << indx
+                              << " (iy=" << iy << ", ix=" << ix
+                              << "), but the grid is N=" << N
+                              << ". Element is (" << re << " + " << im
+                              << "i), skipping it.";
+                    messager_.flush("warning");
+                }
+                INPUT_CTR++;
+                continue;
+            }
+            U[indx].set(j, k, complex<double>(re, im));
+        }
+        INPUT_CTR++;
+    }
+
+    InStream.close();
 }
 
 void Init::sampleImpactParameter(Parameters *param) {

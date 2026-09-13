@@ -48,6 +48,39 @@ void closeBufferedTextOutput(ofstream &output, const string &filename) {
     }
 }
 
+// Bilinearly interpolate a per-cell scalar field, given the four
+// surrounding-cell indices (pos1/pos2 share the low-y row, pos3/pos4 the
+// high-y row) and the fractional offsets within that cell. Each pair falls
+// back to 0 when out of the lattice, matching the historical behavior at
+// the edges. takeAbs replicates call sites that previously wrapped each
+// sample in abs() before blending (epsilon, g2mu2A, g2mu2B).
+double interpolateCellField(
+    Lattice *lat, int pos1, int pos2, int pos3, int pos4, int N,
+    double fracx, double fracy, double (Cell::*getter)() const,
+    bool takeAbs = false) {
+    double x1 = 0.;
+    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0 && pos2 < N * N) {
+        double v1 = (lat->cells[pos1]->*getter)();
+        double v2 = (lat->cells[pos2]->*getter)();
+        if (takeAbs) {
+            v1 = abs(v1);
+            v2 = abs(v2);
+        }
+        x1 = (1. - fracx) * v1 + fracx * v2;
+    }
+    double x2 = 0.;
+    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0 && pos4 < N * N) {
+        double v3 = (lat->cells[pos3]->*getter)();
+        double v4 = (lat->cells[pos4]->*getter)();
+        if (takeAbs) {
+            v3 = abs(v3);
+            v4 = abs(v4);
+        }
+        x2 = (1. - fracx) * v3 + fracx * v4;
+    }
+    return (1. - fracy) * x1 + fracy * x2;
+}
+
 bool binaryTmunuEnabled(Parameters *param) {
     const bool inputDefault = param->getWriteTmunuBinary() != 0;
     const char *value = std::getenv("IPGLASMA_BINARY_TMUNU");
@@ -572,319 +605,60 @@ void MyEigen::flowVelocity4DImpl(
                         pos3 = xpos * N + yposUp;
                         pos4 = xposUp * N + yposUp;
 
-                        // -----------------------------epsilon---------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx)
-                                     * abs(lat->cells[pos1]->getEpsilon())
-                                 + fracx * abs(lat->cells[pos2]->getEpsilon());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx)
-                                     * abs(lat->cells[pos3]->getEpsilon())
-                                 + fracx * abs(lat->cells[pos4]->getEpsilon());
-                        else
-                            x2 = 0.;
-
                         fracy = (y - ylow) / a;
 
-                        resultE = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------g2mu2A----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 =
-                                (1 - fracx) * abs(lat->cells[pos1]->getg2mu2A())
-                                + fracx * abs(lat->cells[pos2]->getg2mu2A());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 =
-                                (1 - fracx) * abs(lat->cells[pos3]->getg2mu2A())
-                                + fracx * abs(lat->cells[pos4]->getg2mu2A());
-                        else
-                            x2 = 0.;
-
-                        g2mu2A = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------g2mu2B----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 =
-                                (1 - fracx) * abs(lat->cells[pos1]->getg2mu2B())
-                                + fracx * abs(lat->cells[pos2]->getg2mu2B());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 =
-                                (1 - fracx) * abs(lat->cells[pos3]->getg2mu2B())
-                                + fracx * abs(lat->cells[pos4]->getg2mu2B());
-                        else
-                            x2 = 0.;
-
-                        g2mu2B = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------utau------------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getutau())
-                                 + fracx * (lat->cells[pos2]->getutau());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getutau())
-                                 + fracx * (lat->cells[pos4]->getutau());
-                        else
-                            x2 = 0.;
-
-                        resultutau = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------ux--------------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getux())
-                                 + fracx * (lat->cells[pos2]->getux());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getux())
-                                 + fracx * (lat->cells[pos4]->getux());
-                        else
-                            x2 = 0.;
-
-                        resultux = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------uy--------------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getuy())
-                                 + fracx * (lat->cells[pos2]->getuy());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getuy())
-                                 + fracx * (lat->cells[pos4]->getuy());
-                        else
-                            x2 = 0.;
-
-                        resultuy = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------ueta------------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getueta())
-                                 + fracx * (lat->cells[pos2]->getueta());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getueta())
-                                 + fracx * (lat->cells[pos4]->getueta());
-                        else
-                            x2 = 0.;
-
-                        resultueta = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pitautau--------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpitautau())
-                                 + fracx * (lat->cells[pos2]->getpitautau());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpitautau())
-                                 + fracx * (lat->cells[pos4]->getpitautau());
-                        else
-                            x2 = 0.;
-
-                        resultpi00 = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pitaux----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpitaux())
-                                 + fracx * (lat->cells[pos2]->getpitaux());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpitaux())
-                                 + fracx * (lat->cells[pos4]->getpitaux());
-                        else
-                            x2 = 0.;
-
-                        resultpi0x = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pitauy----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpitauy())
-                                 + fracx * (lat->cells[pos2]->getpitauy());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpitauy())
-                                 + fracx * (lat->cells[pos4]->getpitauy());
-                        else
-                            x2 = 0.;
-
-                        resultpi0y = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pitaueta--------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpitaueta())
-                                 + fracx * (lat->cells[pos2]->getpitaueta());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpitaueta())
-                                 + fracx * (lat->cells[pos4]->getpitaueta());
-                        else
-                            x2 = 0.;
-
-                        resultpi0eta = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pixy----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpixy())
-                                 + fracx * (lat->cells[pos2]->getpixy());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpixy())
-                                 + fracx * (lat->cells[pos4]->getpixy());
-                        else
-                            x2 = 0.;
-
-                        resultpixy = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pixeta----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpixeta())
-                                 + fracx * (lat->cells[pos2]->getpixeta());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpixeta())
-                                 + fracx * (lat->cells[pos4]->getpixeta());
-                        else
-                            x2 = 0.;
-
-                        resultpixeta = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------piyeta----------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpiyeta())
-                                 + fracx * (lat->cells[pos2]->getpiyeta());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpiyeta())
-                                 + fracx * (lat->cells[pos4]->getpiyeta());
-                        else
-                            x2 = 0.;
-
-                        resultpiyeta = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pixx------------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpixx())
-                                 + fracx * (lat->cells[pos2]->getpixx());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpixx())
-                                 + fracx * (lat->cells[pos4]->getpixx());
-                        else
-                            x2 = 0.;
-
-                        resultpixx = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------piyy------------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpiyy())
-                                 + fracx * (lat->cells[pos2]->getpiyy());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpiyy())
-                                 + fracx * (lat->cells[pos4]->getpiyy());
-                        else
-                            x2 = 0.;
-
-                        resultpiyy = (1. - fracy) * x1 + fracy * x2;
-
-                        // -----------------------------pietaeta--------------------------------
-                        // //
-                        if (pos1 >= 0 && pos1 < (N) * (N) && pos2 >= 0
-                            && pos2 < (N) * (N))
-                            x1 = (1 - fracx) * (lat->cells[pos1]->getpietaeta())
-                                 + fracx * (lat->cells[pos2]->getpietaeta());
-                        else
-                            x1 = 0.;
-
-                        if (pos3 >= 0 && pos3 < N * N && pos4 >= 0
-                            && pos4 < N * N)
-                            x2 = (1 - fracx) * (lat->cells[pos3]->getpietaeta())
-                                 + fracx * (lat->cells[pos4]->getpietaeta());
-                        else
-                            x2 = 0.;
-
-                        resultpietaeta = (1. - fracy) * x1 + fracy * x2;
+                        // Note: the interpolated utau computed here would be
+                        // immediately overwritten below by the u^mu
+                        // normalization condition, so it is intentionally
+                        // not interpolated at all.
+                        resultE = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getEpsilon, true);
+                        g2mu2A = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getg2mu2A, true);
+                        g2mu2B = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getg2mu2B, true);
+                        resultux = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getux);
+                        resultuy = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getuy);
+                        resultueta = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getueta);
+                        resultpi00 = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpitautau);
+                        resultpi0x = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpitaux);
+                        resultpi0y = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpitauy);
+                        resultpi0eta = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpitaueta);
+                        resultpixy = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpixy);
+                        resultpixeta = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpixeta);
+                        resultpiyeta = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpiyeta);
+                        resultpixx = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpixx);
+                        resultpiyy = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpiyy);
+                        resultpietaeta = interpolateCellField(
+                            lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
+                            &Cell::getpietaeta);
 
                         resultutau = sqrt(
                             1. + resultux * resultux + resultuy * resultuy

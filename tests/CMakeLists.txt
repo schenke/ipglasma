@@ -24,6 +24,8 @@ set(TEST_SOURCES
     test_prettyostream.cpp
     test_instrumentation.cpp
     test_fragmentation.cpp
+    test_init.cpp
+    test_evolution.cpp
     )
 
 add_executable(ipglasma_tests ${TEST_SOURCES} ${LIB_SOURCES})

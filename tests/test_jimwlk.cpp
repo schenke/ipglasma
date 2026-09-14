@@ -19,8 +19,8 @@ void makeJimwlkTestParam(Parameters &param, int size) {
     param.setRapidityB(0.0);
     param.setMu0_jimwlk(0.2);
     param.setLambdaQCD_jimwlk(0.2);
-    param.setm_jimwlk(0.0);         // skips the Bessel mass-regulator branch
-    param.setJimwlk_alphas(0.3);    // fixed coupling, skips running-coupling
+    param.setm_jimwlk(0.0);       // skips the Bessel mass-regulator branch
+    param.setJimwlk_alphas(0.3);  // fixed coupling, skips running-coupling
     param.setDs_jimwlk(0.001);
 }
 }  // namespace

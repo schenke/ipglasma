@@ -731,6 +731,20 @@ double Glauber::nuIntHulthen(double xi) {
     return f;
 } /* nuIntHulthen */
 
+double Glauber::evaluateIntegrand(int id, double xi) {
+    switch (id) {
+        case 1: return nuInt2HO(xi);
+        case 2: return nuInt3Gauss(xi);
+        case 3: return nuInt3Fermi(xi);
+        case 4: return anum3FermiInt(xi);
+        case 5: return anum3GaussInt(xi);
+        case 6: return anum2HOInt(xi);
+        case 7: return oLSIntegrand(xi);
+        case 8: return nuIntHulthen(xi);
+        default: return 0.0;
+    }
+}
+
 double Glauber::integral(
     int id, double down, double up, double tol, int *count) {
     double dx, y, g1[7];
@@ -741,22 +755,7 @@ double Glauber::integral(
     else {
         dx = (up - down) / 6.0;
         for (i = 0; i < 7; i++) {
-            if (id == 1)
-                g1[i] = nuInt2HO(down + i * dx);
-            else if (id == 2)
-                g1[i] = nuInt3Gauss(down + i * dx);
-            else if (id == 3)
-                g1[i] = nuInt3Fermi(down + i * dx);
-            else if (id == 4)
-                g1[i] = anum3FermiInt(down + i * dx);
-            else if (id == 5)
-                g1[i] = anum3GaussInt(down + i * dx);
-            else if (id == 6)
-                g1[i] = anum2HOInt(down + i * dx);
-            else if (id == 7)
-                g1[i] = oLSIntegrand(down + i * dx);
-            else if (id == 8)
-                g1[i] = nuIntHulthen(down + i * dx);
+            g1[i] = evaluateIntegrand(id, down + i * dx);
         }
         *count = 7;
         y = qnc7(id, tol, down, dx, g1, 0.0, 0.0, count);
@@ -787,39 +786,9 @@ double Glauber::qnc7(
       store half distanced values for the left sum in fl[]
       */
 
-    if (id == 1) {
-        fl[1] = nuInt2HO(down + dx);
-        fl[3] = nuInt2HO(down + 3.0 * dx);
-        fl[5] = nuInt2HO(down + 5.0 * dx);
-    } else if (id == 2) {
-        fl[1] = nuInt3Gauss(down + dx);
-        fl[3] = nuInt3Gauss(down + 3.0 * dx);
-        fl[5] = nuInt3Gauss(down + 5.0 * dx);
-    } else if (id == 3) {
-        fl[1] = nuInt3Fermi(down + dx);
-        fl[3] = nuInt3Fermi(down + 3.0 * dx);
-        fl[5] = nuInt3Fermi(down + 5.0 * dx);
-    } else if (id == 4) {
-        fl[1] = anum3FermiInt(down + dx);
-        fl[3] = anum3FermiInt(down + 3.0 * dx);
-        fl[5] = anum3FermiInt(down + 5.0 * dx);
-    } else if (id == 5) {
-        fl[1] = anum3GaussInt(down + dx);
-        fl[3] = anum3GaussInt(down + 3.0 * dx);
-        fl[5] = anum3GaussInt(down + 5.0 * dx);
-    } else if (id == 6) {
-        fl[1] = anum2HOInt(down + dx);
-        fl[3] = anum2HOInt(down + 3.0 * dx);
-        fl[5] = anum2HOInt(down + 5.0 * dx);
-    } else if (id == 7) {
-        fl[1] = oLSIntegrand(down + dx);
-        fl[3] = oLSIntegrand(down + 3.0 * dx);
-        fl[5] = oLSIntegrand(down + 5.0 * dx);
-    } else if (id == 8) {
-        fl[1] = nuIntHulthen(down + dx);
-        fl[3] = nuIntHulthen(down + 3.0 * dx);
-        fl[5] = nuIntHulthen(down + 5.0 * dx);
-    }
+    fl[1] = evaluateIntegrand(id, down + dx);
+    fl[3] = evaluateIntegrand(id, down + 3.0 * dx);
+    fl[5] = evaluateIntegrand(id, down + 5.0 * dx);
 
     fl[0] = f_of[0];
     fl[2] = f_of[1];
@@ -836,39 +805,9 @@ double Glauber::qnc7(
       like wise, the right sum is in fr[]
       */
 
-    if (id == 1) {
-        fr[1] = nuInt2HO(down + 7.0 * dx);
-        fr[3] = nuInt2HO(down + 9.0 * dx);
-        fr[5] = nuInt2HO(down + 11.0 * dx);
-    } else if (id == 2) {
-        fr[1] = nuInt3Gauss(down + 7.0 * dx);
-        fr[3] = nuInt3Gauss(down + 9.0 * dx);
-        fr[5] = nuInt3Gauss(down + 11.0 * dx);
-    } else if (id == 3) {
-        fr[1] = nuInt3Fermi(down + 7.0 * dx);
-        fr[3] = nuInt3Fermi(down + 9.0 * dx);
-        fr[5] = nuInt3Fermi(down + 11.0 * dx);
-    } else if (id == 4) {
-        fr[1] = anum3FermiInt(down + 7.0 * dx);
-        fr[3] = anum3FermiInt(down + 9.0 * dx);
-        fr[5] = anum3FermiInt(down + 11.0 * dx);
-    } else if (id == 5) {
-        fr[1] = anum3GaussInt(down + 7.0 * dx);
-        fr[3] = anum3GaussInt(down + 9.0 * dx);
-        fr[5] = anum3GaussInt(down + 11.0 * dx);
-    } else if (id == 6) {
-        fr[1] = anum2HOInt(down + 7.0 * dx);
-        fr[3] = anum2HOInt(down + 9.0 * dx);
-        fr[5] = anum2HOInt(down + 11.0 * dx);
-    } else if (id == 7) {
-        fr[1] = oLSIntegrand(down + 7.0 * dx);
-        fr[3] = oLSIntegrand(down + 9.0 * dx);
-        fr[5] = oLSIntegrand(down + 11.0 * dx);
-    } else if (id == 8) {
-        fr[1] = nuIntHulthen(down + 7.0 * dx);
-        fr[3] = nuIntHulthen(down + 9.0 * dx);
-        fr[5] = nuIntHulthen(down + 11.0 * dx);
-    }
+    fr[1] = evaluateIntegrand(id, down + 7.0 * dx);
+    fr[3] = evaluateIntegrand(id, down + 9.0 * dx);
+    fr[5] = evaluateIntegrand(id, down + 11.0 * dx);
 
     fr[0] = f_of[3];
     fr[2] = f_of[4];

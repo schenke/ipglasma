@@ -113,6 +113,9 @@ class Glauber {
     double qnc7(
         int id, double tol, double down, double dx, double *f_of,
         double pre_sum, double area, int *count);
+    // Shared id-dispatch used by integral() and qnc7() to pick which
+    // density-function integrand to sample at xi.
+    double evaluateIntegrand(int id, double xi);
     double oLSIntegrand(double s);
     double tAB();
     void initGlauber(

@@ -70,6 +70,15 @@ class JIMWLK {
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);
     ~JIMWLK() = default;
 
+    // K_/xi_/xi2_/CKxi_/VxsiVx_/VxsiVy_ are pointer-per-cell views aliasing
+    // this object's own *_storage_/*_data_ vectors (see their declarations
+    // below). A compiler-generated copy would deep-copy the storage but
+    // shallow-copy the views, leaving the copy's views pointing into the
+    // original's memory instead of its own -- so disable copying (nothing
+    // needs it; JIMWLK is only ever stack-constructed once in main.cpp).
+    JIMWLK(const JIMWLK &) = delete;
+    JIMWLK &operator=(const JIMWLK &) = delete;
+
     void initializeK();
     double getMassRegulator(const double x, const double y) const;
     double getAlphas(const double x, const double y) const;

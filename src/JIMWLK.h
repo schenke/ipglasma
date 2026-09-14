@@ -86,6 +86,14 @@ class JIMWLK {
 
     void evolution();
     void evolutionStep(NucleusRole nucleus);
+
+  private:
+    // Shared by evolution()'s projectile and target passes: runs `steps`
+    // Langevin steps for `nucleus`, logging progress and writing any
+    // snapshots due in xSnapshotList along the way.
+    void runEvolutionLoop(
+        NucleusRole nucleus, int steps, double x0, double dlogx,
+        bool saveSnapshots, const std::vector<double> &xSnapshotList);
 };
 
 #endif  // SRC_JIMWLK_H_

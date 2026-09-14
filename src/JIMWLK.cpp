@@ -202,57 +202,41 @@ void JIMWLK::evolution() {
             + 0.5);
     }
 
-    unsigned int iSnapshot = 0;
-    messager_ << "[JIMWLK::evolution]: Evolving projectile, evolution steps "
-              << steps_1;
+    runEvolutionLoop(
+        NucleusRole::Projectile, steps_1, x0, dlogx, saveSnapshots,
+        xSnapshotList);
+    runEvolutionLoop(
+        NucleusRole::Target, steps_2, x0, dlogx, saveSnapshots,
+        xSnapshotList);
+}
+
+void JIMWLK::runEvolutionLoop(
+    NucleusRole nucleus, int steps, double x0, double dlogx,
+    bool saveSnapshots, const std::vector<double> &xSnapshotList) {
+    const std::string label =
+        (nucleus == NucleusRole::Projectile) ? "projectile" : "target";
+    messager_ << "[JIMWLK::evolution]: Evolving " << label
+              << ", evolution steps " << steps;
     messager_.flush("info");
-    for (int ids = 0; ids < steps_1; ids++) {
-        // steps_1 (from user-configurable JIMWLK parameters, no lower bound
+    unsigned int iSnapshot = 0;
+    for (int ids = 0; ids < steps; ids++) {
+        // steps (from user-configurable JIMWLK parameters, no lower bound
         // enforced) can be under 10, making this 0; guard against the
         // resulting integer modulo-by-zero below.
-        int printSteps = std::max(1, steps_1 / 10);
+        int printSteps = std::max(1, steps / 10);
         if (ids % printSteps == 0) {
             messager_ << "[JIMWLK::evolution]: Step " << ids;
             messager_.flush("info");
         }
         double xLoc = x0 * exp(-ids * dlogx);
-        evolutionStep(NucleusRole::Projectile);
+        evolutionStep(nucleus);
         if (saveSnapshots) {
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
                     std::stringstream ss;
                     ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->writeWilsonLines(
-                        ss.str(), &param_, NucleusRole::Projectile);
-                    iSnapshot++;
-                }
-            }
-        }
-    }
-    messager_ << "[JIMWLK::evolution]: Done.";
-    messager_.flush("info");
-
-    messager_ << "[JIMWLK::evolution]: Evolving target, evolution steps "
-              << steps_2;
-    messager_.flush("info");
-    iSnapshot = 0;
-    for (int ids = 0; ids < steps_2; ids++) {
-        int printSteps = std::max(1, steps_2 / 10);
-        if (ids % printSteps == 0) {
-            messager_ << "[JIMWLK::evolution]: Step " << ids;
-            messager_.flush("info");
-        }
-        double xLoc = x0 * exp(-ids * dlogx);
-        evolutionStep(NucleusRole::Target);
-        if (saveSnapshots) {
-            if (iSnapshot < xSnapshotList.size()) {
-                if (xLoc > xSnapshotList[iSnapshot]
-                    && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    std::stringstream ss;
-                    ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->writeWilsonLines(
-                        ss.str(), &param_, NucleusRole::Target);
+                    lat_ptr_->writeWilsonLines(ss.str(), &param_, nucleus);
                     iSnapshot++;
                 }
             }

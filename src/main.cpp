@@ -111,12 +111,11 @@ int main(int argc, char *argv[]) {
         std::vector<unsigned long long int> seedList(size, 0);
         if (fin) {
             for (int i = 0; i < size; i++) {
-                if (!fin.eof()) {
-                    fin >> seedList[i];
-                } else {
+                if (!(fin >> seedList[i])) {
                     messager.error(
-                        "[main::main]: Not enough random seeds for the number "
-                        "of processors selected. Exiting.");
+                        "[main::main]: Not enough random seeds (or a "
+                        "malformed entry) for the number of processors "
+                        "selected. Exiting.");
                     exit(1);
                 }
             }

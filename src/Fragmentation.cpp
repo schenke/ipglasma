@@ -3,6 +3,7 @@
 #include "Fragmentation.h"
 
 #include <cmath>
+#include <cstdlib>
 
 #include "PrettyOstream.h"
 
@@ -186,15 +187,14 @@ double kkp(int ih, int iset, double x, double qs) {
     double rlam;
     if (iset == 0) {
         rlam = 0.088;
-    } else {
-        if (iset != 1) {
-            PrettyOstream messager;
-            messager.warning(
-                "[Fragmentation::kkp]: iset should be 0 (LO) or 1 (NLO); "
-                "got a different value, proceeding with the NLO "
-                "fragmentation functions.");
-        }
+    } else if (iset == 1) {
         rlam = 0.213;
+    } else {
+        PrettyOstream messager;
+        messager.error(
+            "[Fragmentation::kkp]: iset should be 0 (LO) or 1 (NLO); got a "
+            "different value. Exiting.");
+        exit(1);
     }
     const double s =
         log(log(qs * qs / (rlam * rlam)) / log(q0 * q0 / (rlam * rlam)));

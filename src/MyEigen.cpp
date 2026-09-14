@@ -433,25 +433,32 @@ double MyEigen::writeHydroText(
     int N, double L, double a, double dtau, double gfactor, int hx, int hy,
     int heta, double hL, double deta, double ha, double tau0) {
     double Etot = 0.;
-    if (tmunuOnly || param->getWriteOutputs() % 2 != 1) return Etot;
+    const bool writeText = param->getWriteOutputs() % 2 == 1;
+    const bool needsEtot =
+        writeText || (param->getWriteOutputs() % 4) / 2 == 1;
+    if (tmunuOnly || !needsEtot) return Etot;
 
     IPG_PROFILE_SCOPE("output.hydro_text");
-    stringstream streuH_name;
-    if (finalFlag) {
-        streuH_name << "epsilon-u-Hydro-TauHydro-" << param->getEventId()
-                    << ".dat";
-    } else {
-        streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
-                    << param->getEventId() << ".dat";
-    }
-    const string outputFilename = streuH_name.str();
-    vector<char> outputBuffer(kTextOutputBufferBytes);
+    string outputFilename;
+    vector<char> outputBuffer;
     ofstream foutEps2;
-    openBufferedTextOutput(foutEps2, outputBuffer, outputFilename);
+    if (writeText) {
+        stringstream streuH_name;
+        if (finalFlag) {
+            streuH_name << "epsilon-u-Hydro-TauHydro-" << param->getEventId()
+                        << ".dat";
+        } else {
+            streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
+                        << param->getEventId() << ".dat";
+        }
+        outputFilename = streuH_name.str();
+        outputBuffer.resize(kTextOutputBufferBytes);
+        openBufferedTextOutput(foutEps2, outputBuffer, outputFilename);
 
-    foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
-             << " ymax= " << hy << " deta= " << deta << " dx= " << ha
-             << " dy= " << ha << " tau= " << tau0 << '\n';
+        foutEps2 << "# dummy " << 1 << " etamax= " << heta << " xmax= " << hx
+                 << " ymax= " << hy << " deta= " << deta << " dx= " << ha
+                 << " dy= " << ha << " tau= " << tau0 << '\n';
+    }
 
     int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
     double fracx, fracy, xlow, ylow, x, y;
@@ -557,6 +564,7 @@ double MyEigen::writeHydroText(
 
                     Etot += abs(hbarc * resultE * gfactor) * ha * ha * it * dtau
                             * a;
+                    if (!writeText) continue;
                     if (abs(hbarc * resultE * gfactor) > 0.0000000001) {
                         foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
                                  << x << " " << y << " "
@@ -581,7 +589,7 @@ double MyEigen::writeHydroText(
                                  << " " << 0. << " " << 0. << " " << 0. << " "
                                  << 0. << " " << 0. << " " << 0. << '\n';
                     }
-                } else {
+                } else if (writeText) {
                     foutEps2 << -(heta - 1) / 2. * deta + deta * ieta << " "
                              << x << " " << y << " " << 0. << " " << 1. << " "
                              << 0. << " " << 0. << " " << 0. << " " << 0. << " "
@@ -591,10 +599,10 @@ double MyEigen::writeHydroText(
                 }
             }
         }
-        foutEps2 << '\n';
+        if (writeText) foutEps2 << '\n';
     }
 
-    closeBufferedTextOutput(foutEps2, outputFilename);
+    if (writeText) closeBufferedTextOutput(foutEps2, outputFilename);
     messager_ << "[MyEigen::flowVelocity4DImpl]: Etot = " << Etot << " GeV";
     messager_.flush("info");
     return Etot;

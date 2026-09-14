@@ -731,15 +731,24 @@ double Glauber::nuIntHulthen(double xi) {
 
 double Glauber::evaluateIntegrand(int id, double xi) {
     switch (id) {
-        case 1: return nuInt2HO(xi);
-        case 2: return nuInt3Gauss(xi);
-        case 3: return nuInt3Fermi(xi);
-        case 4: return anum3FermiInt(xi);
-        case 5: return anum3GaussInt(xi);
-        case 6: return anum2HOInt(xi);
-        case 7: return oLSIntegrand(xi);
-        case 8: return nuIntHulthen(xi);
-        default: return 0.0;
+        case 1:
+            return nuInt2HO(xi);
+        case 2:
+            return nuInt3Gauss(xi);
+        case 3:
+            return nuInt3Fermi(xi);
+        case 4:
+            return anum3FermiInt(xi);
+        case 5:
+            return anum3GaussInt(xi);
+        case 6:
+            return anum2HOInt(xi);
+        case 7:
+            return oLSIntegrand(xi);
+        case 8:
+            return nuIntHulthen(xi);
+        default:
+            return 0.0;
     }
 }
 

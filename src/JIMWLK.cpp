@@ -206,13 +206,12 @@ void JIMWLK::evolution() {
         NucleusRole::Projectile, steps_1, x0, dlogx, saveSnapshots,
         xSnapshotList);
     runEvolutionLoop(
-        NucleusRole::Target, steps_2, x0, dlogx, saveSnapshots,
-        xSnapshotList);
+        NucleusRole::Target, steps_2, x0, dlogx, saveSnapshots, xSnapshotList);
 }
 
 void JIMWLK::runEvolutionLoop(
-    NucleusRole nucleus, int steps, double x0, double dlogx,
-    bool saveSnapshots, const std::vector<double> &xSnapshotList) {
+    NucleusRole nucleus, int steps, double x0, double dlogx, bool saveSnapshots,
+    const std::vector<double> &xSnapshotList) {
     const std::string label =
         (nucleus == NucleusRole::Projectile) ? "projectile" : "target";
     messager_ << "[JIMWLK::evolution]: Evolving " << label

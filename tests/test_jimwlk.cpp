@@ -1,4 +1,5 @@
 #include <cmath>
+#include <vector>
 
 #include "Group.h"
 #include "JIMWLK.h"
@@ -49,6 +50,38 @@ TEST_CASE(
             CHECK(std::isfinite(lat.U[pos].get(k).imag()));
             CHECK(std::isfinite(lat.U2[pos].get(k).real()));
             CHECK(std::isfinite(lat.U2[pos].get(k).imag()));
+        }
+    }
+}
+
+TEST_CASE(
+    "JIMWLK::evolution doesn't crash when steps_1/steps_2 come out under 10 "
+    "(regression test: printSteps = steps_1/10 used to be 0 in that case, "
+    "making \"ids % printSteps\" an integer modulo-by-zero)") {
+    const int N = 8;
+    Parameters param;
+    makeJimwlkTestParam(param, N);
+    param.setSimpleLangevin(1);
+    param.setSaveSnapshots(0);
+    param.setxSnapshotList(std::vector<double>());
+    // Fixed coupling (getJimwlk_alphas() > 0): steps_1 = as*log(x0/x_proj) /
+    // (pi^2*ds) + 0.5. These values give steps_1 = steps_2 = 1.
+    param.setJimwlk_x0(0.01);
+    param.setJimwlk_x_projectile(0.008);
+    param.setJimwlk_x_target(0.008);
+
+    Group group;
+    Random random;
+    random.init_genrand64(42ULL);
+    Lattice lat(&param, N);
+
+    JIMWLK jimwlk(param, &group, &lat, &random);
+    jimwlk.evolution();
+
+    for (int pos = 0; pos < N * N; ++pos) {
+        for (int k = 0; k < 9; ++k) {
+            CHECK(std::isfinite(lat.U[pos].get(k).real()));
+            CHECK(std::isfinite(lat.U2[pos].get(k).real()));
         }
     }
 }

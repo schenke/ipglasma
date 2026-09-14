@@ -3,6 +3,7 @@
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_sf_bessel.h>
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <iostream>
@@ -206,7 +207,10 @@ void JIMWLK::evolution() {
               << steps_1;
     messager_.flush("info");
     for (int ids = 0; ids < steps_1; ids++) {
-        int printSteps = steps_1 / 10;
+        // steps_1 (from user-configurable JIMWLK parameters, no lower bound
+        // enforced) can be under 10, making this 0; guard against the
+        // resulting integer modulo-by-zero below.
+        int printSteps = std::max(1, steps_1 / 10);
         if (ids % printSteps == 0) {
             messager_ << "[JIMWLK::evolution]: Step " << ids;
             messager_.flush("info");
@@ -234,7 +238,7 @@ void JIMWLK::evolution() {
     messager_.flush("info");
     iSnapshot = 0;
     for (int ids = 0; ids < steps_2; ids++) {
-        int printSteps = steps_2 / 10;
+        int printSteps = std::max(1, steps_2 / 10);
         if (ids % printSteps == 0) {
             messager_ << "[JIMWLK::evolution]: Step " << ids;
             messager_.flush("info");

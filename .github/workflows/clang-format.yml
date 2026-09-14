@@ -29,14 +29,13 @@ jobs:
       - name: Install clang-format
         # .clang-format uses options (e.g. AlignCaseArrows) that only exist
         # in clang-format 19+; Ubuntu's own apt repo tops out at 18, which
-        # fails to even parse the config. Install from the LLVM apt repo
-        # instead.
-        run: |
-          wget https://apt.llvm.org/llvm.sh
-          chmod +x llvm.sh
-          sudo ./llvm.sh 19
-          sudo apt-get install -y clang-format-19
-          sudo ln -sf "$(command -v clang-format-19)" /usr/local/bin/clang-format
+        # fails to even parse the config. Install a pinned exact version
+        # from PyPI's official clang-format wheel instead of piping a
+        # remote install script (previously apt.llvm.org/llvm.sh) into a
+        # root shell in this contents:write job -- an unpinned, unverified
+        # script run as root here could act with this job's write-scoped
+        # credentials.
+        run: pip install --quiet clang-format==19.1.7
 
       - name: Run clang-format
         # Run the formatter directly instead of the PR-controlled

@@ -14,7 +14,6 @@ set (IPGLASMA_LIB_SOURCES
     Lattice.cpp
     Cell.cpp
     Glauber.cpp
-    Util.cpp
     Evolution.cpp
     GaugeFix.cpp
     MyEigen.cpp

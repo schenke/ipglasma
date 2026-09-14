@@ -299,7 +299,11 @@ void Init::sampleTAFromConfigFiles(Random *random, Glauber *glauber) {
 
 void Init::sampleTAFromAlvioliFiles(Random *random, Glauber *glauber) {
     // Read in Alvioli's nucleon positions including correlations
-    if (glauber->nucleusA1() != 208 && glauber->nucleusA2() != 208) {
+    const bool bothPb208 =
+        (glauber->nucleusA1() == 208 && glauber->nucleusA2() == 208);
+    const bool protonProjectileOnPb208Target =
+        (glauber->nucleusA1() == 1 && glauber->nucleusA2() == 208);
+    if (!bothPb208 && !protonProjectileOnPb208Target) {
         messager_ << "[Init::sampleTA]: nucleonPositionsFromFile == 2 only "
                      "works when both nuclei are Pb-208, or when the "
                      "projectile is a proton and the target is Pb-208. "

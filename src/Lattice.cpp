@@ -61,6 +61,25 @@ Lattice::Lattice(Parameters *param, int length) {
     messager_.flush("info");
 }
 
+void Lattice::writeMatrixArrayText(
+    const std::string &file_name, std::vector<Matrix> &field, int N) {
+    std::ofstream fout(file_name.c_str(), std::ios::out);
+    fout.precision(15);
+
+    for (int ix = 0; ix < N; ix++) {
+        for (int iy = 0; iy < N; iy++) {
+            int pos = ix * N + iy;
+            fout << ix << " " << iy << " " << field[pos].MatrixToString()
+                 << std::endl;
+        }
+        fout << std::endl;
+    }
+    fout.close();
+
+    messager_ << "[Lattice::writeSU3Matrices]: wrote " << file_name;
+    messager_.flush("info");
+}
+
 void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     // Logical aliases (see the field comment in Lattice.h): Ux2 <-> pi,
     // Uy2 <-> phi.
@@ -78,37 +97,8 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
                         + (1 + 2 * param->getSeed()) * param->getMPISize()
                  << ".txt";
 
-    // Output in text
-    std::ofstream foutU(strVOne_name.str().c_str(), std::ios::out);
-    foutU.precision(15);
-
-    for (int ix = 0; ix < N; ix++) {
-        for (int iy = 0; iy < N; iy++) {
-            int pos = ix * N + iy;
-            foutU << ix << " " << iy << " " << Uy2[pos].MatrixToString()
-                  << std::endl;
-        }
-        foutU << std::endl;
-    }
-    foutU.close();
-
-    messager_ << "[Lattice::writeSU3Matrices]: wrote " << strVOne_name.str();
-    messager_.flush("info");
-
-    std::ofstream foutU2(strVTwo_name.str().c_str(), std::ios::out);
-    foutU2.precision(15);
-    for (int ix = 0; ix < N; ix++) {
-        for (int iy = 0; iy < N; iy++) {
-            int pos = ix * N + iy;
-            foutU2 << ix << " " << iy << " " << Ux2[pos].MatrixToString()
-                   << std::endl;
-        }
-        foutU2 << std::endl;
-    }
-    foutU2.close();
-
-    messager_ << "[Lattice::writeSU3Matrices]: wrote " << strVTwo_name.str();
-    messager_.flush("info");
+    writeMatrixArrayText(strVOne_name.str(), Uy2, N);
+    writeMatrixArrayText(strVTwo_name.str(), Ux2, N);
 }
 
 void Lattice::writeWilsonLines(

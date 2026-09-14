@@ -21,6 +21,11 @@ class Lattice {
     static constexpr int Nc_ = 3;
     PrettyOstream messager_;
 
+    // Shared by writeSU3Matrices()'s Phi and Pi passes: writes one N*N
+    // Matrix array to a text file in "ix iy MatrixToString()" format.
+    void writeMatrixArrayText(
+        const std::string &file_name, std::vector<Matrix> &field, int N);
+
   public:
     Lattice(Parameters *param, int length);
     ~Lattice() = default;

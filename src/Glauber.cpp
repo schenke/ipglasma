@@ -81,6 +81,11 @@ void Glauber::findNucleusData(
         exit(1);
     }
 
+    // Not set anywhere pre-table-driven-rewrite either (findNucleusData
+    // never wrote it, and no caller set it separately), leaving it
+    // permanently empty for printNucleusData -- currently uncalled -- to
+    // print; set it here now that we have the matched name at hand anyway.
+    nucleus->name = name;
     nucleus->A = tmpl->A;
     nucleus->Z = tmpl->Z;
     nucleus->R_WS = tmpl->R_WS;

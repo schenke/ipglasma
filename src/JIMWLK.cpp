@@ -26,15 +26,19 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
 
     initializeK();
     initializeNoise();
-    if (param_.getSimpleLangevin()) {
-        VxsiVxStorage_.assign(Ncells_, Matrix(0.));
-        VxsiVyStorage_.assign(Ncells_, Matrix(0.));
-        VxsiVx_.resize(Ncells_);
-        VxsiVy_.resize(Ncells_);
-        for (int i = 0; i < Ncells_; i++) {
-            VxsiVx_[i] = &VxsiVxStorage_[i];
-            VxsiVy_[i] = &VxsiVyStorage_[i];
-        }
+    // evolutionStep() dereferences VxsiVx_/VxsiVy_ unconditionally (there is
+    // no getSimpleLangevin()-gated alternative that skips them), so these
+    // must be allocated regardless of that flag -- gating this allocation
+    // on it (as the pre-refactor new[]-based version also did) left an
+    // empty view here whenever simpleLangevin was off, so the first
+    // evolutionStep() call indexed past an empty vector.
+    VxsiVxStorage_.assign(Ncells_, Matrix(0.));
+    VxsiVyStorage_.assign(Ncells_, Matrix(0.));
+    VxsiVx_.resize(Ncells_);
+    VxsiVy_.resize(Ncells_);
+    for (int i = 0; i < Ncells_; i++) {
+        VxsiVx_[i] = &VxsiVxStorage_[i];
+        VxsiVy_[i] = &VxsiVyStorage_[i];
     }
 }
 

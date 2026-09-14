@@ -26,6 +26,11 @@ class Evolution {
 
     ~Evolution() { delete fft_; }
 
+    // Owns fft_, a raw pointer freed in the destructor; default copies
+    // would double-free it, so disable copying (nothing needs it).
+    Evolution(const Evolution &) = delete;
+    Evolution &operator=(const Evolution &) = delete;
+
     void run(Lattice *lat, Group *group, Parameters *param);
     // run()'s writeOutputs==3 epsilon-plot writers.
     // NOTE: this one computes its running-coupling factor via only the

@@ -28,9 +28,11 @@ class MyEigen {
 
     // Writes the hydro-flow text output (epsilon-u-Hydro*.dat): per-cell
     // interpolated energy density, u^mu, and pi^munu on the output grid.
-    // Returns the total energy Etot integrated over the grid, or 0 if this
-    // output is disabled (param->getWriteOutputs() % 2 != 1) -- writeJazma
-    // needs Etot even when this writer itself is off.
+    // Returns the total energy Etot integrated over the grid, computed
+    // whenever either this text output or writeJazma's output is enabled
+    // (param->getWriteOutputs() bit 0 or bit 1) -- writeJazma needs Etot
+    // even when this writer's own text file is off (e.g. writeOutputs=2,
+    // "standalone Jazma output" per README.md).
     double writeHydroText(
         Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly,
         int N, double L, double a, double dtau, double gfactor, int hx, int hy,

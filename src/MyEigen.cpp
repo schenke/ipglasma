@@ -434,8 +434,7 @@ double MyEigen::writeHydroText(
     int heta, double hL, double deta, double ha, double tau0) {
     double Etot = 0.;
     const bool writeText = param->getWriteOutputs() % 2 == 1;
-    const bool needsEtot =
-        writeText || (param->getWriteOutputs() % 4) / 2 == 1;
+    const bool needsEtot = writeText || (param->getWriteOutputs() % 4) / 2 == 1;
     if (tmunuOnly || !needsEtot) return Etot;
 
     IPG_PROFILE_SCOPE("output.hydro_text");

@@ -20,7 +20,6 @@ set(TEST_SOURCES
     test_fft.cpp
     test_lattice.cpp
     test_cell.cpp
-    test_util.cpp
     test_prettyostream.cpp
     test_instrumentation.cpp
     test_fragmentation.cpp

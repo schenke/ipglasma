@@ -4,10 +4,12 @@
 #include <gsl/gsl_sf_gamma.h>
 
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <iostream>
 
 #include "Instrumentation.h"
+#include "PrettyOstream.h"
 #include "gsl/gsl_randist.h"
 
 // This file contains the random generator, which is
@@ -299,6 +301,14 @@ void Random::setGammaIncCDF(const double omega) {
 }
 
 double Random::sampleGammaInc() {
+    if (gammaIncCDF_.empty()) {
+        PrettyOstream messager;
+        messager.error(
+            "[Random::sampleGammaInc]: gammaIncCDF_ is empty; "
+            "setGammaIncCDF() must be called before sampleGammaInc(). "
+            "Exiting.");
+        exit(1);
+    }
     double u = genrand64_real1();
     int idx_l = 0;
     int idx_h = gammaIncCDF_.size() - 1;

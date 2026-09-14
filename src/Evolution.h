@@ -17,7 +17,10 @@
 class Evolution {
   private:
     FFT *fft_;
-    double nIn_[100];  // k_T array
+    // k_T array; zero-initialized so a short readNkt() input file (fewer
+    // than 100 rows) leaves untouched entries at a defined 0 rather than
+    // uninitialized garbage.
+    double nIn_[100] = {};
     PrettyOstream messager_;
 
   public:

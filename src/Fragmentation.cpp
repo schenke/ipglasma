@@ -51,25 +51,42 @@ namespace Fragmentation {
 
 namespace {
 
-// One (b1,b2,b3,a1..a11) coefficient set for the KKP parametrization's
-// fitted functional form (see evalKkpFit); extraA3rd is the LO
-// proton-gluon fragmentation's unique extra +extraA3rd*S^3 term inside
-// the last factor (0 for every other species/flavor).
+/**
+ * One \f$(b_1,b_2,b_3,a_1,\ldots,a_{11})\f$ coefficient set for the KKP
+ * parametrization's fitted functional form (see evalKkpFit()).
+ */
 struct KkpFitCoeffs {
+    /// Overall normalization / low-\f$x\f$ and high-\f$x\f$ power
+    /// exponents at \f$s=0\f$: \f$b_1\f$ (normalization), \f$b_2\f$
+    /// (power of \f$x\f$), \f$b_3\f$ (power of \f$1-x\f$).
     double b1, b2, b3;
+    /// Coefficients of the \f$s\f$, \f$s^2\f$, \f$s^3\f$ terms
+    /// correcting \f$b_1\f$ (\f$a_1,a_2,a_3\f$), \f$b_2\f$
+    /// (\f$a_4,a_5,a_6\f$), \f$b_3\f$ (\f$a_7,a_8,a_9\f$), and the
+    /// \f$1/x\f$ term (\f$a_{10},a_{11}\f$).
     double a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11;
+    /// LO proton-gluon fragmentation's unique extra
+    /// \f$+\text{extraA3rd}\cdot s^3\f$ term inside the \f$1/x\f$
+    /// factor; `0` for every other species/flavor.
     double extraA3rd = 0.;
 };
 
-// One coefficient set per parton flavor (gluon/up/down-or-analog/charm/
-// bottom) for a fixed hadron species (pion/kaon/proton) and iset
-// (LO or NLO).
+/**
+ * One KkpFitCoeffs set per parton flavor (gluon/up/down-or-analog/
+ * charm/bottom) for a fixed hadron species (pion/kaon/proton) and \c
+ * iset (LO or NLO); see kLoFits/kNloFits.
+ */
 struct KkpSpeciesFits {
+    /// Pion fragmentation fits, one per parton flavor.
     KkpFitCoeffs pionG, pionU, pionS, pionC, pionB;
+    /// Kaon fragmentation fits, one per parton flavor.
     KkpFitCoeffs kaonG, kaonU, kaonD, kaonC, kaonB;
+    /// Proton fragmentation fits, one per parton flavor.
     KkpFitCoeffs protonG, protonU, protonS, protonC, protonB;
 };
 
+/// Leading-order (\c iset=0) KKP fit coefficients, one KkpFitCoeffs set
+/// per hadron species and parton flavor.
 const KkpSpeciesFits kLoFits = {
     /*pionG*/
     {6.04510, -0.71378, 2.92133, -6.61523, -1.64978, 2.68223, 0.14705, -1.08423,
@@ -119,6 +136,8 @@ const KkpSpeciesFits kLoFits = {
      3.05340, -1.04932, 0.34662, -1.34412, -0.04290, -0.30359},
 };
 
+/// Next-to-leading-order (\c iset=1) KKP fit coefficients, one
+/// KkpFitCoeffs set per hadron species and parton flavor.
 const KkpSpeciesFits kNloFits = {
     /*pionG*/
     {3.73331, -0.74159, 2.33092, -3.16946, -0.47683, 0.70270, -0.51377,
@@ -167,6 +186,25 @@ const KkpSpeciesFits kNloFits = {
      -2.45377, -3.27370, 1.21188, -5.50374, 0.14628, -0.78634},
 };
 
+/**
+ * Evaluates the KKP parametrization's fitted functional form for one
+ * hadron-species/parton-flavor coefficient set at a given scale
+ * variable and momentum fraction:
+ * \f[
+ * D(x, s) = \left(b_1 + a_1 s + a_2 s^2 + a_3 s^3\right)
+ * x^{\,b_2 + a_4 s + a_5 s^2 + a_6 s^3}
+ * (1-x)^{\,b_3 + a_7 s + a_8 s^2 + a_9 s^3}
+ * \left(1 + \frac{a_{10} s + a_{11} s^2 + \text{extraA3rd}\, s^3}{x}
+ * \right).
+ * \f]
+ * \param[in] c Coefficient set for this hadron species and parton
+ * flavor.
+ * \param[in] s KKP scale variable, \f$s = \ln(\ln(Q^2/\Lambda^2) /
+ * \ln(Q_0^2/\Lambda^2))\f$ (or the charm-/bottom-mass-threshold
+ * variant `sc`/`sb`) [dimensionless].
+ * \param[in] x Longitudinal momentum fraction [dimensionless].
+ * \return The fitted fragmentation-function value [dimensionless].
+ */
 double evalKkpFit(const KkpFitCoeffs &c, double s, double x) {
     return (c.b1 + c.a1 * s + c.a2 * s * s + c.a3 * s * s * s)
            * pow(x, c.b2 + c.a4 * s + c.a5 * s * s + c.a6 * s * s * s)

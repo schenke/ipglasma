@@ -54,6 +54,14 @@ leading `*`:
   (\f$\tau, x, y, \eta\f$) explicitly wherever it disambiguates a
   quantity (e.g. an energy-momentum tensor component).
 
+### Publication references
+
+- Don't use `\iref`/`\cite` yet -- both require a bibliography file
+  (Inspire-backed or not) that this repo doesn't have set up. Cite papers
+  in plain text for now (matching how the existing prose comments already
+  do it, e.g. `arXiv:1508.06294`), and switch the existing plain-text
+  citations to `\iref`/`\cite` once a Doxyfile and `.bib` file exist.
+
 ### Scope
 
 - Document every function, including trivial getters/setters -- don't

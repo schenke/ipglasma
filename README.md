@@ -72,7 +72,7 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
  - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
  	- 0: no
  	- 1: yes	
- - **writeWilsonLines**: controls if the generated Wilson lines for the saved on disc. File names depend on random seed (parameter `seed`). Wilson lines at the initial condition and after the evolution are saved.
+ - **writeWilsonLines**: controls if the generated Wilson lines for the saved on disc. File names depend on random seed (parameter `seed`), see `Lattice::generateWilsonLineDataFileName()`. Wilson lines at the initial condition and after the JIMWLK evolution are saved. 
     - 0: do not save Wilson lines
 	- 1: save in text format
 	- 2: save in binary format (faster I/O, smaller file size)

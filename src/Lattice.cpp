@@ -3,8 +3,10 @@
 #include <algorithm>
 #include <cstdlib>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <sstream>
+
 
 #include "Glauber.h"
 #include "Instrumentation.h"
@@ -102,30 +104,19 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
 }
 
 void Lattice::writeWilsonLines(
-    std::string fileprefix, Parameters *param, NucleusRole nucleus) {
+    Parameters *param, NucleusRole nucleus, double x) {
+    std::string wLineFile = generateWilsonLineDataFileName(param, x, nucleus);
     const int N = param->getSize();
-    const double L = param->getL();
-    const double a = L / static_cast<double>(N);  // lattice spacing in fm
-    const bool isProjectile = (nucleus == NucleusRole::Projectile);
-    // Preserves the historical iA=1 (projectile) / iA=2 (target) numbering
-    // used in the output filename below.
-    const int iA = isProjectile ? 1 : 2;
-
-    std::stringstream strVOne_name;
-    strVOne_name << fileprefix << "V-"
-                 << param->getEventId()
-                        + (iA + 2 * param->getSeed()) * param->getMPISize();
-    if (param->getWriteWilsonLines() == 1) strVOne_name << ".txt";
 
     // Output in text
     if (param->getWriteWilsonLines() == 1) {
-        std::ofstream foutU(strVOne_name.str().c_str(), std::ios::out);
+        std::ofstream foutU(wLineFile, std::ios::out);
         foutU.precision(15);
 
         for (int ix = 0; ix < N; ix++) {
             for (int iy = 0; iy < N; iy++) {
                 int pos = ix * N + iy;
-                if (isProjectile) {
+                if (nucleus == NucleusRole::Projectile) {
                     foutU << ix << " " << iy << " " << U[pos].MatrixToString()
                           << std::endl;
                 } else {
@@ -138,15 +129,18 @@ void Lattice::writeWilsonLines(
         foutU.close();
 
         messager_ << "[Lattice::writeWilsonLines]: wrote "
-                  << strVOne_name.str();
+                  << wLineFile;
         messager_.flush("info");
     } else if (param->getWriteWilsonLines() == 2) {
+         
+        const double L = param->getL();
+        const double a = L / static_cast<double>(N);  // lattice spacing in fm
+        
         std::ofstream Outfile1;
-        Outfile1.open(
-            strVOne_name.str().c_str(), std::ios::out | std::ios::binary);
+        Outfile1.open(wLineFile, std::ios::out | std::ios::binary);
 
-        double temp = param->getRapidityA();
-        if (!isProjectile) temp = param->getRapidityB();
+
+        double temp = (nucleus == NucleusRole::Projectile) ? param->getRapidityA() : param->getRapidityB();
 
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
@@ -170,7 +164,7 @@ void Lattice::writeWilsonLines(
                         // fix on the read side).
                         int indx = N * ix + iy;
                         int SU3indx = a1 * Nc_ + b;
-                        if (isProjectile) {
+                        if (nucleus == NucleusRole::Projectile) {
                             val1[0] = U[indx].getRe(SU3indx);
                             val1[1] = U[indx].getIm(SU3indx);
                         } else {
@@ -192,7 +186,7 @@ void Lattice::writeWilsonLines(
 
         Outfile1.close();
         messager_ << "[Lattice::writeWilsonLines]: wrote "
-                  << strVOne_name.str();
+                  << wLineFile;
         messager_.flush("info");
     } else {
         std::stringstream errorMsg;
@@ -204,6 +198,23 @@ void Lattice::writeWilsonLines(
     }
 }
 
+std::string Lattice::generateWilsonLineDataFileName(Parameters *param,
+        const double x, NucleusRole nucleus)
+{
+    const bool isProjectile = (nucleus == NucleusRole::Projectile);
+    const int iA = isProjectile ? 1 : 2;
+
+    std::stringstream Vname;
+    Vname << param->getWilsonLinePath() << "/WilsonLine";
+    if (x >= 0) Vname << "_x_" << std::scientific
+                 << std::setprecision(5) << x;
+    Vname << "_" << param->getEventId()
+                        + (iA + 2 * param->getSeed()) * param->getMPISize();
+
+    if (param->getWriteWilsonLines() == 1) Vname << ".txt";
+
+    return Vname.str();
+}
 // constructor
 BufferLattice::BufferLattice(int length) {
     size_ = length * length;

@@ -83,6 +83,8 @@ class Parameters {
     int writeWilsonLines_;    // decide whether to write (1) in text or (2)
                               // in binary format or not write (0) generated
                               // Wilson lines (before any evolution)
+    std::string wilsonLinePath_; // path to the directory where the Wilson lines 
+                                // are stored or loaded from
     int readInitialWilsonLines_;  // decide wheter to generate initial Wilson
                                   // lines (0), or read these in plain text (1)
                                   // or in binary format (2)
@@ -441,6 +443,8 @@ class Parameters {
     int getWriteOutputsToHDF5() const { return writeOutputsToHDF5_; }
     void setWriteWilsonLines(int x) { writeWilsonLines_ = x; }
     int getWriteWilsonLines() const { return writeWilsonLines_; }
+    void setWilsonLinePath(std::string x) { wilsonLinePath_ = x; }
+    std::string getWilsonLinePath() const { return wilsonLinePath_; }
     void setReadInitialWilsonLines(int x) { readInitialWilsonLines_ = x; }
     int getReadInitialWilsonLines() const { return readInitialWilsonLines_; }
     void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile_ = x; }

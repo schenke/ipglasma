@@ -1973,17 +1973,24 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     }
 
     // output U
-    if (param->getWriteWilsonLines() > 0 && param->getSaveSnapshots()) {
-        std::stringstream ss;
-        ss << "Initial_x_";
+    if (param->getWriteWilsonLines() > 0 && (param->getSaveSnapshots() || !param->getUseJIMWLK())) {
+        double x_projectile, x_target;
         if (param->getUseJIMWLK()) {
-            ss << param->getJimwlk_x0() << "_";
+            x_projectile = x_target = param->getJimwlk_x0();
         } else {
-            ss << "0.001" << "_";
+            if (param->getUseFluctuatingx() == 1)
+            {
+                // Initial condition does not correspond to a fixed x
+                x_projectile = x_target = -1; 
+            }
+            else 
+            {
+                x_projectile = 0.01 * std::exp(-param->getRapidityA());
+                x_target = 0.01 * std::exp(-param->getRapidityB());
+            }
         }
-        std::string wilsonfileHeader = ss.str();
-        lat->writeWilsonLines(wilsonfileHeader, param, NucleusRole::Projectile);
-        lat->writeWilsonLines(wilsonfileHeader, param, NucleusRole::Target);
+        lat->writeWilsonLines(param, NucleusRole::Projectile, x_projectile);
+        lat->writeWilsonLines(param, NucleusRole::Target, x_target);
     }
 
     messager_ << "[Init::setV]: Wilson lines V_A and V_B set on rank "
@@ -1991,33 +1998,20 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     messager_.flush("info");
 }
 
-void Init::readVFromFile(Lattice *lat, Parameters *param, int format) {
+void Init::readVFromFile(Lattice *lat, Parameters *param, int format, double x) {
     IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
     // format 1 = plain text, 2 = binary
 
-    if (format > 2 or format < 1) {
+    if (!Lattice::IsValidWilsonLineDataFormat(format)) {
         messager_ << "[Init::readVFromFile]: Unknown format " << format
                   << " when reading the initial Wilson lines, supported "
                      "formats: 1,2";
         messager_.flush("error");
         exit(1);
     }
-
-    stringstream strVOne_name;
-    strVOne_name << "V-"
-                 << param->getEventId()
-                        + 2 * param->getSeed() * param->getMPISize();
-    if (format == 1) strVOne_name << ".txt";
-    string VOne_name;
-    VOne_name = strVOne_name.str();
-
-    stringstream strVTwo_name;
-    strVTwo_name << "V-"
-                 << param->getEventId()
-                        + (1 + 2 * param->getSeed()) * param->getMPISize();
-    if (format == 1) strVTwo_name << ".txt";
-    string VTwo_name;
-    VTwo_name = strVTwo_name.str();
+   
+    string VOne_name = Lattice::generateWilsonLineDataFileName(param, x, NucleusRole::Projectile);
+    string VTwo_name = Lattice::generateWilsonLineDataFileName(param, x, NucleusRole::Target);
 
     messager_ << "[Init::readVFromFile]: Reading Wilson lines from files "
               << VOne_name << " and " << VTwo_name;

@@ -233,9 +233,7 @@ void JIMWLK::runEvolutionLoop(
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    std::stringstream ss;
-                    ss << "JIMWLKSnapshot_x_" << xLoc << "_";
-                    lat_ptr_->writeWilsonLines(ss.str(), &param_, nucleus);
+                    lat_ptr_->writeWilsonLines(&param_, nucleus, xLoc);
                     iSnapshot++;
                 }
             }

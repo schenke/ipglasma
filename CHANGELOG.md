@@ -30,6 +30,7 @@ The main categories for changes in this file are:
 * Replace the default nuclear-`Qs^2` table `qs2Adj_vs_Tp_vs_Y_200.in` with `qs2Adj_vs_Tp_vs_Y_240.in`, which extends the covered `T_p` range 10x to avoid the "T out of range, using maximal T in table" clamping warning at high local thickness; `Init::iTpmax_` is updated accordingly (200 → 240).
 * Remove the `Nc` input parameter; the code has always been SU(3)-only and now hardcodes it internally.
 * Remove the dead `tDistNu`, `useFatTails` and `writeEvolution` input parameters, which never had any effect on the simulation.
+* File names for stored Wilson lines are now unified and generated centrally in `Lattice::generateWilsonLineDataFileName`
 
 ### Added
 * Add a JIMWLK small-x evolution stage, run on the projectile and target Wilson lines before the classical Yang-Mills evolution.

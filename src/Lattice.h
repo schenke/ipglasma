@@ -53,8 +53,15 @@ class Lattice {
     std::vector<int> posmY;
     std::vector<int> pospY;
 
+    /*
+     * Write Wilson lines to disk in either text or binary format, depending on the
+      * value of param->getWriteWilsonLines(). The output filename is generated
+      * by generateWilsonLineDataFile() 
+      * If the optional argumet x is provided, the generated filename includes x 
+      * in the filename, otherwise it does not.
+    */
     void writeWilsonLines(
-        std::string fileprefix, Parameters *param, NucleusRole nucleus);
+        Parameters *param, NucleusRole nucleus, double x=-1);
     void writeSU3Matrices(std::string fileprefix, Parameters *param);
     std::vector<int> posmXpY;
     std::vector<int> pospXmY;
@@ -68,6 +75,12 @@ class Lattice {
     static bool IsValidWilsonLineDataFormat(const int format) {
         return format == 1 || format == 2;
     }
+
+    /* 
+    * Generate filename for Wilson lines stored on disc
+    */
+    static std::string generateWilsonLineDataFileName(Parameters *param,
+        const double x, NucleusRole nucleus); 
 };
 
 class BufferLattice {

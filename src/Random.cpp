@@ -118,7 +118,14 @@ void Random::genrand64RawBulk(unsigned long long *out, std::size_t count) {
 }
 
 namespace {
-/* MT19937-64 tempering step, applied to one raw generator word */
+/**
+ * MT19937-64 tempering step, applied to one raw generator word to
+ * improve its equidistribution properties. Stateless and independent
+ * per word, so it can run in parallel across many words (see
+ * Random::gaussBulk()).
+ * \param[in] x Raw (untempered) generator word.
+ * \return The tempered word.
+ */
 unsigned long long temperMT64(unsigned long long x) {
     x ^= (x >> 29) & 0x5555555555555555ULL;
     x ^= (x << 17) & 0x71D67FFFEDA60000ULL;

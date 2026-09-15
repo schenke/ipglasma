@@ -11,6 +11,9 @@ const double smallEps = 1e-16;
 /// \f$\hbar c\f$, used to convert lattice/natural-unit energy densities
 /// (\f$1/\mathrm{fm}^4\f$) to \f$\mathrm{GeV/fm}^3\f$ [GeV fm].
 const double hbarc = 0.1973269718;
+/// \f$1/\hbar c\f$ [1/(GeV fm)], used by JIMWLK::getMassRegulator()/
+/// getAlphas() to make a GeV-times-fm product dimensionless.
+const double invHbarc = 1.0 / hbarc;
 /// Charged-pion mass [GeV].
 const double m_pion = 0.13957;
 /// Charged-kaon mass [GeV].

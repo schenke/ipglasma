@@ -12,6 +12,8 @@
 
 #include "Instrumentation.h"
 
+using PhysConst::invHbarc;
+
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
       Ngrid_(param.getSize()),
@@ -109,7 +111,7 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     double lat_r = sqrt(lat_x * lat_x + lat_y * lat_y) * Ngrid_;
     // lat_r now tells how many lattice units the distance is
     double a = length / Ngrid_;
-    double lat_m = m * a * fmgev;
+    double lat_m = m * a * invHbarc;
     double bessel_argument = lat_m * lat_r;
     // use gsl bessel function to be compatible with the AppleClang compiler
     // (assumes the GSL error handler was already disabled by the caller,
@@ -141,11 +143,12 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     double phys_r2 = phys_x * phys_x + phys_y * phys_y;
 
     // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
-    alphas = 4. * M_PI
-             / ((11. * Nc_ - 2. * Nf) / 3. * c
-                * log(
-                    (pow(mu0 * mu0 / Lambda2, 1. / c)
-                     + pow(4. / (phys_r2 * Lambda2 * fmgev * fmgev), 1. / c))));
+    alphas =
+        4. * M_PI
+        / ((11. * Nc_ - 2. * Nf) / 3. * c
+           * log((
+               pow(mu0 * mu0 / Lambda2, 1. / c)
+               + pow(4. / (phys_r2 * Lambda2 * invHbarc * invHbarc), 1. / c))));
     return alphas;
 }
 

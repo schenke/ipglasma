@@ -983,15 +983,10 @@ double computeRunningCouplingGfactor(
     double c, double muZero) {
     double g2mu2A, g2mu2B, alphas = 0., Qs = 0.;
     if (param->getRunningCoupling()) {
-        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1) {
-            g2mu2A = lat->cells[pos]->getg2mu2A();
-        } else
-            g2mu2A = 0;
-
-        if (pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1) {
-            g2mu2B = lat->cells[pos]->getg2mu2B();
-        } else
-            g2mu2B = 0;
+        const bool inBounds =
+            pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1;
+        g2mu2A = inBounds ? lat->cells[pos]->getg2mu2A() : 0;
+        g2mu2B = inBounds ? lat->cells[pos]->getg2mu2B() : 0;
 
         if (param->getRunWithQs() == 2) {
             if (g2mu2A > g2mu2B)

@@ -442,12 +442,13 @@ void Glauber::calcRho(Nucleus *nucleus) {
 double Glauber::nuInS(double s) {
     double y;
     int count;
-    int id;
 
     /* to pass to the densityFunc's */
     NuInS_S_ = s;
 
-    id = Nuc_WS_->densityFunc;
+    // Nucleus::densityFunc only ever holds 1 (2HO), 2 (3Gauss), 3 (3Fermi) or
+    // 8 (Hulthen) -- the same values IntegrandId uses for these cases.
+    const IntegrandId id = static_cast<IntegrandId>(Nuc_WS_->densityFunc);
 
     count = 0;
     y = integral(id, 0.0, 1.0, TOL, &count);
@@ -468,7 +469,7 @@ double Glauber::anum3Fermi(double R_WS) {
     down = 0.0;
     up = 1.0;
 
-    f = integral(4, down, up, TOL, &count);
+    f = integral(IntegrandId::Anum3FermiInt, down, up, TOL, &count);
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
@@ -542,7 +543,7 @@ double Glauber::anum3Gauss(double R_WS) {
     down = 0.0;
     up = 1.0;
 
-    f = integral(5, down, up, TOL, &count);
+    f = integral(IntegrandId::Anum3GaussInt, down, up, TOL, &count);
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
@@ -618,7 +619,7 @@ double Glauber::anum2HO() {
     down = 0.0;
     up = 1.0;
 
-    f = integral(6, down, up, TOL, &count);
+    f = integral(IntegrandId::Anum2HOInt, down, up, TOL, &count);
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
@@ -729,31 +730,30 @@ double Glauber::nuIntHulthen(double xi) {
     return f;
 } /* nuIntHulthen */
 
-double Glauber::evaluateIntegrand(int id, double xi) {
+double Glauber::evaluateIntegrand(IntegrandId id, double xi) {
     switch (id) {
-        case 1:
+        case IntegrandId::NuInt2HO:
             return nuInt2HO(xi);
-        case 2:
+        case IntegrandId::NuInt3Gauss:
             return nuInt3Gauss(xi);
-        case 3:
+        case IntegrandId::NuInt3Fermi:
             return nuInt3Fermi(xi);
-        case 4:
+        case IntegrandId::Anum3FermiInt:
             return anum3FermiInt(xi);
-        case 5:
+        case IntegrandId::Anum3GaussInt:
             return anum3GaussInt(xi);
-        case 6:
+        case IntegrandId::Anum2HOInt:
             return anum2HOInt(xi);
-        case 7:
+        case IntegrandId::OLSIntegrand:
             return oLSIntegrand(xi);
-        case 8:
+        case IntegrandId::NuIntHulthen:
             return nuIntHulthen(xi);
-        default:
-            return 0.0;
     }
+    return 0.0;
 }
 
 double Glauber::integral(
-    int id, double down, double up, double tol, int *count) {
+    IntegrandId id, double down, double up, double tol, int *count) {
     double dx, y, g1[7];
     int i;
 
@@ -771,8 +771,8 @@ double Glauber::integral(
 } /* end of integral */
 
 double Glauber::qnc7(
-    int id, double tol, double down, double dx, double *f_of, double pre_sum,
-    double area, int *count) {
+    IntegrandId id, double tol, double down, double dx, double *f_of,
+    double pre_sum, double area, int *count) {
     int i;
     double left_sum, right_sum, ans;
     static double w[] = {41.0 / 140.0, 54.0 / 35.0, 27.0 / 140.0, 68.0 / 35.0,
@@ -882,7 +882,7 @@ double Glauber::tAB() {
     double f;
     int count = 0;
     f = integral(
-        7, 0.0, glauberData_.sCutoff, TOL,
+        IntegrandId::OLSIntegrand, 0.0, glauberData_.sCutoff, TOL,
         &count);                        // integrate oLSIntegrand(s)
     f *= 2.0 / (glauberData_.sigmaNN);  // here tAB is the number of binary
                                         // collisions, dimensionless (1/fm^4

@@ -21,33 +21,84 @@
 #include <sstream>
 #include <string>
 
+/**
+ * Buffered, colorized console logger: accumulates a message via
+ * `operator<<` like an `ostream`, then flush() dispatches it to
+ * info()/debug()/warning()/error() by category.
+ *
+ * Every category-specific method (info()/debug()/warning()/error())
+ * locks a shared mutex around its actual write to `cout`, so instances
+ * can be constructed one-per-thread (e.g. inside an
+ * `#pragma omp parallel` region, since this class itself has no
+ * internal state to race on beyond that shared terminal) without
+ * interleaving another thread's message.
+ */
 class PrettyOstream {
   private:
+    /// Accumulates the message being built via `operator<<`, until the
+    /// next flush().
     std::ostringstream messageStream_;
 
   public:
+    /**
+     * Constructs a PrettyOstream with an empty message buffer.
+     */
     PrettyOstream();
+    /**
+     * Destroys this PrettyOstream (nothing to release; any
+     * un-flushed, buffered message is silently discarded).
+     */
     ~PrettyOstream();
 
+    /**
+     * Dispatches the buffered message to info()/debug()/warning()/
+     * error() based on \p type, then clears the buffer. An
+     * unrecognized \p type silently discards the buffered message
+     * without printing anything.
+     * \param[in] type Category name, case-insensitively one of
+     * `"info"`, `"debug"`, `"warning"`, `"error"`.
+     */
     void flush(std::string type);
 
-    //! This function output information message
+    /**
+     * Prints an info-level message (uncolored) with a memory-usage
+     * prefix.
+     * \param[in] message Message to print.
+     */
     void info(std::string message);
 
-    //! This function output debug message
+    /**
+     * Prints a debug-level message (cyan) with a memory-usage prefix.
+     * \param[in] message Message to print.
+     */
     void debug(std::string message);
 
-    //! This function output warning message
+    /**
+     * Prints a warning-level message (bold orange).
+     * \param[in] message Message to print.
+     */
     void warning(std::string message);
 
-    //! This function output error message
+    /**
+     * Prints an error-level message (bold red).
+     * \param[in] message Message to print.
+     */
     void error(std::string message);
 
-    //! This function returns a string for the memory usage
-    //! of the current program in MB
+    /**
+     * Reads this process' peak resident memory usage via `getrusage()`.
+     * \return `"<value> MB"` (4 significant digits), or an empty
+     * string if `getrusage()` fails.
+     */
     std::string getMemoryUsage();
 
-    //! reload the << operator
+    /**
+     * Appends a value to the buffered message, like `ostream`'s
+     * `operator<<`.
+     * \param[in] value Value to append; anything `ostringstream`
+     * accepts.
+     * \return `*this`, for chaining.
+     */
     template <typename T>
     PrettyOstream &operator<<(T const &value) {
         messageStream_ << value;

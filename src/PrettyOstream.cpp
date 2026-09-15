@@ -17,11 +17,11 @@ using std::endl;
 using std::string;
 
 namespace {
-// Guards the actual writes to cout below. Each PrettyOstream instance owns
-// its own message buffer, so one per OpenMP thread is safe, but the
-// terminal itself is one shared resource and each message below is
-// written as several separate operator<< calls, which could otherwise
-// interleave with another thread's message.
+/// Guards the actual writes to `cout` below. Each PrettyOstream instance
+/// owns its own message buffer, so one per OpenMP thread is safe, but
+/// the terminal itself is one shared resource and each message below is
+/// written as several separate `operator<<` calls, which could
+/// otherwise interleave with another thread's message.
 std::mutex ttyMutex;
 }  // namespace
 

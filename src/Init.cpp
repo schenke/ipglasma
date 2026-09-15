@@ -1148,7 +1148,7 @@ double Init::computeNucleonThicknessAtCell(
 
                 T += exp(-bp2 / (2. * BGq[i][iq])) / (2. * M_PI * BGq[i][iq])
                      / (static_cast<double>(xq[i].size()))
-                     * gauss[i][iq];  // I removed the 2/3 here
+                     * gauss[i][iq];
                                       // to make it a bit bigger
             }
         } else {

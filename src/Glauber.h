@@ -13,6 +13,24 @@
 
 enum class NucleusRole { Projectile, Target };
 
+// Selects which integrand evaluateIntegrand()/integral()/qnc7() sample.
+// NuInt2HO/NuInt3Gauss/NuInt3Fermi/NuIntHulthen mirror Nucleus::densityFunc's
+// values (1/2/3/8) and are used for nuInS()'s normalization integral, whose
+// integrand depends on the active nucleus's density profile; the other four
+// are fixed, density-profile-specific integrands used by exactly one caller
+// each (anum3Fermi/anum3Gauss/anum2HO's own normalization, and tAB()'s
+// overlap integral) and never vary at runtime.
+enum class IntegrandId {
+    NuInt2HO = 1,
+    NuInt3Gauss = 2,
+    NuInt3Fermi = 3,
+    Anum3FermiInt = 4,
+    Anum3GaussInt = 5,
+    Anum2HOInt = 6,
+    OLSIntegrand = 7,
+    NuIntHulthen = 8,
+};
+
 struct ReturnValue {
     double x;
     double y;
@@ -109,13 +127,14 @@ class Glauber {
     double anumHulthen();
     double nuIntHulthen(double xi);
 
-    double integral(int id, double down, double up, double tol, int *count);
+    double integral(
+        IntegrandId id, double down, double up, double tol, int *count);
     double qnc7(
-        int id, double tol, double down, double dx, double *f_of,
+        IntegrandId id, double tol, double down, double dx, double *f_of,
         double pre_sum, double area, int *count);
     // Shared id-dispatch used by integral() and qnc7() to pick which
     // density-function integrand to sample at xi.
-    double evaluateIntegrand(int id, double xi);
+    double evaluateIntegrand(IntegrandId id, double xi);
     double oLSIntegrand(double s);
     double tAB();
     void initGlauber(

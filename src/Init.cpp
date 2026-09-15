@@ -3,6 +3,7 @@
 
 #include "Init.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <fstream>
 #include <iomanip>

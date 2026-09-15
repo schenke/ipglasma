@@ -31,6 +31,7 @@ void makeLatticeParam(Parameters &param, int size) {
     param.setMPISize(1);
     param.setRapidityA(0.0);
     param.setRapidityB(0.0);
+    param.setWilsonLinePath(".");
 }
 }  // namespace
 
@@ -81,14 +82,15 @@ TEST_CASE("Lattice::writeWilsonLines (text format) writes a non-empty file") {
     Parameters param;
     makeLatticeParam(param, length);
     param.setWriteWilsonLines(1);  // text
+    param.setUseFluctuatingx(
+        1);  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
-    const std::string prefix = "ipglasma_test_lattice_";
-    lat.writeWilsonLines(prefix, &param, NucleusRole::Projectile);
+    lat.writeWilsonLines(&param, NucleusRole::Projectile);
 
     // filename suffix = eventId + (iA + 2*seed)*MPISize; iA=1 for
     // Projectile, and eventId=seed=0, MPISize=1 here, so suffix = 1.
-    const std::string path = prefix + "V-1.txt";
+    const std::string path = "./WilsonLine_1.txt";
     std::ifstream in(path);
     REQUIRE(in.good());
     std::string firstLine;
@@ -105,6 +107,8 @@ TEST_CASE(
     Parameters param;
     makeLatticeParam(param, length);
     param.setWriteWilsonLines(2);  // binary
+    param.setUseFluctuatingx(
+        1);  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
     // Give two off-diagonal sites (ix != iy, swapped between them) distinct
@@ -122,12 +126,11 @@ TEST_CASE(
     lat.U[1 * length + 2] = markerA;  // (ix=1, iy=2)
     lat.U[2 * length + 1] = markerB;  // (ix=2, iy=1)
 
-    const std::string prefix = "ipglasma_test_lattice_bin_";
-    lat.writeWilsonLines(prefix, &param, NucleusRole::Projectile);
+    lat.writeWilsonLines(&param, NucleusRole::Projectile);
 
     // filename suffix = eventId + (iA + 2*seed)*MPISize = 1, as above; no
     // extension is appended for the binary format.
-    const std::string path = prefix + "V-1";
+    const std::string path = "./WilsonLine_1";
     std::ifstream in(path, std::ios::binary);
     REQUIRE(in.good());
 

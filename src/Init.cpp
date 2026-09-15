@@ -1999,8 +1999,6 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 void Init::readVFromFile(
     Lattice *lat, Parameters *param, int format, double x) {
     IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
-    // format 1 = plain text, 2 = binary
-
     if (!Lattice::IsValidWilsonLineDataFormat(format)) {
         messager_ << "[Init::readVFromFile]: Unknown format " << format
                   << " when reading the initial Wilson lines, supported "
@@ -2010,9 +2008,9 @@ void Init::readVFromFile(
     }
 
     string VOne_name = Lattice::generateWilsonLineDataFileName(
-        param, x, NucleusRole::Projectile);
-    string VTwo_name =
-        Lattice::generateWilsonLineDataFileName(param, x, NucleusRole::Target);
+        param, x, NucleusRole::Projectile, format);
+    string VTwo_name = Lattice::generateWilsonLineDataFileName(
+        param, x, NucleusRole::Target, format);
 
     messager_ << "[Init::readVFromFile]: Reading Wilson lines from files "
               << VOne_name << " and " << VTwo_name;

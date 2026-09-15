@@ -78,9 +78,15 @@ class Lattice {
 
     /*
      * Generate filename for Wilson lines stored on disc
+     *
+     * If format >= 0, this setting overrides the value of
+     * param->getWriteWilsonLines() to determine the output format (1 = text, 2
+     * = binary). If format < 0, the value of param->getWriteWilsonLines() is
+     * used.
      */
     static std::string generateWilsonLineDataFileName(
-        Parameters *param, const double x, NucleusRole nucleus);
+        Parameters *param, const double x, NucleusRole nucleus,
+        int format = -1);
 };
 
 class BufferLattice {

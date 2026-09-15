@@ -196,7 +196,7 @@ void Lattice::writeWilsonLines(
 }
 
 std::string Lattice::generateWilsonLineDataFileName(
-    Parameters *param, const double x, NucleusRole nucleus) {
+    Parameters *param, const double x, NucleusRole nucleus, int format) {
     const bool isProjectile = (nucleus == NucleusRole::Projectile);
     const int iA = isProjectile ? 1 : 2;
 
@@ -207,7 +207,7 @@ std::string Lattice::generateWilsonLineDataFileName(
           << param->getEventId()
                  + (iA + 2 * param->getSeed()) * param->getMPISize();
 
-    if (param->getWriteWilsonLines() == 1) Vname << ".txt";
+    if (param->getWriteWilsonLines() == 1 or format == 1) Vname << ".txt";
 
     return Vname.str();
 }

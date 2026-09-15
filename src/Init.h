@@ -1009,7 +1009,7 @@ class Init {
      * Samples one nucleon's radius from an undeformed Woods-Saxon
      * distribution via rejection sampling: draws \f$r\f$ with density
      * \f$\propto r^2\f$ (the correct 3D volume-element weighting, via
-     * inverse-cube-root of a uniform draw) up to a generous cutoff, and
+     * the cube root of a uniform draw) up to a generous cutoff, and
      * accepts it with probability given by fermiDistribution().
      * \param[in,out] random Random-number source.
      * \param[in] a_WS Surface diffuseness [fm].
@@ -1021,11 +1021,12 @@ class Init {
     /**
      * Samples one nucleon's radius and polar angle jointly from an
      * axially symmetric (\f$\gamma=0\f$) deformed Woods-Saxon
-     * distribution: draws `(r, cos\theta)` uniformly over their
-     * respective ranges and accepts with probability given by
-     * fermiDistribution() evaluated at the angle-dependent surface
-     * radius \f$R(\theta) = R_{WS}(1+\beta_2 Y_{20}+\beta_3
-     * Y_{30}+\beta_4 Y_{40})\f$.
+     * distribution: draws \f$r\f$ with density \f$\propto r^2\f$ (via
+     * the cube root of a uniform draw, as in sampleRFromWoodsSaxon())
+     * up to a generous cutoff, \f$\cos\theta\f$ uniformly, and accepts
+     * the pair with probability given by fermiDistribution() evaluated
+     * at the angle-dependent surface radius \f$R(\theta) =
+     * R_{WS}(1+\beta_2 Y_{20}+\beta_3 Y_{30}+\beta_4 Y_{40})\f$.
      * \param[in,out] random Random-number source.
      * \param[in] a_WS Surface diffuseness [fm].
      * \param[in] R_WS Half-density radius [fm].

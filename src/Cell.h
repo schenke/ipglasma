@@ -16,12 +16,17 @@
  * - The \f$T^{\mu\nu}\f$ components: the local energy-momentum tensor
  *   in Milne (\f$\tau, x, y, \eta\f$) coordinates, computed from the
  *   classical Yang-Mills fields by Evolution::tmunu().
- * - \f$\epsilon\f$, the \f$u^\mu\f$ components, and the
- *   \f$\pi^{\mu\nu}\f$ components: the local rest-frame energy density,
- *   fluid four-velocity, and (traceless) shear-stress tensor, obtained
- *   by diagonalizing \f$T^{\mu\nu}\f$ in
- *   MyEigen::solveFlowVelocityAtCell() and written out as the
- *   hydrodynamic initial condition.
+ * - \f$\epsilon\f$ and the \f$u^\mu\f$ components: the local rest-frame
+ *   energy density and fluid four-velocity, obtained by diagonalizing
+ *   \f$T^{\mu\nu}\f$ (Landau matching) in
+ *   MyEigen::solveFlowVelocityAtCell().
+ * - The \f$\pi^{\mu\nu}\f$ components: the Milne-coordinate (not
+ *   boosted to the local rest frame) traceless remainder of
+ *   \f$T^{\mu\nu}\f$ after subtracting its ideal-fluid form built from
+ *   \f$\epsilon\f$ and \f$u^\mu\f$, also computed in
+ *   MyEigen::solveFlowVelocityAtCell(). Together with \f$\epsilon\f$
+ *   and \f$u^\mu\f$, written out as the viscous-hydrodynamic initial
+ *   condition.
  */
 class Cell {
   private:
@@ -51,7 +56,9 @@ class Cell {
     /// \f$T^{xy}\f$ component of the energy-momentum tensor [1/fm^4].
     double Txy_;
     /// \f$T^{\eta\eta}\f$ component of the energy-momentum tensor
-    /// [1/fm^4].
+    /// [1/fm^6] (an extra \f$1/\mathrm{fm}^2\f$ relative to the other
+    /// diagonal components, from the Milne metric's \f$g_{\eta\eta} =
+    /// -\tau^2\f$).
     double Tetaeta_;
     /// \f$T^{\tau x}\f$ component of the energy-momentum tensor
     /// [1/fm^4].
@@ -60,44 +67,45 @@ class Cell {
     /// [1/fm^4].
     double Ttauy_;
     /// \f$T^{\tau\eta}\f$ component of the energy-momentum tensor
-    /// [1/fm^4].
+    /// [1/fm^5] (see \c Tetaeta_'s note on the extra \f$\eta\f$
+    /// dimension).
     double Ttaueta_;
     /// \f$T^{x\eta}\f$ component of the energy-momentum tensor
-    /// [1/fm^4].
+    /// [1/fm^5].
     double Txeta_;
     /// \f$T^{y\eta}\f$ component of the energy-momentum tensor
-    /// [1/fm^4].
+    /// [1/fm^5].
     double Tyeta_;
 
-    /// \f$\pi^{\tau\tau}\f$ component of the local-rest-frame shear-
-    /// stress tensor [1/fm^4].
+    /// \f$\pi^{\tau\tau}\f$ component of the Milne-coordinate
+    /// shear-stress tensor [1/fm^4].
     double pitautau_;
-    /// \f$\pi^{xx}\f$ component of the local-rest-frame shear-stress
+    /// \f$\pi^{xx}\f$ component of the Milne-coordinate shear-stress
     /// tensor [1/fm^4].
     double pixx_;
-    /// \f$\pi^{yy}\f$ component of the local-rest-frame shear-stress
+    /// \f$\pi^{yy}\f$ component of the Milne-coordinate shear-stress
     /// tensor [1/fm^4].
     double piyy_;
-    /// \f$\pi^{xy}\f$ component of the local-rest-frame shear-stress
+    /// \f$\pi^{xy}\f$ component of the Milne-coordinate shear-stress
     /// tensor [1/fm^4].
     double pixy_;
-    /// \f$\pi^{\eta\eta}\f$ component of the local-rest-frame shear-
-    /// stress tensor [1/fm^4].
+    /// \f$\pi^{\eta\eta}\f$ component of the Milne-coordinate
+    /// shear-stress tensor [1/fm^6] (see \c Tetaeta_'s note).
     double pietaeta_;
-    /// \f$\pi^{\tau x}\f$ component of the local-rest-frame shear-stress
+    /// \f$\pi^{\tau x}\f$ component of the Milne-coordinate shear-stress
     /// tensor [1/fm^4].
     double pitaux_;
-    /// \f$\pi^{\tau y}\f$ component of the local-rest-frame shear-stress
+    /// \f$\pi^{\tau y}\f$ component of the Milne-coordinate shear-stress
     /// tensor [1/fm^4].
     double pitauy_;
-    /// \f$\pi^{\tau\eta}\f$ component of the local-rest-frame shear-
-    /// stress tensor [1/fm^4].
+    /// \f$\pi^{\tau\eta}\f$ component of the Milne-coordinate
+    /// shear-stress tensor [1/fm^5] (see \c Tetaeta_'s note).
     double pitaueta_;
-    /// \f$\pi^{x\eta}\f$ component of the local-rest-frame shear-stress
-    /// tensor [1/fm^4].
+    /// \f$\pi^{x\eta}\f$ component of the Milne-coordinate shear-stress
+    /// tensor [1/fm^5].
     double pixeta_;
-    /// \f$\pi^{y\eta}\f$ component of the local-rest-frame shear-stress
-    /// tensor [1/fm^4].
+    /// \f$\pi^{y\eta}\f$ component of the Milne-coordinate shear-stress
+    /// tensor [1/fm^5].
     double piyeta_;
 
     /// \f$u^\tau\f$ component of the local fluid four-velocity
@@ -109,8 +117,11 @@ class Cell {
     /// \f$u^y\f$ component of the local fluid four-velocity
     /// [dimensionless].
     double uy_;
-    /// \f$u^\eta\f$ component of the local fluid four-velocity
-    /// [dimensionless].
+    /// \f$u^\eta\f$ component of the local fluid four-velocity [1/fm]
+    /// (unlike \c utau_/\c ux_/\c uy_: \f$\tau u^\eta\f$, not
+    /// \f$u^\eta\f$ itself, is the dimensionless rapidity-like
+    /// velocity, again from the Milne metric's \f$g_{\eta\eta} =
+    /// -\tau^2\f$).
     double ueta_;
 
   public:
@@ -238,14 +249,14 @@ class Cell {
     /**
      * Sets the \f$T^{\eta\eta}\f$ (longitudinal) component of the
      * energy-momentum tensor.
-     * \param[in] x The new \f$T^{\eta\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$T^{\eta\eta}\f$ value [1/fm^6].
      */
     void setTetaeta(double x) { Tetaeta_ = x; }
     /**
      * Returns the \f$T^{\eta\eta}\f$ (longitudinal) component of the
      * energy-momentum tensor, set by Evolution::tmunu() from the
      * classical Yang-Mills fields.
-     * \return The stored \f$T^{\eta\eta}\f$ value [1/fm^4].
+     * \return The stored \f$T^{\eta\eta}\f$ value [1/fm^6].
      */
     double getTetaeta() const { return Tetaeta_; }
     /**
@@ -277,173 +288,175 @@ class Cell {
     /**
      * Sets the \f$T^{\tau\eta}\f$ (longitudinal energy flux) component
      * of the energy-momentum tensor.
-     * \param[in] x The new \f$T^{\tau\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$T^{\tau\eta}\f$ value [1/fm^5].
      */
     void setTtaueta(double x) { Ttaueta_ = x; }
     /**
      * Returns the \f$T^{\tau\eta}\f$ (longitudinal energy flux)
      * component of the energy-momentum tensor, set by
      * Evolution::tmunu() from the classical Yang-Mills fields.
-     * \return The stored \f$T^{\tau\eta}\f$ value [1/fm^4].
+     * \return The stored \f$T^{\tau\eta}\f$ value [1/fm^5].
      */
     double getTtaueta() const { return Ttaueta_; }
     /**
      * Sets the \f$T^{x\eta}\f$ (transverse-longitudinal shear)
      * component of the energy-momentum tensor.
-     * \param[in] x The new \f$T^{x\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$T^{x\eta}\f$ value [1/fm^5].
      */
     void setTxeta(double x) { Txeta_ = x; }
     /**
      * Returns the \f$T^{x\eta}\f$ (transverse-longitudinal shear)
      * component of the energy-momentum tensor, set by
      * Evolution::tmunu() from the classical Yang-Mills fields.
-     * \return The stored \f$T^{x\eta}\f$ value [1/fm^4].
+     * \return The stored \f$T^{x\eta}\f$ value [1/fm^5].
      */
     double getTxeta() const { return Txeta_; }
     /**
      * Sets the \f$T^{y\eta}\f$ (transverse-longitudinal shear)
      * component of the energy-momentum tensor.
-     * \param[in] x The new \f$T^{y\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$T^{y\eta}\f$ value [1/fm^5].
      */
     void setTyeta(double x) { Tyeta_ = x; }
     /**
      * Returns the \f$T^{y\eta}\f$ (transverse-longitudinal shear)
      * component of the energy-momentum tensor, set by
      * Evolution::tmunu() from the classical Yang-Mills fields.
-     * \return The stored \f$T^{y\eta}\f$ value [1/fm^4].
+     * \return The stored \f$T^{y\eta}\f$ value [1/fm^5].
      */
     double getTyeta() const { return Tyeta_; }
 
     /**
-     * Sets the \f$\pi^{\tau\tau}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{\tau\tau}\f$ component of the Milne-coordinate
      * shear-stress tensor.
      * \param[in] x The new \f$\pi^{\tau\tau}\f$ value [1/fm^4].
      */
     void setpitautau(double x) { pitautau_ = x; }
     /**
-     * Returns the \f$\pi^{\tau\tau}\f$ component of the local-rest-
-     * frame shear-stress tensor: the traceless part of
-     * \f$T^{\mu\nu}\f$ once boosted to the local rest frame via
-     * \f$u^\mu\f$, computed by MyEigen::solveFlowVelocityAtCell() and
-     * written out as the viscous-hydrodynamics initial condition.
+     * Returns the \f$\pi^{\tau\tau}\f$ component of the Milne-coordinate
+     * shear-stress tensor: the traceless remainder of
+     * \f$T^{\mu\nu}\f$'s Milne-coordinate components after subtracting
+     * their ideal-fluid form built from \f$\epsilon\f$ and
+     * \f$u^\mu\f$ (not itself boosted to the local rest frame),
+     * computed by MyEigen::solveFlowVelocityAtCell() and written out as
+     * the viscous-hydrodynamics initial condition.
      * \return The stored \f$\pi^{\tau\tau}\f$ value [1/fm^4].
      */
     double getpitautau() const { return pitautau_; }
     /**
-     * Sets the \f$\pi^{xx}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{xx}\f$ component of the Milne-coordinate
      * shear-stress tensor.
      * \param[in] x The new \f$\pi^{xx}\f$ value [1/fm^4].
      */
     void setpixx(double x) { pixx_ = x; }
     /**
-     * Returns the \f$\pi^{xx}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{xx}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
      * \return The stored \f$\pi^{xx}\f$ value [1/fm^4].
      */
     double getpixx() const { return pixx_; }
     /**
-     * Sets the \f$\pi^{yy}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{yy}\f$ component of the Milne-coordinate
      * shear-stress tensor.
      * \param[in] x The new \f$\pi^{yy}\f$ value [1/fm^4].
      */
     void setpiyy(double x) { piyy_ = x; }
     /**
-     * Returns the \f$\pi^{yy}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{yy}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
      * \return The stored \f$\pi^{yy}\f$ value [1/fm^4].
      */
     double getpiyy() const { return piyy_; }
     /**
-     * Sets the \f$\pi^{xy}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{xy}\f$ component of the Milne-coordinate
      * shear-stress tensor.
      * \param[in] x The new \f$\pi^{xy}\f$ value [1/fm^4].
      */
     void setpixy(double x) { pixy_ = x; }
     /**
-     * Returns the \f$\pi^{xy}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{xy}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
      * \return The stored \f$\pi^{xy}\f$ value [1/fm^4].
      */
     double getpixy() const { return pixy_; }
     /**
-     * Sets the \f$\pi^{\eta\eta}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{\eta\eta}\f$ component of the Milne-coordinate
      * shear-stress tensor.
-     * \param[in] x The new \f$\pi^{\eta\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$\pi^{\eta\eta}\f$ value [1/fm^6].
      */
     void setpietaeta(double x) { pietaeta_ = x; }
     /**
-     * Returns the \f$\pi^{\eta\eta}\f$ component of the local-rest-
-     * frame shear-stress tensor, computed by
+     * Returns the \f$\pi^{\eta\eta}\f$ component of the Milne-coordinate
+     * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
-     * \return The stored \f$\pi^{\eta\eta}\f$ value [1/fm^4].
+     * \return The stored \f$\pi^{\eta\eta}\f$ value [1/fm^6].
      */
     double getpietaeta() const { return pietaeta_; }
     /**
-     * Sets the \f$\pi^{\tau x}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{\tau x}\f$ component of the Milne-coordinate
      * shear-stress tensor.
      * \param[in] x The new \f$\pi^{\tau x}\f$ value [1/fm^4].
      */
     void setpitaux(double x) { pitaux_ = x; }
     /**
-     * Returns the \f$\pi^{\tau x}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{\tau x}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
      * \return The stored \f$\pi^{\tau x}\f$ value [1/fm^4].
      */
     double getpitaux() const { return pitaux_; }
     /**
-     * Sets the \f$\pi^{\tau y}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{\tau y}\f$ component of the Milne-coordinate
      * shear-stress tensor.
      * \param[in] x The new \f$\pi^{\tau y}\f$ value [1/fm^4].
      */
     void setpitauy(double x) { pitauy_ = x; }
     /**
-     * Returns the \f$\pi^{\tau y}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{\tau y}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
      * \return The stored \f$\pi^{\tau y}\f$ value [1/fm^4].
      */
     double getpitauy() const { return pitauy_; }
     /**
-     * Sets the \f$\pi^{\tau\eta}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{\tau\eta}\f$ component of the Milne-coordinate
      * shear-stress tensor.
-     * \param[in] x The new \f$\pi^{\tau\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$\pi^{\tau\eta}\f$ value [1/fm^5].
      */
     void setpitaueta(double x) { pitaueta_ = x; }
     /**
-     * Returns the \f$\pi^{\tau\eta}\f$ component of the local-rest-
-     * frame shear-stress tensor, computed by
+     * Returns the \f$\pi^{\tau\eta}\f$ component of the Milne-coordinate
+     * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
-     * \return The stored \f$\pi^{\tau\eta}\f$ value [1/fm^4].
+     * \return The stored \f$\pi^{\tau\eta}\f$ value [1/fm^5].
      */
     double getpitaueta() const { return pitaueta_; }
     /**
-     * Sets the \f$\pi^{x\eta}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{x\eta}\f$ component of the Milne-coordinate
      * shear-stress tensor.
-     * \param[in] x The new \f$\pi^{x\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$\pi^{x\eta}\f$ value [1/fm^5].
      */
     void setpixeta(double x) { pixeta_ = x; }
     /**
-     * Returns the \f$\pi^{x\eta}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{x\eta}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
-     * \return The stored \f$\pi^{x\eta}\f$ value [1/fm^4].
+     * \return The stored \f$\pi^{x\eta}\f$ value [1/fm^5].
      */
     double getpixeta() const { return pixeta_; }
     /**
-     * Sets the \f$\pi^{y\eta}\f$ component of the local-rest-frame
+     * Sets the \f$\pi^{y\eta}\f$ component of the Milne-coordinate
      * shear-stress tensor.
-     * \param[in] x The new \f$\pi^{y\eta}\f$ value [1/fm^4].
+     * \param[in] x The new \f$\pi^{y\eta}\f$ value [1/fm^5].
      */
     void setpiyeta(double x) { piyeta_ = x; }
     /**
-     * Returns the \f$\pi^{y\eta}\f$ component of the local-rest-frame
+     * Returns the \f$\pi^{y\eta}\f$ component of the Milne-coordinate
      * shear-stress tensor, computed by
      * MyEigen::solveFlowVelocityAtCell().
-     * \return The stored \f$\pi^{y\eta}\f$ value [1/fm^4].
+     * \return The stored \f$\pi^{y\eta}\f$ value [1/fm^5].
      */
     double getpiyeta() const { return piyeta_; }
 
@@ -485,14 +498,14 @@ class Cell {
     double getuy() const { return uy_; }
     /**
      * Sets the \f$u^\eta\f$ component of the local fluid four-velocity.
-     * \param[in] x The new \f$u^\eta\f$ value [dimensionless].
+     * \param[in] x The new \f$u^\eta\f$ value [1/fm].
      */
     void setueta(double x) { ueta_ = x; }
     /**
      * Returns the \f$u^\eta\f$ component of the local fluid
      * four-velocity, obtained by diagonalizing \f$T^{\mu\nu}\f$ in
      * MyEigen::solveFlowVelocityAtCell().
-     * \return The stored \f$u^\eta\f$ value [dimensionless].
+     * \return The stored \f$u^\eta\f$ value [1/fm].
      */
     double getueta() const { return ueta_; }
 };

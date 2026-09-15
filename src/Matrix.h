@@ -243,8 +243,12 @@ class Matrix {
      * (e.g. GaugeFix.cpp's \c expGaugeRotationSU3, which combines
      * these coefficients into the actual exponential matrix). Any
      * coefficient that comes out NaN (a 0/0 case that can occur in the
-     * very-low-density region) is replaced by `0`, contributing only
-     * the identity/vacuum piece.
+     * very-low-density region) is replaced by `0`; what that
+     * contributes to the final matrix depends on the caller's own
+     * combination of `out[0..8]` -- e.g. Init::getUfromExponent()
+     * separately checks for a zeroed `out[0]` and substitutes the
+     * identity matrix in that case, while \c expGaugeRotationSU3 has no
+     * such special case and simply uses the zeroed coefficient(s) as-is.
      * \param[in] Q The eight real coefficients \f$Q^1,\ldots,Q^8\f$ of
      * \f$Q\f$ in the generator basis (see Group).
      * \param[out] out The nine coefficients: `out[0]` for the identity,

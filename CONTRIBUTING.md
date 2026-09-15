@@ -35,7 +35,7 @@ leading `*`:
 
 ### Tags
 
-- `\param[in]`, `\param[out]`, `\param[inout]` -- one per parameter, with
+- `\param[in]`, `\param[out]`, `\param[in,out]` -- one per parameter, with
   the direction that actually applies. Every parameter gets one.
 - `\return` -- required for every non-`void` return.
 - `\note` / `\warning` -- for a real caveat (a non-obvious precondition, a

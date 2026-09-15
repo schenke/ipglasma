@@ -393,7 +393,7 @@ Matrix &Matrix::expm(double t, const int p) {
         U = (scale * t)
             * (*this);  // Here U is used as temp value due to that H is const
     } else
-        U = *this;
+        U = t * (*this);
 
     // Horner evaluation of the irreducible fraction.
     // Initialize P (numerator) and Q (denominator)

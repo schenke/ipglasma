@@ -42,9 +42,10 @@ class Setup {
     std::string stringFind(std::string file_name, std::string st);
     /**
      * Same lookup as stringFind(), but returns \p defaultValue instead
-     * of exiting if \p st isn't found (an `EndOfFile` token isn't
-     * even required for this to work, since the whole file is scanned
-     * via `>>` until it runs out).
+     * of exiting if \p st isn't found before an `EndOfFile` token (or
+     * before the file itself runs out, if there's no `EndOfFile`
+     * token). A key that appears only after `EndOfFile` is therefore
+     * not found either, and yields \p defaultValue.
      * \param[in] file_name Path to the input file; exits with an error
      * if it doesn't exist.
      * \param[in] st Key to search for.

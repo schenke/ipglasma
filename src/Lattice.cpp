@@ -7,7 +7,6 @@
 #include <iostream>
 #include <sstream>
 
-
 #include "Glauber.h"
 #include "Instrumentation.h"
 
@@ -128,19 +127,18 @@ void Lattice::writeWilsonLines(
         }
         foutU.close();
 
-        messager_ << "[Lattice::writeWilsonLines]: wrote "
-                  << wLineFile;
+        messager_ << "[Lattice::writeWilsonLines]: wrote " << wLineFile;
         messager_.flush("info");
     } else if (param->getWriteWilsonLines() == 2) {
-         
         const double L = param->getL();
         const double a = L / static_cast<double>(N);  // lattice spacing in fm
-        
+
         std::ofstream Outfile1;
         Outfile1.open(wLineFile, std::ios::out | std::ios::binary);
 
-
-        double temp = (nucleus == NucleusRole::Projectile) ? param->getRapidityA() : param->getRapidityB();
+        double temp = (nucleus == NucleusRole::Projectile)
+                          ? param->getRapidityA()
+                          : param->getRapidityB();
 
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
@@ -185,8 +183,7 @@ void Lattice::writeWilsonLines(
         }
 
         Outfile1.close();
-        messager_ << "[Lattice::writeWilsonLines]: wrote "
-                  << wLineFile;
+        messager_ << "[Lattice::writeWilsonLines]: wrote " << wLineFile;
         messager_.flush("info");
     } else {
         std::stringstream errorMsg;
@@ -198,18 +195,17 @@ void Lattice::writeWilsonLines(
     }
 }
 
-std::string Lattice::generateWilsonLineDataFileName(Parameters *param,
-        const double x, NucleusRole nucleus)
-{
+std::string Lattice::generateWilsonLineDataFileName(
+    Parameters *param, const double x, NucleusRole nucleus) {
     const bool isProjectile = (nucleus == NucleusRole::Projectile);
     const int iA = isProjectile ? 1 : 2;
 
     std::stringstream Vname;
     Vname << param->getWilsonLinePath() << "/WilsonLine";
-    if (x >= 0) Vname << "_x_" << std::scientific
-                 << std::setprecision(5) << x;
-    Vname << "_" << param->getEventId()
-                        + (iA + 2 * param->getSeed()) * param->getMPISize();
+    if (x >= 0) Vname << "_x_" << std::scientific << std::setprecision(5) << x;
+    Vname << "_"
+          << param->getEventId()
+                 + (iA + 2 * param->getSeed()) * param->getMPISize();
 
     if (param->getWriteWilsonLines() == 1) Vname << ".txt";
 

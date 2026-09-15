@@ -83,8 +83,8 @@ class Parameters {
     int writeWilsonLines_;    // decide whether to write (1) in text or (2)
                               // in binary format or not write (0) generated
                               // Wilson lines (before any evolution)
-    std::string wilsonLinePath_; // path to the directory where the Wilson lines 
-                                // are stored or loaded from
+    std::string wilsonLinePath_;  // path to the directory where the Wilson
+                                  // lines are stored or loaded from
     int readInitialWilsonLines_;  // decide wheter to generate initial Wilson
                                   // lines (0), or read these in plain text (1)
                                   // or in binary format (2)

@@ -241,7 +241,8 @@ class Init {
         Lattice *lat, int sites, double g, double invNy,
         std::vector<double> &colorChargeScaleA,
         std::vector<double> &colorChargeScaleB);
-    void readVFromFile(Lattice *lat, Parameters *param, int format, double x=-1);
+    void readVFromFile(
+        Lattice *lat, Parameters *param, int format, double x = -1);
     // readVFromFile's format==1/format==2 branches, each called once for
     // the projectile's Wilson line file and once for the target's; role
     // selects the sign of the b/2 shift and (format 1 only) which side of

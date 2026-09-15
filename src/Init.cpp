@@ -1973,18 +1973,16 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     }
 
     // output U
-    if (param->getWriteWilsonLines() > 0 && (param->getSaveSnapshots() || !param->getUseJIMWLK())) {
+    if (param->getWriteWilsonLines() > 0
+        && (param->getSaveSnapshots() || !param->getUseJIMWLK())) {
         double x_projectile, x_target;
         if (param->getUseJIMWLK()) {
             x_projectile = x_target = param->getJimwlk_x0();
         } else {
-            if (param->getUseFluctuatingx() == 1)
-            {
+            if (param->getUseFluctuatingx() == 1) {
                 // Initial condition does not correspond to a fixed x
-                x_projectile = x_target = -1; 
-            }
-            else 
-            {
+                x_projectile = x_target = -1;
+            } else {
                 x_projectile = 0.01 * std::exp(-param->getRapidityA());
                 x_target = 0.01 * std::exp(-param->getRapidityB());
             }
@@ -1998,7 +1996,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     messager_.flush("info");
 }
 
-void Init::readVFromFile(Lattice *lat, Parameters *param, int format, double x) {
+void Init::readVFromFile(
+    Lattice *lat, Parameters *param, int format, double x) {
     IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
     // format 1 = plain text, 2 = binary
 
@@ -2009,9 +2008,11 @@ void Init::readVFromFile(Lattice *lat, Parameters *param, int format, double x) 
         messager_.flush("error");
         exit(1);
     }
-   
-    string VOne_name = Lattice::generateWilsonLineDataFileName(param, x, NucleusRole::Projectile);
-    string VTwo_name = Lattice::generateWilsonLineDataFileName(param, x, NucleusRole::Target);
+
+    string VOne_name = Lattice::generateWilsonLineDataFileName(
+        param, x, NucleusRole::Projectile);
+    string VTwo_name =
+        Lattice::generateWilsonLineDataFileName(param, x, NucleusRole::Target);
 
     messager_ << "[Init::readVFromFile]: Reading Wilson lines from files "
               << VOne_name << " and " << VTwo_name;

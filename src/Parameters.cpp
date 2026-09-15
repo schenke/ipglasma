@@ -2,8 +2,8 @@
 
 #include "Parameters.h"
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
@@ -119,8 +119,6 @@ bool Parameters::ValidParameters() {
             return false;
         }
     }
-
-    
 
     return true;
 }

@@ -1147,8 +1147,7 @@ double Init::computeNucleonThicknessAtCell(
                 bp2 /= hbarc * hbarc;
 
                 T += exp(-bp2 / (2. * BGq[i][iq])) / (2. * M_PI * BGq[i][iq])
-                     / (static_cast<double>(xq[i].size()))
-                     * gauss[i][iq];
+                     / (static_cast<double>(xq[i].size())) * gauss[i][iq];
             }
         } else {
             const double BG = param->getBG();

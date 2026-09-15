@@ -10,6 +10,7 @@
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
+#include "PhysConst.h"
 #include "PrettyOstream.h"
 #include "Random.h"
 
@@ -38,12 +39,6 @@ class JIMWLK {
     int nn_[2];
     /// Log sink for progress messages.
     PrettyOstream messager_;
-
-    /// \f$1/\hbar c\f$ [1/(GeV fm)] (matches PhysConst::hbarc to the
-    /// precision given here), used by getMassRegulator() to make its
-    /// Bessel-function argument \f$m a \cdot\f$ \c fmgev
-    /// dimensionless.
-    const double fmgev = 5.068;
 
     /// Number of colors; fixed at 3.
     static constexpr int Nc_ = 3;

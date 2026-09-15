@@ -14,9 +14,14 @@ static_assert(
     "Matrix must remain an exact contiguous complex<double>[9]");
 
 namespace {
-// Analytic inverse of a general 3x3 matrix via its cofactor (adjugate)
-// matrix. Shared by Matrix::inv() (inverting *this) and Matrix::expm()
-// (inverting the Pade denominator Q), which both need this exact formula.
+/**
+ * Analytic inverse of a general \f$3\times3\f$ matrix via its cofactor
+ * (adjugate) matrix. Shared by Matrix::inv() (inverting `*this`) and
+ * Matrix::expm() (inverting the Pade denominator \f$Q\f$), which both
+ * need this exact formula.
+ * \param[in] Q Matrix to invert.
+ * \return \f$Q^{-1}\f$.
+ */
 Matrix cofactorInverse(const Matrix &Q) {
     Matrix H2(Matrix::noInit);
     H2.set(0, 0, (Q(1, 1) * Q(2, 2) - Q(1, 2) * Q(2, 1)));
@@ -104,7 +109,11 @@ Matrix operator*(const complex<double> s, const Matrix &a) {
     return aa;
 }
 
-// / division by scalar
+// Division by a real scalar. Not declared in Matrix.h and never called
+// from within this file either, so this is currently unreachable from
+// anywhere else in the codebase (a free function needs a visible
+// declaration to be called from another translation unit) -- found
+// while documenting this file.
 Matrix operator/(const Matrix &a, const double s) {
     Matrix aa(Matrix::noInit);
     for (int i = 0; i < a.getNN(); i++) aa.set(i, a(i) / s);

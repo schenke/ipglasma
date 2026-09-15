@@ -76,6 +76,7 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
     - 0: do not save Wilson lines
 	- 1: save in text format
 	- 2: save in binary format (faster I/O, smaller file size)
+ - **wilsonLinePath** (optional): directory where the Wilson lines are written to (when `writeWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
 
 ### JIMWLK evolution
 Note that when using the JIMWLK evolution, one should use `useFluctuatingx 0` which corresponds to having a fixed $x$ at the initial state of the evoluiton.

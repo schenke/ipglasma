@@ -33,7 +33,7 @@ target_include_directories(ipglasma_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     )
-target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads)
+target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS})
 if (APPLE)
     # Matches src/CMakeLists.txt: PrettyOstream::getMemoryUsage() reads
     # ru_maxrss in different units on macOS vs. Linux and picks the

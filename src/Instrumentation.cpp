@@ -15,6 +15,14 @@
 
 namespace {
 
+/**
+ * Checks whether an environment variable is set to an "enabling"
+ * value.
+ * \param[in] name Environment variable name.
+ * \return `false` if unset, empty, or one of
+ * `0`/`false`/`FALSE`/`off`/`OFF`/`no`/`NO`; `true` for any other
+ * value.
+ */
 bool envEnabled(const char *name) {
     const char *value = std::getenv(name);
     if (value == NULL || value[0] == '\0') return false;
@@ -23,25 +31,57 @@ bool envEnabled(const char *name) {
            && text != "OFF" && text != "no" && text != "NO";
 }
 
+/**
+ * Reads an environment variable, or a fallback if unset/empty.
+ * \param[in] name Environment variable name.
+ * \param[in] fallback Value to return if \p name is unset or empty.
+ * \return The variable's value, or \p fallback.
+ */
 std::string envOrDefault(const char *name, const char *fallback) {
     const char *value = std::getenv(name);
     if (value == NULL || value[0] == '\0') return std::string(fallback);
     return std::string(value);
 }
 
+/**
+ * Joins a directory and a file name with exactly one `/` between them.
+ * \param[in] directory Directory path; empty or `"."` means "no
+ * prefix".
+ * \param[in] name File name to append.
+ * \return \p name if \p directory is empty/`"."`, otherwise
+ * `directory + "/" + name` (no doubled slash if \p directory already
+ * ends in one).
+ */
 std::string joinPath(const std::string &directory, const std::string &name) {
     if (directory.empty() || directory == ".") return name;
     if (directory[directory.size() - 1] == '/') return directory + name;
     return directory + "/" + name;
 }
 
+/**
+ * Checks whether a TSV output file still needs its header line
+ * written.
+ * \param[in] path File path to check.
+ * \return `true` if \p path doesn't exist or is empty.
+ */
 bool fileNeedsHeader(const std::string &path) {
     std::ifstream input(path.c_str(), std::ios::binary | std::ios::ate);
     return !input || input.tellg() == std::streampos(0);
 }
 
+/**
+ * Streaming summary statistics for one lattice field's values, used by
+ * writeLatticeFingerprint(): a running FNV-1a hash of every value's
+ * raw bit pattern (order- and position-dependent, so it changes if any
+ * value moves or differs even in its last bit), plus count, non-finite
+ * count, mean, RMS, min and max over the finite values.
+ */
 class FieldDigest {
   public:
+    /**
+     * Constructs an empty digest (zero count, hash seeded to the
+     * FNV-1a offset basis).
+     */
     FieldDigest()
         : hash_(14695981039346656037ULL),
           count_(0),
@@ -52,6 +92,11 @@ class FieldDigest {
           min_(std::numeric_limits<double>::infinity()),
           max_(-std::numeric_limits<double>::infinity()) {}
 
+    /**
+     * Folds one value into the running hash and (if finite) the
+     * running count/sum/sum-of-squares/min/max.
+     * \param[in] value Value to add.
+     */
     void add(double value) {
         std::uint64_t bits = 0;
         static_assert(sizeof(bits) == sizeof(value), "unexpected double size");
@@ -77,38 +122,63 @@ class FieldDigest {
         if (value > max_) max_ = value;
     }
 
+    /// Returns the running FNV-1a hash of every added value's raw bits.
     std::uint64_t hash() const { return hash_; }
+    /// Returns the total number of values added (finite or not).
     std::uint64_t count() const { return count_; }
+    /// Returns the number of added values that were not finite.
     std::uint64_t nonfinite() const { return nonfinite_; }
+    /// Returns the mean of the finite values added (NaN if none were).
     double mean() const {
         return finite_count_ == 0 ? std::numeric_limits<double>::quiet_NaN()
                                   : static_cast<double>(sum_ / finite_count_);
     }
+    /// Returns the RMS of the finite values added (NaN if none were).
     double rms() const {
         return finite_count_ == 0
                    ? std::numeric_limits<double>::quiet_NaN()
                    : std::sqrt(static_cast<double>(sumsq_ / finite_count_));
     }
+    /// Returns the minimum of the finite values added (NaN if none
+    /// were).
     double minimum() const {
         return finite_count_ == 0 ? std::numeric_limits<double>::quiet_NaN()
                                   : min_;
     }
+    /// Returns the maximum of the finite values added (NaN if none
+    /// were).
     double maximum() const {
         return finite_count_ == 0 ? std::numeric_limits<double>::quiet_NaN()
                                   : max_;
     }
 
   private:
+    /// Running FNV-1a hash of every added value's raw bits.
     std::uint64_t hash_;
+    /// Total number of values added.
     std::uint64_t count_;
+    /// Number of added values that were finite.
     std::uint64_t finite_count_;
+    /// Number of added values that were not finite.
     std::uint64_t nonfinite_;
+    /// Running sum of the finite values (long double, to limit
+    /// accumulated rounding error over a whole lattice).
     long double sum_;
+    /// Running sum of the finite values' squares.
     long double sumsq_;
+    /// Minimum finite value added so far.
     double min_;
+    /// Maximum finite value added so far.
     double max_;
 };
 
+/**
+ * Mixes one field's label and hash into a combined FNV-1a hash spanning
+ * every field writeLatticeFingerprint() digests.
+ * \param[in,out] combined Running combined hash, updated in place.
+ * \param[in] label Field's label (e.g. `"epsilon"`).
+ * \param[in] field_hash Field's own FieldDigest::hash().
+ */
 void mixCombined(
     std::uint64_t &combined, const std::string &label,
     const std::uint64_t field_hash) {
@@ -122,6 +192,17 @@ void mixCombined(
     }
 }
 
+/**
+ * Writes one field's digest as a TSV row and mixes its hash into the
+ * running combined hash.
+ * \param[in,out] output Stream to append the row to.
+ * \param[in] rank This process' MPI rank.
+ * \param[in] event_id Identifier recorded alongside this row.
+ * \param[in] label This field's label.
+ * \param[in] digest This field's accumulated digest.
+ * \param[in,out] combined Running combined hash, updated via
+ * mixCombined().
+ */
 void writeDigestRow(
     std::ofstream &output, int rank, int event_id, const std::string &label,
     const FieldDigest &digest, std::uint64_t &combined) {
@@ -134,6 +215,18 @@ void writeDigestRow(
     mixCombined(combined, label, digest.hash());
 }
 
+/**
+ * Digests one scalar Cell field across every site and writes its row.
+ * \param[in,out] output Stream to append the row to.
+ * \param[in] lat Lattice to read from.
+ * \param[in] rank This process' MPI rank.
+ * \param[in] event_id Identifier recorded alongside this row.
+ * \param[in] label This field's label.
+ * \param[in] getter Pointer to the Cell getter to digest (e.g.
+ * `&Cell::getEpsilon`).
+ * \param[in,out] combined Running combined hash, updated via
+ * mixCombined().
+ */
 void digestScalarField(
     std::ofstream &output, Lattice *lat, int rank, int event_id,
     const std::string &label, double (Cell::*getter)() const,
@@ -145,6 +238,17 @@ void digestScalarField(
     writeDigestRow(output, rank, event_id, label, digest, combined);
 }
 
+/**
+ * Digests one per-site Matrix field (every real and imaginary
+ * component of every site's matrix) and writes its row.
+ * \param[in,out] output Stream to append the row to.
+ * \param[in] field Per-site matrix field to digest (e.g. `lat->Ux`).
+ * \param[in] rank This process' MPI rank.
+ * \param[in] event_id Identifier recorded alongside this row.
+ * \param[in] label This field's label.
+ * \param[in,out] combined Running combined hash, updated via
+ * mixCombined().
+ */
 void digestMatrixField(
     std::ofstream &output, const std::vector<Matrix> &field, int rank,
     int event_id, const std::string &label, std::uint64_t &combined) {

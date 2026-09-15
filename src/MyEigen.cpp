@@ -28,8 +28,21 @@ using std::vector;
 
 namespace {
 
+/// Output stream buffer size used by openBufferedTextOutput(), chosen
+/// to keep the hydro-text/raw-Tmunu writers' many small `<<` calls from
+/// each hitting the OS individually.
 const std::size_t kTextOutputBufferBytes = 4u * 1024u * 1024u;
 
+/**
+ * Opens a text output file with a caller-owned, oversized stream
+ * buffer (see kTextOutputBufferBytes) installed before opening, so the
+ * writer's many small insertions coalesce into few OS writes.
+ * \param[out] output Stream to open; must not already be open.
+ * \param[in,out] buffer Backing buffer for \p output's `streambuf`;
+ * must outlive \p output.
+ * \param[in] filename Path to open.
+ * \throw std::runtime_error if the file can't be opened.
+ */
 void openBufferedTextOutput(
     ofstream &output, vector<char> &buffer, const string &filename) {
     output.rdbuf()->pubsetbuf(
@@ -40,6 +53,16 @@ void openBufferedTextOutput(
     }
 }
 
+/**
+ * Closes an output stream and checks the close succeeded. Works for
+ * any `ofstream`, not just one opened via openBufferedTextOutput()
+ * (used to close writeRawTmunu()'s binary stream too).
+ * \param[in,out] output Stream to close.
+ * \param[in] filename Path \p output was opened from, for the error
+ * message.
+ * \throw std::runtime_error if the stream is in a failed state after
+ * closing.
+ */
 void closeBufferedTextOutput(ofstream &output, const string &filename) {
     output.close();
     if (!output) {
@@ -48,12 +71,31 @@ void closeBufferedTextOutput(ofstream &output, const string &filename) {
     }
 }
 
-// Bilinearly interpolate a per-cell scalar field, given the four
-// surrounding-cell indices (pos1/pos2 share the low-y row, pos3/pos4 the
-// high-y row) and the fractional offsets within that cell. Each pair falls
-// back to 0 when out of the lattice, matching the historical behavior at
-// the edges. takeAbs replicates call sites that previously wrapped each
-// sample in abs() before blending (epsilon, g2mu2A, g2mu2B).
+/**
+ * Bilinearly interpolates a per-cell scalar field, given the four
+ * surrounding-cell indices (\p pos1/\p pos2 share the low-\f$y\f$ row,
+ * \p pos3/\p pos4 the high-\f$y\f$ row) and the fractional offsets
+ * within that cell. Each pair falls back to `0` when out of the
+ * lattice, matching the historical behavior at the edges.
+ * \param[in] lat Lattice to read from.
+ * \param[in] pos1 Low-\f$x\f$, low-\f$y\f$ corner index (or out of
+ * range).
+ * \param[in] pos2 High-\f$x\f$, low-\f$y\f$ corner index (or out of
+ * range).
+ * \param[in] pos3 Low-\f$x\f$, high-\f$y\f$ corner index (or out of
+ * range).
+ * \param[in] pos4 High-\f$x\f$, high-\f$y\f$ corner index (or out of
+ * range).
+ * \param[in] N Lattice side length, used to range-check each index.
+ * \param[in] fracx Fractional \f$x\f$ offset within the cell, `[0,1)`.
+ * \param[in] fracy Fractional \f$y\f$ offset within the cell, `[0,1)`.
+ * \param[in] getter Cell getter to sample at each corner.
+ * \param[in] takeAbs If `true`, take each sampled value's absolute
+ * value before blending -- replicates call sites that previously
+ * wrapped each sample in `abs()` before blending (\c epsilon, \c
+ * g2mu2A, \c g2mu2B).
+ * \return The bilinearly interpolated value.
+ */
 double interpolateCellField(
     Lattice *lat, int pos1, int pos2, int pos3, int pos4, int N, double fracx,
     double fracy, double (Cell::*getter)() const, bool takeAbs = false) {
@@ -80,13 +122,45 @@ double interpolateCellField(
     return (1. - fracy) * x1 + fracy * x2;
 }
 
-// Solves for the local flow velocity u^mu and energy density at one lattice
-// cell by diagonalizing T^mu_nu (Landau matching), then fills in that cell's
-// u^mu, epsilon, and pi^munu. Reads only lat->cells[pos]'s T^munu and writes
-// only lat->cells[pos], so it is safe to call from an OpenMP-parallel loop
-// over pos with eval/evec/w_ws as thread-private GSL workspace. averageux,
-// averageuy, averageueta, averageeps, and count are OpenMP reduction
-// accumulators in the caller.
+/**
+ * Solves for the local flow velocity \f$u^\mu\f$ and energy density at
+ * one lattice cell by diagonalizing the mixed tensor \f$T^\mu_\nu\f$
+ * (Landau matching: find its timelike eigenvector, normalized under
+ * the Milne metric with \f$u^\tau>0\f$; falls back to the local rest
+ * frame \f$(1,0,0,0)\f$ if no such eigenvector is found, or if the
+ * eigen-decomposition comes out complex away from the lattice edges),
+ * then fills in that cell's \f$u^\mu\f$, \f$\epsilon\f$, and
+ * \f$\pi^{\mu\nu}\f$ (the traceless part of \f$T^{\mu\nu}\f$ in that
+ * rest frame).
+ *
+ * Reads only `lat->cells[pos]`'s \f$T^{\mu\nu}\f$ and writes only
+ * `lat->cells[pos]`, so it is safe to call from an OpenMP-parallel loop
+ * over \p pos with \p eval_ws/\p evec_ws/\p w_ws as thread-private GSL
+ * workspace.
+ * \param[in] lat Lattice to read from and write into.
+ * \param[in] pos Flat cell index to solve.
+ * \param[in] si Cell's \f$x\f$ index (for edge-proximity checks only).
+ * \param[in] sj Cell's \f$y\f$ index (for edge-proximity checks only).
+ * \param[in] N Lattice side length.
+ * \param[in] it Current evolution time step.
+ * \param[in] dtau Evolution time step [lattice units].
+ * \param[in] a Lattice spacing [fm].
+ * \param[in,out] eval_ws Thread-private GSL eigenvalue workspace.
+ * \param[in,out] evec_ws Thread-private GSL eigenvector workspace.
+ * \param[in,out] w_ws Thread-private GSL `gsl_eigen_nonsymmv`
+ * workspace.
+ * \param[in,out] averageux OpenMP reduction accumulator: running sum of
+ * \f$u_x^2\epsilon\f$ across every cell a timelike eigenvector was
+ * found for.
+ * \param[in,out] averageuy OpenMP reduction accumulator: running sum of
+ * \f$u_y^2\epsilon\f$.
+ * \param[in,out] averageueta OpenMP reduction accumulator: running sum
+ * of \f$(\tau u_\eta)^2\epsilon\f$.
+ * \param[in,out] averageeps OpenMP reduction accumulator: running sum
+ * of \f$\epsilon\f$.
+ * \param[in,out] count OpenMP reduction accumulator: number of cells a
+ * timelike eigenvector was found for.
+ */
 void solveFlowVelocityAtCell(
     Lattice *lat, int pos, int si, int sj, int N, int it, double dtau, double a,
     gsl_vector_complex *eval_ws, gsl_matrix_complex *evec_ws,
@@ -341,6 +415,16 @@ void solveFlowVelocityAtCell(
     }
 }
 
+/**
+ * Decides whether writeRawTmunu() should write binary (`.ipgt`) or
+ * text (`.dat`) output.
+ * \param[in] param Simulation parameters; `getWriteTmunuBinary()` is
+ * the default, overridable at runtime by `IPGLASMA_BINARY_TMUNU` (any
+ * value other than empty/`0`/`false`/`off`/`no`, case-insensitively,
+ * enables binary output) -- a convenient override for benchmarking and
+ * existing launch scripts without editing the input file.
+ * \return `true` if binary output should be written.
+ */
 bool binaryTmunuEnabled(Parameters *param) {
     const bool inputDefault = param->getWriteTmunuBinary() != 0;
     const char *value = std::getenv("IPGLASMA_BINARY_TMUNU");
@@ -354,11 +438,22 @@ bool binaryTmunuEnabled(Parameters *param) {
         || text == "OFF" || text == "no" || text == "NO");
 }
 
+/**
+ * Checks the host's byte order, since openTmunuBinaryOutput()'s format
+ * is defined as little-endian.
+ * \return `true` if this host is little-endian.
+ */
 bool littleEndianHost() {
     const std::uint16_t probe = 1;
     return *reinterpret_cast<const unsigned char *>(&probe) == 1;
 }
 
+/**
+ * Writes a 32-bit unsigned integer in little-endian byte order,
+ * regardless of host byte order.
+ * \param[in,out] output Stream to write to.
+ * \param[in] value Value to write.
+ */
 void writeUint32LittleEndian(ofstream &output, std::uint32_t value) {
     const unsigned char bytes[4] = {
         static_cast<unsigned char>(value & 0xffu),
@@ -368,6 +463,29 @@ void writeUint32LittleEndian(ofstream &output, std::uint32_t value) {
     output.write(reinterpret_cast<const char *>(bytes), sizeof(bytes));
 }
 
+/**
+ * Opens writeRawTmunu()'s binary output file and writes its header: an
+ * 8-byte magic string, a little-endian `uint32` metadata length, then
+ * a JSON metadata blob (format/version/dtype/shape/axis order/
+ * component names/physical parameters) describing how to interpret the
+ * per-cell rows that follow.
+ * \param[out] output Stream to open; must not already be open.
+ * \param[in] filename Path to open.
+ * \param[in] hx Output grid size in \f$x\f$, recorded in the metadata.
+ * \param[in] hy Output grid size in \f$y\f$, recorded in the metadata.
+ * \param[in] heta Output grid size in \f$\eta\f$, recorded in the
+ * metadata.
+ * \param[in] tauFm Current proper time [fm/c], recorded in the
+ * metadata.
+ * \param[in] deta Output grid spacing in \f$\eta\f$, recorded in the
+ * metadata.
+ * \param[in] dxFm Output grid spacing in \f$x\f$/\f$y\f$ [fm], recorded
+ * in the metadata.
+ * \param[in] eventId Event identifier, recorded in the metadata.
+ * \throw std::runtime_error if the host isn't little-endian, the file
+ * can't be opened, the metadata is implausibly large, or the header
+ * write fails.
+ */
 void openTmunuBinaryOutput(
     ofstream &output, const string &filename, int hx, int hy, int heta,
     double tauFm, double deta, double dxFm, int eventId) {

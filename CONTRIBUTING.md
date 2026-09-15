@@ -69,6 +69,11 @@ leading `*`:
 - Document every class (its role in the simulation pipeline: who
   constructs it, what populates its state, what stage consumes it) and
   every member variable.
+- Document every enum (what it selects/represents) and every enumerator
+  individually, the same way as a struct and its member variables --
+  don't leave an enum with only a plain `//` comment or no per-value
+  docs (a gap this pass initially left on `IntegrandId`/`NucleusRole`
+  in Glauber.h, added before this rule was; caught by the user).
 
 ### Example
 

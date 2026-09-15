@@ -16,24 +16,34 @@ using std::string;
 
 namespace {
 
-// U and Xe's beta2 historically defaults to whatever the caller passed in
-// (see findNucleusData's beta2 parameter) rather than a fixed literal, so
-// their table row uses this sentinel instead of a numeric default.
+/// Sentinel used by \c kNucleusTemplates' \c beta2 field for U and Xe,
+/// whose \c beta2 historically defaults to whatever the caller passed
+/// into findNucleusData() rather than a fixed literal.
 constexpr double kUseCallerBeta2 = std::numeric_limits<double>::quiet_NaN();
 
-// One row per supported nucleus name. funcCode selects the density
-// function (anum2HO/anum3Gauss/anum3Fermi/anumHulthen family) and is
-// assigned identically to all three of nucleus->anumFunc/
-// anumFuncIntegrand/densityFunc (1=2HO or readFromFile, 2=3Gauss,
-// 3=3Fermi, 8=Hulthen).
+/**
+ * One row of Glauber::findNucleusData()'s built-in per-species table.
+ */
 struct NucleusTemplate {
+    /// Species name, matched case-sensitively against
+    /// Glauber::findNucleusData()'s \p name argument.
     const char *name;
+    /// Mass number, atomic number.
     int A, Z;
+    /// Woods-Saxon half-density radius [fm], profile-shape parameter
+    /// [dimensionless or 1/fm], surface diffuseness [fm].
     double R_WS, w_WS, a_WS;
+    /// Quadrupole/octupole/hexadecapole deformation [dimensionless]
+    /// (\c beta2 may be \c kUseCallerBeta2) and triaxiality angle [rad].
     double beta2, beta3, beta4, gamma;
+    /// Density-function selector, assigned identically to
+    /// `Nucleus::anumFunc`/`anumFuncIntegrand`/`densityFunc` (1=2HO or
+    /// readFromFile, 2=3Gauss, 3=3Fermi, 8=Hulthen).
     int funcCode;
 };
 
+/// Built-in Woods-Saxon/density-profile parameters, one row per
+/// supported species name; see NucleusTemplate for the field meanings.
 const NucleusTemplate kNucleusTemplates[] = {
     {"Au", 197, 79, 6.37, 0, 0.535, -0.13, 0., -0.03, 0., 3},
     {"Pb", 208, 82, 6.62, 0., 0.546, 0.0, 0., 0.0, 0., 3},

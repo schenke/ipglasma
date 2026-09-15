@@ -5,19 +5,37 @@
 
 #include "Matrix.h"
 
-// Fixed-size SU(3) hot-path helpers. These routines intentionally do not
-// provide a generic-N fallback: IP-Glasma is validated to run with Nc == 3
-// at input time. Keeping the kernels dimension-free lets the compiler see the
-// complete 3x3 operation and avoids Matrix temporaries when only a trace is
-// required.
+/**
+ * Fixed-size SU(3) hot-path helpers, used by Evolution.cpp's per-cell
+ * energy-momentum tensor computation.
+ *
+ * These routines intentionally do not provide a generic-N fallback:
+ * IP-Glasma is validated to run with \f$N_c = 3\f$ at input time.
+ * Keeping the kernels dimension-free lets the compiler see the complete
+ * \f$3\times3\f$ operation and avoids Matrix temporaries (with their
+ * full get()/set() indirection) when only a trace is required.
+ */
 namespace su3 {
 
 using Complex = std::complex<double>;
 
+/**
+ * A bare \f$3\times3\f$ complex matrix, row-major, with no invariants
+ * enforced and none of Matrix's operator overloads -- scratch storage
+ * for intermediate products these helpers never need to feed back
+ * through the full Matrix interface.
+ */
 struct Matrix3 {
+    /// The 9 matrix elements, row-major (`e[3*row+col]`).
     Complex e[9];
 };
 
+/**
+ * Matrix product \f$C = AB\f$.
+ * \param[in] a Left factor.
+ * \param[in] b Right factor.
+ * \return \f$AB\f$.
+ */
 inline Matrix3 multiply(const Matrix &a, const Matrix &b) {
     const Complex *A = a.data();
     const Complex *B = b.data();
@@ -34,6 +52,13 @@ inline Matrix3 multiply(const Matrix &a, const Matrix &b) {
     return c;
 }
 
+/**
+ * Matrix product with a Hermitian-conjugated right factor,
+ * \f$C = AB^\dagger\f$, without materializing \f$B^\dagger\f$.
+ * \param[in] a Left factor.
+ * \param[in] b Factor to conjugate-transpose before multiplying.
+ * \return \f$AB^\dagger\f$.
+ */
 inline Matrix3 multiplyABdagger(const Matrix &a, const Matrix &b) {
     const Complex *A = a.data();
     const Complex *B = b.data();
@@ -59,6 +84,12 @@ inline Matrix3 multiplyABdagger(const Matrix &a, const Matrix &b) {
     return c;
 }
 
+/**
+ * Matrix commutator \f$[A, B] = AB - BA\f$.
+ * \param[in] a First matrix.
+ * \param[in] b Second matrix.
+ * \return \f$[A, B]\f$.
+ */
 inline Matrix3 commutator(const Matrix &a, const Matrix &b) {
     Matrix3 ab = multiply(a, b);
     Matrix3 ba = multiply(b, a);
@@ -67,13 +98,30 @@ inline Matrix3 commutator(const Matrix &a, const Matrix &b) {
     return c;
 }
 
+/**
+ * Matrix trace \f$\mathrm{Tr}(A)\f$.
+ * \param[in] a Matrix to trace.
+ * \return \f$\mathrm{Tr}(A)\f$.
+ */
 inline Complex trace(const Matrix &a) {
     const Complex *A = a.data();
     return A[0] + A[4] + A[8];
 }
 
+/**
+ * Matrix trace \f$\mathrm{Tr}(A)\f$, for an already-computed Matrix3.
+ * \param[in] a Matrix to trace.
+ * \return \f$\mathrm{Tr}(A)\f$.
+ */
 inline Complex trace(const Matrix3 &a) { return a.e[0] + a.e[4] + a.e[8]; }
 
+/**
+ * Trace of a matrix product, \f$\mathrm{Tr}(AB)\f$, without
+ * materializing the full product.
+ * \param[in] a Left factor.
+ * \param[in] b Right factor.
+ * \return \f$\mathrm{Tr}(AB)\f$.
+ */
 inline Complex traceAB(const Matrix &a, const Matrix &b) {
     const Complex *A = a.data();
     const Complex *B = b.data();
@@ -83,6 +131,13 @@ inline Complex traceAB(const Matrix &a, const Matrix &b) {
     return t0 + t1 + t2;
 }
 
+/**
+ * Trace of a matrix product, \f$\mathrm{Tr}(AB)\f$, for an
+ * already-computed left factor.
+ * \param[in] a Left factor.
+ * \param[in] b Right factor.
+ * \return \f$\mathrm{Tr}(AB)\f$.
+ */
 inline Complex traceAB(const Matrix3 &a, const Matrix &b) {
     const Complex *B = b.data();
     const Complex t0 = a.e[0] * B[0] + a.e[1] * B[3] + a.e[2] * B[6];
@@ -91,6 +146,13 @@ inline Complex traceAB(const Matrix3 &a, const Matrix &b) {
     return t0 + t1 + t2;
 }
 
+/**
+ * Trace of a matrix product, \f$\mathrm{Tr}(AB)\f$, for two
+ * already-computed factors.
+ * \param[in] a Left factor.
+ * \param[in] b Right factor.
+ * \return \f$\mathrm{Tr}(AB)\f$.
+ */
 inline Complex traceAB(const Matrix3 &a, const Matrix3 &b) {
     const Complex t0 = a.e[0] * b.e[0] + a.e[1] * b.e[3] + a.e[2] * b.e[6];
     const Complex t1 = a.e[3] * b.e[1] + a.e[4] * b.e[4] + a.e[5] * b.e[7];
@@ -98,6 +160,14 @@ inline Complex traceAB(const Matrix3 &a, const Matrix3 &b) {
     return t0 + t1 + t2;
 }
 
+/**
+ * Trace of a matrix product with a Hermitian-conjugated right factor,
+ * \f$\mathrm{Tr}(AB^\dagger)\f$, without materializing \f$B^\dagger\f$
+ * or the full product.
+ * \param[in] a Left factor.
+ * \param[in] b Factor to conjugate-transpose before multiplying.
+ * \return \f$\mathrm{Tr}(AB^\dagger)\f$.
+ */
 inline Complex traceABdagger(const Matrix &a, const Matrix &b) {
     const Complex *A = a.data();
     const Complex *B = b.data();
@@ -110,8 +180,20 @@ inline Complex traceABdagger(const Matrix &a, const Matrix &b) {
     return t0 + t1 + t2;
 }
 
+/**
+ * Trace of a matrix square, \f$\mathrm{Tr}(A^2)\f$.
+ * \param[in] a Matrix to square and trace.
+ * \return \f$\mathrm{Tr}(A^2)\f$.
+ */
 inline Complex traceSquare(const Matrix &a) { return traceAB(a, a); }
 
+/**
+ * Trace of a squared matrix difference, \f$\mathrm{Tr}((A-B)^2)\f$,
+ * without materializing \f$A-B\f$ as a full Matrix.
+ * \param[in] a First matrix.
+ * \param[in] b Second matrix.
+ * \return \f$\mathrm{Tr}((A-B)^2)\f$.
+ */
 inline Complex traceDifferenceSquare(const Matrix &a, const Matrix &b) {
     const Complex *A = a.data();
     const Complex *B = b.data();
@@ -130,6 +212,14 @@ inline Complex traceDifferenceSquare(const Matrix &a, const Matrix &b) {
     return t0 + t1 + t2;
 }
 
+/**
+ * Trace of a three-matrix product, \f$\mathrm{Tr}(ABC)\f$, without
+ * materializing any intermediate product.
+ * \param[in] a First factor.
+ * \param[in] b Second factor.
+ * \param[in] c Third factor.
+ * \return \f$\mathrm{Tr}(ABC)\f$.
+ */
 inline Complex traceABC(const Matrix &a, const Matrix &b, const Matrix &c) {
     const Complex *A = a.data();
     const Complex *B = b.data();
@@ -146,6 +236,15 @@ inline Complex traceABC(const Matrix &a, const Matrix &b, const Matrix &c) {
     return tr;
 }
 
+/**
+ * Trace of a four-matrix product, \f$\mathrm{Tr}(ABCD)\f$, without
+ * materializing any intermediate product.
+ * \param[in] a First factor.
+ * \param[in] b Second factor.
+ * \param[in] c Third factor.
+ * \param[in] d Fourth factor.
+ * \return \f$\mathrm{Tr}(ABCD)\f$.
+ */
 inline Complex traceABCD(
     const Matrix &a, const Matrix &b, const Matrix &c, const Matrix &d) {
     const Complex *A = a.data();

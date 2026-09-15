@@ -237,17 +237,14 @@ int main(int argc, char *argv[]) {
                 jimwlkSolver.evolution();
                 messager.info("[main::main]: Finish JIMWLK");
 
+                // Store final Wilson lines after JIMWLK evolution
                 if (param->getWriteWilsonLines() > 0) {
-                    std::stringstream s1;
-                    s1 << "Final_x_"
-                       << std::to_string(param->getJimwlk_x_projectile())
-                       << "_";
                     lat.writeWilsonLines(
-                        s1.str(), param, NucleusRole::Projectile);
-                    std::stringstream s2;
-                    s2 << "Final_x_"
-                       << std::to_string(param->getJimwlk_x_target()) << "_";
-                    lat.writeWilsonLines(s2.str(), param, NucleusRole::Target);
+                        param, NucleusRole::Projectile,
+                        param->getJimwlk_x_projectile());
+                    lat.writeWilsonLines(
+                        param, NucleusRole::Target,
+                        param->getJimwlk_x_target());
                 }
             }
 
@@ -526,6 +523,8 @@ int readInput(
         setup->iFindOptional(file_name, "writeTmunuBinary", 1));
     param->setWriteOutputsToHDF5(setup->iFind(file_name, "writeOutputsToHDF5"));
     param->setWriteWilsonLines(setup->iFind(file_name, "writeWilsonLines"));
+    param->setWilsonLinePath(
+        setup->stringFindOptional(file_name, "wilsonLinePath", "./"));
     param->setReadInitialWilsonLines(
         setup->iFind(file_name, "readInitialWilsonLines"));
     param->setAverageOverNuclei(

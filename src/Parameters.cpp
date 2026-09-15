@@ -2,6 +2,7 @@
 
 #include "Parameters.h"
 
+#include <filesystem>
 #include <fstream>
 #include <iostream>
 #include <sstream>
@@ -105,6 +106,18 @@ bool Parameters::ValidParameters() {
                   << getWriteWilsonLines() << ").";
         messager_.flush("error");
         return false;
+    }
+
+    if (getWriteWilsonLines() != 0) {
+        const std::filesystem::path outputPath(getWilsonLinePath());
+        if (!std::filesystem::exists(outputPath)
+            || !std::filesystem::is_directory(outputPath)) {
+            messager_ << "[Parameters::ValidParameters]: Wilson line output "
+                         "directory does not exist: "
+                      << outputPath.string() << ".";
+            messager_.flush("error");
+            return false;
+        }
     }
 
     return true;

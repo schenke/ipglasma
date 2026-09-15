@@ -20,6 +20,7 @@ namespace {
 void makeValidBaseline(Parameters &param) {
     param.setSize(256);
     param.setWriteWilsonLines(2);
+    param.setWilsonLinePath(".");
     param.setSaveSnapshots(0);
 }
 }  // namespace

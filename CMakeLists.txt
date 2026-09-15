@@ -95,6 +95,17 @@ endif()
 
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wredundant-decls -Wshadow -Wundef -Wno-unused")
 
+# std::filesystem (used in Parameters.cpp) is part of libstdc++/libc++ proper
+# starting with GCC 9 / Clang 9, but on older compilers that still ship it
+# under C++17 it lives in a separate runtime library that must be linked
+# explicitly.
+set(FILESYSTEM_LIBS "")
+if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    set(FILESYSTEM_LIBS stdc++fs)
+elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang" AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 9.0)
+    set(FILESYSTEM_LIBS c++fs)
+endif()
+
 # Pins FFTW plan selection via an on-disk wisdom cache (see FFT.h) so that
 # repeated runs with the same seed are bit-reproducible, at the cost of the
 # first run in a given directory measuring (rather than estimating) its FFT

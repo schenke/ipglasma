@@ -81,8 +81,11 @@ struct ReturnValue {
     /// Init::sampleNucleonAnisotropyAngles()).
     double phi;
     /// `1` if this nucleon has undergone at least one binary collision,
-    /// `0` otherwise; set by the caller after sampling, not by any
-    /// Glauber method.
+    /// `0` otherwise. Initialized to `0` by every producer (both
+    /// Glauber::sampleTARejection() and Init.cpp's other position
+    /// samplers); later set to `1` by Init::computeNcollList() for
+    /// nucleons found to collide, and reset to `0` again at the start
+    /// of each new event by Init::sampleImpactParameter().
     int collided;
     /// `true` if this nucleon is a proton, `false` if a neutron.
     bool proton;
@@ -164,8 +167,9 @@ struct Data {
     /// Glauber::interNuPInSP()/interNuTInST().
     double sCutoff;
     /// Number of grid points used by Glauber::interNuPInSP()/
-    /// interNuTInST()'s interpolation tables (also the recursion-depth
-    /// scale for qnc7()); set from Glauber::initGlauber()'s \c imax.
+    /// interNuTInST()'s interpolation tables; set from
+    /// Glauber::initGlauber()'s \c imax. Unrelated to qnc7(), whose
+    /// evaluation-count bound is the fixed \c LIMIT macro.
     int interMax;
 };
 

@@ -172,10 +172,17 @@ class Random {
 
     /**
      * Builds the tabulated inverse-CDF sampler sampleGammaInc() draws
-     * from: 1000 points of the regularized upper incomplete gamma
-     * function \f$Q(1/\omega, x)\f$'s (unnormalized) cumulative sum,
-     * over \f$x \in [0, \max(5, 5/\omega)]\f$, normalized so the table
-     * spans `[0, 1]`.
+     * from: 1000 abscissas \f$x_i = i \cdot x_{\max}/1000\f$ for
+     * \f$i=0,\ldots,999\f$ (so evenly spaced over \f$[0, x_{\max})\f$,
+     * \f$x_{\max} = \max(5, 5/\omega)\f$, never reaching \f$x_{\max}\f$
+     * itself), paired with the regularized upper incomplete gamma
+     * function \f$Q(1/\omega, x)\f$'s cumulative sum evaluated at each
+     * bin's *left* edge (i.e. `gammaIncCDF_[i]` excludes bin `i`'s own
+     * weight), normalized by the sum over all 1000 bins. Consequently
+     * the table's last entry is strictly below `1`, not `1` itself;
+     * sampleGammaInc() maps the remaining upper-tail probability (any
+     * draw above that last entry) onto the last abscissa rather than
+     * sampling it.
      * \param[in] omega Shape parameter; must match what
      * sampleGammaInc()'s caller subsequently scales its result by
      * (see Init::sampleConstituentQuarkGeometry()).
@@ -183,7 +190,8 @@ class Random {
     void setGammaIncCDF(const double omega);
     /**
      * Draws one sample from the distribution tabulated by
-     * setGammaIncCDF(), via binary search on its CDF table.
+     * setGammaIncCDF(), via binary search on its CDF table (with the
+     * upper-tail draws described there mapped to the last abscissa).
      * \return A pseudorandom real in `[0, ` \c gammaIncCDFx_'s last
      * entry `]`.
      */

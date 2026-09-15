@@ -17,14 +17,30 @@ namespace {
 // coefficients directly from the 3x3 matrix and evaluate exp(i chi) with
 // the analytic SU(3) exponential used by the Wilson-line hot path.
 
-// Project a general 3x3 matrix D onto the Hermitian traceless SU(3) algebra
-// element used by the historical generator loop:
-//
-//     g = sum_a Im Tr(D t_a) t_a
-//       = 1/2 [ (D - D^dagger)/(2 i) ]_traceless .
-//
-// Return Tr(g^dagger g)/3 at the same time so the gauge-fixing residual does
-// not need a separate matrix conjugation and multiplication.
+/**
+ * Projects a general \f$3\times3\f$ matrix \f$D\f$ (the lattice gauge
+ * divergence at one site, \f$D = U_x(x) - U_x(x-\hat x) + U_y(x) -
+ * U_y(x-\hat y)\f$) onto the Hermitian traceless SU(3) algebra element
+ * used by GaugeFix::fftChi()'s relaxation step:
+ * \f[
+ * g = \sum_a \mathrm{Im}\,\mathrm{Tr}(D\, t_a)\, t_a
+ * = \tfrac{1}{2}\left[\frac{D - D^\dagger}{2i}\right]_{\text{traceless}}.
+ * \f]
+ * Also returns \f$\mathrm{Tr}(g^\dagger g)/3\f$ at the same time, so the
+ * gauge-fixing residual does not need a separate matrix conjugation and
+ * multiplication.
+ * \param[in] ux Forward \f$x\f$-link at this site, \f$U_x(x)\f$.
+ * \param[in] uy Forward \f$y\f$-link at this site, \f$U_y(x)\f$.
+ * \param[in] uxMx Forward \f$x\f$-link at the site one step in \f$-x\f$,
+ * \f$U_x(x-\hat x)\f$.
+ * \param[in] uyMy Forward \f$y\f$-link at the site one step in \f$-y\f$,
+ * \f$U_y(x-\hat y)\f$.
+ * \param[out] g Receives the projected Hermitian traceless algebra
+ * element (this site's un-relaxed \f$\chi\f$, before the momentum-space
+ * Poisson step and exponentiation).
+ * \return \f$\mathrm{Tr}(g^\dagger g)/3\f$ [dimensionless], this site's
+ * contribution to the mean gauge-fixing residual.
+ */
 inline double projectGaugeDivergenceSU3(
     const Matrix &ux, const Matrix &uy, const Matrix &uxMx, const Matrix &uyMy,
     Matrix &g) {
@@ -74,6 +90,19 @@ inline double projectGaugeDivergenceSU3(
     return frobeniusSquared / 3.0;
 }
 
+/**
+ * Evaluates \f$g = \exp(i\chi)\f$ directly in SU(3), for \f$\chi\f$
+ * already known to be Hermitian and traceless (as produced by
+ * GaugeFix::fftChi()'s momentum-space relaxation step). Recovers
+ * \f$\chi\f$'s eight real Gell-Mann coefficients directly from the
+ * \f$3\times3\f$ matrix and reuses Matrix::expmCoeff() (the same
+ * analytic SU(3) exponential the Wilson-line construction hot path
+ * uses), avoiding both the generic Pade exponential and the
+ * reunitarization it would otherwise need.
+ * \param[in] chi Hermitian, traceless SU(3) algebra element.
+ * \param[out] out Receives \f$\exp(i\chi)\f$, the local gauge
+ * transformation.
+ */
 inline void expGaugeRotationSU3(const Matrix &chi, Matrix &out) {
     double q[8];
     q[0] = 2.0 * chi.getRe(1);

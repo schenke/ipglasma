@@ -77,10 +77,6 @@ class Init {
     /// Log sink for progress/warning/error messages.
     PrettyOstream messager_;
 
-    /// Number of colors; fixed at 3.
-    static constexpr int Nc_ = 3;
-    /// SU(3) adjoint dimension, \f$N_c^2-1=8\f$.
-    static constexpr int Nc2m1_ = Nc_ * Nc_ - 1;
     /// Non-owning pointer to the shared Group instance, set by init().
     Group *group_ptr_;
     /// Non-owning pointer to the shared Random instance, set by init().

@@ -28,9 +28,6 @@ class Lattice {
     /// Total number of sites, `length*length` (despite the name, *not*
     /// the lattice side length -- see getSize()).
     int size_;
-    /// Number of colors; fixed at 3 (see SU3.h/GaugeFix.cpp's comments
-    /// on why this codebase doesn't generalize to other \f$N_c\f$).
-    static constexpr int Nc_ = 3;
     /// Log sink for progress/error messages.
     PrettyOstream messager_;
 

@@ -12,6 +12,9 @@
 #include <sstream>
 #include <string>
 
+#include "PhysConst.h"
+
+using PhysConst::mbToFm2;
 using std::string;
 
 namespace {
@@ -937,7 +940,7 @@ void Glauber::initGlauber(
         &(glauberData_.projectile), projectileName, setWSDeformParams, R_WS,
         a_WS, beta2, beta3, beta4, gamma, forceDminFlag, d_min, dR_np, da_np);
 
-    glauberData_.sigmaNN = 0.1 * sigmaNN;  // sigma in fm^2
+    glauberData_.sigmaNN = mbToFm2 * sigmaNN;  // sigma in fm^2
     currentA1_ = glauberData_.projectile.A;
     currentA2_ = glauberData_.target.A;
     currentZ1_ = glauberData_.projectile.Z;

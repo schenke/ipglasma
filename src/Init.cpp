@@ -19,6 +19,10 @@
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::hbarc;
+using PhysConst::mbToFm2;
+using PhysConst::Nc;
+using PhysConst::Nc2m1;
+using PhysConst::smallEps;
 using std::endl;
 using std::ifstream;
 using std::ofstream;
@@ -77,17 +81,17 @@ inline double deterministicRetryGaussian(
 // Init class.
 
 void Init::solveAxb(double *Jab, double *Fa, std::vector<double> &xvec) {
-    gsl_matrix_view m = gsl_matrix_view_array(Jab, Nc2m1_, Nc2m1_);
-    gsl_vector_view c = gsl_vector_view_array(Fa, Nc2m1_);
-    gsl_vector *x = gsl_vector_alloc(Nc2m1_);
+    gsl_matrix_view m = gsl_matrix_view_array(Jab, Nc2m1, Nc2m1);
+    gsl_vector_view c = gsl_vector_view_array(Fa, Nc2m1);
+    gsl_vector *x = gsl_vector_alloc(Nc2m1);
 
     int s;
-    gsl_permutation *p = gsl_permutation_alloc(Nc2m1_);
+    gsl_permutation *p = gsl_permutation_alloc(Nc2m1);
     gsl_linalg_LU_decomp(&m.matrix, p, &s);
     gsl_linalg_LU_solve(&m.matrix, p, &c.vector, x);
     gsl_permutation_free(p);
 
-    for (int i = 0; i < Nc2m1_; i++) {
+    for (int i = 0; i < Nc2m1; i++) {
         xvec[i] = gsl_vector_get(x, i);
     }
 
@@ -1242,7 +1246,7 @@ void Init::computeNcollList(
 // useFixedNpart is set and this event's Npart doesn't match, signaling the
 // caller to abort and resample.
 bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
-    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
+    const double d2 = param->getSigmaNN() * mbToFm2 / M_PI;  // in fm^2
     const double b = param->getb();
     const double phiRP = param->getPhiRP();
     const int A1 = nucleusA_.size();
@@ -1418,10 +1422,10 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         return;
     }
 
-    averageQs /= static_cast<double>(count) + 1e-16;
-    averageQs2 /= static_cast<double>(count) + 1e-16;
-    averageQs2Avg /= static_cast<double>(count) + 1e-16;
-    averageQs2min /= static_cast<double>(count) + 1e-16;
+    averageQs /= static_cast<double>(count) + smallEps;
+    averageQs2 /= static_cast<double>(count) + smallEps;
+    averageQs2Avg /= static_cast<double>(count) + smallEps;
+    averageQs2min /= static_cast<double>(count) + smallEps;
 
     param->setAverageQs(sqrt(averageQs2));
     param->setAverageQsAvg(sqrt(averageQs2Avg));
@@ -1518,7 +1522,7 @@ void Init::scanCollisionGeometry(
             double ym = nucleusA_.at(i).y + b / 2. * sin(phiRP);
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
-            if (r < sqrt(0.1 * param->getSigmaNN() / M_PI)
+            if (r < sqrt(param->getSigmaNN() * mbToFm2 / M_PI)
                 && nucleusA_.at(i).collided == 1) {
                 check = 1;
             }
@@ -1529,7 +1533,7 @@ void Init::scanCollisionGeometry(
             double ym = nucleusB_.at(i).y - b / 2. * sin(phiRP);
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
-            if (r < sqrt(0.1 * param->getSigmaNN() / M_PI)
+            if (r < sqrt(param->getSigmaNN() * mbToFm2 / M_PI)
                 && nucleusB_.at(i).collided == 1 && check == 1) {
                 check = 2;
             }
@@ -1699,7 +1703,6 @@ void Init::writeNgluonEstimatorsFile(
 namespace {
 void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
     const int N = param->getSize();
-    constexpr int Nc = 3;
     const double L = param->getL();
     const double a = L / static_cast<double>(N);
 
@@ -1844,7 +1847,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
-    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
+    const double d2 = param->getSigmaNN() * mbToFm2 / M_PI;  // in fm^2
     const int N = param->getSize();
     const int Ny = param->getNy();
     const int sites = N * N;
@@ -1863,19 +1866,19 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     std::vector<double> momentumKernel =
         computeWilsonLineMomentumKernel(N, sites, m, UVdamp);
 
-    // rhoACoeffData owns the Nc2m1_*sites backing storage; rhoACoeff is a
+    // rhoACoeffData owns the Nc2m1*sites backing storage; rhoACoeff is a
     // pointer-per-component view over it for FFT::fftnComplexArray's T**
     // interface.
     std::vector<complex<double>> rhoACoeffData(
-        static_cast<std::size_t>(Nc2m1_) * sites);
-    std::vector<complex<double> *> rhoACoeff(Nc2m1_);
-    for (int i = 0; i < Nc2m1_; i++) {
+        static_cast<std::size_t>(Nc2m1) * sites);
+    std::vector<complex<double> *> rhoACoeff(Nc2m1);
+    for (int i = 0; i < Nc2m1; i++) {
         rhoACoeff[i] = rhoACoeffData.data() + i * sites;
     }
 
     auto applyMomentumKernel = [&]() {
 #pragma omp parallel for
-        for (int n = 0; n < Nc2m1_; ++n) {
+        for (int n = 0; n < Nc2m1; ++n) {
             complex<double> *rho = rhoACoeff[n];
             for (int pos = 0; pos < sites; ++pos) {
                 rho[pos] *= momentumKernel[static_cast<std::size_t>(pos)];
@@ -1887,7 +1890,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     // linear ordering matches the historical pos-major/color-minor gauss()
     // call sequence exactly.
     std::vector<double> gaussianField(
-        static_cast<std::size_t>(sites) * static_cast<std::size_t>(Nc2m1_));
+        static_cast<std::size_t>(sites) * static_cast<std::size_t>(Nc2m1));
     std::vector<double> gaussianScratch;
     gaussianScratch.reserve(5 * ((gaussianField.size() + 1) / 2));
 
@@ -1911,8 +1914,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             for (int pos = 0; pos < sites; ++pos) {
                 const double localScale = scale[static_cast<std::size_t>(pos)];
                 const std::size_t base = static_cast<std::size_t>(pos)
-                                         * static_cast<std::size_t>(Nc2m1_);
-                for (int n = 0; n < Nc2m1_; ++n) {
+                                         * static_cast<std::size_t>(Nc2m1);
+                for (int n = 0; n < Nc2m1; ++n) {
                     rhoACoeff[n][pos] =
                         localScale
                         * gaussianField[base + static_cast<std::size_t>(n)];
@@ -1932,7 +1935,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
                 }
 
                 fft_.fftnComplexArray(
-                    rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1_);
+                    rhoACoeff.data(), rhoACoeff.data(), nn, 1, Nc2m1);
 
                 {
                     IPG_PROFILE_SCOPE("initialization.wilson_Poisson");
@@ -1940,19 +1943,19 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
                 }
 
                 fft_.fftnComplexArray(
-                    rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1_);
+                    rhoACoeff.data(), rhoACoeff.data(), nn, -1, Nc2m1);
 
                 {
                     IPG_PROFILE_SCOPE("initialization.wilson_exponent");
 #pragma omp parallel
                     {
-                        std::vector<double> in(Nc2m1_, 0.);
+                        std::vector<double> in(Nc2m1, 0.);
                         Matrix temp(1.);
                         Matrix tempNew(0.);
 
 #pragma omp for
                         for (int pos = 0; pos < sites; pos++) {
-                            for (int aa = 0; aa < Nc2m1_; aa++) {
+                            for (int aa = 0; aa < Nc2m1; aa++) {
                                 // expmCoeff calculates exp(i in[a] t[a]), so
                                 // multiply by -1 (not -i).
                                 in[aa] = -(rhoACoeff[aa][pos]).real();
@@ -3084,7 +3087,7 @@ double Init::computeForwardLightconeResidual(
     double *Fa) {
     Matrix Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
     double Fzero = 0.;
-    for (int ai = 0; ai < Nc2m1_; ai++) {
+    for (int ai = 0; ai < Nc2m1; ai++) {
         complex<double> traceLoc =
             Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
         // minus trace if temp gives -F_ai
@@ -3102,7 +3105,7 @@ void Init::computeForwardLightconeJacobian(
 
     // numerical formula
     bool JabGood = true;
-    for (int bi = 0; bi < Nc2m1_; bi++) {
+    for (int bi = 0; bi < Nc2m1; bi++) {
         double dalpha_bi =
             (std::max(0.001, std::min(10., 0.01 * std::abs(alpha[bi]))));
         alpha[bi] = alpha[bi] + dalpha_bi;
@@ -3110,8 +3113,8 @@ void Init::computeForwardLightconeJacobian(
         Mtemp.conjg();
         Mtemp = U1pU2 * (Mtemp - Usoldagger);
         double Mcheck = 0.;
-        for (int ai = 0; ai < Nc2m1_; ai++) {
-            int countMe = ai * Nc2m1_ + bi;
+        for (int ai = 0; ai < Nc2m1; ai++) {
+            int countMe = ai * Nc2m1 + bi;
             complex<double> traceLoc =
                 Mtemp.traceOfProductOfMatrix(group_ptr_->getT(ai), Mtemp);
             Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
@@ -3125,10 +3128,10 @@ void Init::computeForwardLightconeJacobian(
     }
     if (!JabGood) {
         // analytical approximated formula
-        for (int bi = 0; bi < Nc2m1_; bi++) {
+        for (int bi = 0; bi < Nc2m1; bi++) {
             Mtemp = group_ptr_->getT(bi) * Usoldagger;
-            for (int ai = 0; ai < Nc2m1_; ai++) {
-                int countMe = ai * Nc2m1_ + bi;
+            for (int ai = 0; ai < Nc2m1; ai++) {
+                int countMe = ai * Nc2m1 + bi;
                 complex<double> traceLoc =
                     Mtemp.traceOfProductOfMatrix(MtempArr[ai], Mtemp);
                 auto traceRes = -2. * real(traceLoc);
@@ -3150,9 +3153,9 @@ bool Init::findUInForwardLightcone(
 
     Matrix Mtemp(0.);
     std::vector<Matrix> MtempArr;
-    MtempArr.resize(Nc2m1_);
-    std::vector<complex<double>> traceCache(Nc2m1_, 0.);
-    for (int ai = 0; ai < Nc2m1_; ai++) {
+    MtempArr.resize(Nc2m1);
+    std::vector<complex<double>> traceCache(Nc2m1, 0.);
+    for (int ai = 0; ai < Nc2m1; ai++) {
         Mtemp = group_ptr_->getT(ai) * (U1pU2 - U1pU2dagger);
         traceCache[ai] = Mtemp.trace();
         MtempArr[ai] = group_ptr_->getT(ai) * U1pU2;
@@ -3162,8 +3165,8 @@ bool Init::findUInForwardLightcone(
     // for solveAxb's GSL interface (gsl_matrix_view_array/
     // gsl_vector_view_array need a raw contiguous buffer, not a
     // std::vector).
-    std::vector<double> JabData(Nc2m1_ * Nc2m1_);
-    std::vector<double> FaData(Nc2m1_);
+    std::vector<double> JabData(Nc2m1 * Nc2m1);
+    std::vector<double> FaData(Nc2m1);
     double *Jab = JabData.data();
     double *Fa = FaData.data();
 
@@ -3172,8 +3175,8 @@ bool Init::findUInForwardLightcone(
     Matrix UsolBestEst(1.);
 
     // set up initial guess
-    std::vector<double> alpha(Nc2m1_, 0.);  // solution
-    std::vector<double> Dalpha(Nc2m1_, 0.);
+    std::vector<double> alpha(Nc2m1, 0.);  // solution
+    std::vector<double> Dalpha(Nc2m1, 0.);
     Usol = getUfromExponent(alpha) * U0;
     Matrix Usoldagger = Usol;
     Usoldagger.conjg();
@@ -3196,18 +3199,18 @@ bool Init::findUInForwardLightcone(
         solveAxb(Jab, Fa, Dalpha);
 
         bool DalphaCheck = true;
-        for (int ai = 0; ai < Nc2m1_; ai++) {
+        for (int ai = 0; ai < Nc2m1; ai++) {
             if (std::abs(Dalpha[ai]) > 1e5) {
                 DalphaCheck = false;
                 break;
             }
         }
         if (DalphaCheck) {
-            for (int ai = 0; ai < Nc2m1_; ai++) {
+            for (int ai = 0; ai < Nc2m1; ai++) {
                 alpha[ai] = alpha[ai] + Dalpha[ai];
             }
         } else {
-            for (int ai = 0; ai < Nc2m1_; ai++) {
+            for (int ai = 0; ai < Nc2m1; ai++) {
                 alpha[ai] = nextRetryGaussian();
             }
         }
@@ -3220,7 +3223,7 @@ bool Init::findUInForwardLightcone(
             UsolBestEst = Usol;
         }
         if (iter == maxIterations) {
-            for (int ai = 0; ai < Nc2m1_; ai++) {
+            for (int ai = 0; ai < Nc2m1; ai++) {
                 alpha[ai] = nextRetryGaussian();
             }
             Usol = getUfromExponent(alpha) * U0;

@@ -7,7 +7,11 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 #include <sstream>
 #include <vector>
 
+#include "PhysConst.h"
 #include "PrettyOstream.h"
+
+using PhysConst::Nc2m1;
+using PhysConst::smallEps;
 
 static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
@@ -221,7 +225,6 @@ Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
 // matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
 // Q^a of generators t^a as argument. Dimension is Nc
 void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
-    const int Nc2m1 = 8;
     double sqrt3 = sqrt(3.);
     complex<double> f0, f1, f2, iu, u0, ua[8];
     double c0 = 0., c0max, u, w, xi0, den, thetaOverThree;
@@ -536,7 +539,7 @@ Matrix &Matrix::sqrtm(const int scale) {
     const int n = this->getNDim();
     int sc = scale;
     double eps = 1e-2;
-    double tol = sqrt(static_cast<double>(n)) * 1e-16 / 2.;
+    double tol = sqrt(static_cast<double>(n)) * smallEps / 2.;
     double g;
     double Mres;
     double reldiff;

@@ -10,9 +10,9 @@ name: Multi-platform build
 
 on:
   push:
-    branches: [devel, master]
+    branches: [devel, main]
   pull_request:
-    branches: [devel, master]
+    branches: [devel, main]
 
 jobs:
   build:

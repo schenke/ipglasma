@@ -23,7 +23,7 @@ cmake -B build -Dunittest=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
-It also runs automatically on every push/PR to `devel`/`master` via GitHub Actions (see `.github/workflows/tests.yml`).
+It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`).
 
  
 ## Input parameters

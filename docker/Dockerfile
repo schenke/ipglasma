@@ -82,7 +82,7 @@ RUN echo 'export GSL_ROOT_DIR="/usr/local/gsl/2.5/x86_64"' >> /root/.bashrc
 
 # download and compile IPGlasma:
 RUN cd ${HOME} && \
-    git clone --depth=1 https://github.com/schenke/ipglasma -b master && \
+    git clone --depth=1 https://github.com/schenke/ipglasma -b main && \
     cd ipglasma && \
     ./compile_IPGlasma.sh
 

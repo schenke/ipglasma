@@ -15,6 +15,7 @@
 using PhysConst::invHbarc;
 using PhysConst::Nc;
 using PhysConst::Nc2m1;
+using PhysConst::smallEps;
 
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
@@ -73,7 +74,7 @@ void JIMWLK::initializeK() {
         x /= Ngrid_;
         y /= Ngrid_;
         double r2 = x * x + y * y;
-        if (r2 < 1e-16) {
+        if (r2 < smallEps) {
             continue;  // K_[pos] is already (0, 0)
         }
         double mass_regulator = getMassRegulator(x, y);
@@ -100,7 +101,7 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     // K is multiplied by this, which is m*r*K_1(m*r)
     double mass_regulator = 1.0;
     double m = param_.getm_jimwlk();
-    if (m < 1e-16) {
+    if (m < smallEps) {
         return mass_regulator;
     }
     double length = param_.getL();

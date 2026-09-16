@@ -19,8 +19,10 @@
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::hbarc;
+using PhysConst::mbToFm2;
 using PhysConst::Nc;
 using PhysConst::Nc2m1;
+using PhysConst::smallEps;
 using std::endl;
 using std::ifstream;
 using std::ofstream;
@@ -1244,7 +1246,7 @@ void Init::computeNcollList(
 // useFixedNpart is set and this event's Npart doesn't match, signaling the
 // caller to abort and resample.
 bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
-    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
+    const double d2 = param->getSigmaNN() * mbToFm2 / M_PI;  // in fm^2
     const double b = param->getb();
     const double phiRP = param->getPhiRP();
     const int A1 = nucleusA_.size();
@@ -1420,10 +1422,10 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         return;
     }
 
-    averageQs /= static_cast<double>(count) + 1e-16;
-    averageQs2 /= static_cast<double>(count) + 1e-16;
-    averageQs2Avg /= static_cast<double>(count) + 1e-16;
-    averageQs2min /= static_cast<double>(count) + 1e-16;
+    averageQs /= static_cast<double>(count) + smallEps;
+    averageQs2 /= static_cast<double>(count) + smallEps;
+    averageQs2Avg /= static_cast<double>(count) + smallEps;
+    averageQs2min /= static_cast<double>(count) + smallEps;
 
     param->setAverageQs(sqrt(averageQs2));
     param->setAverageQsAvg(sqrt(averageQs2Avg));
@@ -1520,7 +1522,7 @@ void Init::scanCollisionGeometry(
             double ym = nucleusA_.at(i).y + b / 2. * sin(phiRP);
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
-            if (r < sqrt(0.1 * param->getSigmaNN() / M_PI)
+            if (r < sqrt(param->getSigmaNN() * mbToFm2 / M_PI)
                 && nucleusA_.at(i).collided == 1) {
                 check = 1;
             }
@@ -1531,7 +1533,7 @@ void Init::scanCollisionGeometry(
             double ym = nucleusB_.at(i).y - b / 2. * sin(phiRP);
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
-            if (r < sqrt(0.1 * param->getSigmaNN() / M_PI)
+            if (r < sqrt(param->getSigmaNN() * mbToFm2 / M_PI)
                 && nucleusB_.at(i).collided == 1 && check == 1) {
                 check = 2;
             }
@@ -1845,7 +1847,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
-    const double d2 = param->getSigmaNN() / (M_PI * 10.);  // in fm^2
+    const double d2 = param->getSigmaNN() * mbToFm2 / M_PI;  // in fm^2
     const int N = param->getSize();
     const int Ny = param->getNy();
     const int sites = N * N;

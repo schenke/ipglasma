@@ -25,6 +25,10 @@ const double m_pion = 0.13957;
 const double m_kaon = 0.493667;
 /// Proton mass [GeV].
 const double m_proton = 0.938272;
+/// Millibarn-to-fm\f$^2\f$ conversion factor (\f$1\text{ mb} =
+/// 0.1\text{ fm}^2\f$), used to convert the input `SigmaNN` (in mb)
+/// to the inelastic nucleon-nucleon cross section in fm\f$^2\f$.
+const double mbToFm2 = 0.1;
 }  // namespace PhysConst
 
 #endif  // SRC_PHYSCONST_H_

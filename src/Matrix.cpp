@@ -11,6 +11,7 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 #include "PrettyOstream.h"
 
 using PhysConst::Nc2m1;
+using PhysConst::smallEps;
 
 static_assert(
     sizeof(Matrix) == 9 * sizeof(std::complex<double>),
@@ -538,7 +539,7 @@ Matrix &Matrix::sqrtm(const int scale) {
     const int n = this->getNDim();
     int sc = scale;
     double eps = 1e-2;
-    double tol = sqrt(static_cast<double>(n)) * 1e-16 / 2.;
+    double tol = sqrt(static_cast<double>(n)) * smallEps / 2.;
     double g;
     double Mres;
     double reldiff;

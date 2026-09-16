@@ -27,6 +27,7 @@ using PhysConst::hbarc;
 using PhysConst::m_kaon;
 using PhysConst::m_pion;
 using PhysConst::m_proton;
+using PhysConst::Nc;
 
 using std::endl;
 using std::ifstream;
@@ -1321,7 +1322,6 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
 void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("output.evolved_fields");
     const int N = param->getSize();
-    constexpr int Nc = 3;
     const double a = param->getL() / static_cast<double>(N);
     const double dtau = param->getdtau();
     const double tauLattice = static_cast<double>(it) * dtau;

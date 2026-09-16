@@ -9,6 +9,9 @@
 
 #include "Glauber.h"
 #include "Instrumentation.h"
+#include "PhysConst.h"
+
+using PhysConst::Nc;
 
 Lattice::Lattice(Parameters *param, int length) {
     IPG_PROFILE_SCOPE("lattice.allocate");
@@ -142,7 +145,7 @@ void Lattice::writeWilsonLines(
 
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
-        Outfile1.write((char *)&Nc_, sizeof(int));
+        Outfile1.write((char *)&Nc, sizeof(int));
         Outfile1.write((char *)&L, sizeof(double));
         Outfile1.write((char *)&a, sizeof(double));
         Outfile1.write((char *)&temp, sizeof(double));
@@ -161,7 +164,7 @@ void Lattice::writeWilsonLines(
                         // caught it -- see Init::readVFromFile's matching
                         // fix on the read side).
                         int indx = N * ix + iy;
-                        int SU3indx = a1 * Nc_ + b;
+                        int SU3indx = a1 * Nc + b;
                         if (nucleus == NucleusRole::Projectile) {
                             val1[0] = U[indx].getRe(SU3indx);
                             val1[1] = U[indx].getIm(SU3indx);

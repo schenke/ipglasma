@@ -40,10 +40,6 @@ class JIMWLK {
     /// Log sink for progress messages.
     PrettyOstream messager_;
 
-    /// Number of colors; fixed at 3.
-    static constexpr int Nc_ = 3;
-    /// SU(3) adjoint dimension, \f$N_c^2-1=8\f$.
-    static constexpr int Nc2m1_ = Nc_ * Nc_ - 1;
     /// Lattice side length.
     const int Ngrid_;
     /// Total number of lattice sites, `Ngrid_*Ngrid_`.

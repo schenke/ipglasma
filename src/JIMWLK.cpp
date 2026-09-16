@@ -13,6 +13,8 @@
 #include "Instrumentation.h"
 
 using PhysConst::invHbarc;
+using PhysConst::Nc;
+using PhysConst::Nc2m1;
 
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
@@ -145,7 +147,7 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
     alphas =
         4. * M_PI
-        / ((11. * Nc_ - 2. * Nf) / 3. * c
+        / ((11. * Nc - 2. * Nf) / 3. * c
            * log((
                pow(mu0 * mu0 / Lambda2, 1. / c)
                + pow(4. / (phys_r2 * Lambda2 * invHbarc * invHbarc), 1. / c))));
@@ -158,17 +160,17 @@ void JIMWLK::initializeNoise() {
     }
     // one contiguous allocation per array instead of Ncells_ separate
     // ones, so consecutive cells are adjacent in memory
-    xi_data_.assign(Ncells_ * 2 * Nc2m1_, std::complex<double>());
-    xi2_data_.assign(Ncells_ * 2 * Nc2m1_, std::complex<double>());
-    CKxi_data_.assign(Ncells_ * Nc2m1_, std::complex<double>());
+    xi_data_.assign(Ncells_ * 2 * Nc2m1, std::complex<double>());
+    xi2_data_.assign(Ncells_ * 2 * Nc2m1, std::complex<double>());
+    CKxi_data_.assign(Ncells_ * Nc2m1, std::complex<double>());
 
     xi_.resize(Ncells_);
     xi2_.resize(Ncells_);
     CKxi_.resize(Ncells_);
     for (int i = 0; i < Ncells_; i++) {
-        xi_[i] = xi_data_.data() + i * 2 * Nc2m1_;
-        xi2_[i] = xi2_data_.data() + i * 2 * Nc2m1_;
-        CKxi_[i] = CKxi_data_.data() + i * Nc2m1_;
+        xi_[i] = xi_data_.data() + i * 2 * Nc2m1;
+        xi2_[i] = xi2_data_.data() + i * 2 * Nc2m1;
+        CKxi_[i] = CKxi_data_.data() + i * Nc2m1;
     }
     initializedNoise_ = true;
 }
@@ -266,15 +268,14 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
     // parallel.
     {
         IPG_PROFILE_SCOPE("jimwlk.gauss_bulk");
-        const std::size_t count =
-            static_cast<std::size_t>(Ncells_) * 2 * Nc2m1_;
+        const std::size_t count = static_cast<std::size_t>(Ncells_) * 2 * Nc2m1;
         gaussNoise_.resize(count);
         random_ptr_->gaussBulk(gaussNoise_.data(), count, gaussNoiseScratch_);
 #pragma omp parallel for
         for (int i = 0; i < Ncells_; i++) {
             const double *cellNoise =
-                gaussNoise_.data() + static_cast<std::size_t>(i) * 2 * Nc2m1_;
-            for (int n = 0; n < 2 * Nc2m1_; n++) {
+                gaussNoise_.data() + static_cast<std::size_t>(i) * 2 * Nc2m1;
+            for (int n = 0; n < 2 * Nc2m1; n++) {
                 xi2_[i][n] = std::complex<double>(cellNoise[n], 0.);
             }
         }
@@ -282,34 +283,34 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
 
     // the local xi now contains the Fourier transform of xi,
     // while the original xi is stored in the array xi2
-    fft_ptr_->fftnArray(xi2_.data(), xi_.data(), nn_, 1, 2 * Nc2m1_);
+    fft_ptr_->fftnArray(xi2_.data(), xi_.data(), nn_, 1, 2 * Nc2m1);
 
     // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
     //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))
 #pragma omp parallel for
     for (int i = 0; i < Ncells_; i++) {
-        for (int n = 0; n < Nc2m1_; n++) {
+        for (int n = 0; n < Nc2m1; n++) {
             CKxi_[i][n] =
-                (*K_[i])[0] * xi_[i][n] + (*K_[i])[1] * xi_[i][n + Nc2m1_];
+                (*K_[i])[0] * xi_[i][n] + (*K_[i])[1] * xi_[i][n + Nc2m1];
             // product of x components + product of y components
         }
     }
 
     // now CKxi contains C(K_i,xi_i^a) - it is a vector with a components
-    fft_ptr_->fftnArray(CKxi_.data(), CKxi_.data(), nn_, -1, Nc2m1_);
+    fft_ptr_->fftnArray(CKxi_.data(), CKxi_.data(), nn_, -1, Nc2m1);
 
 #pragma omp parallel for
     for (int i = 0; i < Ncells_; i++) {
         *VxsiVx_[i] = zero_;
         *VxsiVy_[i] = zero_;
         const Matrix &U = wilsonLines[i];
-        for (int a = 0; a < Nc2m1_; a++) {
+        for (int a = 0; a < Nc2m1; a++) {
             Matrix UTa = U * group_ptr_->getT(a);
             // UTa * U^dagger, folding in the conjugate transpose of U
             // instead of building it explicitly (Nc=3 specialization)
             Matrix UTUconj = UTa.prodABconj(UTa, U);
             *VxsiVx_[i] += xi2_[i][a] * UTUconj;
-            *VxsiVy_[i] += xi2_[i][a + Nc2m1_] * UTUconj;
+            *VxsiVy_[i] += xi2_[i][a + Nc2m1] * UTUconj;
         }
     }
 
@@ -331,7 +332,7 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
         Matrix left = negI_dssqrt * (*VxsiVx_[i]);
         Matrix right(0.);
 
-        for (int a = 0; a < Nc2m1_; a++) {
+        for (int a = 0; a < Nc2m1; a++) {
             const Matrix &Ta = group_ptr_->getT(a);
             const double c = real(CKxi_[i][a]);
             for (int idx = 0; idx < Ta.getNN(); idx++) {

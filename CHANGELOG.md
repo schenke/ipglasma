@@ -94,6 +94,7 @@ The main categories for changes in this file are:
 * Deduplicate `Glauber::integral`/`qnc7`'s three copies of the same 8-way `id`-dispatch (selecting which density-function integrand to sample) into one `evaluateIntegrand()` helper.
 * Deduplicate `JIMWLK::evolution`'s near-identical projectile/target evolution loops into one `runEvolutionLoop()` helper, parameterized by `NucleusRole`.
 * Deduplicate `Lattice::writeSU3Matrices`'s near-identical Phi/Pi write blocks into one `writeMatrixArrayText()` helper, matching the parameterized style already used by `writeWilsonLines`.
+* Rename the GitHub repository's default branch from `master` to `main`.
 
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.

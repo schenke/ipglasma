@@ -27,11 +27,13 @@ The main categories for changes in this file are:
 * Add binary format support for reading and writing initial Wilson lines (`writeWilsonLines`/`readInitialWilsonLines` = 2) and for JIMWLK snapshots.
 * Add `evolvedFields*.ipgf` binary snapshot output and `NgluonEstimators.dat`/eccentricity output files.
 * Add nucleon configuration tables for He3, He4, C12, O16, Ne, Ne22 and Ar, including deformed and ab initio (PGCM/NLEFT) variants.
+* Add `nuclearConfigurationsPath` input parameter (optional, default `./nucleusConfigurations`) to configure the directory nucleon configuration tables are read from.
+* Add `writeTmunuBinary` input parameter (optional, default `1`) to select compact binary `.ipgt` or formatted text `.dat` output for `T^{mu nu}`.
 * Replace the default nuclear-`Qs^2` table `qs2Adj_vs_Tp_vs_Y_200.in` with `qs2Adj_vs_Tp_vs_Y_240.in`, which extends the covered `T_p` range 10x to avoid the "T out of range, using maximal T in table" clamping warning at high local thickness; `Init::iTpmax_` is updated accordingly (200 → 240).
 * Remove the `Nc` input parameter; the code has always been SU(3)-only and now hardcodes it internally.
 * Remove the dead `tDistNu`, `useFatTails` and `writeEvolution` input parameters, which never had any effect on the simulation.
 * Remove the `dtau` and `simpleLangevin` input parameters: `dtau` was silently ignored (the actual time step is always computed from `maxtime`/`L`/`size`), and `simpleLangevin` had no effect since `JIMWLK::evolutionStep()`'s buffers are now always allocated unconditionally.
-* File names for stored Wilson lines are now unified and generated centrally in `Lattice::generateWilsonLineDataFileName`
+* File names for stored Wilson lines are now unified and generated centrally in `Lattice::generateWilsonLineDataFileName`; add a `wilsonLinePath` input parameter (optional, default `./`) to configure the directory they're written to/read from.
 
 ### Added
 * Add a JIMWLK small-x evolution stage, run on the projectile and target Wilson lines before the classical Yang-Mills evolution.

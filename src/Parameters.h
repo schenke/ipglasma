@@ -234,7 +234,7 @@ class Parameters {
     /// distribution.
     int averageOverNuclei_;
     /// Whether to sample nucleon positions (`0`) or read them from a
-    /// file (`1`) or Alvioli's correlated Pb-208 files (`2`).
+    /// file (`1`).
     int nucleonPositionsFromFile_;
     /// Path to the nuclear configuration files (used when \c
     /// nucleonPositionsFromFile_ is `1`).
@@ -1344,8 +1344,7 @@ class Parameters {
     int getReadInitialWilsonLines() const { return readInitialWilsonLines_; }
     /**
      * Sets how nucleon positions are obtained.
-     * \param[in] x New value (`0` sample, `1` file, `2` Alvioli
-     * Pb-208 files).
+     * \param[in] x New value (`0` sample, `1` file).
      */
     void setNucleonPositionsFromFile(int x) { nucleonPositionsFromFile_ = x; }
     /**

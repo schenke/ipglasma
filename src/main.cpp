@@ -553,7 +553,6 @@ int readInput(
 
     // JIMWLK parameters
     param->setUseJIMWLK(setup->iFind(file_name, "useJIMWLK"));
-    param->setSimpleLangevin(setup->iFind(file_name, "simpleLangevin"));
     param->setMu0_jimwlk(setup->dFind(file_name, "mu0_jimwlk"));
     param->setLambdaQCD_jimwlk(
         setup->dFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu

@@ -124,8 +124,7 @@ class JIMWLK {
      * Constructs a JIMWLK for a given lattice: allocates the FFT
      * instance, builds the momentum-space kernel and noise buffers, and
      * allocates the gauge-covariant-noise scratch fields (unconditionally,
-     * since evolutionStep() needs them regardless of
-     * `param.getSimpleLangevin()`).
+     * since evolutionStep() always needs them).
      * \param[in] param Simulation parameters; `getSize()` sets the
      * lattice dimensions.
      * \param[in] group Non-owning pointer to the shared Group instance;

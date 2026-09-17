@@ -330,9 +330,6 @@ class Parameters {
     /// Whether to run JIMWLK evolution before the classical Yang-Mills
     /// stage.
     bool useJIMWLK_;
-    /// Whether JIMWLK uses the simple Langevin discretization of
-    /// arXiv:1212.4825.
-    bool simpleLangevin_;
 
     /// JIMWLK coupling: `0` running coupling, a positive value fixed
     /// coupling.
@@ -1568,22 +1565,6 @@ class Parameters {
      * \return The stored value [GeV].
      */
     double getMu0_jimwlk() const { return mu0_jimwlk_; }
-    /**
-     * Sets whether JIMWLK uses the simple Langevin discretization.
-     * \param[in] x New value; `0` disables it.
-     */
-    void setSimpleLangevin(int x) {
-        if (x == 0) {
-            simpleLangevin_ = false;
-        } else {
-            simpleLangevin_ = x;
-        }
-    }
-    /**
-     * Returns whether JIMWLK uses the simple Langevin discretization.
-     * \return The stored value.
-     */
-    bool getSimpleLangevin() const { return simpleLangevin_; }
     /**
      * Sets JIMWLK's \f$\Lambda_{QCD}\f$.
      * \param[in] x New value [GeV].

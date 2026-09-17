@@ -94,7 +94,4 @@ Note that when using the JIMWLK evolution, one should use `useFluctuatingx 0` wh
   - 0.005 with running coupling
   - 0.0005 with fixed coupling
 
-- **simpleLangevin**: JIMWLK discretization method
-  - 1: Use the simple Langevin step developed in [arXiv:1212.4825](https://arxiv.org/abs/1212.4825)
-
   Default parameters for the JIMWLK evolution with fluctuating proton at initial $x=0.01$ fitted to HERA vector meson production data are reported in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)

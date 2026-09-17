@@ -446,6 +446,8 @@ int readInput(
     param->setOmega(setup->dFind(file_name, "omega"));
     param->setMuZero(setup->dFind(file_name, "muZero"));
     param->setc(setup->dFind(file_name, "c"));
+    param->setNFlavors(setup->iFindOptional(file_name, "nFlavors", 3));
+    param->setLambdaQCD(setup->dFindOptional(file_name, "LambdaQCD", 0.2));
     param->setSize(setup->iFind(file_name, "size"));
     param->setSizeOutput(setup->iFind(file_name, "sizeOutput"));
     param->setEtaSizeOutput(setup->iFind(file_name, "etaSizeOutput"));

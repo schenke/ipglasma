@@ -96,6 +96,21 @@ class Setup {
      */
     double dFind(std::string file_name, std::string st);
     /**
+     * Same lookup as dFind(), but returns \p defaultValue instead of
+     * exiting if \p st isn't found before an `EndOfFile` token (or
+     * before the file itself runs out, if there's no `EndOfFile`
+     * token). A key that appears only after `EndOfFile` is therefore
+     * not found either, and yields \p defaultValue.
+     * \param[in] file_name Path to the input file; exits with an error
+     * if it doesn't exist.
+     * \param[in] st Key to search for.
+     * \param[in] defaultValue Value to return if \p st isn't found.
+     * \return The value token following \p st, parsed as a `double`
+     * (`0.0` if it doesn't parse as a number), or \p defaultValue.
+     */
+    double dFindOptional(
+        std::string file_name, std::string st, double defaultValue);
+    /**
      * Checks whether a file can be opened for reading.
      * \param[in] file_name Path to check.
      * \return `1` if \p file_name can be opened for reading, `0`

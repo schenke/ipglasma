@@ -13,6 +13,7 @@
 
 #include "Instrumentation.h"
 #include "PhysConst.h"
+#include "RunningCoupling.h"
 #include "gsl/gsl_complex.h"
 #include "gsl/gsl_complex_math.h"
 #include "gsl/gsl_eigen.h"
@@ -1079,7 +1080,6 @@ void MyEigen::flowVelocity4DImpl(
     // output for hydro
     if (param->getWriteOutputs() <= 0) return;
 
-    double alphas = param->getalphas();
     double g = param->getg();
     double gfactor;
     int hx = param->getSizeOutput();
@@ -1093,16 +1093,9 @@ void MyEigen::flowVelocity4DImpl(
     if (param->getRunningCoupling()) {
         // run with average Q_s only ! local makes no sense here (stuff has
         // moved in the mean time)
-        alphas = 4. * M_PI
-                 / (9.
-                    * log(
-                        pow(pow(muZero / 0.2, 2. / c)
-                                + pow(
-                                    param->getRunWithThisFactorTimesQs()
-                                        * param->getAverageQsmin() / 0.2,
-                                    2. / c),
-                            c)));
-        gfactor = g * g / (4. * M_PI * alphas);
+        gfactor = computeRunningCouplingGfactorFromScale(
+            g, muZero, c, param->getLambdaQCD(), param->getNFlavors(),
+            param->getRunWithThisFactorTimesQs() * param->getAverageQsmin());
     } else {
         gfactor = 1.;
     }

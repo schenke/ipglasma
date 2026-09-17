@@ -69,6 +69,20 @@ TEST_CASE("Setup: stringFindOptional/iFindOptional fall back to default") {
     CHECK(setup.iFindOptional(file.path(), "missingKey", -1) == -1);
 }
 
+TEST_CASE("Setup::dFindOptional falls back to default") {
+    TempInputFile file(
+        "pi 3.14159\n"
+        "EndOfFile\n");
+    Setup setup;
+
+    CHECK(
+        setup.dFindOptional(file.path(), "pi", -1.0)
+        == doctest::Approx(3.14159));
+    CHECK(
+        setup.dFindOptional(file.path(), "missingKey", -1.0)
+        == doctest::Approx(-1.0));
+}
+
 TEST_CASE("Setup: isFile reflects whether the path exists") {
     TempInputFile file("EndOfFile\n");
     Setup setup;

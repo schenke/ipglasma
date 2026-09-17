@@ -36,6 +36,7 @@ The main categories for changes in this file are:
 * File names for stored Wilson lines are now unified and generated centrally in `Lattice::generateWilsonLineDataFileName`; add a `wilsonLinePath` input parameter (optional, default `./`) to configure the directory they're written to/read from.
 * Remove the `nucleonPositionsFromFile = 2` option (nucleon positions sampled from Alvioli's correlated Pb-208 configuration files, `Init::sampleTAFromAlvioliFiles`/`readOneAlvioliNucleus`), which read from a hardcoded, machine-specific external path and was never packaged with the codebase; `nucleonPositionsFromFile` now only accepts `0` (sample) or `1` (read from the bundled configuration files).
 * Remove `Evolution::writeEpsilonInitialPlot`/`writeEpsilonIntermediatePlot`, the `writeOutputs == 3` diagnostic that wrote `epsilonInitialPlot<id>.dat`/`epsilonIntermediatePlot<id>.dat` energy-density maps at the initial and halfway time steps.
+* Add `nFlavors` (optional, default `3`) and `LambdaQCD` (optional, default `0.2` GeV) input parameters, generalizing the classical-evolution/hydro-output running-coupling formula's previously hardcoded 3-flavor beta-function coefficient and `Lambda_QCD=0.2` GeV; distinct from the separate, already-configurable `Lambda_QCD_jimwlk` used by the JIMWLK small-x evolution coupling.
 
 ### Added
 * Add a JIMWLK small-x evolution stage, run on the projectile and target Wilson lines before the classical Yang-Mills evolution.
@@ -100,6 +101,7 @@ The main categories for changes in this file are:
 * Deduplicate `JIMWLK::evolution`'s near-identical projectile/target evolution loops into one `runEvolutionLoop()` helper, parameterized by `NucleusRole`.
 * Deduplicate `Lattice::writeSU3Matrices`'s near-identical Phi/Pi write blocks into one `writeMatrixArrayText()` helper, matching the parameterized style already used by `writeWilsonLines`.
 * Rename the GitHub repository's default branch from `master` to `main`.
+* Deduplicate the classical-evolution/hydro-output running-coupling formula, previously copy-pasted 8 times across `Evolution.cpp` (`computeRunningCouplingGfactor` and its callers) and `MyEigen::flowVelocity4DImpl`, into a shared `computeAlphaS()`/`computeRunningCouplingGfactorFromScale()` pair in the new header-only `RunningCoupling.h`.
 
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.

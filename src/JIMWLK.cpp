@@ -134,8 +134,8 @@ double JIMWLK::getAlphas(const double x, const double y) const {
         return alphas;
     }
 
-    const double c = 0.2;
-    const int Nf = 3;
+    const double c = param_.getc_jimwlk();
+    const int Nf = param_.getNFlavors();
     const double length = param_.getL();
     const double mu0 = param_.getMu0_jimwlk();
     const double Lambda2 =

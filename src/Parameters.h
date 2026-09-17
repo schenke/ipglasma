@@ -163,8 +163,9 @@ class Parameters {
     /// Controls how smooth the running-coupling cutoff is.
     double c_;
     /// Number of active quark flavors \f$N_f\f$ in the one-loop QCD
-    /// beta-function coefficient \f$\beta_0=(11 N_c-2N_f)/3\f$ used by
-    /// the running-coupling formula (see computeAlphaS()).
+    /// beta-function coefficient \f$\beta_0=(11 N_c-2N_f)/3\f$, shared
+    /// by the classical-evolution/hydro-output running-coupling formula
+    /// (see computeAlphaS()) and JIMWLK::getAlphas().
     int nFlavors_;
     /// \f$\Lambda_{QCD}\f$ [GeV] in the running-coupling formula (see
     /// computeAlphaS()); distinct from \c LambdaQCD_jimwlk_, which
@@ -348,6 +349,13 @@ class Parameters {
     /// \f$\Lambda_{QCD}\f$ [GeV] in JIMWLK's running \f$\alpha_s(r)\f$
     /// (Eq. (22) of \cite Mantysaari:2022sux).
     double LambdaQCD_jimwlk_;
+    /// Cutoff smoothness parameter in JIMWLK's running \f$\alpha_s(r)\f$
+    /// (Eq. (22) of \cite Mantysaari:2022sux); distinct from \c c_, the
+    /// analogous parameter in the classical-evolution/hydro-output
+    /// running-coupling formula (see computeAlphaS()). \c nFlavors_ is
+    /// shared between the two formulas instead, since \f$N_f\f$ is the
+    /// same physical quantity in both.
+    double c_jimwlk_;
     /// JIMWLK evolution step size (recommended `0.005` with running
     /// coupling, `0.0005` with fixed coupling).
     double ds_jimwlk_;
@@ -1591,6 +1599,16 @@ class Parameters {
      * \return The stored value [GeV].
      */
     double getLambdaQCD_jimwlk() const { return LambdaQCD_jimwlk_; }
+    /**
+     * Sets JIMWLK's running-coupling cutoff smoothness parameter.
+     * \param[in] x New value.
+     */
+    void setc_jimwlk(double x) { c_jimwlk_ = x; }
+    /**
+     * Returns JIMWLK's running-coupling cutoff smoothness parameter.
+     * \return The stored value.
+     */
+    double getc_jimwlk() const { return c_jimwlk_; }
     /**
      * Sets the Bjorken \f$x\f$ the projectile is evolved to.
      * \param[in] x New value.

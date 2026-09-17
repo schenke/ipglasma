@@ -64,6 +64,7 @@ computeGluonMultiplicity 0
 rotateReactionPlane 1
 nucleonPositionsFromFile 1
 lightNucleusOption 5
+nuclearConfigurationsPath ./nucleusConfigurations
 polariztionProjectile 0
 polariztionTarget 2
 polarizationProjectileJz 0
@@ -81,7 +82,9 @@ detaOutput 0
 writeOutputs 1
 readInitialWilsonLines 0
 writeWilsonLines 2
+wilsonLinePath ./
 writeEpsilonUHydro 0
+writeTmunuBinary 1
 writeOutputsToHDF5 0
 useJIMWLK 1
 mu0_jimwlk 0.28

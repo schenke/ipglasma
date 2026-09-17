@@ -20,7 +20,7 @@
  *
  * Each evolutionStep() advances one nucleus' Wilson-line field by one
  * step of the JIMWLK Langevin equation, using the simple Langevin
- * discretization of \cite Lappi:2012vw: real Gaussian noise is drawn
+ * discretization of \cite Lappi:2012vw real Gaussian noise is drawn
  * per site/color, convolved (via FFT) with a regularized momentum-space
  * kernel \c K_ built once by initializeK(), gauge-covariantly rotated
  * by the current Wilson line, convolved with \c K_ a second time, and

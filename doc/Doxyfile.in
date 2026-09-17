@@ -42,6 +42,14 @@ WARN_NO_PARAMDOC       = YES
 # not absolute, so the generated markdown-page anchors (e.g. \ref md_README)
 # come out as short, portable names instead of embedding this machine's
 # absolute build path.
+#
+# CASE_SENSE_NAMES is pinned to YES (rather than left at its SYSTEM default)
+# so those anchors are deterministic across platforms: left on SYSTEM,
+# Doxygen derives case-sensitivity from the build machine's filesystem, so on
+# a case-insensitive one (e.g. default macOS) it mangles the markdown-page
+# label to avoid collisions (md_README becomes md__r_e_a_d_m_e), which breaks
+# every \ref md_README/md_CONTRIBUTING/md_CHANGELOG in mainpage.dox on that
+# platform even though they resolve fine on a case-sensitive one.
 #---------------------------------------------------------------------------
 INPUT                  = doc/mainpage.dox \
                           README.md \
@@ -53,6 +61,7 @@ FILE_PATTERNS          = *.h *.cpp *.dox *.md
 RECURSIVE              = NO
 USE_MDFILE_AS_MAINPAGE =
 EXCLUDE_PATTERNS       =
+CASE_SENSE_NAMES       = YES
 
 #---------------------------------------------------------------------------
 # Formulas and citations: this codebase already writes \f$...\f$ math and

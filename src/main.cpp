@@ -558,6 +558,7 @@ int readInput(
     param->setMu0_jimwlk(setup->dFind(file_name, "mu0_jimwlk"));
     param->setLambdaQCD_jimwlk(
         setup->dFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu
+    param->setc_jimwlk(setup->dFindOptional(file_name, "c_jimwlk", 0.2));
     param->setm_jimwlk(setup->dFind(file_name, "m_jimwlk"));
     param->setJimwlk_alphas(setup->dFind(file_name, "alphas_jimwlk"));
     param->setDs_jimwlk(setup->dFind(file_name, "Ds_jimwlk"));

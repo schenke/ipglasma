@@ -20,6 +20,8 @@ void makeJimwlkTestParam(Parameters &param, int size) {
     param.setRapidityB(0.0);
     param.setMu0_jimwlk(0.2);
     param.setLambdaQCD_jimwlk(0.2);
+    param.setc_jimwlk(0.2);
+    param.setNFlavors(3);
     param.setm_jimwlk(0.0);       // skips the Bessel mass-regulator branch
     param.setJimwlk_alphas(0.3);  // fixed coupling, skips running-coupling
     param.setDs_jimwlk(0.001);
@@ -82,4 +84,41 @@ TEST_CASE(
             CHECK(std::isfinite(lat.U2[pos].get(k).real()));
         }
     }
+}
+
+TEST_CASE(
+    "JIMWLK::getAlphas: running-coupling branch matches an independently "
+    "computed reference value, and is sensitive to nFlavors/c_jimwlk") {
+    const int N = 8;
+    Parameters param;
+    makeJimwlkTestParam(param, N);
+    param.setMu0_jimwlk(0.28);
+    param.setLambdaQCD_jimwlk(0.04);
+    param.setJimwlk_alphas(0.0);  // forces the running-coupling branch
+
+    Group group;
+    Random random;
+    random.init_genrand64(42ULL);
+    Lattice lat(&param, N);
+
+    const double x = 0.1;
+    const double y = 0.15;
+
+    // JIMWLK stores Parameters by reference, so getAlphas() always reads
+    // whatever param currently holds -- read each value right after
+    // setting it, before mutating param again.
+    JIMWLK jimwlk(param, &group, &lat, &random);
+
+    const double alphasDefault = jimwlk.getAlphas(x, y);
+    CHECK(alphasDefault == doctest::Approx(0.3482995062039298));
+
+    param.setNFlavors(4);
+    const double alphasNf4 = jimwlk.getAlphas(x, y);
+    CHECK(alphasNf4 == doctest::Approx(0.37616346670024414));
+    CHECK(alphasNf4 > alphasDefault);
+    param.setNFlavors(3);
+
+    param.setc_jimwlk(0.25);
+    const double alphasC025 = jimwlk.getAlphas(x, y);
+    CHECK(alphasC025 == doctest::Approx(0.3453365551834896));
 }

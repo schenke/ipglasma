@@ -452,9 +452,7 @@ class Init {
      * Sets \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$ at one cell from its
      * already-accumulated \f$T_p^A\f$/\f$T_p^B\f$, via getNuclearQs2()
      * and (if enabled) the fluctuating-\f$x\f$ iterative solve. Called
-     * from setColorChargeDensity()'s per-cell loop; a no-op at cells
-     * further than `param->getRmax()` from both nuclei (unless a smooth
-     * nucleus or JIMWLK is in use, in which case every cell is set).
+     * from setColorChargeDensity()'s per-cell loop
      * \param[in,out] lat Lattice to read \f$T_p\f$ from and write
      * \f$g^2\mu^2\f$ into.
      * \param[in] param Simulation parameters.

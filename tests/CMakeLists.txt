@@ -26,6 +26,7 @@ set(TEST_SOURCES
     test_init.cpp
     test_evolution.cpp
     test_jimwlk.cpp
+    test_running_coupling.cpp
     )
 
 add_executable(ipglasma_tests ${TEST_SOURCES} ${LIB_SOURCES})

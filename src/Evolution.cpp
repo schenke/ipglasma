@@ -20,6 +20,7 @@
 #include "Instrumentation.h"
 #include "MyEigen.h"
 #include "PhysConst.h"
+#include "RunningCoupling.h"
 #include "SU3.h"
 
 using Fragmentation::kkp;
@@ -1347,35 +1348,35 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
  * \param[in] muZero \f$\mu_0\f$ in the running-coupling formula.
  * \return The local-coupling factor; `1` if running coupling is
  * disabled.
+ * \see computeRunningCouplingGfactorFromScale(), which this calls
+ * with either the local or an event-averaged \f$Q_s\f$ as the scale.
  */
 double computeRunningCouplingGfactor(
     Lattice *lat, Parameters *param, int pos, int N, double a, double g,
     double c, double muZero) {
-    double g2mu2A, g2mu2B, alphas = 0., Qs = 0.;
-    if (param->getRunningCoupling()) {
+    if (!param->getRunningCoupling()) return 1.;
+
+    const double lambdaQCD = param->getLambdaQCD();
+    const int nFlavors = param->getNFlavors();
+
+    if (param->getRunWithLocalQs() == 1) {
+        // run with the local (in transverse plane) coupling
         const bool inBounds =
             pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1;
-        g2mu2A = inBounds ? lat->cells[pos]->getg2mu2A() : 0;
-        g2mu2B = inBounds ? lat->cells[pos]->getg2mu2B() : 0;
+        const double g2mu2A = inBounds ? lat->cells[pos]->getg2mu2A() : 0;
+        const double g2mu2B = inBounds ? lat->cells[pos]->getg2mu2B() : 0;
 
+        double Qs = 0.;
         if (param->getRunWithQs() == 2) {
-            if (g2mu2A > g2mu2B)
-                Qs = sqrt(
-                    g2mu2A * param->getQsmuRatio() * param->getQsmuRatio() / a
-                    / a * hbarc * hbarc * param->getg() * param->getg());
-            else
-                Qs = sqrt(
-                    g2mu2B * param->getQsmuRatio() * param->getQsmuRatio() / a
-                    / a * hbarc * hbarc * param->getg() * param->getg());
+            Qs = sqrt(
+                std::max(g2mu2A, g2mu2B) * param->getQsmuRatio()
+                * param->getQsmuRatio() / a / a * hbarc * hbarc * param->getg()
+                * param->getg());
         } else if (param->getRunWithQs() == 0) {
-            if (g2mu2A < g2mu2B)
-                Qs = sqrt(
-                    g2mu2A * param->getQsmuRatio() * param->getQsmuRatio() / a
-                    / a * hbarc * hbarc * param->getg() * param->getg());
-            else
-                Qs = sqrt(
-                    g2mu2B * param->getQsmuRatio() * param->getQsmuRatio() / a
-                    / a * hbarc * hbarc * param->getg() * param->getg());
+            Qs = sqrt(
+                std::min(g2mu2A, g2mu2B) * param->getQsmuRatio()
+                * param->getQsmuRatio() / a / a * hbarc * hbarc * param->getg()
+                * param->getg());
         } else if (param->getRunWithQs() == 1) {
             Qs = sqrt(
                 (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
@@ -1383,55 +1384,22 @@ double computeRunningCouplingGfactor(
                 * param->getg());
         }
 
-        if (param->getRunWithLocalQs() == 1) {
-            // 3 flavors
-            alphas =
-                4. * M_PI
-                / (9.
-                   * log(pow(
-                       pow(muZero / 0.2, 2. / c)
-                           + pow(
-                               param->getRunWithThisFactorTimesQs() * Qs / 0.2,
-                               2. / c),
-                       c)));
-            return g * g / (4. * M_PI * alphas);
-            // run with the local (in transverse plane) coupling
-        } else {
-            if (param->getRunWithQs() == 0)
-                alphas = 4. * M_PI
-                         / (9.
-                            * log(pow(
-                                pow(muZero / 0.2, 2. / c)
-                                    + pow(
-                                        param->getRunWithThisFactorTimesQs()
-                                            * param->getAverageQsmin() / 0.2,
-                                        2. / c),
-                                c)));
-            else if (param->getRunWithQs() == 1)
-                alphas = 4. * M_PI
-                         / (9.
-                            * log(pow(
-                                pow(muZero / 0.2, 2. / c)
-                                    + pow(
-                                        param->getRunWithThisFactorTimesQs()
-                                            * param->getAverageQsAvg() / 0.2,
-                                        2. / c),
-                                c)));
-            else if (param->getRunWithQs() == 2)
-                alphas = 4. * M_PI
-                         / (9.
-                            * log(
-                                pow(pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * param->getAverageQs() / 0.2,
-                                            2. / c),
-                                    c)));
+        return computeRunningCouplingGfactorFromScale(
+            g, muZero, c, lambdaQCD, nFlavors,
+            param->getRunWithThisFactorTimesQs() * Qs);
+    } else {
+        double averageQs = 0.;
+        if (param->getRunWithQs() == 0)
+            averageQs = param->getAverageQsmin();
+        else if (param->getRunWithQs() == 1)
+            averageQs = param->getAverageQsAvg();
+        else if (param->getRunWithQs() == 2)
+            averageQs = param->getAverageQs();
 
-            return g * g / (4. * M_PI * alphas);
-        }
-    } else
-        return 1.;
+        return computeRunningCouplingGfactorFromScale(
+            g, muZero, c, lambdaQCD, nFlavors,
+            param->getRunWithThisFactorTimesQs() * averageQs);
+    }
 }
 
 /**
@@ -1553,17 +1521,11 @@ void accumulateGluonSpectrum(
                                * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     }
                     if (param->getRunWithkt() == 1) {
-                        nkt *=
-                            g * g
-                            / (4. * M_PI * 4. * M_PI
-                               / (9.
-                                  * log(pow(
-                                      pow(muZero / 0.2, 2. / c)
-                                          + pow(
-                                              param->getRunWithThisFactorTimesQs()
-                                                  * sqrt(kt2) * hbarc / a / 0.2,
-                                              2. / c),
-                                      c))));
+                        nkt *= computeRunningCouplingGfactorFromScale(
+                            g, muZero, c, param->getLambdaQCD(),
+                            param->getNFlavors(),
+                            param->getRunWithThisFactorTimesQs() * sqrt(kt2)
+                                * hbarc / a);
                     }
                 }
 
@@ -2923,16 +2885,10 @@ int Evolution::multiplicity(
                << "N/A"
                << " " << dNdetaCut << " " << dEdetaCut << " " << dNdetaCut2
                << " " << dEdetaCut2 << " "
-               << g * g
-                      / (4. * M_PI * 4. * M_PI
-                         / (9.
-                            * log(
-                                pow(pow(muZero / 0.2, 2. / c)
-                                        + pow(
-                                            param->getRunWithThisFactorTimesQs()
-                                                * param->getAverageQs() / 0.2,
-                                            2. / c),
-                                    c))))
+               << computeRunningCouplingGfactorFromScale(
+                      g, muZero, c, param->getLambdaQCD(), param->getNFlavors(),
+                      param->getRunWithThisFactorTimesQs()
+                          * param->getAverageQs())
                << endl;
         foutNN.close();
         writeGluonMultiplicityTarget(

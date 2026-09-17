@@ -162,6 +162,14 @@ class Parameters {
     double muZero_;
     /// Controls how smooth the running-coupling cutoff is.
     double c_;
+    /// Number of active quark flavors \f$N_f\f$ in the one-loop QCD
+    /// beta-function coefficient \f$\beta_0=(11 N_c-2N_f)/3\f$ used by
+    /// the running-coupling formula (see computeAlphaS()).
+    int nFlavors_;
+    /// \f$\Lambda_{QCD}\f$ [GeV] in the running-coupling formula (see
+    /// computeAlphaS()); distinct from \c LambdaQCD_jimwlk_, which
+    /// scales the separate JIMWLK small-x evolution coupling.
+    double LambdaQCD_;
     /// Center-of-mass energy \f$\sqrt{s}\f$ of the collision [GeV].
     double roots_;
     /// Whether Bjorken \f$x\f$ should fluctuate as the local \f$Q_s\f$
@@ -851,6 +859,28 @@ class Parameters {
      * \return The stored value.
      */
     double getc() const { return c_; }
+    /**
+     * Sets \f$N_f\f$ in the running-coupling formula's beta-function
+     * coefficient.
+     * \param[in] x New value.
+     */
+    void setNFlavors(int x) { nFlavors_ = x; }
+    /**
+     * Returns \f$N_f\f$ in the running-coupling formula's beta-function
+     * coefficient.
+     * \return The stored value.
+     */
+    int getNFlavors() const { return nFlavors_; }
+    /**
+     * Sets \f$\Lambda_{QCD}\f$ [GeV] in the running-coupling formula.
+     * \param[in] x New value.
+     */
+    void setLambdaQCD(double x) { LambdaQCD_ = x; }
+    /**
+     * Returns \f$\Lambda_{QCD}\f$ [GeV] in the running-coupling formula.
+     * \return The stored value.
+     */
+    double getLambdaQCD() const { return LambdaQCD_; }
     /**
      * Sets the center-of-mass energy.
      * \param[in] x New value [GeV].

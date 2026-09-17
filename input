@@ -21,6 +21,8 @@ NqFluc 0.0
 runningCoupling 0
 muZero 0.3
 c 0.2
+nFlavors 3
+LambdaQCD 0.2
 g2mu 0.1
 smearQs 0
 smearingWidth 0.6

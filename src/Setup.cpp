@@ -131,6 +131,27 @@ int Setup::iFindOptional(string file_name, string st, int defaultValue) {
     return defaultValue;
 }
 
+double Setup::dFindOptional(string file_name, string st, double defaultValue) {
+    ifstream input(file_name.c_str());
+    if (!input.is_open()) {
+        messager_ << "[Setup::dFindOptional]: The input file named "
+                  << file_name << " is absent. Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+
+    string key;
+    string value;
+    while (input >> key) {
+        if (key == "EndOfFile") break;
+        if (!(input >> value)) break;
+        if (key == st) {
+            return ::atof(value.c_str());
+        }
+    }
+    return defaultValue;
+}
+
 string Setup::stringFindOptional(
     string file_name, string st, string defaultValue) {
     ifstream input(file_name.c_str());

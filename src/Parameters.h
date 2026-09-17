@@ -264,9 +264,6 @@ class Parameters {
     /// Whether to read the gluon spectrum \f$dN/d^2k_T\f$ from file and
     /// compute the integrated rate from it (`1`).
     int readMultFromFile_;
-    /// Radius [fm] at which the per-nucleon thickness distribution is
-    /// cut off.
-    double rmax_;
     /// Anisotropy \f$\xi\f$ of the proton thickness function,
     /// \f$T \propto \exp[-(x^2+\xi y^2)/2B]/(2\pi B\sqrt{\xi})\f$ (an
     /// initial test parameter).
@@ -992,16 +989,6 @@ class Parameters {
      * \return The stored value.
      */
     int getSuccess() const { return success_; }
-    /**
-     * Sets the per-nucleon thickness-distribution cutoff radius.
-     * \param[in] x New value [fm].
-     */
-    void setRmax(double x) { rmax_ = x; }
-    /**
-     * Returns the per-nucleon thickness-distribution cutoff radius.
-     * \return The stored value [fm].
-     */
-    double getRmax() const { return rmax_; }
     /**
      * Sets the UV damping parameter.
      * \param[in] x New value.

@@ -31,6 +31,7 @@ The main categories for changes in this file are:
 * Add `writeTmunuBinary` input parameter (optional, default `1`) to select compact binary `.ipgt` or formatted text `.dat` output for `T^{mu nu}`.
 * Replace the default nuclear-`Qs^2` table `qs2Adj_vs_Tp_vs_Y_200.in` with `qs2Adj_vs_Tp_vs_Y_240.in`, which extends the covered `T_p` range 10x to avoid the "T out of range, using maximal T in table" clamping warning at high local thickness; `Init::iTpmax_` is updated accordingly (200 → 240).
 * Remove the `Nc` input parameter; the code has always been SU(3)-only and now hardcodes it internally.
+* Remove the `rmax` input parameter: the per-nucleon thickness-distribution cutoff it controlled was effectively disabled by every shipped input file (set to `10000000.`), and color charges are now always assigned over the whole lattice.
 * Remove the dead `tDistNu`, `useFatTails` and `writeEvolution` input parameters, which never had any effect on the simulation.
 * Remove the `dtau` and `simpleLangevin` input parameters: `dtau` was silently ignored (the actual time step is always computed from `maxtime`/`L`/`size`), and `simpleLangevin` had no effect since `JIMWLK::evolutionStep()`'s buffers are now always allocated unconditionally.
 * File names for stored Wilson lines are now unified and generated centrally in `Lattice::generateWilsonLineDataFileName`; add a `wilsonLinePath` input parameter (optional, default `./`) to configure the directory they're written to/read from.

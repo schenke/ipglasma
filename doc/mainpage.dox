@@ -44,6 +44,8 @@ grouped by physics topic.
   fixing and KKP hadron fragmentation, both used by
   Evolution::multiplicity().
 
-\note This documentation currently has no automated build/publish step;
-see CONTRIBUTING.md for how to build it locally with `make doc`.
+\note CI automatically checks that every class/function/member stays
+documented (`.github/workflows/doxygen.yml`), but there is no automated
+step that builds and publishes this generated HTML anywhere; see
+CONTRIBUTING.md for how to build it locally with `make doc`.
 */

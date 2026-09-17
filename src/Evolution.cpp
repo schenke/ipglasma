@@ -122,7 +122,7 @@ struct EvolveEScratch {
 };
 
 /**
- * Adds one electric field's plaquette and \f$\phi\f$-\f$\pi\f$
+ * Adds one electric field's plaquette and \f$[\phi_N,\phi]\f$
  * commutator force to \p En in place: the traceless anti-Hermitian
  * part of \f$a+\text{bSign}\cdot b\f$ (scaled by \p coeffPlaq) plus
  * \f$[\phi_N,\phi]\f$ (scaled by \p coeffComm), then re-projects \p En
@@ -308,7 +308,7 @@ void evolvePiTeam(
  * `Evolution::evolveE()`'s per-cell kernel, run inside an existing
  * `#pragma omp parallel` region: adds the traceless anti-Hermitian
  * plaquette force (from the four spatial plaquettes touching each
- * link) and the \f$\phi\f$-\f$\pi\f$ commutator force to `U`/`U2`,
+ * link) and the \f$[\phi_N,\phi]\f$ commutator force to `U`/`U2`,
  * via the shared addEForceSU3() kernel.
  * \param[in,out] lat Lattice whose `U`/`U2` are updated in place.
  * \param[in] N Lattice side length.

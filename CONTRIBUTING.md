@@ -2,13 +2,37 @@
 
 ## Code documentation
 
-IP-Glasma is starting to adopt [Doxygen](https://www.doxygen.nl/)-style
-documentation, following the conventions used by
+IP-Glasma uses [Doxygen](https://www.doxygen.nl/)-style documentation,
+following the conventions used by
 [SMASH](https://github.com/smash-transport/smash) (see its
 [CONTRIBUTING.md](https://github.com/smash-transport/smash/blob/main/CONTRIBUTING.md)).
-No `Doxyfile`/build target exists yet in this repo, but writing comments this
-way now means they need no rework once one is added, and in the meantime
-they still read as ordinary comments and IDE tooltips.
+Every class, function, and member variable in `src/` should be documented
+this way -- see "Scope" below.
+
+### Building the documentation
+
+You need Doxygen installed (and, optionally, Graphviz's `dot` for the
+class/collaboration/call graphs). From your build directory:
+
+```
+cmake --build . --target doc
+```
+
+and open `doc/html/index.html` in a browser. Two more targets check
+completeness (both build the documentation with only fully-documented
+entities extracted, so any gap shows up as a Doxygen "not documented"
+warning):
+
+```
+cmake --build . --target undocumented        # lists every warning
+cmake --build . --target undocumented_count  # just counts them
+```
+
+`.github/workflows/doxygen.yml` runs `undocumented_test` on every push/PR
+to `devel`/`main`, so a newly-added undocumented class/function/member
+fails CI; run it locally first (see above) to catch this before pushing.
+There is currently no hosted/published copy of the generated documentation
+itself -- that's a separate, later step.
 
 ### Comment style
 
@@ -56,11 +80,19 @@ leading `*`:
 
 ### Publication references
 
-- Don't use `\iref`/`\cite` yet -- both require a bibliography file
-  (Inspire-backed or not) that this repo doesn't have set up. Cite papers
-  in plain text for now (matching how the existing prose comments already
-  do it, e.g. `arXiv:1508.06294`), and switch the existing plain-text
-  citations to `\iref`/`\cite` once a Doxyfile and `.bib` file exist.
+- Cite papers with `\cite <INSPIRE texkey>` (e.g. `\cite Schenke:2012wb`)
+  inside an actual Doxygen doc comment (`/** ... */` or `///`), backed by
+  `doc/ipglasma.bib`. Add a new entry to that file (INSPIRE-HEP's BibTeX
+  export, e.g. `curl -H "Accept: application/x-bibtex"
+  "https://inspirehep.net/api/arxiv/<id>"`) before citing a paper that
+  isn't in it yet.
+- `\cite` only has an effect inside a real Doxygen comment -- a citation
+  in a plain `//` implementation comment (not extracted into the
+  generated docs) should stay as plain text, e.g. `arXiv:1508.06294`.
+- Top-level narrative docs (`README.md`, this file) intentionally keep
+  plain Markdown links instead of `\cite`/`\iref`, since GitHub renders
+  them directly and doesn't understand Doxygen's special commands
+  (matching SMASH's own README).
 
 ### Scope
 

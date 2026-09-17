@@ -31,7 +31,7 @@ enum class NucleusRole {
 /**
  * Selects which integrand evaluateIntegrand()/integral()/qnc7() sample.
  *
- * \c NuInt2HO/\c NuInt3Gauss/\c NuInt3Fermi/\c NuIntHulthen mirror
+ * `NuInt2HO`/`NuInt3Gauss`/`NuInt3Fermi`/`NuIntHulthen` mirror
  * `Nucleus::densityFunc`'s values (1/2/3/8) and are used for nuInS()'s
  * normalization integral, whose integrand depends on the active
  * nucleus's density profile; the other four are fixed,
@@ -265,8 +265,8 @@ class Glauber {
      * \param[in] name Species name (e.g. `"Pb"`, `"Au"`, `"p"`, `"d"`);
      * exits with an error if not one of the supported species (see
      * Glauber.cpp's \c kNucleusTemplates table).
-     * \param[in] setWSDeformParams If `true`, \p R_WS/\p a_WS/\p
-     * beta2/\p beta3/\p beta4/\p gamma override the species' built-in
+     * \param[in] setWSDeformParams If `true`, `R_WS`/`a_WS`/\p
+     * beta2/`beta3`/`beta4`/`gamma` override the species' built-in
      * values instead of being ignored.
      * \param[in] R_WS Woods-Saxon half-density radius override [fm],
      * used only if \p setWSDeformParams.
@@ -479,7 +479,7 @@ class Glauber {
     /**
      * 3-parameter Fermi (Woods-Saxon) density integrand for nuInS(), in
      * the substitution \f$\xi = e^{-z/a}\f$ at fixed transverse offset
-     * \link NuInS_S_ \c s\endlink.
+     * \link NuInS_S_ s\endlink.
      * \param[in] xi Integration variable in `(0, 1)`, clamped away from
      * the endpoints by \c TINY.
      * \return The integrand's value at \p xi.
@@ -504,7 +504,7 @@ class Glauber {
     /**
      * 3-parameter Gaussian density integrand for nuInS(), in the
      * substitution \f$\xi = e^{-z^2/a^2}\f$ at fixed transverse offset
-     * \link NuInS_S_ \c s\endlink.
+     * \link NuInS_S_ s\endlink.
      * \param[in] xi Integration variable in `(0, 1)`, clamped away from
      * the endpoints by \c TINY.
      * \return The integrand's value at \p xi.
@@ -528,7 +528,7 @@ class Glauber {
     /**
      * 2-parameter harmonic-oscillator density integrand for nuInS(), in
      * the substitution \f$\xi = e^{-z^2}\f$ at fixed transverse offset
-     * \link NuInS_S_ \c s\endlink.
+     * \link NuInS_S_ s\endlink.
      * \param[in] xi Integration variable in `(0, 1)`, clamped away from
      * the endpoints by \c TINY.
      * \return The integrand's value at \p xi.
@@ -545,7 +545,7 @@ class Glauber {
     /**
      * Hulthen (deuteron) density integrand for nuInS(), in the
      * substitution \f$\xi = e^{-za}\f$ at fixed transverse offset
-     * \link NuInS_S_ \c s\endlink.
+     * \link NuInS_S_ s\endlink.
      * \param[in] xi Integration variable in `(0, 1)`, clamped away from
      * the endpoints by \c TINY.
      * \return The integrand's value at \p xi.
@@ -667,7 +667,7 @@ class Glauber {
      * \param[in] random Random-number source.
      * \param[in] nucleus Which nucleus' thickness function to sample
      * from.
-     * \return A ReturnValue with \c x/\c y set to the sampled position
+     * \return A ReturnValue with `x`/`y` set to the sampled position
      * and \c collided set to `0`; \c z, \c phi and \c proton are left
      * unset (see ReturnValue::phi for why that's safe today).
      */

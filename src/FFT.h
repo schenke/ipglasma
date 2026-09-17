@@ -62,15 +62,24 @@ class FFT {
   private:
     /// Log sink for error/warning messages (e.g. an oversized \p mDim).
     PrettyOstream messager_;
-    /// Single-plane scratch buffers used by fftnVector(), sized
+    /// Single-plane input scratch buffer used by fftnVector(), sized
     /// `nn[0]*nn[1]`.
-    fftw_complex *input, *output;
-    /// Batched, multi-plane scratch buffers used by fftn()/fftnArray()/
-    /// fftnComplexArray(), sized `nn[0]*nn[1]*kMaxBatchDim`.
-    fftw_complex *inputMany, *outputMany;
-    /// Forward (\c p_) and backward (\c pback_) FFTW plans for this
-    /// instance's fixed lattice size.
-    fftw_plan p_, pback_;
+    fftw_complex *input;
+    /// Single-plane output scratch buffer used by fftnVector(), sized
+    /// `nn[0]*nn[1]`.
+    fftw_complex *output;
+    /// Batched, multi-plane input scratch buffer used by fftn()/
+    /// fftnArray()/fftnComplexArray(), sized
+    /// `nn[0]*nn[1]*kMaxBatchDim`.
+    fftw_complex *inputMany;
+    /// Batched, multi-plane output scratch buffer used by fftn()/
+    /// fftnArray()/fftnComplexArray(), sized
+    /// `nn[0]*nn[1]*kMaxBatchDim`.
+    fftw_complex *outputMany;
+    /// Forward FFTW plan for this instance's fixed lattice size.
+    fftw_plan p_;
+    /// Backward FFTW plan for this instance's fixed lattice size.
+    fftw_plan pback_;
 
   public:
     /// Largest number of planes any batched transform (fftn()'s 9

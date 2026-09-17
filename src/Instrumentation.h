@@ -89,8 +89,16 @@ class Profiler {
     void endEvent();
 
   private:
+    /// Private: use instance() instead (singleton).
     Profiler();
+    /// Declared but never defined, to block copying at link time (this
+    /// class is otherwise noncopyable via `instance()`'s singleton
+    /// access, so callers should never need these).
     Profiler(const Profiler &);
+    /**
+     * \copydoc Profiler(const Profiler &)
+     * \return Never returns (never defined).
+     */
     Profiler &operator=(const Profiler &);
 
     /// Whether `IPGLASMA_PROFILE` was set to an enabling value.
@@ -143,7 +151,14 @@ class ScopedTimer {
     ~ScopedTimer();
 
   private:
+    /// Declared but never defined, to block copying at link time (a
+    /// copy would double-add its scope's elapsed time to the profiler
+    /// when both copies go out of scope).
     ScopedTimer(const ScopedTimer &);
+    /**
+     * \copydoc ScopedTimer(const ScopedTimer &)
+     * \return Never returns (never defined).
+     */
     ScopedTimer &operator=(const ScopedTimer &);
 
     /// Whether profiling was enabled when this timer was constructed.

@@ -1,0 +1,97 @@
+# Doxygen configuration for IP-Glasma's developer reference documentation.
+#
+# This is a template processed by CMake's configure_file() (see
+# doc/CMakeLists.txt), which substitutes the @VARIABLE@ placeholders below.
+# Any setting not listed here falls back to Doxygen's own documented default
+# -- see https://www.doxygen.nl/manual/config.html. If Doxygen's minimum
+# supported version is ever bumped, regenerate a fresh default template with
+# `doxygen -g` and re-apply the overrides below, since option names
+# occasionally change between Doxygen versions.
+
+#---------------------------------------------------------------------------
+# Project
+#---------------------------------------------------------------------------
+PROJECT_NAME           = "IP-Glasma"
+PROJECT_BRIEF          = "IP-Glasma initial condition with JIMWLK evolution"
+OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@
+OPTIMIZE_OUTPUT_FOR_C  = NO
+TAB_SIZE               = 4
+BUILTIN_STL_SUPPORT    = YES
+
+#---------------------------------------------------------------------------
+# What to document: everything, including private/static/anonymous-namespace
+# members, not just the public API -- this is a full developer reference,
+# not an end-user API guide.
+#---------------------------------------------------------------------------
+EXTRACT_ALL            = @DOXYGEN_EXTRACT_ALL@
+EXTRACT_PRIVATE        = YES
+EXTRACT_PRIV_VIRTUAL   = YES
+EXTRACT_STATIC         = YES
+EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_ANON_NSPACES   = YES
+INTERNAL_DOCS          = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+
+#---------------------------------------------------------------------------
+# Input: every header/source in src/, plus the top-level narrative docs and
+# this directory's own \mainpage. Deliberately excludes tests/ (vendors
+# doctest.h) and utilities/ (standalone scripts, not part of the simulation
+# library's own API). Paths are relative to PROJECT_SOURCE_DIR (the
+# WORKING_DIRECTORY every custom target in doc/CMakeLists.txt runs from),
+# not absolute, so the generated markdown-page anchors (e.g. \ref md_README)
+# come out as short, portable names instead of embedding this machine's
+# absolute build path.
+#---------------------------------------------------------------------------
+INPUT                  = doc/mainpage.dox \
+                          README.md \
+                          CONTRIBUTING.md \
+                          CHANGELOG.md \
+                          src
+STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@
+FILE_PATTERNS          = *.h *.cpp *.dox *.md
+RECURSIVE              = NO
+USE_MDFILE_AS_MAINPAGE =
+EXCLUDE_PATTERNS       =
+
+#---------------------------------------------------------------------------
+# Formulas and citations: this codebase already writes \f$...\f$ math and
+# plain-text arXiv references throughout; render the former with MathJax and
+# resolve the latter through a real bibliography.
+#---------------------------------------------------------------------------
+USE_MATHJAX            = YES
+MATHJAX_CODEFILE       = doc/mathjax-config.js
+CITE_BIB_FILES         = doc/ipglasma.bib
+
+#---------------------------------------------------------------------------
+# Output: HTML only (no LaTeX/PDF manual), with a browsable source tree and
+# a navigation sidebar; no hosting/deployment set up yet (see CONTRIBUTING.md).
+#---------------------------------------------------------------------------
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_TREEVIEW      = YES
+SOURCE_BROWSER         = YES
+ALPHABETICAL_INDEX     = YES
+
+#---------------------------------------------------------------------------
+# Diagrams: class/collaboration/call/caller graphs via Graphviz, if available
+# (HAVE_DOT is set by CMake based on whether it found the `dot` executable).
+#---------------------------------------------------------------------------
+HAVE_DOT               = @HAVE_DOT@
+DOT_PATH               = @DOT_PATH@
+CLASS_GRAPH            = YES
+COLLABORATION_GRAPH    = YES
+CALL_GRAPH             = YES
+CALLER_GRAPH           = YES
+DOT_IMAGE_FORMAT       = svg
+INTERACTIVE_SVG        = YES
+# main()/readInput()/PrettyOstream::flush() legitimately call/are called by
+# more than the default 50-node limit; raise it so their graphs still
+# render instead of being silently skipped.
+DOT_GRAPH_MAX_NODES    = 150
+
+#---------------------------------------------------------------------------
+# Diagnostics
+#---------------------------------------------------------------------------
+QUIET                  = YES
+WARN_LOGFILE           =

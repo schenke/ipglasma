@@ -1,0 +1,49 @@
+/**
+\mainpage IP-Glasma Developer Documentation
+
+This is the full developer reference for IP-Glasma: every class, function,
+and member variable in `src/`, plus the top-level project documentation
+(README, CONTRIBUTING, CHANGELOG) reproduced as browsable pages below.
+Classes are listed alphabetically (see the "Classes" tab) rather than
+grouped by physics topic.
+
+\par Where to start
+- \ref md_README -- what IP-Glasma computes, how to build it, and every
+  input-file parameter.
+- \ref md_CONTRIBUTING -- coding/documentation conventions for anyone
+  changing this codebase.
+- \ref md_CHANGELOG -- what changed between versions.
+
+\par The simulation pipeline, in the order a run actually executes it
+-# \ref Setup / \ref Parameters -- read and validate the input file.
+-# \ref Glauber -- resolve nuclear geometry and sample the collision
+   impact parameter.
+-# \ref Init -- sample nucleon positions and color charges, and build the
+   initial classical Yang-Mills fields (the two nuclei's Wilson lines,
+   matched across the forward light cone).
+-# \ref JIMWLK -- (optional) small-\f$x\f$ JIMWLK evolution of the Wilson
+   lines before the classical evolution proper.
+-# \ref Evolution -- leapfrog time evolution of the classical fields, and
+   the energy-momentum tensor/multiplicity/eccentricity observables
+   computed from them.
+-# \ref MyEigen -- Landau matching (flow velocity from
+   \f$T^{\mu\nu}\f$) and the various binary/text output writers.
+
+\par Supporting/utility classes
+- \ref Matrix, \ref Group, \ref SU3.h "SU3" -- the fixed \f$3\times3\f$
+  SU(3) matrix type and its generators.
+- \ref Lattice, \ref Cell, \ref FFT -- the transverse lattice's field
+  storage and Fourier transforms.
+- \ref Random -- the pseudorandom-number streams used throughout
+  initialization and JIMWLK.
+- \ref PhysConst.h "PhysConst" -- physical/mathematical constants shared
+  across the codebase.
+- \ref PrettyOstream, \ref Instrumentation.h "Instrumentation" --
+  logging and profiling.
+- \ref GaugeFix, \ref Fragmentation.h "Fragmentation" -- Coulomb gauge
+  fixing and KKP hadron fragmentation, both used by
+  Evolution::multiplicity().
+
+\note This documentation currently has no automated build/publish step;
+see CONTRIBUTING.md for how to build it locally with `make doc`.
+*/

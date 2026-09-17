@@ -56,15 +56,34 @@ namespace {
  * parametrization's fitted functional form (see evalKkpFit()).
  */
 struct KkpFitCoeffs {
-    /// Overall normalization / low-\f$x\f$ and high-\f$x\f$ power
-    /// exponents at \f$s=0\f$: \f$b_1\f$ (normalization), \f$b_2\f$
-    /// (power of \f$x\f$), \f$b_3\f$ (power of \f$1-x\f$).
-    double b1, b2, b3;
-    /// Coefficients of the \f$s\f$, \f$s^2\f$, \f$s^3\f$ terms
-    /// correcting \f$b_1\f$ (\f$a_1,a_2,a_3\f$), \f$b_2\f$
-    /// (\f$a_4,a_5,a_6\f$), \f$b_3\f$ (\f$a_7,a_8,a_9\f$), and the
-    /// \f$1/x\f$ term (\f$a_{10},a_{11}\f$).
-    double a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11;
+    /// Overall normalization at \f$s=0\f$, \f$b_1\f$.
+    double b1;
+    /// Power of \f$x\f$ at \f$s=0\f$, \f$b_2\f$.
+    double b2;
+    /// Power of \f$1-x\f$ at \f$s=0\f$, \f$b_3\f$.
+    double b3;
+    /// Coefficient of the \f$s\f$ term correcting \f$b_1\f$.
+    double a1;
+    /// Coefficient of the \f$s^2\f$ term correcting \f$b_1\f$.
+    double a2;
+    /// Coefficient of the \f$s^3\f$ term correcting \f$b_1\f$.
+    double a3;
+    /// Coefficient of the \f$s\f$ term correcting \f$b_2\f$.
+    double a4;
+    /// Coefficient of the \f$s^2\f$ term correcting \f$b_2\f$.
+    double a5;
+    /// Coefficient of the \f$s^3\f$ term correcting \f$b_2\f$.
+    double a6;
+    /// Coefficient of the \f$s\f$ term correcting \f$b_3\f$.
+    double a7;
+    /// Coefficient of the \f$s^2\f$ term correcting \f$b_3\f$.
+    double a8;
+    /// Coefficient of the \f$s^3\f$ term correcting \f$b_3\f$.
+    double a9;
+    /// Coefficient of the \f$s\f$ term in the \f$1/x\f$ factor.
+    double a10;
+    /// Coefficient of the \f$s^2\f$ term in the \f$1/x\f$ factor.
+    double a11;
     /// LO proton-gluon fragmentation's unique extra
     /// \f$+\text{extraA3rd}\cdot s^3\f$ term inside the \f$1/x\f$
     /// factor; `0` for every other species/flavor.
@@ -77,12 +96,39 @@ struct KkpFitCoeffs {
  * iset (LO or NLO); see kLoFits/kNloFits.
  */
 struct KkpSpeciesFits {
-    /// Pion fragmentation fits, one per parton flavor.
-    KkpFitCoeffs pionG, pionU, pionS, pionC, pionB;
-    /// Kaon fragmentation fits, one per parton flavor.
-    KkpFitCoeffs kaonG, kaonU, kaonD, kaonC, kaonB;
-    /// Proton fragmentation fits, one per parton flavor.
-    KkpFitCoeffs protonG, protonU, protonS, protonC, protonB;
+    /// Pion fragmentation fit for a gluon parton.
+    KkpFitCoeffs pionG;
+    /// Pion fragmentation fit for an up-type (or analogous light)
+    /// parton.
+    KkpFitCoeffs pionU;
+    /// Pion fragmentation fit for a strange parton.
+    KkpFitCoeffs pionS;
+    /// Pion fragmentation fit for a charm parton.
+    KkpFitCoeffs pionC;
+    /// Pion fragmentation fit for a bottom parton.
+    KkpFitCoeffs pionB;
+    /// Kaon fragmentation fit for a gluon parton.
+    KkpFitCoeffs kaonG;
+    /// Kaon fragmentation fit for an up-type (or analogous light)
+    /// parton.
+    KkpFitCoeffs kaonU;
+    /// Kaon fragmentation fit for a down-type parton.
+    KkpFitCoeffs kaonD;
+    /// Kaon fragmentation fit for a charm parton.
+    KkpFitCoeffs kaonC;
+    /// Kaon fragmentation fit for a bottom parton.
+    KkpFitCoeffs kaonB;
+    /// Proton fragmentation fit for a gluon parton.
+    KkpFitCoeffs protonG;
+    /// Proton fragmentation fit for an up-type (or analogous light)
+    /// parton.
+    KkpFitCoeffs protonU;
+    /// Proton fragmentation fit for a strange parton.
+    KkpFitCoeffs protonS;
+    /// Proton fragmentation fit for a charm parton.
+    KkpFitCoeffs protonC;
+    /// Proton fragmentation fit for a bottom parton.
+    KkpFitCoeffs protonB;
 };
 
 /// Leading-order (\c iset=0) KKP fit coefficients, one KkpFitCoeffs set

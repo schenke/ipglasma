@@ -1,0 +1,29 @@
+name: Documentation completeness
+
+# Builds the developer-reference Doxygen documentation and fails if any
+# class/function/member is undocumented (see doc/CMakeLists.txt's
+# undocumented_test target). Does not publish/host the generated HTML
+# anywhere -- see CONTRIBUTING.md.
+
+on:
+  push:
+    branches: [devel, main]
+  pull_request:
+    branches: [devel, main]
+
+jobs:
+  undocumented_test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz libfftw3-dev libgsl-dev
+
+      - name: Configure
+        run: cmake -B build -DdisableMPI=ON
+
+      - name: Check documentation completeness
+        run: cmake --build build --target undocumented_test

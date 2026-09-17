@@ -131,3 +131,7 @@ if (unittest)
     enable_testing()
     add_subdirectory (tests)
 endif()
+
+# Doxygen developer-reference documentation (`make doc`); see
+# doc/CMakeLists.txt. A no-op with a message if Doxygen isn't installed.
+add_subdirectory (doc)

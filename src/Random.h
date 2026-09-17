@@ -25,10 +25,10 @@ class Random {
     static constexpr int MM = 156;
     /// Twist recurrence's alternating XOR mask.
     static constexpr unsigned long long MATRIX_A = 0xB5026F5AA96619E9ULL;
-    static constexpr unsigned long long UM =
-        0xFFFFFFFF80000000ULL;  // most significant 33 bits
-    static constexpr unsigned long long LM =
-        0x7FFFFFFFULL;  // least significant 31 bits
+    /// Mask selecting a word's most significant 33 bits.
+    static constexpr unsigned long long UM = 0xFFFFFFFF80000000ULL;
+    /// Mask selecting a word's least significant 31 bits.
+    static constexpr unsigned long long LM = 0x7FFFFFFFULL;
 
     /// `0` if the next gauss() call must generate a fresh polar pair,
     /// `1` if \c gset_ holds an already-generated, unused partner.

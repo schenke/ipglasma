@@ -122,31 +122,45 @@ class FieldDigest {
         if (value > max_) max_ = value;
     }
 
-    /// Returns the running FNV-1a hash of every added value's raw bits.
+    /**
+     * \return The running FNV-1a hash of every added value's raw bits.
+     */
     std::uint64_t hash() const { return hash_; }
-    /// Returns the total number of values added (finite or not).
+    /**
+     * \return The total number of values added (finite or not).
+     */
     std::uint64_t count() const { return count_; }
-    /// Returns the number of added values that were not finite.
+    /**
+     * \return The number of added values that were not finite.
+     */
     std::uint64_t nonfinite() const { return nonfinite_; }
-    /// Returns the mean of the finite values added (NaN if none were).
+    /**
+     * \return The mean of the finite values added (NaN if none were).
+     */
     double mean() const {
         return finite_count_ == 0 ? std::numeric_limits<double>::quiet_NaN()
                                   : static_cast<double>(sum_ / finite_count_);
     }
-    /// Returns the RMS of the finite values added (NaN if none were).
+    /**
+     * \return The RMS of the finite values added (NaN if none were).
+     */
     double rms() const {
         return finite_count_ == 0
                    ? std::numeric_limits<double>::quiet_NaN()
                    : std::sqrt(static_cast<double>(sumsq_ / finite_count_));
     }
-    /// Returns the minimum of the finite values added (NaN if none
-    /// were).
+    /**
+     * \return The minimum of the finite values added (NaN if none
+     * were).
+     */
     double minimum() const {
         return finite_count_ == 0 ? std::numeric_limits<double>::quiet_NaN()
                                   : min_;
     }
-    /// Returns the maximum of the finite values added (NaN if none
-    /// were).
+    /**
+     * \return The maximum of the finite values added (NaN if none
+     * were).
+     */
     double maximum() const {
         return finite_count_ == 0 ? std::numeric_limits<double>::quiet_NaN()
                                   : max_;

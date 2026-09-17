@@ -40,48 +40,109 @@ using std::stringstream;
 
 namespace {
 
+/// Scratch matrices for evolveUTeam(), reused across cells to avoid
+/// reallocating.
 struct EvolveUScratch {
+    /// Initializes \c one to the identity matrix.
     EvolveUScratch() : one(1.) {}
 
+    /// Padé-approximant intermediate for the \c Ux-side rotation.
     Matrix E1;
+    /// Padé-approximant intermediate for the \c Uy-side rotation.
     Matrix E2;
+    /// General scratch used while building `E1`/`E2`.
     Matrix temp1;
+    /// General scratch used while building `E1`/`E2`.
     Matrix temp2;
+    /// Reusable identity matrix.
     Matrix one;
 };
 
+/// Scratch matrices for evolvePhiTeam(), reused across cells to avoid
+/// reallocating.
 struct EvolvePhiScratch {
+    /// Current cell's \f$\phi\f$ (\c Uy2), updated in place.
     Matrix phi;
+    /// Current cell's \f$\pi\f$ (\c Ux2).
     Matrix pi;
 };
 
+/// Scratch matrices for evolvePiTeam(), reused across cells to avoid
+/// reallocating.
 struct EvolvePiScratch {
+    /// Current cell's \f$U_x\f$.
     Matrix Ux;
+    /// Current cell's \f$U_y\f$.
     Matrix Uy;
+    /// \f$U_x\f$ at the \f$-\hat x\f$ neighbor.
     Matrix UxXm1;
+    /// \f$U_y\f$ at the \f$-\hat y\f$ neighbor.
     Matrix UyYm1;
+    /// Current cell's \f$\phi\f$.
     Matrix phi;
+    /// \f$\phi\f$ parallel-transported from the \f$+\hat x\f$ neighbor.
     Matrix phiX;
+    /// \f$\phi\f$ parallel-transported from the \f$+\hat y\f$ neighbor.
     Matrix phiY;
+    /// \f$\phi\f$ parallel-transported from the \f$-\hat x\f$ neighbor.
     Matrix phimX;
+    /// \f$\phi\f$ parallel-transported from the \f$-\hat y\f$ neighbor.
     Matrix phimY;
+    /// The covariant discrete Laplacian of \f$\phi\f$,
+    /// \f$\phi_X+\phi_{-X}+\phi_Y+\phi_{-Y}-4\phi\f$.
     Matrix bracket;
+    /// Current cell's \f$\pi\f$, updated in place.
     Matrix pi;
 };
 
+/// Scratch matrices for evolveETeam(), reused across cells to avoid
+/// reallocating.
 struct EvolveEScratch {
+    /// Current cell's \f$U_x\f$.
     Matrix Ux;
+    /// Current cell's \f$U_y\f$.
     Matrix Uy;
+    /// General scratch used while building `U12`/`U1m2`/`U2m1`.
     Matrix temp1;
+    /// General scratch used while building `U12`/`U1m2`/`U2m1`.
     Matrix temp2;
+    /// Electric field (\c U or \c U2) being updated, passed to
+    /// addEForceSU3().
     Matrix En;
-    Matrix phi;
+    /// \f$\phi\f$ parallel-transported to the plaquette's far corner.
     Matrix phiN;
+    /// Current cell's \f$\phi\f$.
+    Matrix phi;
+    /// The \f$(x,y)\f$-oriented spatial plaquette touching this link.
     Matrix U12;
+    /// The \f$(x,-y)\f$-oriented spatial plaquette touching this link.
     Matrix U1m2;
+    /// The \f$(-x,y)\f$-oriented spatial plaquette touching this link.
     Matrix U2m1;
 };
 
+/**
+ * Adds one electric field's plaquette and \f$\phi\f$-\f$\pi\f$
+ * commutator force to \p En in place: the traceless anti-Hermitian
+ * part of \f$a+\text{bSign}\cdot b\f$ (scaled by \p coeffPlaq) plus
+ * \f$[\phi_N,\phi]\f$ (scaled by \p coeffComm), then re-projects \p En
+ * traceless. Shared by both calls in evolveETeam() (once for \c U with
+ * \f$a=U_{12}\f$/\f$b=U_{1m2}\f$/`bSign=+1`, once for \c U2 with
+ * \f$a=U_{2m1}\f$/\f$b=U_{12}\f$/`bSign=-1`), which previously
+ * duplicated this derivation.
+ * \param[in,out] En Electric field to add the force to.
+ * \param[in] a First plaquette combination.
+ * \param[in] b Second plaquette combination.
+ * \param[in] bSign Sign \p b enters the plaquette combination with
+ * (`+1` or `-1`).
+ * \param[in] phiN \f$\phi\f$ parallel-transported to this plaquette's
+ * far corner.
+ * \param[in] phi This cell's \f$\phi\f$.
+ * \param[in] coeffPlaq Prefactor multiplying the plaquette force
+ * (\f$i\tau d\tau/(2g^2)\f$).
+ * \param[in] coeffComm Prefactor multiplying the commutator force
+ * (\f$i d\tau/\tau\f$).
+ */
 inline void addEForceSU3(
     Matrix &En, const Matrix &a, const Matrix &b, double bSign,
     const Matrix &phiN, const Matrix &phi, const complex<double> coeffPlaq,
@@ -122,6 +183,19 @@ inline void addEForceSU3(
     E[8] -= eTraceThird;
 }
 
+/**
+ * `Evolution::evolveU()`'s per-cell kernel, run inside an existing
+ * `#pragma omp parallel` region (its own `#pragma omp for` provides
+ * the worksharing): rotates `Ux`/`Uy` by a second-order Padé
+ * approximant of \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$, using the
+ * electric fields `U`/`U2` as the generator.
+ * \param[in,out] lat Lattice whose `Ux`/`Uy` are updated in place.
+ * \param[in] N Lattice side length.
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] tau Current proper time [lattice units].
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void evolveUTeam(
     Lattice *lat, int N, double g, double dtau, double tau,
     EvolveUScratch &scratch) {
@@ -157,6 +231,17 @@ void evolveUTeam(
     }
 }
 
+/**
+ * `Evolution::evolvePhi()`'s per-cell kernel, run inside an existing
+ * `#pragma omp parallel` region: \f$\phi \mathrel{+}=
+ * (\tau+d\tau/2)\,d\tau\,\pi\f$.
+ * \param[in,out] lat Lattice whose \c Uy2 (\f$\phi\f$) is updated in
+ * place.
+ * \param[in] N Lattice side length.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] tau Current proper time [lattice units].
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void evolvePhiTeam(
     Lattice *lat, int N, double dtau, double tau, EvolvePhiScratch &scratch) {
 #pragma omp for
@@ -170,6 +255,18 @@ void evolvePhiTeam(
     }
 }
 
+/**
+ * `Evolution::evolvePi()`'s per-cell kernel, run inside an existing
+ * `#pragma omp parallel` region: adds \f$(d\tau/\tau)\f$ times the
+ * covariant discrete Laplacian of \f$\phi\f$ (parallel-transported via
+ * `Ux`/`Uy` to its four neighbors) to \f$\pi\f$.
+ * \param[in,out] lat Lattice whose \c Ux2 (\f$\pi\f$) is updated in
+ * place.
+ * \param[in] N Lattice side length.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] tau Current proper time [lattice units].
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void evolvePiTeam(
     Lattice *lat, int N, double dtau, double tau, EvolvePiScratch &scratch) {
     const double dtauOverTau = dtau / tau;
@@ -207,6 +304,19 @@ void evolvePiTeam(
     }
 }
 
+/**
+ * `Evolution::evolveE()`'s per-cell kernel, run inside an existing
+ * `#pragma omp parallel` region: adds the traceless anti-Hermitian
+ * plaquette force (from the four spatial plaquettes touching each
+ * link) and the \f$\phi\f$-\f$\pi\f$ commutator force to `U`/`U2`,
+ * via the shared addEForceSU3() kernel.
+ * \param[in,out] lat Lattice whose `U`/`U2` are updated in place.
+ * \param[in] N Lattice side length.
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] tau Current proper time [lattice units].
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void evolveETeam(
     Lattice *lat, int N, double g, double dtau, double tau,
     EvolveEScratch &scratch) {
@@ -265,16 +375,48 @@ void evolveETeam(
     }
 }
 
+/**
+ * Records the elapsed wall time since \p started under \p phase in
+ * the global profiler, without restarting the clock. Called from
+ * inside `#pragma omp single` in evolveStepPersistent(), for phases
+ * whose elapsed time is the final one measured in that scope.
+ * \param[in] phase Profiler phase name to add the elapsed time to.
+ * \param[in] started Wall-clock time the phase began (from
+ * `ipg::wallSeconds()`).
+ */
 void addTeamPhase(const char *phase, double started) {
     ipg::Profiler::instance().add(phase, ipg::wallSeconds() - started);
 }
 
+/**
+ * Same as addTeamPhase(), but also resets \p started to the current
+ * time, so the next phase's elapsed time is measured from here.
+ * \param[in] phase Profiler phase name to add the elapsed time to.
+ * \param[in,out] started Wall-clock time the phase began; updated to
+ * now on return.
+ */
 void addPhaseAndRestart(const char *phase, double &started) {
     const double now = ipg::wallSeconds();
     ipg::Profiler::instance().add(phase, now - started);
     started = now;
 }
 
+/**
+ * Runs one leapfrog step (\f$\pi\f$, then `U`/`U2`, then --
+ * if \p updateCoordinates -- \f$\phi\f$ and `Ux`/`Uy`) inside a
+ * single shared `#pragma omp parallel` region: each team function's
+ * own `#pragma omp for` provides the worksharing, and the implicit
+ * barrier at the end of each keeps the update order correct without
+ * tearing down and rebuilding the thread team between phases.
+ * \param[in,out] lat Lattice to evolve in place.
+ * \param[in] param Simulation parameters.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] tau Current proper time [lattice units].
+ * \param[in] updateCoordinates Whether to also update the coordinate
+ * fields (\f$\phi\f$, `Ux`/`Uy`) this step, or only the momenta
+ * (\f$\pi\f$, `U`/`U2`) -- `false` for a measurement-only half-step
+ * that must not advance the trajectory.
+ */
 void evolveStepPersistent(
     Lattice *lat, Parameters *param, double dtau, double tau,
     bool updateCoordinates) {
@@ -325,23 +467,47 @@ void evolveStepPersistent(
     }
 }
 
+/**
+ * Computes the traceless part of \p lhs minus \p rhs into \p out:
+ * \f$(\text{lhs}-\text{rhs}) - \text{tr}(\text{lhs}-\text{rhs})/3\f$.
+ * Used throughout tmunuOffDiagonalTeam() to turn a pair of four-link
+ * chains into the traceless combination its off-diagonal
+ * \f$T^{\mu\nu}\f$ components need.
+ * \param[in] lhs Minuend matrix.
+ * \param[in] rhs Subtrahend matrix.
+ * \param[in] one Reusable identity matrix.
+ * \param[out] out The traceless difference.
+ */
 inline void makeTmunuTracelessDifference(
     const Matrix &lhs, const Matrix &rhs, const Matrix &one, Matrix &out) {
     out = lhs - rhs;
     out -= (out.trace() / 3.0) * one;
 }
 
+/// Scratch matrices for tmunuPlaquetteTeam(), reused across cells to
+/// avoid reallocating.
 struct TmunuPlaquetteScratch {
+    /// Conjugate-transposed \f$U_x\f$ at the plaquette's far corner.
     Matrix UDx;
+    /// Conjugate-transposed \f$U_y\f$ at this cell.
     Matrix UDy;
+    /// The computed spatial plaquette.
     Matrix Uplaq;
 };
 
-// Precomputes the spatial plaquette U_x(x) U_y(x+xhat) U_x(x+yhat)^dagger
-// U_y(x)^dagger at every cell into lat->Uy1, consumed by
-// tmunuDiagonalMagneticTeam below. The outermost ring is a nonphysical guard
-// region (Tmunu's stencils need a genuine one-cell neighborhood), so it gets
-// the identity instead of a clamped, gauge-noncovariant plaquette.
+/**
+ * Precomputes the spatial plaquette \f$U_x(x)\,U_y(x+\hat x)\,
+ * U_x(x+\hat y)^\dagger\,U_y(x)^\dagger\f$ at every cell into
+ * \c lat->Uy1, consumed by tmunuDiagonalMagneticTeam() below. The
+ * outermost ring is a nonphysical guard region (\f$T^{\mu\nu}\f$'s
+ * stencils need a genuine one-cell neighborhood), so it gets the
+ * identity instead of a clamped, gauge-noncovariant plaquette.
+ * \param[in,out] lat Lattice to read `Ux`/`Uy` from and write \c Uy1
+ * into.
+ * \param[in] N Lattice side length.
+ * \param[in] one Reusable identity matrix.
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void tmunuPlaquetteTeam(
     Lattice *lat, int N, const Matrix &one, TmunuPlaquetteScratch &scratch) {
     int pos, posX, posY;
@@ -369,21 +535,44 @@ void tmunuPlaquetteTeam(
     }
 }
 
+/// Scratch matrices for tmunuDiagonalElectricTeam(), reused across
+/// cells to avoid reallocating.
 struct TmunuDiagonalElectricScratch {
+    /// This cell's electric field \f$E_1\f$ (\c U).
     Matrix E1;
+    /// This cell's electric field \f$E_2\f$ (\c U2).
     Matrix E2;
+    /// \f$E_1\f$ at the \f$+\hat y\f$ neighbor.
     Matrix E1p;
+    /// \f$E_2\f$ at the \f$+\hat x\f$ neighbor.
     Matrix E2p;
+    /// This cell's \f$\pi\f$.
     Matrix pi;
+    /// \f$\pi\f$ at the \f$+\hat x\f$ neighbor.
     Matrix piX;
+    /// \f$\pi\f$ at the \f$+\hat y\f$ neighbor.
     Matrix piY;
+    /// \f$\pi\f$ at the \f$(+\hat x,+\hat y)\f$ neighbor.
     Matrix piXY;
 };
 
-// T^tautau, T^xx, T^yy, T^etaeta: electric (E, pi) contribution. Sets each
-// field outright (rather than adding to it) since this runs before
-// tmunuDiagonalMagneticTeam, which adds the magnetic/gradient contribution
-// on top.
+/**
+ * Sets \f$T^{\tau\tau}\f$, \f$T^{xx}\f$, \f$T^{yy}\f$,
+ * \f$T^{\eta\eta}\f$'s electric (\f$E\f$, \f$\pi\f$) contribution.
+ * Sets each field outright (rather than adding to it) since this runs
+ * before tmunuDiagonalMagneticTeam(), which adds the magnetic/gradient
+ * contribution on top; zeroes all four at the nonphysical boundary
+ * ring.
+ * \param[in,out] lat Lattice to read `U`/`U2`/`Ux2` from and write
+ * \f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/\f$T^{\eta\eta}\f$ into
+ * (via `lat->cells`).
+ * \param[in] N Lattice side length.
+ * \param[in] it Current time step index, used to convert to physical
+ * units.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void tmunuDiagonalElectricTeam(
     Lattice *lat, int N, int it, double dtau, double g,
     TmunuDiagonalElectricScratch &scratch) {
@@ -447,25 +636,61 @@ void tmunuDiagonalElectricTeam(
     }
 }
 
+/// Scratch matrices for tmunuDiagonalMagneticTeam(), reused across
+/// cells to avoid reallocating.
 struct TmunuDiagonalMagneticScratch {
+    /// This cell's spatial plaquette, from `lat->Uy1`
+    /// (tmunuPlaquetteTeam()'s output).
     Matrix Uplaq;
+    /// This cell's \f$\phi\f$.
     Matrix phi;
+    /// \f$\phi\f$ at the \f$+\hat x\f$ neighbor.
     Matrix phiX;
+    /// \f$\phi\f$ at the \f$+\hat y\f$ neighbor.
     Matrix phiY;
+    /// \f$\phi\f$ at the \f$(+\hat x,+\hat y)\f$ neighbor.
     Matrix phiXY;
+    /// \f$U_x\f$ used to parallel-transport \f$\phi\f$ (reused for two
+    /// different base cells within one iteration).
     Matrix Ux;
+    /// \f$U_y\f$ used to parallel-transport \f$\phi\f$ (reused for two
+    /// different base cells within one iteration).
     Matrix Uy;
+    /// Conjugate-transposed \c Ux.
     Matrix UDx;
+    /// Conjugate-transposed \c Uy.
     Matrix UDy;
+    /// \f$\phi_X\f$ parallel-transported back to this cell,
+    /// \f$U_x\phi_X U_x^\dagger\f$.
     Matrix phiTildeX;
+    /// \f$\phi_Y\f$ parallel-transported back to this cell,
+    /// \f$U_y\phi_Y U_y^\dagger\f$.
     Matrix phiTildeY;
+    /// \f$\phi_{XY}\f$ parallel-transported back to the \f$+\hat
+    /// y\f$ neighbor via \f$U_x\f$ there.
     Matrix phiTildeXY1;
+    /// \f$\phi_{XY}\f$ parallel-transported back to the \f$+\hat
+    /// x\f$ neighbor via \f$U_y\f$ there.
     Matrix phiTildeXY2;
 };
 
-// T^tautau, T^xx, T^yy, T^etaeta: adds the magnetic (plaquette) and gradient
-// (phi) contribution on top of whatever tmunuDiagonalElectricTeam set
-// (0 at the boundary, the electric part elsewhere).
+/**
+ * Adds \f$T^{\tau\tau}\f$, \f$T^{xx}\f$, \f$T^{yy}\f$,
+ * \f$T^{\eta\eta}\f$'s magnetic (plaquette) and gradient (\f$\phi\f$)
+ * contribution on top of whatever tmunuDiagonalElectricTeam() set
+ * (`0` at the boundary, the electric part elsewhere); a no-op at the
+ * nonphysical boundary ring.
+ * \param[in,out] lat Lattice to read `Uy1`/`Uy2`/`Ux`/`Uy` from
+ * and add into
+ * \f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/\f$T^{\eta\eta}\f$ (via
+ * `lat->cells`).
+ * \param[in] N Lattice side length.
+ * \param[in] it Current time step index, used to convert to physical
+ * units.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void tmunuDiagonalMagneticTeam(
     Lattice *lat, int N, int it, double dtau, double g,
     TmunuDiagonalMagneticScratch &scratch) {
@@ -554,84 +779,205 @@ void tmunuDiagonalMagneticTeam(
     }
 }
 
+/**
+ * Scratch matrices for tmunuOffDiagonalTeam(), reused across cells to
+ * avoid reallocating.
+ *
+ * Naming convention: `U`/`UD` is the transverse gauge link (`x` or
+ * `y` direction) or its conjugate transpose; a trailing `pX`/`mX`/
+ * `pY`/`mY` (optionally combined, e.g. `pXpY`) selects a neighbor
+ * shifted \f$\pm1\f$ cell in that direction, `p2X`/`p2Y` a neighbor
+ * shifted \f$+2\f$ cells; a bare name (no suffix) is this cell. `E1`/
+ * `E2`/`pi`/`phi` follow the same neighbor-suffix convention for the
+ * electric fields, \f$\pi\f$, and \f$\phi\f$.
+ */
 struct TmunuOffDiagonalScratch {
+    /// This cell's \f$U_x\f$.
     Matrix Ux;
+    /// This cell's \f$U_y\f$.
     Matrix Uy;
+    /// \f$U_x\f$ at the \f$-\hat x\f$ neighbor.
     Matrix UxmX;
+    /// \f$U_y\f$ at the \f$-\hat y\f$ neighbor.
     Matrix UymY;
+    /// Conjugate-transposed \c Ux.
     Matrix UDx;
+    /// Conjugate-transposed \c Uy.
     Matrix UDy;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$-\hat x\f$ neighbor.
     Matrix UDxmX;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$-\hat y\f$ neighbor.
     Matrix UDymY;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$(-\hat x,+\hat
+    /// y)\f$ neighbor.
     Matrix UDxmXpY;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$(+\hat x,+\hat
+    /// y)\f$ neighbor.
     Matrix UDxpXpY;
+    /// \f$U_x\f$ at the \f$+\hat x\f$ neighbor.
     Matrix UxpX;
+    /// \f$U_x\f$ at the \f$+\hat y\f$ neighbor.
     Matrix UxpY;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$+\hat y\f$ neighbor.
     Matrix UDxpY;
+    /// \f$U_x\f$ at the \f$(+\hat x,+\hat y)\f$ neighbor.
     Matrix UxpXpY;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$(+\hat x,-\hat
+    /// y)\f$ neighbor.
     Matrix UDypXmY;
+    /// \f$U_y\f$ at the \f$+\hat y\f$ neighbor.
     Matrix UypY;
+    /// \f$U_y\f$ at the \f$+\hat x\f$ neighbor.
     Matrix UypX;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$+\hat x\f$ neighbor.
     Matrix UDypX;
+    /// \f$U_y\f$ at the \f$(+\hat x,+\hat y)\f$ neighbor.
     Matrix UypXpY;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$(+\hat x,+\hat
+    /// y)\f$ neighbor.
     Matrix UDypXpY;
+    /// \f$U_y\f$ at the \f$-\hat x\f$ neighbor.
     Matrix UymX;
+    /// \f$U_x\f$ at the \f$(-\hat x,+\hat y)\f$ neighbor.
     Matrix UxmXpY;
+    /// \f$U_x\f$ at the \f$-\hat y\f$ neighbor.
     Matrix UxmY;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$-\hat y\f$ neighbor.
     Matrix UDxmY;
+    /// \f$U_y\f$ at the \f$(+\hat x,-\hat y)\f$ neighbor.
     Matrix UypXmY;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$+2\hat x\f$ neighbor.
     Matrix UDyp2X;
+    /// \f$U_y\f$ at the \f$+2\hat x\f$ neighbor.
     Matrix Uyp2X;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$+\hat x\f$ neighbor.
     Matrix UDxpX;
+    /// \f$U_x\f$ at the \f$+2\hat y\f$ neighbor.
     Matrix Uxp2Y;
+    /// Conjugate-transposed \f$U_x\f$ at the \f$+2\hat y\f$ neighbor.
     Matrix UDxp2Y;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$+\hat y\f$ neighbor.
     Matrix UDypY;
+    /// Conjugate-transposed \f$U_y\f$ at the \f$-\hat x\f$ neighbor.
     Matrix UDymX;
+    /// This cell's electric field \f$E_1\f$.
     Matrix E1;
+    /// This cell's electric field \f$E_2\f$.
     Matrix E2;
+    /// \f$E_1\f$ at the \f$+\hat y\f$ neighbor.
     Matrix E1p;
+    /// \f$E_2\f$ at the \f$+\hat x\f$ neighbor.
     Matrix E2p;
+    /// This cell's \f$\pi\f$.
     Matrix pi;
+    /// \f$\pi\f$ at the \f$+\hat x\f$ neighbor.
     Matrix piX;
+    /// \f$\pi\f$ at the \f$+\hat y\f$ neighbor.
     Matrix piY;
+    /// \f$\pi\f$ at the \f$(+\hat x,+\hat y)\f$ neighbor.
     Matrix piXY;
+    /// This cell's \f$\phi\f$.
     Matrix phi;
+    /// \f$\phi\f$ at the \f$+\hat x\f$ neighbor.
     Matrix phiX;
+    /// \f$\phi\f$ at the \f$+\hat y\f$ neighbor.
     Matrix phiY;
+    /// \f$\phi\f$ at the \f$(+\hat x,+\hat y)\f$ neighbor.
     Matrix phiXY;
+    /// \f$\phi\f$ at the \f$-\hat x\f$ neighbor.
     Matrix phimX;
+    /// \f$\phi\f$ at the \f$-\hat y\f$ neighbor.
     Matrix phimY;
+    /// \f$\phi\f$ at the \f$(+2\hat x,+\hat y)\f$ neighbor.
     Matrix phi2XY;
+    /// \f$\phi\f$ at the \f$(+\hat x,+2\hat y)\f$ neighbor.
     Matrix phiX2Y;
+    /// \f$\phi\f$ at the \f$+2\hat x\f$ neighbor.
     Matrix phi2X;
+    /// \f$\phi\f$ at the \f$+2\hat y\f$ neighbor.
     Matrix phi2Y;
+    /// \f$\phi\f$ at the \f$(-\hat x,+\hat y)\f$ neighbor.
     Matrix phimXpY;
+    /// \f$\phi\f$ at the \f$(+\hat x,-\hat y)\f$ neighbor.
     Matrix phipXmY;
+    /// Scratch for one four-link chain product, reused for each of
+    /// the `xMinus*`/`yPlus*` combinations below.
     Matrix chainA;
+    /// Scratch for the other four-link chain product paired with \c
+    /// chainA.
     Matrix chainB;
+    /// Traceless difference of the two four-link chains centered at
+    /// this cell, contributing to \f$T^{x\eta}\f$/\f$T^{y\eta}\f$.
     Matrix xMinus0;
+    /// Same as \c xMinus0, evaluated at the \f$-\hat x\f$-shifted
+    /// chain.
     Matrix xMinusM;
+    /// Same as \c xMinus0, evaluated at the \f$+\hat x\f$-shifted
+    /// chain.
     Matrix xMinusP;
+    /// Same as \c xMinus0, evaluated at the transposed
+    /// (\f$x\leftrightarrow y\f$) chain ordering.
     Matrix xMinusT;
+    /// \f$\text{xMinus0}+\text{xMinusM}\f$.
     Matrix xMinusSum0;
+    /// \f$\text{xMinusP}+\text{xMinusT}\f$.
     Matrix xMinusSum1;
+    /// The \f$y\f$-oriented analog of \c xMinus0; equal to
+    /// \f$-\text{xMinus0}\f$ by the chains' symmetry, so it's obtained
+    /// by a sign flip rather than recomputed.
     Matrix yPlus0;
+    /// Same as \c yPlus0, evaluated at the \f$-\hat y\f$-shifted
+    /// chain.
     Matrix yPlusM;
+    /// Same as \c yPlus0, evaluated at the \f$+\hat y\f$-shifted
+    /// chain.
     Matrix yPlusP;
+    /// Same as \c yPlus0, evaluated at the transposed chain ordering.
     Matrix yPlusT;
+    /// \f$\text{yPlus0}+\text{yPlusM}\f$.
     Matrix yPlusSum0;
+    /// \f$\text{yPlusP}+\text{yPlusT}\f$.
     Matrix yPlusSum1;
+    /// This cell's covariant gradient of \f$\phi\f$ in \f$x\f$,
+    /// \f$\phi_X-\phi\f$ (transported).
     Matrix covGradX0;
+    /// This cell's covariant gradient of \f$\phi\f$ in \f$y\f$,
+    /// \f$\phi_Y-\phi\f$ (transported).
     Matrix covGradY0;
+    /// \c covGradX0-like gradient evaluated at the \f$+\hat y\f$
+    /// neighbor.
     Matrix gradXAtY;
+    /// \c covGradY0-like gradient evaluated at the \f$+\hat x\f$
+    /// neighbor.
     Matrix gradYAtX;
+    /// \c gradXAtY parallel-transported back to this cell.
     Matrix gradXAtYToPos;
+    /// \c gradYAtX parallel-transported back to this cell.
     Matrix gradYAtXToPos;
+    /// \f$E_1\f$ at the \f$+\hat y\f$ neighbor, parallel-transported
+    /// back to this cell.
     Matrix E1AtYToPos;
+    /// \f$E_2\f$ at the \f$+\hat x\f$ neighbor, parallel-transported
+    /// back to this cell.
     Matrix E2AtXToPos;
 };
 
-// T^taux, T^tauy, T^taueta, T^xy, T^xeta, T^yeta.
+/**
+ * Computes the six off-diagonal energy-momentum tensor components
+ * (\f$T^{\tau x}\f$, \f$T^{\tau y}\f$, \f$T^{\tau\eta}\f$,
+ * \f$T^{xy}\f$, \f$T^{x\eta}\f$, \f$T^{y\eta}\f$) at every cell,
+ * zeroing all six at the nonphysical boundary ring.
+ * \param[in,out] lat Lattice to read the fields from and write the
+ * six components into (via `lat->cells`).
+ * \param[in] N Lattice side length.
+ * \param[in] it Current time step index, used to convert to physical
+ * units.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] one Reusable identity matrix.
+ * \param[in,out] scratch Thread-local scratch storage.
+ */
 void tmunuOffDiagonalTeam(
     Lattice *lat, int N, int it, double dtau, double g, double a,
     const Matrix &one, TmunuOffDiagonalScratch &scratch) {
@@ -948,8 +1294,17 @@ void tmunuOffDiagonalTeam(
     }
 }
 
-// epsilon = T^tautau (before lattice-unit rescaling), then rescales
-// T^tautau/T^xx/T^yy/T^etaeta and epsilon from lattice to physical units.
+/**
+ * Sets \f$\epsilon = T^{\tau\tau}\f$ (before lattice-unit rescaling),
+ * then rescales \f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/
+ * \f$T^{\eta\eta}\f$ and \f$\epsilon\f$ from lattice to physical
+ * units; zeroes all five at the nonphysical boundary ring.
+ * \param[in,out] lat Lattice to read/write
+ * \f$\epsilon\f$/\f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/
+ * \f$T^{\eta\eta}\f$ in place (via `lat->cells`).
+ * \param[in] N Lattice side length.
+ * \param[in] a Lattice spacing [fm].
+ */
 void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
@@ -974,11 +1329,25 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
     }
 }
 
-// Computes the local-coupling factor g^2/(4 pi alpha_s) at one cell, used to
-// rescale Tmunu/epsilon-derived quantities when running coupling is enabled
-// (alpha_s runs with either the local Qs at this cell or one of the
-// event-averaged Qs choices, per param->getRunWithLocalQs()/getRunWithQs()).
-// Returns 1 when running coupling is disabled.
+/**
+ * Computes the local-coupling factor \f$g^2/(4\pi\alpha_s)\f$ at one
+ * cell, used to rescale \f$T^{\mu\nu}\f$/\f$\epsilon\f$-derived
+ * quantities when running coupling is enabled (\f$\alpha_s\f$ runs
+ * with either the local \f$Q_s\f$ at this cell or one of the
+ * event-averaged \f$Q_s\f$ choices, per
+ * `param->getRunWithLocalQs()`/`getRunWithQs()`).
+ * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
+ * from (only used when `getRunWithLocalQs()==1`).
+ * \param[in] param Simulation parameters.
+ * \param[in] pos Flat cell index.
+ * \param[in] N Lattice side length.
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] c Running-coupling shape parameter.
+ * \param[in] muZero \f$\mu_0\f$ in the running-coupling formula.
+ * \return The local-coupling factor; `1` if running coupling is
+ * disabled.
+ */
 double computeRunningCouplingGfactor(
     Lattice *lat, Parameters *param, int pos, int N, double a, double g,
     double c, double muZero) {
@@ -1065,10 +1434,25 @@ double computeRunningCouplingGfactor(
         return 1.;
 }
 
-// Fills E1[pos] from sourceField[pos] (one of lat->U/U2/Ux2), scaling by
-// sqrt of the local running-coupling gfactor unless alpha_s runs with k_T
-// (in which case the k_T-dependent factor is applied later, per-mode, in
-// accumulateGluonSpectrum instead).
+/**
+ * Fills \p E1[pos] from \p sourceField[pos] (one of `lat->U`/`U2`/
+ * `Ux2`), scaling by the square root of the local running-coupling
+ * g-factor (computeRunningCouplingGfactor()) unless \f$\alpha_s\f$
+ * runs with \f$k_T\f$ (in which case the \f$k_T\f$-dependent factor
+ * is applied later, per-mode, in accumulateGluonSpectrum() instead).
+ * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
+ * from, forwarded to computeRunningCouplingGfactor().
+ * \param[in] param Simulation parameters.
+ * \param[in] N Lattice side length.
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] c Running-coupling shape parameter.
+ * \param[in] muZero \f$\mu_0\f$ in the running-coupling formula.
+ * \param[in] sourceField Field to copy from (`lat->U`, `lat->U2`, or
+ * `lat->Ux2`).
+ * \param[out] E1 Filled with the (optionally rescaled) field, as a
+ * pointer-per-cell view ready for `FFT::fftn`.
+ */
 void prepareSpectrumField(
     Lattice *lat, Parameters *param, int N, double a, double g, double c,
     double muZero, const std::vector<Matrix> &sourceField,
@@ -1087,12 +1471,46 @@ void prepareSpectrumField(
     }
 }
 
-// Accumulates E1's (already FFT'd) momentum-space spectrum into
-// dNdeta/dEdeta and the n/E/n2 k_T bins. useElectricNormalization selects
-// nkt's electric-field (E1/E2 passes: g^2/((it-0.5)dtau)) vs pi-field
-// ((it-0.5)dtau, no g^2) normalization. accumulateCounter records bin
-// occupancy into counter[]; only one of the three spectrum passes needs to,
-// since all three share the same k_T grid.
+/**
+ * Accumulates \p E1's (already FFT'd) momentum-space spectrum into
+ * `dNdeta`/`dEdeta` and the `n`/`E`/`n2` \f$k_T\f$ bins. Called
+ * once each for the \c U, \c U2, and \c Ux2 (\f$\pi\f$) fields by
+ * `Evolution::multiplicity()`.
+ * \param[in] param Simulation parameters.
+ * \param[in] N Lattice side length.
+ * \param[in] it Current time step index.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] c Running-coupling shape parameter.
+ * \param[in] muZero \f$\mu_0\f$ in the running-coupling formula.
+ * \param[in] dkt Momentum-bin width [lattice units].
+ * \param[in] bins Number of \f$k_T\f$ bins in `n`/`E`/`n2`/
+ * \p counter.
+ * \param[in] E1 The field's FFT'd momentum-space values, as a
+ * pointer-per-cell view.
+ * \param[in] useElectricNormalization Selects \c nkt's electric-field
+ * normalization (`true`, \f$g^2/((it-0.5)d\tau)\f$) vs. the
+ * \f$\pi\f$-field normalization (`false`, \f$(it-0.5)d\tau\f$, no
+ * \f$g^2\f$).
+ * \param[in] accumulateCounter Whether to also increment \p counter;
+ * only one of the three per-field passes needs to, since all three
+ * share the same \f$k_T\f$ grid.
+ * \param[in,out] dNdeta Running sum of \f$dN/dy\f$ (or \f$d\eta\f$),
+ * incremented by this field's contribution.
+ * \param[in,out] dEdeta Running sum of \f$dE/dy\f$ (or \f$d\eta\f$),
+ * incremented by this field's contribution.
+ * \param[in,out] n Binned \f$dN/d^2k_T\f$, incremented by this
+ * field's contribution, length \p bins.
+ * \param[in,out] E Binned \f$dE/d^2k_T\f$, incremented by this
+ * field's contribution, length \p bins.
+ * \param[in,out] n2 Alternate binned \f$dN/d^2k_T\f$ normalization
+ * (used for a cross-check), incremented by this field's contribution,
+ * length \p bins.
+ * \param[in,out] counter Number of lattice momentum modes falling
+ * into each bin, incremented only if \p accumulateCounter, length
+ * \p bins.
+ */
 void accumulateGluonSpectrum(
     Parameters *param, int N, int it, double dtau, double g, double a, double c,
     double muZero, double dkt, int bins, const std::vector<Matrix *> &E1,
@@ -1176,11 +1594,20 @@ void accumulateGluonSpectrum(
     }
 }
 
-// multiplicity()'s per-bin dN/dy, dE/dy weight: the phase-space factor
-// (ik+0.5)*dkt^2*2*pi, times a Jacobian ratio when the rapidity input is
-// actually a pseudorapidity (same factor computed identically three times
-// in the original -- unconditionally, and again inside the >3 and >6 GeV
-// cuts -- for both the usePseudoRapidity branches).
+/**
+ * `Evolution::multiplicity()`'s per-bin \f$dN/dy\f$, \f$dE/dy\f$
+ * weight: the phase-space factor \f$(ik+0.5)\,dk_T^2\,2\pi\f$, times
+ * a Jacobian ratio when the rapidity input is actually a
+ * pseudorapidity (the same factor previously computed identically
+ * three times -- unconditionally, and again inside the \f$k_T>3\f$
+ * and \f$k_T>6\f$ GeV cuts -- for both `usePseudoRapidity` branches).
+ * \param[in] param Simulation parameters.
+ * \param[in] m Jacobian mass term [GeV] (`param->getJacobianm()`).
+ * \param[in] ik Bin index.
+ * \param[in] dkt Momentum-bin width [lattice units].
+ * \param[in] a Lattice spacing [fm].
+ * \return The per-bin weight.
+ */
 double computeMultiplicityBinWeight(
     Parameters *param, double m, int ik, double dkt, double a) {
     const double base = (ik + 0.5) * dkt * dkt * 2. * M_PI;
@@ -1846,15 +2273,34 @@ void Evolution::u(Lattice *lat, Parameters *param, int it, bool finalFlag) {
 }
 
 namespace {
+/// Result of computeRotatedAnisotropy(): the rotated- and
+/// unrotated-frame \f$T^{xx}-T^{yy}\f$ spatial anisotropy sums.
 struct AnisotropyResult {
+    /// \f$\sum (T^{xx}_{\text{rot}}-T^{yy}_{\text{rot}})\f$ at the
+    /// sampled angle \f$\Psi\f$.
     double num;
+    /// \f$\sum (T^{xx}_{\text{rot}}+T^{yy}_{\text{rot}})\f$ at the
+    /// sampled angle \f$\Psi\f$.
     double den;
+    /// \f$\sum (T^{xx}-T^{yy})\f$ in the unrotated frame.
     double num2;
+    /// \f$\sum (T^{xx}+T^{yy})\f$ in the unrotated frame.
     double den2;
 };
 
-// eccentricity()'s doAniso==1 branch samples this at ten values of Psi
-// (previously ten copy-pasted ~25-line blocks, differing only in Psi).
+/**
+ * `Evolution::eccentricity()`'s `doAniso==1` branch samples this at
+ * ten values of \p Psi (previously ten copy-pasted ~25-line blocks,
+ * differing only in \p Psi): sums \f$T^{xx}-T^{yy}\f$ and
+ * \f$T^{xx}+T^{yy}\f$ over the whole lattice, both in the unrotated
+ * frame and after rotating \f$T^{xx}\f$/\f$T^{xy}\f$/\f$T^{yy}\f$ by
+ * \p Psi.
+ * \param[in] lat Lattice to read `Txx`/`Txy`/`Tyy` from.
+ * \param[in] N Lattice side length.
+ * \param[in] Psi Rotation angle [rad].
+ * \return The summed rotated- and unrotated-frame anisotropy
+ * numerators/denominators.
+ */
 AnisotropyResult computeRotatedAnisotropy(Lattice *lat, int N, double Psi) {
     double num = 0., den = 0., num2 = 0., den2 = 0.;
     for (int ix = 0; ix < N; ix++) {

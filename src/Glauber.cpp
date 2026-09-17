@@ -31,14 +31,24 @@ struct NucleusTemplate {
     /// Species name, matched case-sensitively against
     /// Glauber::findNucleusData()'s \p name argument.
     const char *name;
-    /// Mass number, atomic number.
-    int A, Z;
-    /// Woods-Saxon half-density radius [fm], profile-shape parameter
-    /// [dimensionless or 1/fm], surface diffuseness [fm].
-    double R_WS, w_WS, a_WS;
-    /// Quadrupole/octupole/hexadecapole deformation [dimensionless]
-    /// (\c beta2 may be \c kUseCallerBeta2) and triaxiality angle [rad].
-    double beta2, beta3, beta4, gamma;
+    /// Mass number.
+    int A;
+    /// Atomic number.
+    int Z;
+    /// Woods-Saxon half-density radius [fm].
+    double R_WS;
+    /// Profile-shape parameter [dimensionless or 1/fm].
+    double w_WS;
+    /// Surface diffuseness [fm].
+    double a_WS;
+    /// Quadrupole deformation [dimensionless] (may be `kUseCallerBeta2`).
+    double beta2;
+    /// Octupole deformation [dimensionless].
+    double beta3;
+    /// Hexadecapole deformation [dimensionless].
+    double beta4;
+    /// Triaxiality angle [rad].
+    double gamma;
     /// Density-function selector, assigned identically to
     /// `Nucleus::anumFunc`/`anumFuncIntegrand`/`densityFunc` (1=2HO or
     /// readFromFile, 2=3Gauss, 3=3Fermi, 8=Hulthen).

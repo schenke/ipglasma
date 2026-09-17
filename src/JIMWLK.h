@@ -19,7 +19,8 @@
  * lines, run before the classical Yang-Mills evolution.
  *
  * Each evolutionStep() advances one nucleus' Wilson-line field by one
- * step of the JIMWLK Langevin equation: real Gaussian noise is drawn
+ * step of the JIMWLK Langevin equation, using the simple Langevin
+ * discretization of \cite Lappi:2012vw: real Gaussian noise is drawn
  * per site/color, convolved (via FFT) with a regularized momentum-space
  * kernel \c K_ built once by initializeK(), gauge-covariantly rotated
  * by the current Wilson line, convolved with \c K_ a second time, and
@@ -105,7 +106,7 @@ class JIMWLK {
     std::vector<Matrix *> VxsiVx_;
     /// Same as \c VxsiVx_, \f$y\f$ component.
     std::vector<Matrix *> VxsiVy_;
-    /// Reusable zero matrix, to reset \c VxsiVx_/\c VxsiVy_ at the
+    /// Reusable zero matrix, to reset `VxsiVx_`/`VxsiVy_` at the
     /// start of each evolutionStep() without reallocating.
     Matrix zero_ = Matrix(0.);
 
@@ -178,7 +179,7 @@ class JIMWLK {
      */
     double getAlphas(const double x, const double y) const;
     /**
-     * Allocates the per-step Gaussian-noise buffers \c xi_/\c xi2_/\c
+     * Allocates the per-step Gaussian-noise buffers `xi_`/`xi2_`/\c
      * CKxi_ (idempotent: a no-op if already allocated).
      */
     void initializeNoise();

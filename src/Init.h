@@ -44,7 +44,7 @@ class Init {
     /// Number of tabulated rapidity points in \c Qs2Nuclear_/readNuclearQs().
     int const static iymaxNuc_ = 44;  // for the Tp-y table
 
-    /// Number of tabulated \f$T_p\f$ points in \c Qs2Nuclear_/\c Tlist_
+    /// Number of tabulated \f$T_p\f$ points in `Qs2Nuclear_`/`Tlist_`
     /// (updated in Sep 2026 to a 10x extended \f$T_p\f$ range).
     int const static iTpmax_ = 240;
 
@@ -84,16 +84,33 @@ class Init {
 
     /// Reusable identity matrix.
     Matrix one_;
-    /// Sampled constituent-quark ("hot spot") transverse positions and
-    /// widths for the projectile (\c xq1_/\c yq1_/\c BGq1_, one inner
-    /// vector per nucleon) and target (\c xq2_/\c yq2_/\c BGq2_); \c
-    /// gauss1_/\c gauss2_ hold each nucleon's (or, if substructure is
-    /// off, each constituent quark's) \f$Q_s\f$-normalization factor
-    /// from sampleQsNormalization(). Populated by
-    /// sampleConstituentQuarkGeometry(), consumed by
+    /// Sampled constituent-quark ("hot spot") transverse \f$x\f$
+    /// positions for the projectile, one inner vector per nucleon.
+    /// Populated by sampleConstituentQuarkGeometry(), consumed by
     /// computeNucleonThicknessAtCell().
-    vector<vector<double>> xq1_, xq2_, yq1_, yq2_, BGq1_, BGq2_, gauss1_,
-        gauss2_;
+    vector<vector<double>> xq1_;
+    /// \copydoc xq1_
+    /// (target instead of projectile).
+    vector<vector<double>> xq2_;
+    /// Sampled constituent-quark transverse \f$y\f$ positions for the
+    /// projectile; see \c xq1_.
+    vector<vector<double>> yq1_;
+    /// \copydoc yq1_
+    /// (target instead of projectile).
+    vector<vector<double>> yq2_;
+    /// Sampled constituent-quark widths for the projectile; see \c
+    /// xq1_.
+    vector<vector<double>> BGq1_;
+    /// \copydoc BGq1_
+    /// (target instead of projectile).
+    vector<vector<double>> BGq2_;
+    /// Each projectile nucleon's (or, if substructure is off, each
+    /// constituent quark's) \f$Q_s\f$-normalization factor from
+    /// sampleQsNormalization(); see \c xq1_.
+    vector<vector<double>> gauss1_;
+    /// \copydoc gauss1_
+    /// (target instead of projectile).
+    vector<vector<double>> gauss2_;
 
   public:
     /**
@@ -133,7 +150,7 @@ class Init {
      * \f$\mp b/2\f$ along the impact-parameter direction so they sit at
      * their correct separated positions on the shared lattice, filling
      * with the identity outside the lattice bounds.
-     * \param[in,out] lat Lattice whose \c U/\c U2 fields are shifted in
+     * \param[in,out] lat Lattice whose `U`/`U2` fields are shifted in
      * place.
      * \param[in] param Simulation parameters; `getb()`/`getPhiRP()`
      * give the impact parameter and reaction-plane angle.
@@ -142,7 +159,7 @@ class Init {
     /**
      * Matches the projectile's and target's Wilson lines across the
      * forward light cone to obtain the post-collision gauge links (\c
-     * Ux/\c Uy), electric field (\c U/\c U2, reused as scratch and then
+     * Ux/\c Uy), electric field (`U`/`U2`, reused as scratch and then
      * as the actual electric-field components), and momentum
      * \f$\pi\f$ (\c Ux2) that seed the subsequent classical Yang-Mills
      * evolution. Runs its steps (see below) in sequence inside one
@@ -154,7 +171,7 @@ class Init {
      */
     void initializeForwardLightCone(Lattice *lat, Parameters *param);
     /**
-     * Replaces any NaN \c U/\c U2 (left over from a failed
+     * Replaces any NaN `U`/`U2` (left over from a failed
      * forward-lightcone solve at a previous stage) with the identity.
      * \param[in,out] lat Lattice to sanitize.
      * \param[in] N2 Total number of lattice sites.
@@ -172,10 +189,10 @@ class Init {
     };
     /**
      * Computes the pre-collision forward/backward gauge links \c
-     * Ux1/\c Uy1 (from \c U) and \c Ux2/\c Uy2 (from \c U2) needed by
+     * Ux1/\c Uy1 (from \c U) and `Ux2`/`Uy2` (from \c U2) needed by
      * the forward-lightcone matching.
-     * \param[in,out] lat Lattice to read \c U/\c U2 from and write \c
-     * Ux1/\c Uy1/\c Ux2/\c Uy2 into.
+     * \param[in,out] lat Lattice to read `U`/`U2` from and write \c
+     * Ux1/`Uy1`/`Ux2`/`Uy2` into.
      * \param[in] N2 Total number of lattice sites.
      * \param[in,out] scratch Thread-local scratch storage.
      */
@@ -202,12 +219,12 @@ class Init {
         Matrix UDy2;
     };
     /**
-     * Solves for the post-collision gauge links \c Ux/\c Uy from \c
-     * Ux1/\c Ux2 and \c Uy1/\c Uy2 via findUInForwardLightcone(),
+     * Solves for the post-collision gauge links `Ux`/`Uy` from \c
+     * Ux1/\c Ux2 and `Uy1`/`Uy2` via findUInForwardLightcone(),
      * logging a warning at each cell where the Newton solve didn't
      * converge.
-     * \param[in,out] lat Lattice to read \c Ux1/\c Uy1/\c Ux2/\c Uy2
-     * from and write \c Ux/\c Uy into.
+     * \param[in,out] lat Lattice to read `Ux1`/`Uy1`/`Ux2`/`Uy2`
+     * from and write `Ux`/`Uy` into.
      * \param[in] param Simulation parameters; only used for the
      * warning message's cell coordinates and `getRandomSeed()`/
      * `getEventId()` (to seed findUInForwardLightcone()'s deterministic
@@ -223,27 +240,44 @@ class Init {
      * reused across cells to avoid reallocating.
      */
     struct ForwardLightconeElectricFieldScratch {
+        /// General scratch accumulating the field contribution.
         Matrix temp2;
+        /// `lat->Ux1[pos] - lat->Ux2[pos]` (or the same at a neighbor
+        /// cell): the difference between the pre-collision forward/
+        /// backward links in \f$x\f$.
         Matrix Ux1mUx2;
+        /// Conjugate-transposed `lat->Ux1` at the current cell.
         Matrix UDx1;
+        /// Conjugate-transposed `lat->Ux2` at the current cell.
         Matrix UDx2;
+        /// \c UDx1 minus \c UDx2.
         Matrix UDx1mUDx2;
+        /// The post-collision link \c Ux at the current cell.
         Matrix Ux;
+        /// Conjugate-transposed \c Ux.
         Matrix UDx;
+        /// `lat->Uy1[pos] - lat->Uy2[pos]` (or the same at a neighbor
+        /// cell): the difference between the pre-collision forward/
+        /// backward links in \f$y\f$.
         Matrix Uy1mUy2;
+        /// Conjugate-transposed `lat->Uy1` at the current cell.
         Matrix UDy1;
+        /// Conjugate-transposed `lat->Uy2` at the current cell.
         Matrix UDy2;
+        /// \c UDy1 minus \c UDy2.
         Matrix UDy1mUDy2;
+        /// The post-collision link \c Uy at the current cell.
         Matrix Uy;
+        /// Conjugate-transposed \c Uy.
         Matrix UDy;
     };
     /**
      * Computes the initial electric field's contribution from one
-     * direction (\p neighborX/\p neighborY select minus-shifted or
+     * direction (`neighborX`/`neighborY` select minus-shifted or
      * plus-shifted neighbors), written into \p outputField. Called
      * once with `(posmX, posmY, lat->U)` and once with `(pospX, pospY,
      * lat->U2)` -- previously two copy-pasted loops.
-     * \param[in] lat Lattice to read \c Ux1/\c Uy1/\c Ux2/\c Uy2/\c
+     * \param[in] lat Lattice to read `Ux1`/`Uy1`/`Ux2`/`Uy2`/\c
      * Ux/\c Uy from.
      * \param[in] N2 Total number of lattice sites.
      * \param[in] neighborX Neighbor-index table to use in \f$x\f$
@@ -264,16 +298,19 @@ class Init {
      * reused across cells to avoid reallocating.
      */
     struct ForwardLightconePlaquetteScratch {
+        /// Conjugate-transposed neighbor link in \f$x\f$.
         Matrix UDx;
+        /// Conjugate-transposed neighbor link in \f$y\f$.
         Matrix UDy;
+        /// The computed spatial plaquette.
         Matrix Uplaq;
     };
     /**
-     * Computes the spatial plaquette from \c Ux/\c Uy into \c
+     * Computes the spatial plaquette from `Ux`/`Uy` into \c
      * lat->Uy1 (reused as scratch here, ahead of
      * computeForwardLightconePiTeam()/resetForwardLightconeFieldsTeam()
      * repurposing it further).
-     * \param[in,out] lat Lattice to read \c Ux/\c Uy from and write \c
+     * \param[in,out] lat Lattice to read `Ux`/`Uy` from and write \c
      * Uy1 into.
      * \param[in] N2 Total number of lattice sites.
      * \param[in,out] scratch Thread-local scratch storage.
@@ -291,7 +328,7 @@ class Init {
      */
     void computeForwardLightconePiTeam(Lattice *lat, Parameters *param, int N2);
     /**
-     * Zeroes \c lat->U/\c U2/\c Uy2 and resets \c lat->Ux1 to the
+     * Zeroes \c lat->U/`U2`/`Uy2` and resets \c lat->Ux1 to the
      * identity, now that this event's forward-lightcone fields have
      * been consumed by the steps above.
      * \param[in,out] lat Lattice to reset.
@@ -337,7 +374,7 @@ class Init {
         Parameters *param, Random *random, Glauber *glauber);
     /**
      * Samples nucleon positions by drawing a random pre-tabulated
-     * configuration from \c nucleonPosArrA_/\c nucleonPosArrB_,
+     * configuration from `nucleonPosArrA_`/`nucleonPosArrB_`,
      * falling back to sampleTAWoodsSaxon()-style generation for
      * whichever nucleus has no configurations loaded.
      * \param[in,out] random Random-number source.
@@ -402,7 +439,7 @@ class Init {
 
     /**
      * Bilinearly interpolates the tabulated \f$Q_s^2(T_p, y)\f$ table
-     * (\c Qs2Nuclear_/\c Tlist_).
+     * (`Qs2Nuclear_`/`Tlist_`).
      * \param[in] T Nuclear thickness \f$T_p\f$ to interpolate at.
      * \param[in] y Rapidity to interpolate at; exits with an error if
      * above the tabulated range.
@@ -434,7 +471,7 @@ class Init {
      * computeCellColorCharge()'s `useFluctuatingx==1` iterative solve
      * for one nucleus's \f$g^2\mu^2\f$ at this cell: iterates the
      * self-consistent local rapidity/\f$Q_s\f$ relation (following the
-     * \f$x\f$-dependent \f$Q_s\f$ suppression of arXiv:1212.2974
+     * \f$x\f$-dependent \f$Q_s\f$ suppression of \cite Rezaeian:2012ji
      * Eq. (17)) until the rapidity estimate converges to within
      * \f$10^{-3}\f$.
      * \param[in] param Simulation parameters.
@@ -497,7 +534,7 @@ class Init {
      */
     void sampleNucleonAnisotropyAngles(Parameters *param, Random *random);
     /**
-     * Samples constituent-quark positions/widths (\c xq1_/\c yq1_/\c
+     * Samples constituent-quark positions/widths (`xq1_`/`yq1_`/\c
      * BGq1_ etc., via samplePartonPositions()) and each nucleon's
      * \f$Q_s\f$-normalization factor (via sampleQsNormalization()), for
      * both nuclei.
@@ -696,7 +733,7 @@ class Init {
      * (getUfromExponent()), and left-multiply onto the running Wilson
      * line. Optionally writes ML training data (`writeOutputs==5`)
      * and/or an initial Wilson-line snapshot.
-     * \param[in,out] lat Lattice whose \c U/\c U2 are set.
+     * \param[in,out] lat Lattice whose `U`/`U2` are set.
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.
      */
@@ -733,7 +770,7 @@ class Init {
      * Reads both nuclei's Wilson lines from disk, using
      * Lattice::generateWilsonLineDataFileName() to build each file
      * name, in text or binary format depending on \p format.
-     * \param[in,out] lat Lattice whose \c U/\c U2 are set.
+     * \param[in,out] lat Lattice whose `U`/`U2` are set.
      * \param[in] param Simulation parameters.
      * \param[in] format `1` for plain text, `2` for binary; exits with
      * an error for any other value
@@ -856,8 +893,8 @@ class Init {
     /**
      * Loads pre-tabulated binary nucleon configurations for light
      * nuclei (deuteron through Pb-208) into \p nucleonPosArr, selecting
-     * the file by \p nucleusA/\p lightNucleusOption (and, for the
-     * deuteron, \p polarizationFlag/\p polJz). A no-op if \p
+     * the file by `nucleusA`/`lightNucleusOption` (and, for the
+     * deuteron, `polarizationFlag`/`polJz`). A no-op if \p
      * nucleonPosArr is already populated, or if \p nucleusA isn't one
      * of the supported species (in which case nucleon positions are
      * sampled fresh instead, elsewhere).
@@ -912,7 +949,7 @@ class Init {
      * Generates an undeformed (spherically symmetric) Woods-Saxon
      * nucleon configuration: samples each nucleon's radius via
      * sampleRFromWoodsSaxon() (protons and neutrons from
-     * possibly-different \p a_WS/\p R_WS, via \p dR_np/\p da_np), then
+     * possibly-different `a_WS`/`R_WS`, via `dR_np`/`da_np`), then
      * places them at random angles subject to a best-effort (up to 100
      * retries) minimum-distance rejection, and recenters the result.
      * \param[in,out] random Random-number source.

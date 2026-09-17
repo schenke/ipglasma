@@ -17,6 +17,7 @@
  */
 namespace su3 {
 
+/// Shorthand for this namespace's scalar type.
 using Complex = std::complex<double>;
 
 /**

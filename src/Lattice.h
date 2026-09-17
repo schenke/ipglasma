@@ -131,7 +131,7 @@ class Lattice {
      * MatrixToString()`. Format `2` (binary): a
      * `{N, Nc, L, a, rapidity}` header followed by every site's 9
      * complex components as consecutive `{real, imag}` `double` pairs,
-     * indexed `N*ix+iy` (matching every other \c U/\c U2 indexing in
+     * indexed `N*ix+iy` (matching every other `U`/`U2` indexing in
      * the codebase; see Init::readVFromFile for the matching reader).
      * Exits with an error for any other `getWriteWilsonLines()` value,
      * or if the binary write fails.

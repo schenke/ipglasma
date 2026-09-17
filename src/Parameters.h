@@ -99,7 +99,7 @@ class Parameters {
     double rapidityA_;
     /// Same as \c rapidityA_, for the target.
     double rapidityB_;
-    /// Whether \c rapidityA_/\c rapidityB_ hold pseudorapidity instead
+    /// Whether `rapidityA_`/`rapidityB_` hold pseudorapidity instead
     /// of rapidity (`1`), applying the corresponding Jacobian.
     int usePseudoRapidity_;
     /// Average \f$Q_s\f$ (maximum of nuclei A and B), used as the
@@ -247,7 +247,7 @@ class Parameters {
     /// its mean at every transverse position (`1`) or not (`0`).
     int smearQs_;
     /// Width of the Gaussian smearing around the mean \f$g^2\mu^2\f$
-    /// (parameter \f$\sigma\f$ in Eq. (23) of arXiv:1607.01711).
+    /// (parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
     double smearingWidth_;
     /// Whether to use a hard-sphere profile (`0`) or Gaussian cross
     /// section (`1`) to decide whether a nucleon is wounded.
@@ -306,7 +306,7 @@ class Parameters {
     /// Minimum inter-nucleon distance [fm], enforced when \c
     /// forceDminFlag_ is set.
     double d_min_;
-    /// Whether \c R_WS_/\c a_WS_/\c beta2_/\c beta3_/\c beta4_/\c
+    /// Whether `R_WS_`/`a_WS_`/`beta2_`/`beta3_`/`beta4_`/\c
     /// gamma_ override a nucleus species' built-in deformation
     /// parameters.
     bool setWSDeformParams_;
@@ -335,13 +335,13 @@ class Parameters {
     /// coupling.
     double jimwlk_alphas_;
     /// Infrared regulator [GeV] in the JIMWLK kernel (see Eq. (21) of
-    /// arXiv:2207.03712).
+    /// \cite Mantysaari:2022sux).
     double m_jimwlk_;
     /// Regulator [GeV] in JIMWLK's running \f$\alpha_s(r)\f$ (Eq. (22)
-    /// of arXiv:2207.03712).
+    /// of \cite Mantysaari:2022sux).
     double mu0_jimwlk_;
     /// \f$\Lambda_{QCD}\f$ [GeV] in JIMWLK's running \f$\alpha_s(r)\f$
-    /// (Eq. (22) of arXiv:2207.03712).
+    /// (Eq. (22) of \cite Mantysaari:2022sux).
     double LambdaQCD_jimwlk_;
     /// JIMWLK evolution step size (recommended `0.005` with running
     /// coupling, `0.0005` with fixed coupling).
@@ -1013,7 +1013,7 @@ class Parameters {
      */
     double getUVdamp() const { return UVdamp_; }
     /**
-     * Sets whether \c R_WS_/\c a_WS_/\c beta2_/\c beta3_/\c beta4_/\c
+     * Sets whether `R_WS_`/`a_WS_`/`beta2_`/`beta3_`/`beta4_`/\c
      * gamma_ override a species' built-in deformation parameters.
      * \param[in] x Non-zero to enable the override.
      */
@@ -1412,12 +1412,12 @@ class Parameters {
      */
     int getGaussianWounding() const { return gaussianWounding_; }
     /**
-     * Sets whether \c rapidityA_/\c rapidityB_ hold pseudorapidity.
+     * Sets whether `rapidityA_`/`rapidityB_` hold pseudorapidity.
      * \param[in] x New value.
      */
     void setUsePseudoRapidity(int x) { usePseudoRapidity_ = x; }
     /**
-     * Returns whether \c rapidityA_/\c rapidityB_ hold pseudorapidity.
+     * Returns whether `rapidityA_`/`rapidityB_` hold pseudorapidity.
      * \return The stored value.
      */
     int getUsePseudoRapidity() const { return usePseudoRapidity_; }
@@ -1533,7 +1533,7 @@ class Parameters {
     void loadPosteriorParameterSets(const int itype);
     /**
      * Applies one row of a loaded posterior-fit table to this
-     * instance's \c m_/\c BG_/\c BGq_/\c smearingWidth_/\c NqBase_/\c
+     * instance's `m_`/`BG_`/`BGq_`/`smearingWidth_`/`NqBase_`/\c
      * QsmuRatio_/\c dq_min_.
      * \param[in] itype `1` uses \c posteriorParamSets_ (also sets \c
      * NqBase_ from the table); `2` or `4` use \c

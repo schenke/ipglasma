@@ -51,7 +51,12 @@ class Matrix {
      */
     explicit Matrix(NoInitTag);
 
+    /// Copyable: a plain `complex<double>[9]` with no owned resources.
     Matrix(const Matrix &) = default;
+    /**
+     * \copydoc Matrix(const Matrix &)
+     * \return `*this`, now a copy of the assigned-from matrix.
+     */
     Matrix &operator=(const Matrix &) = default;
     ~Matrix() = default;
 
@@ -372,6 +377,12 @@ class Matrix {
      */
     complex<double> traceOfProductOfMatrix(Matrix &a, Matrix &b) const;
 
+    /**
+     * Streams \p p's rows space/newline-separated, via `Matrix::operator()`.
+     * \param[in,out] os Stream to write to.
+     * \param[in] p Matrix to print.
+     * \return \p os, for chaining.
+     */
     friend ostream &operator<<(ostream &os, const Matrix &p) {
         for (int i = 0; i < kN; ++i) {
             for (int j = 0; j < kN; ++j) os << p(i, j);

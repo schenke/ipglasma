@@ -31,8 +31,13 @@ using std::stringstream;
 
 namespace {
 
-// SplitMix64 finalizer/counter step.  This is used only to construct a
-// deterministic, stateless retry stream for the forward-light-cone solver.
+/**
+ * SplitMix64 finalizer/counter step, used only to construct a
+ * deterministic, stateless retry stream for the forward-lightcone
+ * solver (see forwardLightconeRetrySeed()/deterministicRetryGaussian()).
+ * \param[in] x Input state.
+ * \return The mixed 64-bit output.
+ */
 inline std::uint64_t splitmix64(std::uint64_t x) {
     x += 0x9E3779B97F4A7C15ULL;
     x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
@@ -40,6 +45,21 @@ inline std::uint64_t splitmix64(std::uint64_t x) {
     return x ^ (x >> 31);
 }
 
+/**
+ * Derives a deterministic seed for
+ * Init::findUInForwardLightcone()'s restart stream, unique per
+ * cell/direction/event/run without touching the shared Random state
+ * (so retries are reproducible even though they're computed in
+ * parallel across cells). Chains splitmix64() over \p runSeed and each
+ * of `eventId`/`pos`/`direction` in turn.
+ * \param[in] runSeed Run-wide seed (typically `param->getRandomSeed()`).
+ * \param[in] eventId Current event id.
+ * \param[in] pos Flat cell index.
+ * \param[in] direction Distinguishes the \f$x\f$ and \f$y\f$ link
+ * solves at the same cell (e.g. `0`/`1`).
+ * \return A 64-bit seed to drive deterministicRetryGaussian() for this
+ * cell/direction/event/run.
+ */
 inline std::uint64_t forwardLightconeRetrySeed(
     std::uint64_t runSeed, int eventId, int pos, int direction) {
     std::uint64_t key = splitmix64(runSeed);
@@ -58,6 +78,18 @@ inline std::uint64_t forwardLightconeRetrySeed(
     return key;
 }
 
+/**
+ * Draws one standard-normal sample from a deterministic, stateless
+ * stream keyed by \p seed and \p drawIndex (see
+ * forwardLightconeRetrySeed()), via the Box-Muller transform applied
+ * to two independent SplitMix64 counters. No shared Random state is
+ * touched, so this is safe to call from multiple threads/cells at
+ * once and reproducible given the same `seed`/`drawIndex`.
+ * \param[in] seed Stream seed (see forwardLightconeRetrySeed()).
+ * \param[in] drawIndex Draw index within the stream; increment for
+ * each successive sample requested with the same \p seed.
+ * \return One standard-normal (\f$\mu=0\f$, \f$\sigma=1\f$) sample.
+ */
 inline double deterministicRetryGaussian(
     std::uint64_t seed, std::uint64_t drawIndex) {
     // Build two open-interval uniform doubles from independent SplitMix64
@@ -1701,6 +1733,18 @@ void Init::writeNgluonEstimatorsFile(
 }
 
 namespace {
+/**
+ * `Init::setV()`'s `writeOutputs==5` diagnostic: writes
+ * `initialWilsonLines<id>.ipgw`, a binary snapshot of the two nuclei's
+ * just-constructed initial Wilson lines (\c lat->U/\c lat->U2) as full
+ * \f$3\times3\f$ complex matrices per cell, little-endian
+ * single-precision, preceded by an 8-byte magic string, an 8-byte
+ * metadata length, and a JSON metadata header describing the
+ * layout/units -- the same format convention as
+ * Evolution::writeEvolvedFields().
+ * \param[in] lat Lattice to read `U`/`U2` from.
+ * \param[in] param Simulation parameters.
+ */
 void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
     const int N = param->getSize();
     const double L = param->getL();

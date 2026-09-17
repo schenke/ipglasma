@@ -17,9 +17,9 @@
 /**
  * Advances the classical Yang-Mills fields built by Init via a leapfrog
  * time evolution: the coordinate fields (\f$\phi\f$, the transverse
- * gauge links \c Ux/\c Uy) live at integer-\f$\tau\f$ steps and are
+ * gauge links `Ux`/`Uy`) live at integer-\f$\tau\f$ steps and are
  * updated by evolvePhi()/evolveU(), while the momentum fields (the
- * electric fields \c U/\c U2, and \f$\pi\f$) live at half-integer steps
+ * electric fields `U`/`U2`, and \f$\pi\f$) live at half-integer steps
  * and are updated by evolvePi()/evolveE(). Also computes the
  * energy-momentum tensor (tmunu()), derived observables (eccentricity(),
  * u()), and an optional final-time gluon spectrum/multiplicity estimate
@@ -109,12 +109,12 @@ class Evolution {
     void writeEpsilonIntermediatePlot(Lattice *lat, Parameters *param);
     /**
      * Leapfrog coordinate update for the transverse gauge links: rotates
-     * \c Ux/\c Uy by \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$ (a
+     * `Ux`/`Uy` by \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$ (a
      * second-order Padé approximant of the exponential), using the
-     * electric fields \c U/\c U2 as the generator. Runs
+     * electric fields `U`/`U2` as the generator. Runs
      * `evolveUTeam` (an anonymous-namespace helper in Evolution.cpp)
      * inside its own `#pragma omp parallel` region.
-     * \param[in,out] lat Lattice whose \c Ux/\c Uy are updated in place.
+     * \param[in,out] lat Lattice whose `Ux`/`Uy` are updated in place.
      * \param[in] param Simulation parameters.
      * \param[in] dtau Time step [lattice units].
      * \param[in] tau Current proper time [lattice units], evaluated at
@@ -136,7 +136,7 @@ class Evolution {
     /**
      * Leapfrog momentum update for \f$\pi\f$: adds
      * \f$(d\tau/\tau)\f$ times the covariant discrete Laplacian of
-     * \f$\phi\f$ (parallel-transported via \c Ux/\c Uy to its four
+     * \f$\phi\f$ (parallel-transported via `Ux`/`Uy` to its four
      * neighbors). Runs `evolvePiTeam` (an anonymous-namespace helper in
      * Evolution.cpp) inside its own `#pragma omp parallel` region.
      * \param[in,out] lat Lattice whose \c Ux2 (\f$\pi\f$) is updated in
@@ -147,13 +147,13 @@ class Evolution {
      */
     void evolvePi(Lattice *lat, Parameters *param, double dtau, double tau);
     /**
-     * Leapfrog momentum update for the electric fields \c U/\c U2: adds
+     * Leapfrog momentum update for the electric fields `U`/`U2`: adds
      * the traceless anti-Hermitian plaquette force (from the four
      * spatial plaquettes touching each link) and the \f$\phi\f$-\f$\pi\f$
      * commutator force. Runs `evolveETeam` (an anonymous-namespace
      * helper in Evolution.cpp, using the shared `addEForceSU3` kernel)
      * inside its own `#pragma omp parallel` region.
-     * \param[in,out] lat Lattice whose \c U/\c U2 are updated in place.
+     * \param[in,out] lat Lattice whose `U`/`U2` are updated in place.
      * \param[in] param Simulation parameters.
      * \param[in] dtau Time step [lattice units].
      * \param[in] tau Current proper time [lattice units].
@@ -166,7 +166,7 @@ class Evolution {
      * U_y(x-\hat y)^\dagger E_2(x-\hat y) U_y(x-\hat y) - E_2(x) -
      * i[\phi,\pi]\f$ (evaluated using the momenta at their current
      * \f$\tau-d\tau/2\f$), and logs the largest value found.
-     * \param[in] lat Lattice to read \c U/\c U2/\c Ux/\c Uy/\c Uy2/\c
+     * \param[in] lat Lattice to read `U`/`U2`/`Ux`/`Uy`/`Uy2`/\c
      * Ux2 from.
      * \param[in] param Simulation parameters.
      */
@@ -184,7 +184,7 @@ class Evolution {
      * helper) resampled at ten angles around the flow-velocity event
      * plane \f$\Psi_U\f$ (computed from `getux()`/`getuy()`).
      * \param[in] lat Lattice to read the energy density (and, for
-     * \p doAniso==1, \c Txx/\c Txy/\c Tyy/flow velocity) from.
+     * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current time step index, used for the output file's
      * time column and (on `it==1`) to seed `param->setPsi()`.

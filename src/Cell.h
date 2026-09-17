@@ -118,7 +118,7 @@ class Cell {
     /// [dimensionless].
     double uy_;
     /// \f$u^\eta\f$ component of the local fluid four-velocity [1/fm]
-    /// (unlike \c utau_/\c ux_/\c uy_: \f$\tau u^\eta\f$, not
+    /// (unlike `utau_`/`ux_`/`uy_`: \f$\tau u^\eta\f$, not
     /// \f$u^\eta\f$ itself, is the dimensionless rapidity-like
     /// velocity, again from the Milne metric's \f$g_{\eta\eta} =
     /// -\tau^2\f$).

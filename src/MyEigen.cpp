@@ -73,8 +73,8 @@ void closeBufferedTextOutput(ofstream &output, const string &filename) {
 
 /**
  * Bilinearly interpolates a per-cell scalar field, given the four
- * surrounding-cell indices (\p pos1/\p pos2 share the low-\f$y\f$ row,
- * \p pos3/\p pos4 the high-\f$y\f$ row) and the fractional offsets
+ * surrounding-cell indices (`pos1`/`pos2` share the low-\f$y\f$ row,
+ * `pos3`/`pos4` the high-\f$y\f$ row) and the fractional offsets
  * within that cell. Each pair falls back to `0` when out of the
  * lattice, matching the historical behavior at the edges.
  * \param[in] lat Lattice to read from.
@@ -135,7 +135,7 @@ double interpolateCellField(
  *
  * Reads only `lat->cells[pos]`'s \f$T^{\mu\nu}\f$ and writes only
  * `lat->cells[pos]`, so it is safe to call from an OpenMP-parallel loop
- * over \p pos with \p eval_ws/\p evec_ws/\p w_ws as thread-private GSL
+ * over \p pos with `eval_ws`/`evec_ws`/`w_ws` as thread-private GSL
  * workspace.
  * \param[in] lat Lattice to read from and write into.
  * \param[in] pos Flat cell index to solve.

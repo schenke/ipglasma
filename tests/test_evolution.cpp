@@ -1,17 +1,13 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
-#include <sstream>
 #include <string>
 #include <vector>
 
 #include "Evolution.h"
 #include "Lattice.h"
 #include "Parameters.h"
-#include "PhysConst.h"
 #include "doctest.h"
-
-using PhysConst::hbarc;
 
 namespace {
 // Matches test_lattice.cpp's makeLatticeParam: Parameters holds a
@@ -32,94 +28,7 @@ void makeEvolutionTestParam(Parameters &param, int size) {
     param.setRunningCoupling(0);  // gfactor == 1 everywhere; see below
 }
 
-struct EpsilonPlotRow {
-    double x, y, value;
-};
-
-std::vector<EpsilonPlotRow> readEpsilonPlot(const std::string &path) {
-    std::vector<EpsilonPlotRow> rows;
-    std::ifstream in(path);
-    std::string line;
-    while (std::getline(in, line)) {
-        std::istringstream iss(line);
-        EpsilonPlotRow row;
-        if (iss >> row.x >> row.y >> row.value) rows.push_back(row);
-    }
-    return rows;
-}
 }  // namespace
-
-TEST_CASE(
-    "Evolution::writeEpsilonInitialPlot: with runningCoupling off, output is "
-    "exactly hbarc*|epsilon| at each cell's (x, y)") {
-    const int N = 4;
-    Parameters param;
-    makeEvolutionTestParam(param, N);
-    Lattice lat(&param, N);
-
-    // One positive, one negative (exercises the abs()), rest left at the
-    // Lattice default.
-    lat.cells[0]->setEpsilon(2.5);
-    lat.cells[1]->setEpsilon(-1.25);
-
-    int nn[2] = {N, N};
-    Evolution evo(nn);
-    std::remove("epsilonInitialPlot0.dat");
-    evo.writeEpsilonInitialPlot(&lat, &param);
-
-    std::vector<EpsilonPlotRow> rows =
-        readEpsilonPlot("epsilonInitialPlot0.dat");
-    std::remove("epsilonInitialPlot0.dat");
-    REQUIRE(rows.size() == static_cast<std::size_t>(N * N));
-
-    const double a = param.getL() / N;
-    const double L = param.getL();
-    for (int ix = 0; ix < N; ++ix) {
-        for (int iy = 0; iy < N; ++iy) {
-            const int pos = ix * N + iy;
-            const double expectedX = -L / 2. + a * ix;
-            const double expectedY = -L / 2. + a * iy;
-            const double expectedValue =
-                hbarc * std::abs(lat.cells[pos]->getEpsilon());
-            CHECK(rows[pos].x == doctest::Approx(expectedX));
-            CHECK(rows[pos].y == doctest::Approx(expectedY));
-            CHECK(rows[pos].value == doctest::Approx(expectedValue));
-        }
-    }
-}
-
-TEST_CASE(
-    "Evolution::writeEpsilonIntermediatePlot matches writeEpsilonInitialPlot "
-    "when runningCoupling is off (both reduce to gfactor=1)") {
-    const int N = 4;
-    Parameters param;
-    makeEvolutionTestParam(param, N);
-    Lattice lat(&param, N);
-    for (int pos = 0; pos < N * N; ++pos) {
-        lat.cells[pos]->setEpsilon(0.1 * (pos + 1));
-    }
-
-    int nn[2] = {N, N};
-    Evolution evo(nn);
-    std::remove("epsilonInitialPlot0.dat");
-    std::remove("epsilonIntermediatePlot0.dat");
-    evo.writeEpsilonInitialPlot(&lat, &param);
-    evo.writeEpsilonIntermediatePlot(&lat, &param);
-
-    std::vector<EpsilonPlotRow> initial =
-        readEpsilonPlot("epsilonInitialPlot0.dat");
-    std::vector<EpsilonPlotRow> intermediate =
-        readEpsilonPlot("epsilonIntermediatePlot0.dat");
-    std::remove("epsilonInitialPlot0.dat");
-    std::remove("epsilonIntermediatePlot0.dat");
-
-    REQUIRE(initial.size() == intermediate.size());
-    for (std::size_t i = 0; i < initial.size(); ++i) {
-        CHECK(initial[i].x == doctest::Approx(intermediate[i].x));
-        CHECK(initial[i].y == doctest::Approx(intermediate[i].y));
-        CHECK(initial[i].value == doctest::Approx(intermediate[i].value));
-    }
-}
 
 TEST_CASE(
     "Evolution::eccentricity(doAniso=1): the unrotated Txx-Tyy/Txx+Tyy ratio "

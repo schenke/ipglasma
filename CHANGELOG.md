@@ -35,6 +35,7 @@ The main categories for changes in this file are:
 * Remove the `dtau` and `simpleLangevin` input parameters: `dtau` was silently ignored (the actual time step is always computed from `maxtime`/`L`/`size`), and `simpleLangevin` had no effect since `JIMWLK::evolutionStep()`'s buffers are now always allocated unconditionally.
 * File names for stored Wilson lines are now unified and generated centrally in `Lattice::generateWilsonLineDataFileName`; add a `wilsonLinePath` input parameter (optional, default `./`) to configure the directory they're written to/read from.
 * Remove the `nucleonPositionsFromFile = 2` option (nucleon positions sampled from Alvioli's correlated Pb-208 configuration files, `Init::sampleTAFromAlvioliFiles`/`readOneAlvioliNucleus`), which read from a hardcoded, machine-specific external path and was never packaged with the codebase; `nucleonPositionsFromFile` now only accepts `0` (sample) or `1` (read from the bundled configuration files).
+* Remove `Evolution::writeEpsilonInitialPlot`/`writeEpsilonIntermediatePlot`, the `writeOutputs == 3` diagnostic that wrote `epsilonInitialPlot<id>.dat`/`epsilonIntermediatePlot<id>.dat` energy-density maps at the initial and halfway time steps.
 
 ### Added
 * Add a JIMWLK small-x evolution stage, run on the projectile and target Wilson lines before the classical Yang-Mills evolution.

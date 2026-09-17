@@ -705,79 +705,25 @@ double Init::computeFluctuatingXG2mu2(
 void Init::computeCellColorCharge(
     Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
     double rapidityB) {
-    int check = 0;
-    double distanceA = 0;
-    double distanceB = 0;
+    if (param->getUseFluctuatingx() == 1) {  // Local Qs dependent x
+        lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
+            param, a, rapidityA, lat->cells[ipos]->getTpA(),
+            param->getQsmuRatio(), 1.));
+        lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
+            param, a, rapidityB, lat->cells[ipos]->getTpB(),
+            param->getQsmuRatioB(), -1.));
+    } else {  // Fixed x
+        // nucleus A
+        lat->cells[ipos]->setg2mu2A(
+            getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
+            / param->getQsmuRatio() / param->getQsmuRatio() * a * a / hbarc
+            / hbarc / param->getg() / param->getg());  // lattice units? check
 
-    if (param->getUseSmoothNucleus() == 1) {
-        check = 2;
-    } else {
-        const double BG = param->getBG();
-
-        // cut proton at a radius of rmax [fm] (about twice the
-        // gluonic radius to be generous)
-
-        if (log(2 * M_PI * BG * lat->cells[ipos]->getTpA()) < 0.) {
-            if (isinf(log(2 * M_PI * BG * lat->cells[ipos]->getTpA())) == 1)
-                distanceA = param->getRmax() + 1.;
-            else
-                distanceA =
-                    sqrt(
-                        -2. * BG
-                        * log(2 * M_PI * BG * lat->cells[ipos]->getTpA()))
-                    * hbarc;
-        } else {
-            distanceA = 0.;
-        }
-
-        if (log(2 * M_PI * BG * lat->cells[ipos]->getTpB()) < 0.) {
-            if (isinf(log(2 * M_PI * BG * lat->cells[ipos]->getTpB())) == 1)
-                distanceB = param->getRmax() + 1.;
-            else
-                distanceB =
-                    sqrt(
-                        -2. * BG
-                        * log(2 * M_PI * BG * lat->cells[ipos]->getTpB()))
-                    * hbarc;
-        } else
-            distanceB = 0.;
-
-        if (distanceA < param->getRmax()) {
-            check = 1;
-        }
-
-        if (distanceB < param->getRmax() && check == 1) {
-            check = 2;
-        }
-    }
-
-    if (param->getUseJIMWLK() == 1) {
-        // always assgin color charge density for whole lattice
-        check = 2;
-    }
-
-    if (check == 2) {
-        if (param->getUseFluctuatingx() == 1) {
-            lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
-                param, a, rapidityA, lat->cells[ipos]->getTpA(),
-                param->getQsmuRatio(), 1.));
-            lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
-                param, a, rapidityB, lat->cells[ipos]->getTpB(),
-                param->getQsmuRatioB(), -1.));
-        } else {
-            // nucleus A
-            lat->cells[ipos]->setg2mu2A(
-                getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
-                / param->getQsmuRatio() / param->getQsmuRatio() * a * a / hbarc
-                / hbarc / param->getg()
-                / param->getg());  // lattice units? check
-
-            // nucleus B
-            lat->cells[ipos]->setg2mu2B(
-                getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
-                / param->getQsmuRatioB() / param->getQsmuRatioB() * a * a
-                / hbarc / hbarc / param->getg() / param->getg());
-        }
+        // nucleus B
+        lat->cells[ipos]->setg2mu2B(
+            getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
+            / param->getQsmuRatioB() / param->getQsmuRatioB() * a * a / hbarc
+            / hbarc / param->getg() / param->getg());
     }
 }
 

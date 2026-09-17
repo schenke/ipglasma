@@ -461,7 +461,6 @@ int readInput(
     param->setm(setup->dFind(file_name, "m"));
     param->setJacobianm(setup->dFind(file_name, "Jacobianm"));
     param->setSigmaNN(setup->dFind(file_name, "SigmaNN"));
-    param->setRmax(setup->dFind(file_name, "rmax"));
     param->setUVdamp(setup->dFind(file_name, "UVdamp"));
     param->setSetWSDeformParams(setup->iFind(file_name, "setWSDeformParams"));
     if (param->getSetWSDeformParams()) {
@@ -620,7 +619,6 @@ void writeparams(Parameters *param) {
     fout1 << "QsmuRatio " << param->getQsmuRatio() << endl;
     fout1 << "smeared mu " << param->getSmearQs() << endl;
     fout1 << "m " << param->getm() << endl;
-    fout1 << "rmax " << param->getRmax() << endl;
     fout1 << "UVdamp " << param->getUVdamp() << endl;
     fout1 << "writeTmunuBinary " << param->getWriteTmunuBinary() << endl;
     if (param->getSetWSDeformParams()) {

@@ -5,7 +5,6 @@ size 256
 L 30
 Nc 3
 m 0.4
-rmax 10000000.
 omega 1
 UVdamp 0.
 Jacobianm 0.35

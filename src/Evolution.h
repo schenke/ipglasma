@@ -83,31 +83,6 @@ class Evolution {
      */
     void run(Lattice *lat, Group *group, Parameters *param);
     /**
-     * `writeOutputs==3` diagnostic: writes `epsilonInitialPlot<id>.dat`,
-     * a per-cell map of the (running-coupling-weighted) energy density
-     * at the initial time.
-     * \note Computes its running-coupling factor via only the "3
-     * flavors, local \f$Q_s\f$" formula, unconditionally -- unlike
-     * writeEpsilonIntermediatePlot() (which shares the
-     * anonymous-namespace `computeRunningCouplingGfactor` helper and so
-     * respects `getRunWithLocalQs()`). This looks like a pre-existing
-     * inconsistency between the two writers, preserved exactly as found
-     * rather than silently changed.
-     * \param[in] lat Lattice to read the energy density from.
-     * \param[in] param Simulation parameters.
-     */
-    void writeEpsilonInitialPlot(Lattice *lat, Parameters *param);
-    /**
-     * `writeOutputs==3` diagnostic: writes `epsilonIntermediatePlot<id>
-     * .dat`, the same per-cell energy-density map as
-     * writeEpsilonInitialPlot() but at \f$\tau=\f$`itmax/2`, using the
-     * shared `computeRunningCouplingGfactor` helper for its
-     * running-coupling factor.
-     * \param[in] lat Lattice to read the energy density from.
-     * \param[in] param Simulation parameters.
-     */
-    void writeEpsilonIntermediatePlot(Lattice *lat, Parameters *param);
-    /**
      * Leapfrog coordinate update for the transverse gauge links: rotates
      * `Ux`/`Uy` by \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$ (a
      * second-order Padé approximant of the exponential), using the

@@ -1,4 +1,4 @@
-# README 
+# README
 
 IP-Glasma initial condition with JIMWLK evolution
 
@@ -8,7 +8,7 @@ References
 * Standalone version of the JIMWLK code: https://github.com/hejajama/jimwlk
 
 
- 
+
 ## Compile
 To compile IP-Glasma, run `./compile_IPGlasma.sh`
 Dependencies
@@ -25,19 +25,19 @@ ctest --test-dir build --output-on-failure
 ```
 It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`).
 
- 
+
 ## Input parameters
 See `src/Parameters.h` for a more detailed description of parameters that are specified in the file `input`. If a command line argument is provided, that refers to the input file that will be used.
 
 ### Lattice
-- **size**: controls the size of the lattice that is `size`$^2$. 
+- **size**: controls the size of the lattice that is `size`$^2$.
   - Recommended to be of the form $2^n$
-- **L**: the total physical extend of hte lattice (in fm)
+- **L**: the total physical extent of the lattice (in fm)
 
 ### Initial state
 - **useNucleus**
   - 1: nucleus with finite geometry
-  - 0: infite target with constant color charge density controlled by `g2mu` (in lattice units)
+  - 0: infinite target with constant color charge density controlled by `g2mu` (in lattice units)
 - **Projectile** and **Target**: specify nuclei
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details
@@ -46,12 +46,12 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
 - **BGq**: controls the hot spot width (if nucleon substructure is enabled), hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
 - **useConstituentQuarkProton**: control nucleon substructure
   - 0: no substructure
-  - Positive value: number of hot spots 
-- **shiftConstituentQuarkProtonOrigin** whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
+  - Positive value: number of hot spots
+- **shiftConstituentQuarkProtonOrigin**: whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations
 - **smearingWidth**: width of the saturation scale fluctuations, parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
 - **useFluctuatingx**: controls how to determine Bjorken-$x$ when generating the initial condition
-  - 1: Dynanically determined $b_\perp$ dependent $x$ 
+  - 1: Dynamically determined $b_\perp$ dependent $x$
   - 0: Fixed $x$
 - **RapidityA** and **RapidityB**:
   - If `useFluctuatingx 0`, then $x = 0.01 e^{-\mathrm{RapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{RapidityB}}$ for the target
@@ -60,36 +60,36 @@ See `src/Parameters.h` for a more detailed description of parameters that are sp
 
 ### Output
  - **writeOutputs**: this parameter controls output files
- 	- 0: no output
- 	- 1: output initial conditions e, u^\mu, and pi^{\mu\nu} for hydrodynamic simulations
- 	- 2: output the initial condition for energy density according to the Jazma model
- 	- 3: output 1 & 2
- 	- 4: output initial T^{\mu\nu} for the effective kinetic theory (KoMPoST) simulations
- 	- 5: output 1 & 4
- 	- 6: output 2 & 4
- 	- 7: output 1 & 2 & 4
- 
+   - 0: no output
+   - 1: output initial conditions $\epsilon$, $u^\mu$, and $\pi^{\mu\nu}$ for hydrodynamic simulations
+   - 2: output the initial condition for energy density according to the Jazma model
+   - 3: output 1 & 2
+   - 4: output initial $T^{\mu\nu}$ for the effective kinetic theory (KoMPoST) simulations
+   - 5: output 1 & 4
+   - 6: output 2 & 4
+   - 7: output 1 & 2 & 4
+
  - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
- 	- 0: no
- 	- 1: yes	
- - **writeWilsonLines**: controls if the generated Wilson lines for the saved on disc. File names depend on random seed (parameter `seed`), see `Lattice::generateWilsonLineDataFileName()`. Wilson lines at the initial condition and after the JIMWLK evolution are saved. 
-    - 0: do not save Wilson lines
-	- 1: save in text format
-	- 2: save in binary format (faster I/O, smaller file size)
- - **wilsonLinePath** (optional): directory where the Wilson lines are written to (when `writeWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
+   - 0: no
+   - 1: yes
+ - **writeWilsonLines**: controls whether the generated Wilson lines are saved to disk. File names depend on random seed (parameter `seed`), see `Lattice::generateWilsonLineDataFileName()`. Wilson lines at the initial condition and after the JIMWLK evolution are saved.
+   - 0: do not save Wilson lines
+   - 1: save in text format
+   - 2: save in binary format (faster I/O, smaller file size)
+ - **wilsonLinePath** (optional): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
 
 ### JIMWLK evolution
-Note that when using the JIMWLK evolution, one should use `useFluctuatingx 0` which corresponds to having a fixed $x$ at the initial state of the evoluiton.
+Note that when using the JIMWLK evolution, one should use `useFluctuatingx 0` which corresponds to having a fixed $x$ at the initial state of the evolution.
 
 - **useJIMWLK**: with JIMWLK (1), or no JIMWLK (0)
 - **jimwlk_ic_x**: Bjorken-x at the initial condition
 - **x_projectile_jimwlk**: Bjorken-$x$ to which the projectile is evolved
 - **x_target_jimwlk**: Bjorken-$x$ to which the target is evolved
-- **m_jimwlk**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)
+- **m_jimwlk**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **alphas_jimwlk**: Coupling constant in the JIMWLK evolution
-  - 0: Use running coupling 
-- **Lambda_QCD_jimwlk** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)
-- **mu0_jimwlk**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [https://arxiv.org/pdf/2207.03712](arXiv:2207.03712)
+  - 0: Use running coupling
+- **Lambda_QCD_jimwlk** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
+- **mu0_jimwlk**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **Ds_jimwlk**: step size in JIMWLK evolution. Recommended values
   - 0.005 with running coupling
   - 0.0005 with fixed coupling

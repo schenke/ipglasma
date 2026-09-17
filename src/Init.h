@@ -346,8 +346,7 @@ class Init {
     void sampleImpactParameter(Parameters *param);
     /**
      * Samples nucleon positions for both nuclei (via
-     * sampleTAWoodsSaxon()/sampleTAFromConfigFiles()/
-     * sampleTAFromAlvioliFiles(), depending on
+     * sampleTAWoodsSaxon()/sampleTAFromConfigFiles(), depending on
      * `param->getNucleonPositionsFromFile()`) and applies each
      * nucleus' global polarization rotation. Both nuclei are centered
      * at the origin.
@@ -382,30 +381,6 @@ class Init {
      * geometry.
      */
     void sampleTAFromConfigFiles(Random *random, Glauber *glauber);
-    /**
-     * Samples nucleon positions from Alvioli's correlated Pb-208
-     * configuration files, via readOneAlvioliNucleus().
-     * \param[in,out] random Random-number source.
-     * \param[in] glauber Configured Glauber instance providing nuclear
-     * geometry; exits with an error unless both nuclei are Pb-208, or
-     * the projectile is a proton and the target is Pb-208.
-     */
-    void sampleTAFromAlvioliFiles(Random *random, Glauber *glauber);
-    /**
-     * Reads one nucleus's worth of nucleon positions from a randomly
-     * selected Alvioli correlated-Pb-208 configuration file, appending
-     * them to \p nucleus. \p label (`"A"` or `"B"`) is used only for
-     * log messages.
-     * \param[in,out] random Random-number source.
-     * \param[in] nucleonCount Number of nucleon positions to read
-     * (`1` places a single nucleon at the origin instead of reading).
-     * \param[in] label Nucleus label for log messages.
-     * \param[out] nucleus Appended with the read (or, for
-     * `nucleonCount == 1`, synthesized) positions.
-     */
-    void readOneAlvioliNucleus(
-        Random *random, int nucleonCount, const std::string &label,
-        std::vector<ReturnValue> &nucleus);
     /**
      * Applies sampleTA()'s global nucleus rotation for one polarization
      * flag; called once each for the projectile and target.

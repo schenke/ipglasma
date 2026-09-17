@@ -141,12 +141,9 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
         sampleTAWoodsSaxon(param, random, glauber);
     } else if (nucleonPositionsFromFile == 1) {
         sampleTAFromConfigFiles(random, glauber);
-    } else if (nucleonPositionsFromFile == 2) {
-        sampleTAFromAlvioliFiles(random, glauber);
     } else {
         messager_ << "[Init::sampleTA]: nucleonPositionsFromFile must be 0 "
-                     "(sample nucleons), 1, or 2 (read from files) -- you "
-                     "chose "
+                     "(sample nucleons) or 1 (read from files) -- you chose "
                   << nucleonPositionsFromFile << ". Exiting.";
         messager_.flush("error");
         exit(1);
@@ -332,124 +329,6 @@ void Init::sampleTAFromConfigFiles(Random *random, Glauber *glauber) {
             glauber->getGlauberData().target.dR_np,
             glauber->getGlauberData().target.da_np, nucleusB_);
     }
-}
-
-void Init::sampleTAFromAlvioliFiles(Random *random, Glauber *glauber) {
-    // Read in Alvioli's nucleon positions including correlations
-    const bool bothPb208 =
-        (glauber->nucleusA1() == 208 && glauber->nucleusA2() == 208);
-    const bool protonProjectileOnPb208Target =
-        (glauber->nucleusA1() == 1 && glauber->nucleusA2() == 208);
-    if (!bothPb208 && !protonProjectileOnPb208Target) {
-        messager_ << "[Init::sampleTA]: nucleonPositionsFromFile == 2 only "
-                     "works when both nuclei are Pb-208, or when the "
-                     "projectile is a proton and the target is Pb-208. "
-                     "Exiting.";
-        messager_.flush("error");
-        exit(1);
-    }
-
-    messager_
-        << "[Init::sampleTA]: Retrieving nucleon positions from Alvioli's "
-           "correlated Pb-208 configuration files.";
-    messager_.flush("info");
-
-    readOneAlvioliNucleus(random, glauber->nucleusA1(), "A", nucleusA_);
-    readOneAlvioliNucleus(random, glauber->nucleusA2(), "B", nucleusB_);
-
-    // The files provide only coordinates.
-    // Assign proton/neutron labels
-    assignProtons(random, nucleusA_, glauber->nucleusZ1());
-    assignProtons(random, nucleusB_, glauber->nucleusZ2());
-}
-
-void Init::readOneAlvioliNucleus(
-    Random *random, int nucleonCount, const std::string &label,
-    std::vector<ReturnValue> &nucleus) {
-    ReturnValue rv;
-
-    // generate the file name
-    double ran = random->genrand64_real3();  // sample the file name uniformly
-    int fileNumber = static_cast<int>(ran * 10 + 1);
-
-    stringstream str_file;
-    str_file.str("");
-    if (fileNumber < 10) {
-        str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-0";
-    } else {
-        str_file << "/global/homes/s/schenke/Alvioli-Pb208/pb208-";
-    }
-    str_file << fileNumber;
-    str_file << ".dat";
-    string fileName = str_file.str();
-
-    // open the file
-    ifstream fin;
-    fin.open(fileName.c_str());
-    if (!fin) {
-        messager_ << "[Init::sampleTA]: File " << fileName
-                  << " not found. Trying alternative location:";
-        messager_.flush("warning");
-        str_file.str("");
-        if (fileNumber < 10)
-            str_file << "./Alvioli-Pb208/pb208-0";
-        else
-            str_file << "./Alvioli-Pb208/pb208-";
-        str_file << fileNumber;
-        str_file << ".dat";
-        fileName = str_file.str();
-        fin.open(fileName.c_str());
-    }
-
-    if (!fin) {
-        messager_ << "[Init::sampleTA]: File " << fileName
-                  << " not found. Exiting.";
-        messager_.flush("error");
-        exit(1);
-    }
-
-    messager_ << "[Init::sampleTA]: Reading nucleon positions for nucleus "
-              << label << " from file " << fileName << " ... ";
-    messager_.flush("info");
-
-    // sample the position in the file uniformly (10,000 events per file)
-    double ran2 = random->genrand64_real3();
-    int nucleusNumber = static_cast<int>(ran2 * 10000);
-    messager_ << "[Init::sampleTA]: Nucleus Number = " << nucleusNumber;
-    messager_.flush("info");
-
-    int A = 0;
-    double dummy;
-
-    // go to the correct line in the file
-    fin.seekg(std::ios::beg);
-    for (int i = 0; i < (nucleusNumber)*nucleonCount; ++i) {
-        fin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-    }
-    // am now at the correct line in the file
-
-    // start reading one nucleus (208 positions)
-    if (nucleonCount == 1) {
-        rv.x = 0;
-        rv.y = 0;
-        rv.z = 0;
-        rv.collided = 0;
-        nucleus.push_back(rv);
-        A = 1;
-    } else {
-        while (A < nucleonCount) {
-            if (!fin.eof()) {
-                fin >> rv.x;
-                fin >> rv.y;
-                fin >> rv.z;
-                fin >> dummy;  // don't care about isospin
-                rv.collided = 0;
-                nucleus.push_back(rv);
-                A++;
-            }
-        }
-    }
-    fin.close();
 }
 
 void Init::applyPolarizationRotation(

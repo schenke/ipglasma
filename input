@@ -74,7 +74,6 @@ SigmaNN 73.
 gaussianWounding 1
 inverseQsForMaxTime 0
 maxtime 0.5
-dtau 0.1
 LOutput 30
 sizeOutput 340
 etaSizeOutput 1
@@ -86,7 +85,6 @@ writeEpsilonUHydro 0
 writeOutputsToHDF5 0
 useJIMWLK 1
 mu0_jimwlk 0.28
-simpleLangevin 1
 alphas_jimwlk 0
 jimwlk_ic_x 0.01
 x_projectile_jimwlk 0.0001

@@ -27,13 +27,12 @@ void makeJimwlkTestParam(Parameters &param, int size) {
 }  // namespace
 
 TEST_CASE(
-    "JIMWLK::evolutionStep runs with simpleLangevin=0 without crashing "
-    "(regression test: VxsiVx_/VxsiVy_ used to be allocated only when "
-    "simpleLangevin was true, but evolutionStep needs them regardless)") {
+    "JIMWLK::evolutionStep runs without crashing (regression test: "
+    "VxsiVx_/VxsiVy_ used to be allocated only conditionally on a "
+    "since-removed input flag, but evolutionStep needs them regardless)") {
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);
-    param.setSimpleLangevin(0);
 
     Group group;
     Random random;
@@ -61,7 +60,6 @@ TEST_CASE(
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);
-    param.setSimpleLangevin(1);
     param.setSaveSnapshots(0);
     param.setxSnapshotList(std::vector<double>());
     // Fixed coupling (getJimwlk_alphas() > 0): steps_1 = as*log(x0/x_proj) /
@@ -82,28 +80,6 @@ TEST_CASE(
         for (int k = 0; k < 9; ++k) {
             CHECK(std::isfinite(lat.U[pos].get(k).real()));
             CHECK(std::isfinite(lat.U2[pos].get(k).real()));
-        }
-    }
-}
-
-TEST_CASE("JIMWLK::evolutionStep runs with simpleLangevin=1 without crashing") {
-    const int N = 8;
-    Parameters param;
-    makeJimwlkTestParam(param, N);
-    param.setSimpleLangevin(1);
-
-    Group group;
-    Random random;
-    random.init_genrand64(42ULL);
-    Lattice lat(&param, N);
-
-    JIMWLK jimwlk(param, &group, &lat, &random);
-    jimwlk.evolutionStep(NucleusRole::Projectile);
-
-    for (int pos = 0; pos < N * N; ++pos) {
-        for (int k = 0; k < 9; ++k) {
-            CHECK(std::isfinite(lat.U[pos].get(k).real()));
-            CHECK(std::isfinite(lat.U[pos].get(k).imag()));
         }
     }
 }

@@ -16,6 +16,7 @@
 
 #include "Instrumentation.h"
 #include "PhysConst.h"
+#include "RunningCoupling.h"
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::hbarc;
@@ -1181,20 +1182,23 @@ bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
 // Sets param's running-coupling alpha_s from whichever Qs choice
 // param->getRunWithQs() selects (max/min/avg), or a fixed value when
 // running coupling is disabled or alpha_s runs with k_T instead (handled
-// per-cell elsewhere via computeRunningCouplingGfactor).
+// per-cell elsewhere via computeRunningCouplingGfactor, which shares
+// RunningCoupling.h's computeAlphaS() with this function).
 void Init::computeAndSetRunningAlphaS(Parameters *param) {
     double alphas = 0.;
     if (param->getRunningCoupling() && param->getRunWithkt() == 0) {
+        // muZero=0, c=1 reduces computeAlphaS() to the same unregularized
+        // one-loop formula this used to hardcode inline (4*pi/(beta0*2*
+        // log(scale/LambdaQCD))), now respecting nFlavors/LambdaQCD instead
+        // of assuming 3 flavors and LambdaQCD=0.2 unconditionally.
         if (param->getRunWithQs() == 2) {
             messager_
                 << "[Init::computeCollisionGeometryQuantities]: running with "
                 << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
             messager_.flush("info");
-            alphas = 12. * M_PI
-                     / ((27.) * 2.
-                        * log(
-                            param->getRunWithThisFactorTimesQs()
-                            * param->getAverageQs() / 0.2));  // 3 flavors
+            alphas = computeAlphaS(
+                0., 1., param->getLambdaQCD(), param->getNFlavors(),
+                param->getRunWithThisFactorTimesQs() * param->getAverageQs());
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
                       << param->getRunWithThisFactorTimesQs()
                       << " Qs_max)=" << alphas;
@@ -1204,11 +1208,10 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
                 << "[Init::computeCollisionGeometryQuantities]: running with "
                 << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
             messager_.flush("info");
-            alphas = 12. * M_PI
-                     / ((27.) * 2.
-                        * log(
-                            param->getRunWithThisFactorTimesQs()
-                            * param->getAverageQsmin() / 0.2));  // 3 flavors
+            alphas = computeAlphaS(
+                0., 1., param->getLambdaQCD(), param->getNFlavors(),
+                param->getRunWithThisFactorTimesQs()
+                    * param->getAverageQsmin());
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
                       << param->getRunWithThisFactorTimesQs()
                       << " Qs_min)=" << alphas;
@@ -1218,11 +1221,10 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
                 << "[Init::computeCollisionGeometryQuantities]: running with "
                 << param->getRunWithThisFactorTimesQs() << " <Q_s>";
             messager_.flush("info");
-            alphas = 12. * M_PI
-                     / ((27.) * 2.
-                        * log(
-                            param->getRunWithThisFactorTimesQs()
-                            * param->getAverageQsAvg() / 0.2));  // 3 flavors
+            alphas = computeAlphaS(
+                0., 1., param->getLambdaQCD(), param->getNFlavors(),
+                param->getRunWithThisFactorTimesQs()
+                    * param->getAverageQsAvg());
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
                       << param->getRunWithThisFactorTimesQs()
                       << " <Qs>)=" << alphas;

@@ -22,6 +22,11 @@ void makeValidBaseline(Parameters &param) {
     param.setWriteWilsonLines(2);
     param.setWilsonLinePath(".");
     param.setSaveSnapshots(0);
+    // Both gate one of ValidParameters()'s checks on their respective
+    // feature being enabled; disable both so the baseline doesn't depend
+    // on muZero/LambdaQCD/nFlavors/c_jimwlk's indeterminate default values.
+    param.setRunningCoupling(0);
+    param.setUseJIMWLK(0);
 }
 }  // namespace
 
@@ -63,6 +68,89 @@ TEST_CASE(
     param.setWriteWilsonLines(0);
     param.setSaveSnapshots(1);
     CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: accepts a valid running-coupling "
+    "configuration") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setRunningCoupling(1);
+    param.setMuZero(0.3);
+    param.setLambdaQCD(0.2);
+    param.setNFlavors(3);
+    CHECK(param.ValidParameters() == true);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: rejects LambdaQCD >= muZero when running "
+    "coupling is enabled") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setRunningCoupling(1);
+    param.setNFlavors(3);
+
+    param.setMuZero(0.2);
+    param.setLambdaQCD(0.2);  // equal: log argument is 0 at the boundary
+    CHECK(param.ValidParameters() == false);
+
+    param.setMuZero(0.2);
+    param.setLambdaQCD(0.3);  // larger: log argument is negative
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: LambdaQCD >= muZero is not checked when "
+    "running coupling is disabled") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setRunningCoupling(0);
+    param.setMuZero(0.2);
+    param.setLambdaQCD(0.3);
+    CHECK(param.ValidParameters() == true);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: rejects nFlavors large enough to make "
+    "the beta-function coefficient (11*Nc - 2*nFlavors) non-positive") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setRunningCoupling(1);
+    param.setMuZero(0.3);
+    param.setLambdaQCD(0.2);
+
+    param.setNFlavors(16);  // 11*3 - 2*16 = 1 > 0: still valid
+    CHECK(param.ValidParameters() == true);
+
+    param.setNFlavors(17);  // 11*3 - 2*17 = -1 <= 0: invalid
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: rejects non-positive c_jimwlk when "
+    "JIMWLK is enabled") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setUseJIMWLK(1);
+
+    param.setc_jimwlk(0.2);
+    CHECK(param.ValidParameters() == true);
+
+    param.setc_jimwlk(0.0);
+    CHECK(param.ValidParameters() == false);
+
+    param.setc_jimwlk(-0.1);
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: c_jimwlk is not checked when JIMWLK is "
+    "disabled") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setUseJIMWLK(0);
+    param.setc_jimwlk(0.0);
+    CHECK(param.ValidParameters() == true);
 }
 
 TEST_CASE(

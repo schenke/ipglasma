@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "Lattice.h"
+#include "PhysConst.h"
 
 void Parameters::loadPosteriorParameterSetsFromFile(
     std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
@@ -118,6 +119,36 @@ bool Parameters::ValidParameters() {
             messager_.flush("error");
             return false;
         }
+    }
+
+    if (getRunningCoupling()) {
+        if (getLambdaQCD() >= getMuZero()) {
+            messager_ << "[Parameters::ValidParameters]: LambdaQCD ("
+                      << getLambdaQCD() << ") must be smaller than muZero ("
+                      << getMuZero()
+                      << "); otherwise the running-coupling formula's log "
+                         "argument is non-positive at the lattice edges "
+                         "(where the local scale is zero), making alpha_s "
+                         "singular or negative.";
+            messager_.flush("error");
+            return false;
+        }
+        if (11. * PhysConst::Nc - 2. * getNFlavors() <= 0.) {
+            messager_ << "[Parameters::ValidParameters]: nFlavors ("
+                      << getNFlavors()
+                      << ") is too large -- the one-loop beta-function "
+                         "coefficient (11*Nc - 2*nFlavors) must be "
+                         "positive.";
+            messager_.flush("error");
+            return false;
+        }
+    }
+
+    if (getUseJIMWLK() && getc_jimwlk() <= 0.) {
+        messager_ << "[Parameters::ValidParameters]: c_jimwlk ("
+                  << getc_jimwlk() << ") must be positive.";
+        messager_.flush("error");
+        return false;
     }
 
     return true;

@@ -2154,10 +2154,10 @@ void Init::init(
             nucleusB_.clear();
             // populate the lists nucleusA_ and nucleusB_ with position data
             sampleTA(param, random, glauber);
-            setColorChargeDensity(lat, param, random, glauber);
-            // sample color charges and find Wilson lines V_A and V_B
-            setV(lat, param, random);
         }
+        setColorChargeDensity(lat, param, random, glauber);
+        // sample color charges and find Wilson lines V_A and V_B
+        setV(lat, param, random);
     }
 }
 

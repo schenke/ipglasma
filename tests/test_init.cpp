@@ -100,6 +100,31 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Init::computeAndSetRunningAlphaS respects nFlavors/LambdaQCD instead "
+    "of assuming 3 flavors and LambdaQCD=0.2") {
+    Parameters param;
+    makeInitTestParam(param, 4);
+    param.setRunningCoupling(1);
+    param.setRunWithkt(0);
+    param.setRunWithQs(1);  // average Qs
+    param.setRunWithThisFactorTimesQs(0.5);
+    param.setAverageQsAvg(1.3);
+
+    int nn[2] = {4, 4};
+    Init init(nn);
+
+    param.setNFlavors(3);
+    param.setLambdaQCD(0.2);
+    init.computeAndSetRunningAlphaS(&param);
+    CHECK(param.getalphas() == doctest::Approx(0.5923121718947608));
+
+    param.setNFlavors(4);
+    param.setLambdaQCD(0.25);
+    init.computeAndSetRunningAlphaS(&param);
+    CHECK(param.getalphas() == doctest::Approx(0.789087604115407));
+}
+
+TEST_CASE(
     "Init::computeWilsonLineMomentumKernel: massless kernel is 1/kt^2, zero "
     "at kt=0") {
     const int N = 4;

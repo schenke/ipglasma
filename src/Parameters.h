@@ -1720,8 +1720,9 @@ class Parameters {
      * Checks whether the current parameter set is internally
      * consistent enough to run (e.g. a positive lattice size, a valid
      * Wilson-line data format, snapshots only requested when Wilson
-     * lines are actually written), logging an error and returning
-     * `false` on the first problem found.
+     * lines are actually written, a running-coupling formula that
+     * can't go singular or negative, a positive `c_jimwlk`), logging
+     * an error and returning `false` on the first problem found.
      * \return `true` if every check passes, `false` otherwise.
      */
     bool ValidParameters();

@@ -604,7 +604,8 @@ class Init {
      * \f$Q_s\f$ choice `param->getRunWithQs()` selects, or a fixed
      * value if running coupling is disabled or \f$\alpha_s\f$ runs
      * with \f$k_T\f$ instead (handled per-cell elsewhere via
-     * `computeRunningCouplingGfactor`).
+     * `computeRunningCouplingGfactor`, which shares computeAlphaS()
+     * with this function).
      * \param[in,out] param Simulation parameters;
      * `setalphas()` stores the result.
      */

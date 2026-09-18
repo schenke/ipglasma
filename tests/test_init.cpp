@@ -101,7 +101,8 @@ TEST_CASE(
 
 TEST_CASE(
     "Init::computeAndSetRunningAlphaS respects nFlavors/LambdaQCD instead "
-    "of assuming 3 flavors and LambdaQCD=0.2") {
+    "of assuming 3 flavors and LambdaQCD=0.2, and uses the same muZero/c "
+    "as Evolution::computeRunningCouplingGfactor()") {
     Parameters param;
     makeInitTestParam(param, 4);
     param.setRunningCoupling(1);
@@ -109,6 +110,8 @@ TEST_CASE(
     param.setRunWithQs(1);  // average Qs
     param.setRunWithThisFactorTimesQs(0.5);
     param.setAverageQsAvg(1.3);
+    param.setMuZero(0.3);
+    param.setc(0.2);
 
     int nn[2] = {4, 4};
     Init init(nn);
@@ -116,12 +119,12 @@ TEST_CASE(
     param.setNFlavors(3);
     param.setLambdaQCD(0.2);
     init.computeAndSetRunningAlphaS(&param);
-    CHECK(param.getalphas() == doctest::Approx(0.5923121718947608));
+    CHECK(param.getalphas() == doctest::Approx(0.5922901359561648));
 
     param.setNFlavors(4);
     param.setLambdaQCD(0.25);
     init.computeAndSetRunningAlphaS(&param);
-    CHECK(param.getalphas() == doctest::Approx(0.789087604115407));
+    CHECK(param.getalphas() == doctest::Approx(0.789051392062008));
 }
 
 TEST_CASE(

@@ -1187,17 +1187,21 @@ bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
 void Init::computeAndSetRunningAlphaS(Parameters *param) {
     double alphas = 0.;
     if (param->getRunningCoupling() && param->getRunWithkt() == 0) {
-        // muZero=0, c=1 reduces computeAlphaS() to the same unregularized
-        // one-loop formula this used to hardcode inline (4*pi/(beta0*2*
-        // log(scale/LambdaQCD))), now respecting nFlavors/LambdaQCD instead
-        // of assuming 3 flavors and LambdaQCD=0.2 unconditionally.
+        // Uses the same regularized formula (and the same muZero/c) as
+        // Evolution::computeRunningCouplingGfactor()/MyEigen, instead of
+        // the unregularized formula this used to hardcode inline -- so
+        // this diagnostic/event-acceptance alpha_s always matches the one
+        // actually used during evolution, and can no longer go negative
+        // or singular at a small average Qs (ValidParameters() already
+        // guarantees LambdaQCD < muZero whenever running coupling is on).
         if (param->getRunWithQs() == 2) {
             messager_
                 << "[Init::computeCollisionGeometryQuantities]: running with "
                 << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
             messager_.flush("info");
             alphas = computeAlphaS(
-                0., 1., param->getLambdaQCD(), param->getNFlavors(),
+                param->getMuZero(), param->getc(), param->getLambdaQCD(),
+                param->getNFlavors(),
                 param->getRunWithThisFactorTimesQs() * param->getAverageQs());
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
                       << param->getRunWithThisFactorTimesQs()
@@ -1209,7 +1213,8 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
                 << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
             messager_.flush("info");
             alphas = computeAlphaS(
-                0., 1., param->getLambdaQCD(), param->getNFlavors(),
+                param->getMuZero(), param->getc(), param->getLambdaQCD(),
+                param->getNFlavors(),
                 param->getRunWithThisFactorTimesQs()
                     * param->getAverageQsmin());
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
@@ -1222,7 +1227,8 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
                 << param->getRunWithThisFactorTimesQs() << " <Q_s>";
             messager_.flush("info");
             alphas = computeAlphaS(
-                0., 1., param->getLambdaQCD(), param->getNFlavors(),
+                param->getMuZero(), param->getc(), param->getLambdaQCD(),
+                param->getNFlavors(),
                 param->getRunWithThisFactorTimesQs()
                     * param->getAverageQsAvg());
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("

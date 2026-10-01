@@ -214,6 +214,19 @@ class Evolution {
      */
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     /**
+     * The final-time flow measurement of run(), after tmunu(): with
+     * `getWriteEpsilonUHydro()` the full u() solve and hydro output;
+     * otherwise only the raw \f$T^{\mu\nu}\f$ output, preceded by the
+     * flow-velocity solve if `getComputeGluonMultiplicity()` (so that
+     * eccentricity(), which weights by \f$\epsilon u^\tau\f$, sees the
+     * solved fields).
+     * \param[in,out] lat Lattice holding \f$T^{\mu\nu}\f$; receives
+     * \f$\epsilon\f$ and \f$u^\mu\f$ when the solve runs.
+     * \param[in] param Simulation parameters.
+     * \param[in] it Final time step index.
+     */
+    void finalFlowMeasurement(Lattice *lat, Parameters *param, int it);
+    /**
      * Fixes transverse Coulomb gauge (`GaugeFix::fftChi`), then computes
      * the azimuthally averaged gluon transverse-momentum spectrum by
      * Fourier-transforming the gauge-fixed electric fields \c U, \c U2,

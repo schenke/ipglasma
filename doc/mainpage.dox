@@ -15,7 +15,8 @@ grouped by physics topic.
 - \ref md_CHANGELOG -- what changed between versions.
 
 \par The simulation pipeline, in the order a run actually executes it
--# \ref Setup / \ref Parameters -- read and validate the input file.
+-# \ref InputFile / \ref Parameters -- read and validate the input file
+   (every input parameter is listed once, in ParameterTable.cpp).
 -# \ref Glauber -- resolve nuclear geometry and sample the collision
    impact parameter.
 -# \ref Init -- sample nucleon positions and color charges, and build the

@@ -18,6 +18,7 @@
 #include "Evolution.h"
 #include "FFT.h"
 #include "Init.h"
+#include "InputFile.h"
 #include "Instrumentation.h"
 #include "JIMWLK.h"
 #include "Lattice.h"
@@ -25,7 +26,6 @@
 #include "Parameters.h"
 #include "PrettyOstream.h"
 #include "Random.h"
-#include "Setup.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
@@ -37,8 +37,7 @@ using std::ofstream;
 using std::string;
 using std::stringstream;
 
-int readInput(
-    Setup *setup, Parameters *param, int argc, char *argv[], int rank);
+bool readInput(Parameters *param, int argc, char *argv[], int rank);
 void display_logo();
 void writeparams(Parameters *param);
 
@@ -71,15 +70,12 @@ int main(int argc, char *argv[]) {
     Parameters *param = &paramStorage;
     param->setMPIRank(rank);
     param->setMPISize(size);
-    Setup setup;
 
-    // read parameters from file
-    readInput(&setup, param, argc, argv, rank);
-
-    // Validate parameters before proceeding
-    if (!param->ValidParameters()) {
-        messager << "[main::main]: Invalid parameters detected. Exiting.";
-        messager.flush("error");
+    // read and validate the parameters from the input file
+    if (!readInput(param, argc, argv, rank)) {
+#ifndef DISABLEMPI
+        MPI_Finalize();
+#endif
         return 1;
     }
 
@@ -176,7 +172,7 @@ int main(int argc, char *argv[]) {
         string up_name;
         up_name = strup_name.str();
         ofstream fout1(up_name.c_str(), std::ios::app);
-        fout1 << "Random seed used on rank " << rank << ": "
+        fout1 << "# Random seed used on rank " << rank << ": "
               << param->getRandomSeed() << endl;
         fout1.close();
 
@@ -400,252 +396,51 @@ void display_logo() {
     cout << endl;
 }
 
-int readInput(
-    Setup *setup, Parameters *param, int argc, char *argv[], int rank) {
+bool readInput(Parameters *param, int argc, char *argv[], int rank) {
     // the first given argument is taken to be the input file name
     // if none is given, that file name is "input"
     PrettyOstream messager;
-    string file_name;
-    if (argc > 1) {
-        file_name = argv[1];
-        if (rank == 0) {
-            messager << "[main::readInput]: Using file name \"" << file_name
-                     << "\".";
-            messager.flush("info");
-        }
-    } else {
-        file_name = "input";
-        if (rank == 0) {
-            messager << "[main::readInput]: No input file name given. Using "
-                        "default \""
-                     << file_name << "\".";
-            messager.flush("info");
-        }
-    }
-
-    // read and set all the parameters in the "param" object of class
-    // "Parameters"
+    const string file_name = (argc > 1) ? argv[1] : "input";
     if (rank == 0) {
-        messager << "[main::readInput]: Reading parameters from file ... ";
-        // Flush immediately rather than deferring to the "done." message
-        // far below: if any of the reads that follow hits a missing
-        // key/file and calls exit(1), this is the only indication that
-        // parameter parsing had even started.
-        messager.flush("info");
-    }
-    param->setNucleusQsTableFileName(
-        setup->stringFind(file_name, "NucleusQsTableFileName"));
-    param->setNucleonPositionsFromFile(
-        setup->iFind(file_name, "nucleonPositionsFromFile"));
-    param->setNuclearConfigurationsPath(setup->stringFindOptional(
-        file_name, "nuclearConfigurationsPath", "./nucleusConfigurations"));
-    param->setTarget(setup->stringFind(file_name, "Target"));
-    param->setProjectile(setup->stringFind(file_name, "Projectile"));
-    param->setMode(setup->iFind(file_name, "mode"));
-    param->setRunningCoupling(setup->iFind(file_name, "runningCoupling"));
-    param->setL(setup->dFind(file_name, "L"));
-    param->setLOutput(setup->dFind(file_name, "LOutput"));
-    param->setBG(setup->dFind(file_name, "BG"));
-    param->setBGq(setup->dFind(file_name, "BGq"));
-    param->setBGqVar(setup->dFind(file_name, "BGqVar"));
-    param->setDqmin(setup->dFind(file_name, "dqMin"));
-    param->setOmega(setup->dFind(file_name, "omega"));
-    param->setMuZero(setup->dFind(file_name, "muZero"));
-    param->setc(setup->dFind(file_name, "c"));
-    param->setNFlavors(setup->iFindOptional(file_name, "nFlavors", 3));
-    param->setLambdaQCD(setup->dFindOptional(file_name, "LambdaQCD", 0.2));
-    param->setSize(setup->iFind(file_name, "size"));
-    param->setSizeOutput(setup->iFind(file_name, "sizeOutput"));
-    param->setEtaSizeOutput(setup->iFind(file_name, "etaSizeOutput"));
-    param->setDetaOutput(setup->dFind(file_name, "detaOutput"));
-    param->setUseFluctuatingx(setup->iFind(file_name, "useFluctuatingx"));
-    param->setInverseQsForMaxTime(
-        setup->iFind(file_name, "inverseQsForMaxTime"));
-    param->setSeed(setup->uLLIFind(file_name, "seed"));
-    param->setUseSeedList(setup->iFind(file_name, "useSeedList"));
-    param->setNy(setup->iFind(file_name, "Ny"));
-    param->setRoots(setup->dFind(file_name, "roots"));
-    param->setg(setup->dFind(file_name, "g"));
-    param->setm(setup->dFind(file_name, "m"));
-    param->setJacobianm(setup->dFind(file_name, "Jacobianm"));
-    param->setSigmaNN(setup->dFind(file_name, "SigmaNN"));
-    param->setUVdamp(setup->dFind(file_name, "UVdamp"));
-    param->setSetWSDeformParams(setup->iFind(file_name, "setWSDeformParams"));
-    if (param->getSetWSDeformParams()) {
-        param->setR_WS(setup->dFind(file_name, "R_WS"));
-        param->setA_WS(setup->dFind(file_name, "a_WS"));
-        param->setBeta2(setup->dFind(file_name, "beta2"));
-        param->setBeta3(setup->dFind(file_name, "beta3"));
-        param->setBeta4(setup->dFind(file_name, "beta4"));
-        param->setGamma(setup->dFind(file_name, "gamma"));
-        param->setWSdR_np(setup->dFind(file_name, "dR_np"));
-        param->setWSda_np(setup->dFind(file_name, "da_np"));
-    }
-    // Glauber::findNucleusData applies forceDminFlag/d_min unconditionally
-    // (unlike the other deform params above, which it only applies when
-    // setWSDeformParams is set), so these must always be read.
-    param->setForceDmin(setup->dFind(file_name, "force_dmin_flag"));
-    param->setDmin(setup->dFind(file_name, "d_min"));
-    param->setbmin(setup->dFind(file_name, "bmin"));
-    param->setbmax(setup->dFind(file_name, "bmax"));
-    param->setRotateReactionPlane(
-        setup->iFind(file_name, "rotateReactionPlane"));
-    param->setComputeGluonMultiplicity(
-        setup->iFind(file_name, "computeGluonMultiplicity"));
-    param->setQsmuRatio(setup->dFind(file_name, "QsmuRatio"));
-    param->setUsePseudoRapidity(setup->dFind(file_name, "usePseudoRapidity"));
-    param->setRapidityA(setup->dFind(file_name, "RapidityA"));
-    param->setRapidityB(setup->dFind(file_name, "RapidityB"));
-    param->setUseNucleus(setup->iFind(file_name, "useNucleus"));
-    param->setUseGaussian(setup->iFind(file_name, "useGaussian"));
-    param->setlightNucleusOption(setup->iFind(file_name, "lightNucleusOption"));
-    param->setPolarizationProjectile(
-        setup->iFind(file_name, "polariztionProjectile"));
-    param->setPolarizationTarget(setup->iFind(file_name, "polariztionTarget"));
-    param->setPolarizationProjectileJz(
-        setup->iFind(file_name, "polarizationProjectileJz"));
-    param->setPolarizationTargetJz(
-        setup->iFind(file_name, "polarizationTargetJz"));
-    if (param->getPolarizationProjectile() != 0
-        || param->getPolarizationTarget() != 0) {
-        param->setNucleonPositionsFromFile(1);
-    }
-    param->setg2mu(setup->dFind(file_name, "g2mu"));
-    param->setMaxtime(setup->dFind(file_name, "maxtime"));
-    // dtau (in lattice units) is ~0.1, adjusted so maxtime is a whole number
-    // of steps. With fewer than one step (e.g. maxtime 0 to only produce
-    // Wilson lines) use 0.1 instead of dividing by zero.
-    double lattice_a = param->getL() / static_cast<double>(param->getSize());
-    int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a);
-    param->setdtau(
-        (iTimeSteps > 0) ? param->getMaxtime() / (iTimeSteps * lattice_a)
-                         : 0.1);
-    param->setRunWithQs(setup->iFind(file_name, "runWith0Min1Avg2MaxQs"));
-    param->setRunWithkt(setup->iFind(file_name, "runWithkt"));
-    param->setRunWithLocalQs(setup->iFind(file_name, "runWithLocalQs"));
-    param->setRunWithThisFactorTimesQs(
-        setup->dFind(file_name, "runWithThisFactorTimesQs"));
-    param->setxFromThisFactorTimesQs(
-        setup->dFind(file_name, "xFromThisFactorTimesQs"));
-    param->setLinearb(setup->iFind(file_name, "samplebFromLinearDistribution"));
-    param->setWriteOutputs(setup->iFind(file_name, "writeOutputs"));
-    param->setWriteEpsilonUHydro(
-        setup->iFindOptional(file_name, "writeEpsilonUHydro", 1));
-    param->setWriteTmunuBinary(
-        setup->iFindOptional(file_name, "writeTmunuBinary", 1));
-    param->setWriteOutputsToHDF5(setup->iFind(file_name, "writeOutputsToHDF5"));
-    param->setWriteWilsonLines(setup->iFind(file_name, "writeWilsonLines"));
-    param->setWilsonLinePath(
-        setup->stringFindOptional(file_name, "wilsonLinePath", "./"));
-    param->setReadInitialWilsonLines(
-        setup->iFind(file_name, "readInitialWilsonLines"));
-    param->setAverageOverNuclei(
-        setup->iFind(file_name, "averageOverThisManyNuclei"));
-    param->setUseTimeForSeed(setup->iFind(file_name, "useTimeForSeed"));
-    param->setUseFixedNpart(setup->iFind(file_name, "useFixedNpart"));
-    param->setSmearQs(setup->iFind(file_name, "smearQs"));
-    param->setSmearingWidth(setup->dFind(file_name, "smearingWidth"));
-    param->setGaussianWounding(setup->iFind(file_name, "gaussianWounding"));
-    param->setReadMultFromFile(setup->iFind(file_name, "readMultFromFile"));
-    param->setProtonAnisotropy(setup->dFind(file_name, "protonAnisotropy"));
-    param->setUseConstituentQuarkProton(
-        setup->dFind(file_name, "useConstituentQuarkProton"));
-    param->setNqBase(setup->dFind(file_name, "useConstituentQuarkProton"));
-    param->setNqFluc(setup->dFind(file_name, "NqFluc"));
-    param->setUseSmoothNucleus(setup->iFind(file_name, "useSmoothNucleus"));
-    param->setShiftConstituentQuarkProtonOrigin(
-        setup->dFind(file_name, "shiftConstituentQuarkProtonOrigin"));
-    param->setMinimumQs2ST(setup->iFind(file_name, "minimumQs2ST"));
-    param->setSubNucleonParamType(
-        setup->iFind(file_name, "SubNucleonParamType"));
-    param->setSubNucleonParamSet(setup->iFind(file_name, "SubNucleonParamSet"));
-    if (param->getSubNucleonParamType() > 0) {
-        param->loadPosteriorParameterSets(param->getSubNucleonParamType());
-    }
-
-    // JIMWLK parameters
-    param->setUseJIMWLK(setup->iFind(file_name, "useJIMWLK"));
-    param->setMu0_jimwlk(setup->dFind(file_name, "mu0_jimwlk"));
-    param->setLambdaQCD_jimwlk(
-        setup->dFind(file_name, "Lambda_QCD_jimwlk"));  // in units of g^2mu
-    param->setc_jimwlk(setup->dFindOptional(file_name, "c_jimwlk", 0.2));
-    param->setm_jimwlk(setup->dFind(file_name, "m_jimwlk"));
-    param->setJimwlk_alphas(setup->dFind(file_name, "alphas_jimwlk"));
-    param->setDs_jimwlk(setup->dFind(file_name, "Ds_jimwlk"));
-    param->setJimwlk_x_projectile(
-        setup->dFind(file_name, "x_projectile_jimwlk"));
-    param->setJimwlk_x_target(setup->dFind(file_name, "x_target_jimwlk"));
-    param->setJimwlk_x0(setup->dFind(file_name, "jimwlk_ic_x"));
-    param->setSaveSnapshots(setup->iFind(file_name, "saveSnapshots"));
-    param->setxSnapshotList(setup->listFind(file_name, "xSnapshotList"));
-
-    if (rank == 0) {
-        messager << "[main::readInput]: Finished reading parameters.";
+        messager << "[main::readInput]: Reading parameters from \"" << file_name
+                 << "\".";
         messager.flush("info");
     }
 
-    return 0;
+    const InputFile input(file_name);
+    std::vector<string> errors = param->readInput(input);
+    // checks combining several parameters need all values read
+    if (errors.empty()) errors = param->validationErrors();
+    if (!errors.empty()) {
+        if (rank == 0) {
+            for (const string &error : errors) {
+                messager << "[main::readInput]: " << error;
+                messager.flush("error");
+            }
+            messager << "[main::readInput]: Invalid input parameters. "
+                        "Exiting.";
+            messager.flush("error");
+        }
+        return false;
+    }
+    return true;
 }
 
 void writeparams(Parameters *param) {
-    // write the used parameters into file "usedParameters.dat" as a double
-    // check for later
-    time_t rawtime = time(0);
+    // write the values of all input parameters this event used to
+    // "usedParameters<id>.dat", in input-file syntax
     stringstream strup_name;
     strup_name << "usedParameters" << param->getEventId() << ".dat";
-    string up_name;
-    up_name = strup_name.str();
-
-    ofstream fout1(up_name.c_str(), std::ios::out);
-    char *timestring = ctime(&rawtime);
-    fout1 << "File created on " << timestring << endl;
-    fout1 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ " << endl;
-    fout1 << "Used parameters by IP-Glasma v1.3" << endl;
-    fout1 << "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ " << endl;
-    fout1 << " " << endl;
-    fout1 << " Output by readInput in main.cpp: " << endl;
-    fout1 << " " << endl;
-    fout1 << "Program run in mode " << param->getMode() << endl;
-    fout1 << "Nc 3" << endl;
-    fout1 << "size " << param->getSize() << endl;
-    fout1 << "lattice spacing a "
-          << param->getL() / static_cast<double>(param->getSize()) << " fm "
-          << endl;
-    fout1 << "Ny " << param->getNy() << endl;
-    fout1 << "Projectile " << param->getProjectile() << endl;
-    fout1 << "Target " << param->getTarget() << endl;
-    if (param->getUseConstituentQuarkProton() > 0) {
-        fout1 << "Nucleons consists of "
-              << param->getUseConstituentQuarkProton() << " constituent quarks"
-              << endl;
-        if (param->getShiftConstituentQuarkProtonOrigin())
-            fout1 << "... constituent quark center of mass moved to origin"
-                  << endl;
-    }
-    fout1 << "Smooth nucleus " << param->getUseSmoothNucleus() << endl;
-    fout1 << "Gaussian wounding " << param->getGaussianWounding() << endl;
-    fout1 << "Using fluctuating x=Qs/root(s) " << param->getUseFluctuatingx()
-          << endl;
-    if (param->getRunWithkt() == 0)
-        fout1 << "Using local Qs to run " << param->getRunWithLocalQs() << endl;
-    else
-        fout1 << "running alpha_s with k_T" << endl;
-    fout1 << "QsmuRatio " << param->getQsmuRatio() << endl;
-    fout1 << "smeared mu " << param->getSmearQs() << endl;
-    fout1 << "m " << param->getm() << endl;
-    fout1 << "UVdamp " << param->getUVdamp() << endl;
-    fout1 << "writeTmunuBinary " << param->getWriteTmunuBinary() << endl;
-    if (param->getSetWSDeformParams()) {
-        fout1 << "setWSDeformParams " << param->getSetWSDeformParams() << endl;
-        fout1 << "R_WS " << param->getR_WS() << endl;
-        fout1 << "a_WS " << param->getA_WS() << endl;
-        fout1 << "beta2 " << param->getBeta2() << endl;
-        fout1 << "beta3 " << param->getBeta3() << endl;
-        fout1 << "beta4 " << param->getBeta4() << endl;
-        fout1 << "gamma " << param->getGamma() << endl;
-    }
-    if (param->getSmearQs() == 1) {
-        fout1 << "smearing width " << param->getSmearingWidth() << endl;
-    }
-    fout1.close();
+    ofstream fout1(strup_name.str());
+    time_t rawtime = time(0);
+    fout1 << "# Input parameters used by IP-Glasma for event "
+          << param->getEventId() << ", written " << ctime(&rawtime);
+    fout1 << "# This file is a valid input file. Running it does not "
+             "reproduce this event:\n"
+             "# the random numbers also depend on the MPI rank and the "
+             "event's position in\n"
+             "# the run (and on the time with useTimeForSeed 1), and "
+             "SubNucleonParamSet -1\n"
+             "# draws a new posterior parameter set.\n";
+    param->writeInputParameters(fout1);
 }

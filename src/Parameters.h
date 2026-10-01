@@ -4,15 +4,18 @@
 #ifndef SRC_PARAMETERS_H_
 #define SRC_PARAMETERS_H_
 
+#include <iosfwd>
 #include <string>
 #include <vector>
 
 #include "PrettyOstream.h"
 
+class InputFile;
+
 /**
  * Every user-configurable and derived simulation parameter, read from
  * the input file (see README.md's "Input parameters" section) by
- * main.cpp/Setup and threaded through to every stage of the pipeline.
+ * Parameters::readInput() and threaded through to every stage of the pipeline.
  *
  * Almost every field is a plain value plus a `getX()`/`setX()` pair;
  * only the handful of methods below with real bodies (the posterior-
@@ -315,7 +318,9 @@ class Parameters {
     /// Whether `R_WS_`/`a_WS_`/`beta2_`/`beta3_`/`beta4_`/\c
     /// gamma_ override a nucleus species' built-in deformation
     /// parameters.
-    bool setWSDeformParams_;
+    // initialized: read by ParameterTable.cpp conditions even when its
+    // own input value was missing or malformed
+    bool setWSDeformParams_ = false;
     /// Whether to enforce \c d_min_ as a minimum inter-nucleon
     /// distance when sampling nucleon positions.
     bool forceDminFlag_;
@@ -369,7 +374,8 @@ class Parameters {
     double jimwlk_x2_;
     /// Whether to save Wilson-line snapshots at the \f$x\f$ values in
     /// \c xSnapshotList_ during JIMWLK evolution.
-    bool saveSnapshots_;
+    // initialized: see setWSDeformParams_
+    bool saveSnapshots_ = false;
     /// Bjorken \f$x\f$ values to save a JIMWLK snapshot at, if \c
     /// saveSnapshots_.
     std::vector<double> xSnapshotList_;
@@ -378,7 +384,7 @@ class Parameters {
     /**
      * Constructs a Parameters with every field default-initialized
      * (i.e. left indeterminate for scalar types); callers populate it
-     * via Setup/main.cpp before use.
+     * by readInput() before use.
      */
     Parameters() {};
 
@@ -1704,13 +1710,34 @@ class Parameters {
     bool getSaveSnapshots() const { return saveSnapshots_; }
 
     /**
-     * Checks whether the current parameter set is internally
-     * consistent enough to run (e.g. a positive lattice size, a valid
-     * Wilson-line data format, snapshots only requested when Wilson
-     * lines are actually written, a running-coupling formula that
-     * can't go singular or negative, a positive `c_jimwlk`), logging
-     * an error and returning `false` on the first problem found.
-     * \return `true` if every check passes, `false` otherwise.
+     * Sets every input parameter from \p input, using the parameter
+     * table in ParameterTable.cpp: parses and checks each value, applies
+     * the defaults of optional parameters, and then sets the derived
+     * values (time step, NqBase, posterior parameter sets). Nothing
+     * derived is set if there are errors.
+     * \param[in] input The parsed input file.
+     * \return Every problem found (including those from reading the
+     * file): unknown keys, missing required keys, malformed values and
+     * values failing their checks. Empty on success.
+     */
+    std::vector<std::string> readInput(const InputFile &input);
+    /**
+     * Writes every input parameter's current value, one `key value` line
+     * each in input-file syntax and table order, so the output can be
+     * used as an input file again.
+     * \param[out] out Stream to write to.
+     */
+    void writeInputParameters(std::ostream &out) const;
+    /**
+     * Checks that combine several parameters (e.g. snapshots require
+     * writing Wilson lines, LambdaQCD < muZero with running coupling).
+     * Checks of a single value run in readInput().
+     * \return One message per failed check; empty if all pass.
+     */
+    std::vector<std::string> validationErrors() const;
+    /**
+     * Logs every validationErrors() message as an error.
+     * \return `true` if there are none.
      */
     bool ValidParameters();
 };

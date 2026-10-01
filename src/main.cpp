@@ -307,6 +307,12 @@ int main(int argc, char *argv[]) {
         ipg::Profiler::instance().endEvent();
     }
 
+#ifndef DISABLEMPI
+    // Every rank must have finished appending its last event to its
+    // RESULTS_rank*.h5 before rank 0 merges (and deletes) those files.
+    MPI_Barrier(MPI_COMM_WORLD);
+#endif
+
     if (h5Flag == 1 && rank == 0) {
         int status = 0;
         stringstream collect_command;

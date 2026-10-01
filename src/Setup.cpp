@@ -43,7 +43,9 @@ string Setup::stringFind(string file_name, string st) {
     input >> s;
 
     ind = 0;
-    while (s.compare("EndOfFile") != 0) {
+    // also stop at the end of the stream, in case the file has no
+    // EndOfFile line (a failed read leaves s empty)
+    while (!s.empty() && s.compare("EndOfFile") != 0) {
         input >> xstr;
         if (s.compare(str) == 0) {
             ind++;

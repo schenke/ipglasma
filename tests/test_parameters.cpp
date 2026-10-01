@@ -27,6 +27,17 @@ void makeValidBaseline(Parameters &param) {
     // on muZero/LambdaQCD/nFlavors/c_jimwlk's indeterminate default values.
     param.setRunningCoupling(0);
     param.setUseJIMWLK(0);
+    param.setOmega(1.);
+    param.setSubNucleonParamType(0);
+    // Valid values for the fields only checked once a test enables running
+    // coupling or JIMWLK.
+    param.setc(0.2);
+    param.setRunWithkt(0);
+    param.setRunWithQs(2);
+    param.setNFlavors(3);
+    param.setJimwlk_alphas(0.3);  // fixed JIMWLK coupling
+    param.setMu0_jimwlk(0.28);
+    param.setLambdaQCD_jimwlk(0.04);
 }
 }  // namespace
 
@@ -150,6 +161,81 @@ TEST_CASE(
     makeValidBaseline(param);
     param.setUseJIMWLK(0);
     param.setc_jimwlk(0.0);
+    CHECK(param.ValidParameters() == true);
+}
+
+TEST_CASE("Parameters::ValidParameters: rejects an odd lattice size") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setSize(255);
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE("Parameters::ValidParameters: rejects a non-positive omega") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setOmega(0.);
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: rejects an unknown SubNucleonParamType") {
+    Parameters param;
+    makeValidBaseline(param);
+    for (int type : {0, 1, 2, 4}) {
+        param.setSubNucleonParamType(type);
+        CHECK(param.ValidParameters() == true);
+    }
+    param.setSubNucleonParamType(3);
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: rejects non-positive LambdaQCD/c and an "
+    "unknown runWith0Min1Avg2MaxQs with running coupling") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setRunningCoupling(1);
+    param.setMuZero(0.3);
+    param.setLambdaQCD(0.2);
+    CHECK(param.ValidParameters() == true);
+
+    param.setc(0.);
+    CHECK(param.ValidParameters() == false);
+    param.setc(0.2);
+
+    param.setLambdaQCD(-0.1);
+    CHECK(param.ValidParameters() == false);
+    param.setLambdaQCD(0.2);
+
+    param.setRunWithQs(3);
+    CHECK(param.ValidParameters() == false);
+    // not used with running alpha_s(k_T)
+    param.setRunWithkt(1);
+    CHECK(param.ValidParameters() == true);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: checks the JIMWLK running coupling even "
+    "when runningCoupling is off") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setUseJIMWLK(1);
+    param.setc_jimwlk(0.2);
+    param.setJimwlk_alphas(0.);  // JIMWLK running coupling
+    CHECK(param.ValidParameters() == true);
+
+    param.setNFlavors(17);
+    CHECK(param.ValidParameters() == false);
+    param.setNFlavors(3);
+
+    param.setLambdaQCD_jimwlk(0.3);  // >= mu0_jimwlk
+    CHECK(param.ValidParameters() == false);
+    param.setLambdaQCD_jimwlk(0.);
+    CHECK(param.ValidParameters() == false);
+
+    // none of this matters for a fixed JIMWLK coupling
+    param.setJimwlk_alphas(0.3);
     CHECK(param.ValidParameters() == true);
 }
 

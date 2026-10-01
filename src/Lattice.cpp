@@ -17,7 +17,7 @@ Lattice::Lattice(Parameters *param, int length) {
     IPG_PROFILE_SCOPE("lattice.allocate");
     size_ = length * length;
     length_ = length;
-    const double a = param->getL() / static_cast<double>(length);
+    const double a = param->lattice.L / static_cast<double>(length);
 
     messager_ << "[Lattice::Lattice]: Allocating square lattice of size "
               << length << "x" << length << " with a=" << a << " fm ...";
@@ -62,7 +62,7 @@ Lattice::Lattice(Parameters *param, int length) {
         }
     }
 
-    messager_ << " done on rank " << param->getMPIRank() << ".";
+    messager_ << " done on rank " << param->run.MPIRank << ".";
     messager_.flush("info");
 }
 
@@ -88,18 +88,18 @@ void Lattice::writeMatrixArrayText(
 void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     // Logical aliases (see the field comment in Lattice.h): Ux2 <-> pi,
     // Uy2 <-> phi.
-    const int N = param->getSize();
+    const int N = param->lattice.size;
 
     std::stringstream strVOne_name;
     strVOne_name << fileprefix << "Phi-"
-                 << param->getEventId()
-                        + 2 * param->getSeed() * param->getMPISize()
+                 << param->event.eventId
+                        + 2 * param->random.seed * param->run.MPISize
                  << ".txt";
 
     std::stringstream strVTwo_name;
     strVTwo_name << fileprefix << "Pi-"
-                 << param->getEventId()
-                        + (1 + 2 * param->getSeed()) * param->getMPISize()
+                 << param->event.eventId
+                        + (1 + 2 * param->random.seed) * param->run.MPISize
                  << ".txt";
 
     writeMatrixArrayText(strVOne_name.str(), Uy2, N);
@@ -109,10 +109,10 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
 void Lattice::writeWilsonLines(
     Parameters *param, NucleusRole nucleus, double x) {
     std::string wLineFile = generateWilsonLineDataFileName(param, x, nucleus);
-    const int N = param->getSize();
+    const int N = param->lattice.size;
 
     // Output in text
-    if (param->getWriteWilsonLines() == 1) {
+    if (param->wilsonLines.writeWilsonLines == 1) {
         std::ofstream foutU(wLineFile, std::ios::out);
         foutU.precision(15);
 
@@ -133,16 +133,16 @@ void Lattice::writeWilsonLines(
 
         messager_ << "[Lattice::writeWilsonLines]: wrote " << wLineFile;
         messager_.flush("info");
-    } else if (param->getWriteWilsonLines() == 2) {
-        const double L = param->getL();
+    } else if (param->wilsonLines.writeWilsonLines == 2) {
+        const double L = param->lattice.L;
         const double a = L / static_cast<double>(N);  // lattice spacing in fm
 
         std::ofstream Outfile1;
         Outfile1.open(wLineFile, std::ios::out | std::ios::binary);
 
         double temp = (nucleus == NucleusRole::Projectile)
-                          ? param->getRapidityA()
-                          : param->getRapidityB();
+                          ? param->colorCharge.RapidityA
+                          : param->colorCharge.RapidityB;
 
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
@@ -193,7 +193,7 @@ void Lattice::writeWilsonLines(
         std::stringstream errorMsg;
         errorMsg << "[Lattice::writeWilsonLines]: Unknown writeWilsonLines "
                     "value "
-                 << param->getWriteWilsonLines() << ". Exiting.";
+                 << param->wilsonLines.writeWilsonLines << ". Exiting.";
         messager_.error(errorMsg.str());
         exit(1);
     }
@@ -205,13 +205,14 @@ std::string Lattice::generateWilsonLineDataFileName(
     const int iA = isProjectile ? 1 : 2;
 
     std::stringstream Vname;
-    Vname << param->getWilsonLinePath() << "/WilsonLine";
+    Vname << param->wilsonLines.wilsonLinePath << "/WilsonLine";
     if (x >= 0) Vname << "_x_" << std::scientific << std::setprecision(5) << x;
     Vname << "_"
-          << param->getEventId()
-                 + (iA + 2 * param->getSeed()) * param->getMPISize();
+          << param->event.eventId
+                 + (iA + 2 * param->random.seed) * param->run.MPISize;
 
-    const int fileFormat = (format < 0) ? param->getWriteWilsonLines() : format;
+    const int fileFormat =
+        (format < 0) ? param->wilsonLines.writeWilsonLines : format;
     if (fileFormat == 1) Vname << ".txt";
 
     return Vname.str();

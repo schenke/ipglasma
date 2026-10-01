@@ -17,16 +17,16 @@ namespace {
 // in test_input_file.cpp; these tests cover the checks that combine several
 // parameters.
 void makeValidBaseline(Parameters &param) {
-    param.setWriteWilsonLines(2);
-    param.setWilsonLinePath(".");
-    param.setSaveSnapshots(0);
-    param.setRunningCoupling(0);
-    param.setMuZero(0.3);
-    param.setLambdaQCD(0.2);
-    param.setUseJIMWLK(0);
-    param.setJimwlk_alphas(0.3);  // fixed JIMWLK coupling
-    param.setMu0_jimwlk(0.28);
-    param.setLambdaQCD_jimwlk(0.04);
+    param.wilsonLines.writeWilsonLines = 2;
+    param.wilsonLines.wilsonLinePath = ".";
+    param.jimwlk.saveSnapshots = 0;
+    param.coupling.runningCoupling = 0;
+    param.coupling.muZero = 0.3;
+    param.coupling.LambdaQCD = 0.2;
+    param.jimwlk.useJIMWLK = 0;
+    param.jimwlk.alphas_jimwlk = 0.3;  // fixed JIMWLK coupling
+    param.jimwlk.mu0_jimwlk = 0.28;
+    param.jimwlk.Lambda_QCD_jimwlk = 0.04;
 }
 }  // namespace
 
@@ -42,12 +42,12 @@ TEST_CASE(
     "writeWilsonLines") {
     Parameters param;
     makeValidBaseline(param);
-    param.setSaveSnapshots(1);
-    param.setWriteWilsonLines(0);
+    param.jimwlk.saveSnapshots = 1;
+    param.wilsonLines.writeWilsonLines = 0;
     CHECK(param.validationErrors().size() == 1);
     CHECK(param.ValidParameters() == false);
 
-    param.setSaveSnapshots(0);
+    param.jimwlk.saveSnapshots = 0;
     CHECK(param.validationErrors().empty());
 }
 
@@ -56,9 +56,9 @@ TEST_CASE(
     "only when Wilson lines are written") {
     Parameters param;
     makeValidBaseline(param);
-    param.setWilsonLinePath("this_directory_does_not_exist");
+    param.wilsonLines.wilsonLinePath = "this_directory_does_not_exist";
     CHECK(param.validationErrors().size() == 1);
-    param.setWriteWilsonLines(0);
+    param.wilsonLines.writeWilsonLines = 0;
     CHECK(param.validationErrors().empty());
 }
 
@@ -67,15 +67,15 @@ TEST_CASE(
     "running coupling") {
     Parameters param;
     makeValidBaseline(param);
-    param.setMuZero(0.2);
-    param.setLambdaQCD(0.2);  // equal: log argument is 0 at the boundary
+    param.coupling.muZero = 0.2;
+    param.coupling.LambdaQCD = 0.2;  // equal: log argument is 0 at the boundary
     CHECK(param.validationErrors().empty());
 
-    param.setRunningCoupling(1);
+    param.coupling.runningCoupling = 1;
     CHECK(param.validationErrors().size() == 1);
-    param.setLambdaQCD(0.3);  // larger: log argument is negative
+    param.coupling.LambdaQCD = 0.3;  // larger: log argument is negative
     CHECK(param.validationErrors().size() == 1);
-    param.setLambdaQCD(0.1);
+    param.coupling.LambdaQCD = 0.1;
     CHECK(param.validationErrors().empty());
 }
 
@@ -84,49 +84,22 @@ TEST_CASE(
     "only with the JIMWLK running coupling") {
     Parameters param;
     makeValidBaseline(param);
-    param.setLambdaQCD_jimwlk(0.3);           // >= mu0_jimwlk
+    param.jimwlk.Lambda_QCD_jimwlk = 0.3;     // >= mu0_jimwlk
     CHECK(param.validationErrors().empty());  // JIMWLK off
-    param.setUseJIMWLK(1);
+    param.jimwlk.useJIMWLK = 1;
     CHECK(param.validationErrors().empty());  // fixed JIMWLK coupling
-    param.setJimwlk_alphas(0.);
+    param.jimwlk.alphas_jimwlk = 0.;
     CHECK(param.validationErrors().size() == 1);
 }
 
 TEST_CASE("Parameters::validationErrors: reports every failed check") {
     Parameters param;
     makeValidBaseline(param);
-    param.setSaveSnapshots(1);
-    param.setWriteWilsonLines(0);
-    param.setRunningCoupling(1);
-    param.setLambdaQCD(0.5);
+    param.jimwlk.saveSnapshots = 1;
+    param.wilsonLines.writeWilsonLines = 0;
+    param.coupling.runningCoupling = 1;
+    param.coupling.LambdaQCD = 0.5;
     CHECK(param.validationErrors().size() == 2);
-}
-
-TEST_CASE(
-    "Parameters: int-to-bool coercing setters treat any nonzero as true") {
-    // setSaveSnapshots/setForceDmin/setComputeGluonMultiplicity/... all
-    // share the same "x == 0 -> false, else -> true" pattern; this checks
-    // a representative sample rather than every one of them individually.
-    Parameters param;
-
-    param.setSaveSnapshots(0);
-    CHECK(param.getSaveSnapshots() == false);
-    param.setSaveSnapshots(1);
-    CHECK(param.getSaveSnapshots() == true);
-    param.setSaveSnapshots(2);
-    CHECK(param.getSaveSnapshots() == true);
-    param.setSaveSnapshots(-1);
-    CHECK(param.getSaveSnapshots() == true);
-
-    param.setForceDmin(0);
-    CHECK(param.getForceDmin() == false);
-    param.setForceDmin(5);
-    CHECK(param.getForceDmin() == true);
-
-    param.setComputeGluonMultiplicity(0);
-    CHECK(param.getComputeGluonMultiplicity() == false);
-    param.setComputeGluonMultiplicity(-3);
-    CHECK(param.getComputeGluonMultiplicity() == true);
 }
 
 namespace {

@@ -4,7 +4,7 @@
 // in Parameters, its default (if it is optional) and its validity checks.
 // Parameters::readInput() and Parameters::writeInputParameters() are both
 // driven by this table, so adding a parameter only takes one entry here
-// (plus its member/getter/setter in Parameters.h).
+// (plus its field in one of the groups in Parameters.h).
 
 #include <algorithm>
 #include <cctype>
@@ -62,6 +62,7 @@ void writeValue(std::ostream &out, const T &value) {
 
 template <typename T>
 std::string typeName() {
+    if constexpr (std::is_same_v<T, bool>) return "0 or 1";
     if constexpr (std::is_same_v<T, int>) return "an integer";
     if constexpr (std::is_same_v<T, unsigned long long>)
         return "a non-negative integer";
@@ -77,18 +78,18 @@ template <typename T>
 using Check = std::function<std::string(const T &)>;
 
 /// Typed builder for a ParameterSpec, so the table reads
-/// `param("size", &Parameters::setSize, &Parameters::getSize).check(even())`.
+/// `param("size", &P::lattice, &LatticeParameters::size).check(even())`.
 template <typename T>
 class Param {
   public:
-    template <typename Arg, typename Ret>
-    Param(
-        const char *name, void (Parameters::*set)(Arg),
-        Ret (Parameters::*get)() const)
+    template <typename Group>
+    Param(const char *name, Group Parameters::*group, T Group::*field)
         : name_(name),
-          set_([set](Parameters &p, const T &v) { (p.*set)(v); }),
-          write_([get](const Parameters &p, std::ostream &out) {
-              writeValue(out, (p.*get)());
+          set_([group, field](Parameters &p, const T &v) {
+              (p.*group).*field = v;
+          }),
+          write_([group, field](const Parameters &p, std::ostream &out) {
+              writeValue(out, (p.*group).*field);
           }) {}
 
     /// Makes the parameter optional, with this default (as input text).
@@ -137,11 +138,10 @@ class Param {
     std::vector<Check<T>> checks_;
 };
 
-template <typename Arg, typename Ret>
-Param<std::decay_t<Arg>> param(
-    const char *name, void (Parameters::*set)(Arg),
-    Ret (Parameters::*get)() const) {
-    return Param<std::decay_t<Arg>>(name, set, get);
+/// One input parameter, stored in the field `param.*group.*field`.
+template <typename Group, typename T>
+Param<T> param(const char *name, Group Parameters::*group, T Group::*field) {
+    return Param<T>(name, group, field);
 }
 
 // ---- checks ----
@@ -182,8 +182,10 @@ Check<T> inRange(T low, T high, const char *note = "") {
     };
 }
 
-bool wsDeformParamsSet(const Parameters &p) { return p.getSetWSDeformParams(); }
-bool saveSnapshotsSet(const Parameters &p) { return p.getSaveSnapshots(); }
+bool wsDeformParamsSet(const Parameters &p) {
+    return p.nucleus.setWSDeformParams;
+}
+bool saveSnapshotsSet(const Parameters &p) { return p.jimwlk.saveSnapshots; }
 
 using P = Parameters;
 
@@ -192,225 +194,248 @@ using P = Parameters;
 const std::vector<ParameterSpec> &parameterTable() {
     static const std::vector<ParameterSpec> table = {
         // general setup
-        param("mode", &P::setMode, &P::getMode),
-        param("size", &P::setSize, &P::getSize)
+        param("mode", &P::evolution, &EvolutionParameters::mode),
+        param("size", &P::lattice, &LatticeParameters::size)
             .check(positive<int>())
             .check(even()),  // the FFTs assume even lattice dimensions
-        param("L", &P::setL, &P::getL),
-        param("Ny", &P::setNy, &P::getNy),
-        param("roots", &P::setRoots, &P::getRoots),
-        param("g", &P::setg, &P::getg),
-        param("g2mu", &P::setg2mu, &P::getg2mu),
-        param("maxtime", &P::setMaxtime, &P::getMaxtime),
+        param("L", &P::lattice, &LatticeParameters::L),
+        param("Ny", &P::colorCharge, &ColorChargeParameters::Ny),
+        param("roots", &P::collision, &CollisionParameters::roots),
+        param("g", &P::coupling, &CouplingParameters::g),
+        param("g2mu", &P::collision, &CollisionParameters::g2mu),
+        param("maxtime", &P::evolution, &EvolutionParameters::maxtime),
         param(
-            "inverseQsForMaxTime", &P::setInverseQsForMaxTime,
-            &P::getInverseQsForMaxTime),
+            "inverseQsForMaxTime", &P::evolution,
+            &EvolutionParameters::inverseQsForMaxTime),
 
         // random seed
-        param("seed", &P::setSeed, &P::getSeed),
-        param("useSeedList", &P::setUseSeedList, &P::getUseSeedList),
-        param("useTimeForSeed", &P::setUseTimeForSeed, &P::getUseTimeForSeed),
+        param("seed", &P::random, &RandomParameters::seed),
+        param("useSeedList", &P::random, &RandomParameters::useSeedList),
+        param("useTimeForSeed", &P::random, &RandomParameters::useTimeForSeed),
 
         // collision system and geometry
-        param("Projectile", &P::setProjectile, &P::getProjectile),
-        param("Target", &P::setTarget, &P::getTarget),
-        param("SigmaNN", &P::setSigmaNN, &P::getSigmaNN),
-        param("bmin", &P::setbmin, &P::getbmin),
-        param("bmax", &P::setbmax, &P::getbmax),
-        param("samplebFromLinearDistribution", &P::setLinearb, &P::getLinearb),
+        param("Projectile", &P::collision, &CollisionParameters::Projectile),
+        param("Target", &P::collision, &CollisionParameters::Target),
+        param("SigmaNN", &P::collision, &CollisionParameters::SigmaNN),
+        param("bmin", &P::collision, &CollisionParameters::bmin),
+        param("bmax", &P::collision, &CollisionParameters::bmax),
         param(
-            "rotateReactionPlane", &P::setRotateReactionPlane,
-            &P::getRotateReactionPlane),
-        param("useNucleus", &P::setUseNucleus, &P::getUseNucleus),
-        param("useGaussian", &P::setUseGaussian, &P::getUseGaussian),
+            "samplebFromLinearDistribution", &P::collision,
+            &CollisionParameters::samplebFromLinearDistribution),
         param(
-            "useSmoothNucleus", &P::setUseSmoothNucleus,
-            &P::getUseSmoothNucleus),
-        param("useFixedNpart", &P::setUseFixedNpart, &P::getUseFixedNpart),
+            "rotateReactionPlane", &P::collision,
+            &CollisionParameters::rotateReactionPlane),
+        param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
+        param("useGaussian", &P::collision, &CollisionParameters::useGaussian),
         param(
-            "averageOverThisManyNuclei", &P::setAverageOverNuclei,
-            &P::getAverageOverNuclei),
+            "useSmoothNucleus", &P::nucleus,
+            &NucleusParameters::useSmoothNucleus),
         param(
-            "gaussianWounding", &P::setGaussianWounding,
-            &P::getGaussianWounding),
+            "useFixedNpart", &P::collision,
+            &CollisionParameters::useFixedNpart),
+        param(
+            "averageOverThisManyNuclei", &P::collision,
+            &CollisionParameters::averageOverThisManyNuclei),
+        param(
+            "gaussianWounding", &P::collision,
+            &CollisionParameters::gaussianWounding),
 
         // nucleon positions
         param(
-            "nucleonPositionsFromFile", &P::setNucleonPositionsFromFile,
-            &P::getNucleonPositionsFromFile),
+            "nucleonPositionsFromFile", &P::nucleus,
+            &NucleusParameters::nucleonPositionsFromFile),
         param(
-            "nuclearConfigurationsPath", &P::setNuclearConfigurationsPath,
-            &P::getNuclearConfigurationsPath)
+            "nuclearConfigurationsPath", &P::nucleus,
+            &NucleusParameters::nuclearConfigurationsPath)
             .optional("./nucleusConfigurations"),
         param(
-            "lightNucleusOption", &P::setlightNucleusOption,
-            &P::getlightNucleusOption),
+            "lightNucleusOption", &P::nucleus,
+            &NucleusParameters::lightNucleusOption),
         param(
-            "polariztionProjectile", &P::setPolarizationProjectile,
-            &P::getPolarizationProjectile),
+            "polariztionProjectile", &P::nucleus,
+            &NucleusParameters::polariztionProjectile),
         param(
-            "polariztionTarget", &P::setPolarizationTarget,
-            &P::getPolarizationTarget),
+            "polariztionTarget", &P::nucleus,
+            &NucleusParameters::polariztionTarget),
         param(
-            "polarizationProjectileJz", &P::setPolarizationProjectileJz,
-            &P::getPolarizationProjectileJz),
+            "polarizationProjectileJz", &P::nucleus,
+            &NucleusParameters::polarizationProjectileJz),
         param(
-            "polarizationTargetJz", &P::setPolarizationTargetJz,
-            &P::getPolarizationTargetJz),
+            "polarizationTargetJz", &P::nucleus,
+            &NucleusParameters::polarizationTargetJz),
 
         // Woods-Saxon deformation
         param(
-            "setWSDeformParams", &P::setSetWSDeformParams,
-            &P::getSetWSDeformParams),
-        param("R_WS", &P::setR_WS, &P::getR_WS).onlyIf(wsDeformParamsSet),
-        param("a_WS", &P::setA_WS, &P::getA_WS).onlyIf(wsDeformParamsSet),
-        param("beta2", &P::setBeta2, &P::getBeta2).onlyIf(wsDeformParamsSet),
-        param("beta3", &P::setBeta3, &P::getBeta3).onlyIf(wsDeformParamsSet),
-        param("beta4", &P::setBeta4, &P::getBeta4).onlyIf(wsDeformParamsSet),
-        param("gamma", &P::setGamma, &P::getGamma).onlyIf(wsDeformParamsSet),
-        param("dR_np", &P::setWSdR_np, &P::getWSdR_np)
+            "setWSDeformParams", &P::nucleus,
+            &NucleusParameters::setWSDeformParams),
+        param("R_WS", &P::nucleus, &NucleusParameters::R_WS)
             .onlyIf(wsDeformParamsSet),
-        param("da_np", &P::setWSda_np, &P::getWSda_np)
+        param("a_WS", &P::nucleus, &NucleusParameters::a_WS)
+            .onlyIf(wsDeformParamsSet),
+        param("beta2", &P::nucleus, &NucleusParameters::beta2)
+            .onlyIf(wsDeformParamsSet),
+        param("beta3", &P::nucleus, &NucleusParameters::beta3)
+            .onlyIf(wsDeformParamsSet),
+        param("beta4", &P::nucleus, &NucleusParameters::beta4)
+            .onlyIf(wsDeformParamsSet),
+        param("gamma", &P::nucleus, &NucleusParameters::gamma)
+            .onlyIf(wsDeformParamsSet),
+        param("dR_np", &P::nucleus, &NucleusParameters::dR_np)
+            .onlyIf(wsDeformParamsSet),
+        param("da_np", &P::nucleus, &NucleusParameters::da_np)
             .onlyIf(wsDeformParamsSet),
         // Glauber::findNucleusData applies these regardless of
         // setWSDeformParams
-        param("force_dmin_flag", &P::setForceDmin, &P::getForceDmin),
-        param("d_min", &P::setDmin, &P::getDmin),
+        param(
+            "force_dmin_flag", &P::nucleus,
+            &NucleusParameters::force_dmin_flag),
+        param("d_min", &P::nucleus, &NucleusParameters::d_min),
 
         // nucleon substructure and color charges
-        param("m", &P::setm, &P::getm),
-        param("BG", &P::setBG, &P::getBG),
-        param("BGq", &P::setBGq, &P::getBGq),
-        param("BGqVar", &P::setBGqVar, &P::getBGqVar),
-        param("dqMin", &P::setDqmin, &P::getDqmin),
-        param("omega", &P::setOmega, &P::getOmega).check(positive()),
+        param("m", &P::subnucleon, &SubnucleonParameters::m),
+        param("BG", &P::subnucleon, &SubnucleonParameters::BG),
+        param("BGq", &P::subnucleon, &SubnucleonParameters::BGq),
+        param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar),
+        param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin),
+        param("omega", &P::subnucleon, &SubnucleonParameters::omega)
+            .check(positive()),
         param(
-            "useConstituentQuarkProton", &P::setUseConstituentQuarkProton,
-            &P::getUseConstituentQuarkProton),
-        param("NqFluc", &P::setNqFluc, &P::getNqFluc),
+            "useConstituentQuarkProton", &P::subnucleon,
+            &SubnucleonParameters::useConstituentQuarkProton),
+        param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc),
         param(
-            "shiftConstituentQuarkProtonOrigin",
-            &P::setShiftConstituentQuarkProtonOrigin,
-            &P::getShiftConstituentQuarkProtonOrigin),
+            "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
+            &SubnucleonParameters::shiftConstituentQuarkProtonOrigin),
         param(
-            "protonAnisotropy", &P::setProtonAnisotropy,
-            &P::getProtonAnisotropy),
+            "protonAnisotropy", &P::subnucleon,
+            &SubnucleonParameters::protonAnisotropy),
         param(
-            "SubNucleonParamType", &P::setSubNucleonParamType,
-            &P::getSubNucleonParamType)
+            "SubNucleonParamType", &P::subnucleon,
+            &SubnucleonParameters::SubNucleonParamType)
             .check(oneOf({0, 1, 2, 4}, " (0: use the input values)")),
         param(
-            "SubNucleonParamSet", &P::setSubNucleonParamSet,
-            &P::getSubNucleonParamSet),
-        param("QsmuRatio", &P::setQsmuRatio, &P::getQsmuRatio),
-        param("smearQs", &P::setSmearQs, &P::getSmearQs),
-        param("smearingWidth", &P::setSmearingWidth, &P::getSmearingWidth),
-        param("UVdamp", &P::setUVdamp, &P::getUVdamp),
-        param("minimumQs2ST", &P::setMinimumQs2ST, &P::getMinimumQs2ST),
+            "SubNucleonParamSet", &P::subnucleon,
+            &SubnucleonParameters::SubNucleonParamSet),
+        param("QsmuRatio", &P::colorCharge, &ColorChargeParameters::QsmuRatio),
+        param("smearQs", &P::subnucleon, &SubnucleonParameters::smearQs),
         param(
-            "NucleusQsTableFileName", &P::setNucleusQsTableFileName,
-            &P::getNucleusQsTableFileName),
+            "smearingWidth", &P::subnucleon,
+            &SubnucleonParameters::smearingWidth),
+        param("UVdamp", &P::subnucleon, &SubnucleonParameters::UVdamp),
+        param(
+            "minimumQs2ST", &P::colorCharge,
+            &ColorChargeParameters::minimumQs2ST),
+        param(
+            "NucleusQsTableFileName", &P::colorCharge,
+            &ColorChargeParameters::NucleusQsTableFileName),
 
         // rapidity and x
-        param("RapidityA", &P::setRapidityA, &P::getRapidityA),
-        param("RapidityB", &P::setRapidityB, &P::getRapidityB),
+        param("RapidityA", &P::colorCharge, &ColorChargeParameters::RapidityA),
+        param("RapidityB", &P::colorCharge, &ColorChargeParameters::RapidityB),
         param(
-            "usePseudoRapidity", &P::setUsePseudoRapidity,
-            &P::getUsePseudoRapidity),
-        param("Jacobianm", &P::setJacobianm, &P::getJacobianm),
+            "usePseudoRapidity", &P::colorCharge,
+            &ColorChargeParameters::usePseudoRapidity),
+        param("Jacobianm", &P::colorCharge, &ColorChargeParameters::Jacobianm),
         param(
-            "useFluctuatingx", &P::setUseFluctuatingx, &P::getUseFluctuatingx),
+            "useFluctuatingx", &P::colorCharge,
+            &ColorChargeParameters::useFluctuatingx),
         param(
-            "xFromThisFactorTimesQs", &P::setxFromThisFactorTimesQs,
-            &P::getxFromThisFactorTimesQs),
+            "xFromThisFactorTimesQs", &P::colorCharge,
+            &ColorChargeParameters::xFromThisFactorTimesQs),
 
         // running coupling
         param(
-            "runningCoupling", &P::setRunningCoupling, &P::getRunningCoupling),
-        param("muZero", &P::setMuZero, &P::getMuZero),
-        param("c", &P::setc, &P::getc).check(positive()),
-        param("nFlavors", &P::setNFlavors, &P::getNFlavors)
+            "runningCoupling", &P::coupling,
+            &CouplingParameters::runningCoupling),
+        param("muZero", &P::coupling, &CouplingParameters::muZero),
+        param("c", &P::coupling, &CouplingParameters::c).check(positive()),
+        param("nFlavors", &P::coupling, &CouplingParameters::nFlavors)
             .optional("3")
             .check(inRange(
                 0, 16,
                 " (the one-loop beta-function coefficient 11*Nc - "
                 "2*nFlavors must be positive)")),
-        param("LambdaQCD", &P::setLambdaQCD, &P::getLambdaQCD)
+        param("LambdaQCD", &P::coupling, &CouplingParameters::LambdaQCD)
             .optional("0.2")
             .check(positive()),
-        param("runWith0Min1Avg2MaxQs", &P::setRunWithQs, &P::getRunWithQs)
+        param(
+            "runWith0Min1Avg2MaxQs", &P::coupling,
+            &CouplingParameters::runWith0Min1Avg2MaxQs)
             .check(oneOf({0, 1, 2}, " (0: min, 1: average, 2: max Qs)")),
         param(
-            "runWithThisFactorTimesQs", &P::setRunWithThisFactorTimesQs,
-            &P::getRunWithThisFactorTimesQs),
-        param("runWithLocalQs", &P::setRunWithLocalQs, &P::getRunWithLocalQs),
+            "runWithThisFactorTimesQs", &P::coupling,
+            &CouplingParameters::runWithThisFactorTimesQs),
+        param(
+            "runWithLocalQs", &P::coupling,
+            &CouplingParameters::runWithLocalQs),
         // read by the gluon spectrum even without running coupling
-        param("runWithkt", &P::setRunWithkt, &P::getRunWithkt)
+        param("runWithkt", &P::coupling, &CouplingParameters::runWithkt)
             .check(oneOf({0, 1})),
 
         // observables
         param(
-            "computeGluonMultiplicity", &P::setComputeGluonMultiplicity,
-            &P::getComputeGluonMultiplicity),
+            "computeGluonMultiplicity", &P::output,
+            &OutputParameters::computeGluonMultiplicity),
         param(
-            "readMultFromFile", &P::setReadMultFromFile,
-            &P::getReadMultFromFile),
+            "readMultFromFile", &P::output,
+            &OutputParameters::readMultFromFile),
 
         // output
-        param("writeOutputs", &P::setWriteOutputs, &P::getWriteOutputs),
+        param("writeOutputs", &P::output, &OutputParameters::writeOutputs),
         param(
-            "writeEpsilonUHydro", &P::setWriteEpsilonUHydro,
-            &P::getWriteEpsilonUHydro)
+            "writeEpsilonUHydro", &P::output,
+            &OutputParameters::writeEpsilonUHydro)
             .optional("1"),
         param(
-            "writeTmunuBinary", &P::setWriteTmunuBinary,
-            &P::getWriteTmunuBinary)
+            "writeTmunuBinary", &P::output, &OutputParameters::writeTmunuBinary)
             .optional("1"),
         param(
-            "writeOutputsToHDF5", &P::setWriteOutputsToHDF5,
-            &P::getWriteOutputsToHDF5),
-        param("LOutput", &P::setLOutput, &P::getLOutput),
-        param("sizeOutput", &P::setSizeOutput, &P::getSizeOutput),
-        param("etaSizeOutput", &P::setEtaSizeOutput, &P::getEtaSizeOutput),
-        param("detaOutput", &P::setDetaOutput, &P::getDetaOutput),
+            "writeOutputsToHDF5", &P::output,
+            &OutputParameters::writeOutputsToHDF5),
+        param("LOutput", &P::output, &OutputParameters::LOutput),
+        param("sizeOutput", &P::output, &OutputParameters::sizeOutput),
+        param("etaSizeOutput", &P::output, &OutputParameters::etaSizeOutput),
+        param("detaOutput", &P::output, &OutputParameters::detaOutput),
 
         // Wilson lines
         param(
-            "writeWilsonLines", &P::setWriteWilsonLines,
-            &P::getWriteWilsonLines)
+            "writeWilsonLines", &P::wilsonLines,
+            &WilsonLineParameters::writeWilsonLines)
             .check(oneOf({0, 1, 2}, " (0: none, 1: text, 2: binary)")),
-        param("wilsonLinePath", &P::setWilsonLinePath, &P::getWilsonLinePath)
+        param(
+            "wilsonLinePath", &P::wilsonLines,
+            &WilsonLineParameters::wilsonLinePath)
             .optional("./"),
         param(
-            "readInitialWilsonLines", &P::setReadInitialWilsonLines,
-            &P::getReadInitialWilsonLines)
+            "readInitialWilsonLines", &P::wilsonLines,
+            &WilsonLineParameters::readInitialWilsonLines)
             .check(oneOf({0, 1, 2}, " (0: sample, 1: text, 2: binary)")),
 
         // JIMWLK
-        param("useJIMWLK", &P::setUseJIMWLK, &P::getUseJIMWLK),
-        param("mu0_jimwlk", &P::setMu0_jimwlk, &P::getMu0_jimwlk),
+        param("useJIMWLK", &P::jimwlk, &JimwlkParameters::useJIMWLK),
+        param("mu0_jimwlk", &P::jimwlk, &JimwlkParameters::mu0_jimwlk),
         param(
-            "Lambda_QCD_jimwlk", &P::setLambdaQCD_jimwlk,
-            &P::getLambdaQCD_jimwlk)
+            "Lambda_QCD_jimwlk", &P::jimwlk,
+            &JimwlkParameters::Lambda_QCD_jimwlk)
             .check(positive()),  // in GeV
-        param("c_jimwlk", &P::setc_jimwlk, &P::getc_jimwlk)
+        param("c_jimwlk", &P::jimwlk, &JimwlkParameters::c_jimwlk)
             .optional("0.2")
             .check(positive()),
-        param("m_jimwlk", &P::setm_jimwlk, &P::getm_jimwlk),
-        param("alphas_jimwlk", &P::setJimwlk_alphas, &P::getJimwlk_alphas)
+        param("m_jimwlk", &P::jimwlk, &JimwlkParameters::m_jimwlk),
+        param("alphas_jimwlk", &P::jimwlk, &JimwlkParameters::alphas_jimwlk)
             .check([](const double &v) {
                 // 0 selects the running coupling, > 0 a fixed coupling
                 return v >= 0 ? "" : "must not be negative";
             }),
-        param("Ds_jimwlk", &P::setDs_jimwlk, &P::getDs_jimwlk),
-        param("jimwlk_ic_x", &P::setJimwlk_x0, &P::getJimwlk_x0),
+        param("Ds_jimwlk", &P::jimwlk, &JimwlkParameters::Ds_jimwlk),
+        param("jimwlk_ic_x", &P::jimwlk, &JimwlkParameters::jimwlk_ic_x),
         param(
-            "x_projectile_jimwlk", &P::setJimwlk_x_projectile,
-            &P::getJimwlk_x_projectile),
+            "x_projectile_jimwlk", &P::jimwlk,
+            &JimwlkParameters::x_projectile_jimwlk),
         param(
-            "x_target_jimwlk", &P::setJimwlk_x_target, &P::getJimwlk_x_target),
-        param("saveSnapshots", &P::setSaveSnapshots, &P::getSaveSnapshots),
-        param("xSnapshotList", &P::setxSnapshotList, &P::getxSnapshotList)
+            "x_target_jimwlk", &P::jimwlk, &JimwlkParameters::x_target_jimwlk),
+        param("saveSnapshots", &P::jimwlk, &JimwlkParameters::saveSnapshots),
+        param("xSnapshotList", &P::jimwlk, &JimwlkParameters::xSnapshotList)
             .onlyIf(saveSnapshotsSet),
     };
     return table;
@@ -495,17 +520,19 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     // dtau (in lattice units) is ~0.1, adjusted so maxtime is a whole number
     // of steps. With fewer than one step (e.g. maxtime 0 to only produce
     // Wilson lines) use 0.1 instead of dividing by zero.
-    const double latticeSpacing = getL() / static_cast<double>(getSize());
-    const int timeSteps = static_cast<int>(10 * getMaxtime() / latticeSpacing);
-    setdtau(
-        (timeSteps > 0) ? getMaxtime() / (timeSteps * latticeSpacing) : 0.1);
+    const double latticeSpacing = lattice.L / static_cast<double>(lattice.size);
+    const int timeSteps =
+        static_cast<int>(10 * evolution.maxtime / latticeSpacing);
+    run.dtau = (timeSteps > 0)
+                   ? evolution.maxtime / (timeSteps * latticeSpacing)
+                   : 0.1;
     // polarized nuclei are only available as configuration files
-    if (getPolarizationProjectile() != 0 || getPolarizationTarget() != 0) {
-        setNucleonPositionsFromFile(1);
+    if (nucleus.polariztionProjectile != 0 || nucleus.polariztionTarget != 0) {
+        nucleus.nucleonPositionsFromFile = 1;
     }
-    setNqBase(getUseConstituentQuarkProton());
-    if (getSubNucleonParamType() > 0) {
-        loadPosteriorParameterSets(getSubNucleonParamType());
+    subnucleon.NqBase = subnucleon.useConstituentQuarkProton;
+    if (subnucleon.SubNucleonParamType > 0) {
+        loadPosteriorParameterSets(subnucleon.SubNucleonParamType);
     }
     return errors;
 }

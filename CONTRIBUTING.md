@@ -1,5 +1,20 @@
 # Contributing
 
+## Adding an input parameter
+
+1. Add a documented field with an initializer to the matching group struct in
+   `src/Parameters.h` (e.g. `JimwlkParameters`). Name it like its input-file
+   key.
+2. Add one entry to the table in `src/ParameterTable.cpp`, e.g.
+   `param("size", &P::lattice, &LatticeParameters::size).check(even())`, with
+   `.optional("<default>")` if the key may be omitted, `.onlyIf(...)` if it is
+   only read in some configurations, and `.check(...)` for its valid range.
+   Checks that combine several parameters go into
+   `Parameters::validationErrors()`.
+
+Reading, the unknown-key check and the `usedParameters` output all follow
+from the table; nothing else needs to change.
+
 ## Code documentation
 
 IP-Glasma uses [Doxygen](https://www.doxygen.nl/)-style documentation,

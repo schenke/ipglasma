@@ -53,7 +53,7 @@ inline std::uint64_t splitmix64(std::uint64_t x) {
  * (so retries are reproducible even though they're computed in
  * parallel across cells). Chains splitmix64() over \p runSeed and each
  * of `eventId`/`pos`/`direction` in turn.
- * \param[in] runSeed Run-wide seed (typically `param->getRandomSeed()`).
+ * \param[in] runSeed Run-wide seed (typically `param->run.randomSeed`).
  * \param[in] eventId Current event id.
  * \param[in] pos Flat cell index.
  * \param[in] direction Distinguishes the \f$x\f$ and \f$y\f$ link
@@ -137,7 +137,8 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     messager_.info("[Init::sampleTA]: Sampling nucleon positions ... ");
 
-    const int nucleonPositionsFromFile = param->getNucleonPositionsFromFile();
+    const int nucleonPositionsFromFile =
+        param->nucleus.nucleonPositionsFromFile;
     if (nucleonPositionsFromFile == 0) {
         sampleTAWoodsSaxon(param, random, glauber);
     } else if (nucleonPositionsFromFile == 1) {
@@ -152,15 +153,15 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
     // global rotation of the nucleus
     applyPolarizationRotation(
-        random, param->getPolarizationProjectile(), nucleusA_);
+        random, param->nucleus.polariztionProjectile, nucleusA_);
     applyPolarizationRotation(
-        random, param->getPolarizationTarget(), nucleusB_);
+        random, param->nucleus.polariztionTarget, nucleusB_);
 }
 
 void Init::sampleTAWoodsSaxon(
     Parameters *param, Random *random, Glauber *glauber) {
     ReturnValue rv, rv2;
-    if (param->getAverageOverNuclei() > 1) {
+    if (param->collision.averageOverThisManyNuclei > 1) {
         if ((glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
             messager_ << "[Init::sampleTA]: Averaging over nuclei is not "
                          "supported for collisions involving protons. "
@@ -357,11 +358,11 @@ void Init::readNuclearQs(Parameters *param) {
     // open file
 
     messager_ << "[Init::readNuclearQs]: Reading Q_s(sum(T_p),y) from file ";
-    messager_ << param->getNucleusQsTableFileName() << " ... ";
+    messager_ << param->colorCharge.NucleusQsTableFileName << " ... ";
     messager_.flush("info");
 
     ifstream fin;
-    fin.open((param->getNucleusQsTableFileName()).c_str());
+    fin.open((param->colorCharge.NucleusQsTableFileName).c_str());
     if (fin) {
         for (int iT = 0; iT < iTpmax_; iT++) {
             for (int iy = 0; iy < iymaxNuc_; iy++) {
@@ -383,7 +384,7 @@ void Init::readNuclearQs(Parameters *param) {
         fin.close();
     } else {
         messager_ << "[Init::readNuclearQs]: File "
-                  << param->getNucleusQsTableFileName()
+                  << param->colorCharge.NucleusQsTableFileName
                   << " does not exist. Exiting.";
         messager_.flush("error");
         exit(1);
@@ -395,7 +396,7 @@ void Init::readInNucleusConfigs(
     const int polarizationFlag, const double polJz,
     vector<vector<float>> &nucleonPosArr, Parameters *param) {
     if (nucleonPosArr.size() > 0) return;
-    std::string path = param->getNuclearConfigurationsPath() + "/";
+    std::string path = param->nucleus.nuclearConfigurationsPath + "/";
     std::string fileName;
     bool readFlag = true;
     if (nucleusA == 2) {
@@ -497,16 +498,16 @@ void Init::samplePartonPositions(
     Parameters *param, Random *random, vector<double> &x_array,
     vector<double> &y_array, vector<double> &z_array,
     vector<double> &BGq_array) {
-    const double sqrtBG = sqrt(param->getBG()) * hbarc;  // fm
-    const double BGqMean = param->getBGq();
-    const double BGqVar = param->getBGqVar();
+    const double sqrtBG = sqrt(param->subnucleon.BG) * hbarc;  // fm
+    const double BGqMean = param->subnucleon.BGq;
+    const double BGqVar = param->subnucleon.BGqVar;
     const double BGq =
         (0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar));
-    const double QsSmearWidth = param->getSmearingWidth();
+    const double QsSmearWidth = param->subnucleon.smearingWidth;
     const int Nq = sampleNumberOfPartons(random, param);
-    const double dq_min = param->getDqmin();  // fm
+    const double dq_min = param->subnucleon.dqMin;  // fm
     const double dq_min_sq = dq_min * dq_min;
-    const double omega = param->getOmega();
+    const double omega = param->subnucleon.omega;
 
     vector<double> r_array(Nq, 0.);
     BGq_array.assign(Nq, BGq);
@@ -564,7 +565,7 @@ void Init::samplePartonPositions(
     double avgxq = 0.;
     double avgyq = 0.;
     double avgzq = 0.;
-    if (param->getShiftConstituentQuarkProtonOrigin()) {
+    if (param->subnucleon.shiftConstituentQuarkProtonOrigin) {
         for (int iq = 0; iq < Nq; iq++) {
             avgxq += x_array[iq];
             avgyq += y_array[iq];
@@ -670,8 +671,8 @@ double Init::computeFluctuatingXG2mu2(
         if (localrapidity >= 0) {
             Qs = sqrt(getNuclearQs2(Tp, localrapidity));
         } else {
-            xVal = Qs * param->getxFromThisFactorTimesQs() / param->getRoots()
-                   * exp(ySign * yIn);
+            xVal = Qs * param->colorCharge.xFromThisFactorTimesQs
+                   / param->collision.roots * exp(ySign * yIn);
             if (xVal == 0)
                 Qs = 0.;
             else
@@ -685,17 +686,18 @@ double Init::computeFluctuatingXG2mu2(
             g2mu2 = 0.;
         } else {
             g2mu2 = Qs * Qs / qsmuRatio / qsmuRatio * a * a / hbarc / hbarc
-                    / param->getg() / param->getg();  // lattice units? check
+                    / param->coupling.g
+                    / param->coupling.g;  // lattice units? check
 
             Ydeviation = localrapidity
                          - log(
                              0.01
-                             / (Qs * param->getxFromThisFactorTimesQs()
-                                / param->getRoots() * exp(ySign * yIn)));
+                             / (Qs * param->colorCharge.xFromThisFactorTimesQs
+                                / param->collision.roots * exp(ySign * yIn)));
             localrapidity =
                 log(0.01
-                    / (Qs * param->getxFromThisFactorTimesQs()
-                       / param->getRoots() * exp(ySign * yIn)));
+                    / (Qs * param->colorCharge.xFromThisFactorTimesQs
+                       / param->collision.roots * exp(ySign * yIn)));
         }
     }
     if (g2mu2 != g2mu2) {
@@ -709,25 +711,26 @@ double Init::computeFluctuatingXG2mu2(
 void Init::computeCellColorCharge(
     Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
     double rapidityB) {
-    if (param->getUseFluctuatingx() == 1) {  // Local Qs dependent x
+    if (param->colorCharge.useFluctuatingx == 1) {  // Local Qs dependent x
         lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
             param, a, rapidityA, lat->cells[ipos]->getTpA(),
-            param->getQsmuRatio(), 1.));
+            param->colorCharge.QsmuRatio, 1.));
         lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
             param, a, rapidityB, lat->cells[ipos]->getTpB(),
-            param->getQsmuRatioB(), -1.));
+            param->event.QsmuRatioB, -1.));
     } else {  // Fixed x
         // nucleus A
         lat->cells[ipos]->setg2mu2A(
             getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
-            / param->getQsmuRatio() / param->getQsmuRatio() * a * a / hbarc
-            / hbarc / param->getg() / param->getg());  // lattice units? check
+            / param->colorCharge.QsmuRatio / param->colorCharge.QsmuRatio * a
+            * a / hbarc / hbarc / param->coupling.g
+            / param->coupling.g);  // lattice units? check
 
         // nucleus B
         lat->cells[ipos]->setg2mu2B(
             getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
-            / param->getQsmuRatioB() / param->getQsmuRatioB() * a * a / hbarc
-            / hbarc / param->getg() / param->getg());
+            / param->event.QsmuRatioB / param->event.QsmuRatioB * a * a / hbarc
+            / hbarc / param->coupling.g / param->coupling.g);
     }
 }
 
@@ -737,18 +740,19 @@ void Init::setColorChargeDensity(
     messager_.info(
         "[Init::setColorChargeDensity]: set color charge density ...");
 
-    const int N = param->getSize();
-    const double a = param->getL() / N;  // lattice spacing in fm
+    const int N = param->lattice.size;
+    const double a = param->lattice.L / N;  // lattice spacing in fm
 
     double rapidityA = 0.;
     double rapidityB = 0.;
     computeEffectiveRapidities(param, rapidityA, rapidityB);
 
-    double nucleiInAverage = static_cast<double>(param->getAverageOverNuclei());
+    double nucleiInAverage =
+        static_cast<double>(param->collision.averageOverThisManyNuclei);
 
-    param->setQsmuRatioB(param->getQsmuRatio());
+    param->event.QsmuRatioB = param->colorCharge.QsmuRatio;
 
-    if (param->getUseNucleus() == 0) {
+    if (param->collision.useNucleus == 0) {
         setConstantColorChargeDensity(lat, param);
         return;
     }
@@ -763,7 +767,7 @@ void Init::setColorChargeDensity(
     sampleConstituentQuarkGeometry(param, random);
 
     // test what a smooth Woods-Saxon would give
-    if (param->getUseSmoothNucleus() == 1) {
+    if (param->nucleus.useSmoothNucleus == 1) {
         computeSmoothNucleusThickness(lat, param, glauber);
     } else {
         // Non-smooth nucleus add all T_p's (new in version 1.2)
@@ -782,43 +786,47 @@ void Init::setColorChargeDensity(
 
 void Init::computeEffectiveRapidities(
     Parameters *param, double &rapidityA, double &rapidityB) {
-    if (param->getUsePseudoRapidity() == 0) {
-        rapidityA = param->getRapidityA();
-        rapidityB = param->getRapidityB();
+    if (param->colorCharge.usePseudoRapidity == 0) {
+        rapidityA = param->colorCharge.RapidityA;
+        rapidityB = param->colorCharge.RapidityB;
         return;
     }
     // when using pseudorapidity as input convert to rapidity here.
     // later include Jacobian in multiplicity and energy
     messager_ << "[Init::setColorChargeDensity]: Using pseudorapidity "
-              << param->getRapidityA() << ", " << param->getRapidityB();
+              << param->colorCharge.RapidityA << ", "
+              << param->colorCharge.RapidityB;
     messager_.flush("info");
-    double m = param->getJacobianm();                                // in GeV
-    double P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
+    double m = param->colorCharge.Jacobianm;  // in GeV
+    double P =
+        0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
     rapidityA =
         0.5
         * log(
-            sqrt(pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
-            + sinh(param->getRapidityA())
+            sqrt(pow(cosh(param->colorCharge.RapidityA), 2.) + m * m / (P * P))
+            + sinh(param->colorCharge.RapidityA)
                   / (sqrt(
-                         pow(cosh(param->getRapidityA()), 2.) + m * m / (P * P))
-                     - sinh(param->getRapidityA())));
+                         pow(cosh(param->colorCharge.RapidityA), 2.)
+                         + m * m / (P * P))
+                     - sinh(param->colorCharge.RapidityA)));
     rapidityB =
         0.5
         * log(
-            sqrt(pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
-            + sinh(param->getRapidityB())
+            sqrt(pow(cosh(param->colorCharge.RapidityB), 2.) + m * m / (P * P))
+            + sinh(param->colorCharge.RapidityB)
                   / (sqrt(
-                         pow(cosh(param->getRapidityB()), 2.) + m * m / (P * P))
-                     - sinh(param->getRapidityB())));
+                         pow(cosh(param->colorCharge.RapidityB), 2.)
+                         + m * m / (P * P))
+                     - sinh(param->colorCharge.RapidityB)));
     messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
               << rapidityA << ", " << rapidityB;
     messager_.flush("info");
 }
 
 void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
-    const int N = param->getSize();
-    const double L = param->getL();
-    if (param->getUseGaussian() == 1) {
+    const int N = param->lattice.size;
+    const double L = param->lattice.L;
+    if (param->collision.useGaussian == 1) {
         double sigmax = 0.35;
         double sigmay = 0.5;
         for (int ix = 0; ix < N; ix++)  // loop over all positions
@@ -832,11 +840,11 @@ void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
                                         + y * y / (2. * sigmay * sigmay)))
                                   / (2. * M_PI * sigmax * sigmay);
                 lat->cells[localpos]->setg2mu2A(
-                    envelope * param->getg2mu() * param->getg2mu()
-                    / param->getg() / param->getg());
+                    envelope * param->collision.g2mu * param->collision.g2mu
+                    / param->coupling.g / param->coupling.g);
                 lat->cells[localpos]->setg2mu2B(
-                    envelope * param->getg2mu() * param->getg2mu()
-                    / param->getg() / param->getg());
+                    envelope * param->collision.g2mu * param->collision.g2mu
+                    / param->coupling.g / param->coupling.g);
             }
         }
     } else {
@@ -845,15 +853,15 @@ void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
             for (int iy = 0; iy < N; iy++) {
                 int localpos = lat->positionFromXY(ix, iy);
                 lat->cells[localpos]->setg2mu2A(
-                    param->getg2mu() * param->getg2mu() / param->getg()
-                    / param->getg());
+                    param->collision.g2mu * param->collision.g2mu
+                    / param->coupling.g / param->coupling.g);
                 lat->cells[localpos]->setg2mu2B(
-                    param->getg2mu() * param->getg2mu() / param->getg()
-                    / param->getg());
+                    param->collision.g2mu * param->collision.g2mu
+                    / param->coupling.g / param->coupling.g);
             }
         }
     }
-    param->setSuccess(1);
+    param->event.success = 1;
     messager_.info(
         "[Init::setColorChargeDensity]: constant color charge density set");
 }
@@ -861,7 +869,7 @@ void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
 void Init::sampleNucleonAnisotropyAngles(Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    double xi = param->getProtonAnisotropy();
+    double xi = param->subnucleon.protonAnisotropy;
     if (xi != 0.) {
         for (int i = 0; i < A1; i++) {
             nucleusA_.at(i).phi = 2 * M_PI * random->genrand64_real2();
@@ -884,7 +892,7 @@ void Init::sampleNucleonAnisotropyAngles(Parameters *param, Random *random) {
 void Init::sampleConstituentQuarkGeometry(Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    const int NqFlag = param->getUseConstituentQuarkProton();
+    const int NqFlag = param->subnucleon.useConstituentQuarkProton;
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
     xq1_.clear();
     xq2_.clear();
@@ -899,7 +907,7 @@ void Init::sampleConstituentQuarkGeometry(Parameters *param, Random *random) {
         if (NqFlag > 0) {
             samplePartonPositions(
                 param, random, x_array, y_array, z_array, BGq_array);
-            // if (param->getShiftConstituentQuarkProtonOrigin())
+            // if (param->subnucleon.shiftConstituentQuarkProtonOrigin)
             // Move center of mass to the origin
             // Note that 1607.01711 this is not done, so parameters quoted
             // in that paper can't be used if this is done
@@ -935,8 +943,8 @@ void Init::computeSmoothNucleusThickness(
                  "include "
                  "deformation.";
     messager_.flush("info");
-    const int N = param->getSize();
-    const double L = param->getL();
+    const int N = param->lattice.size;
+    const double L = param->lattice.L;
     const double a = L / N;
     // Both profiles are centered at the origin: the impact parameter is
     // sampled later and applied by shiftFieldsWithImpactParameter(), the
@@ -990,7 +998,7 @@ double Init::computeNucleonThicknessAtCell(
 
         double T = 0.;
         double bp2 = 0.;
-        if (param->getUseConstituentQuarkProton() > 0) {
+        if (param->subnucleon.useConstituentQuarkProton > 0) {
             for (unsigned int iq = 0; iq < xq[i].size(); iq++) {
                 bp2 = (xm + xq[i][iq] - x) * (xm + xq[i][iq] - x)
                       + (ym + yq[i][iq] - y) * (ym + yq[i][iq] - y);
@@ -1000,7 +1008,7 @@ double Init::computeNucleonThicknessAtCell(
                      / (static_cast<double>(xq[i].size())) * gauss[i][iq];
             }
         } else {
-            const double BG = param->getBG();
+            const double BG = param->subnucleon.BG;
             double phi = nucleus.at(i).phi;
 
             bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
@@ -1017,10 +1025,10 @@ double Init::computeNucleonThicknessAtCell(
 
 void Init::computeThicknessFromNucleons(
     Lattice *lat, Parameters *param, double nucleiInAverage) {
-    const int N = param->getSize();
-    const double L = param->getL();
+    const int N = param->lattice.size;
+    const double L = param->lattice.L;
     const double a = L / N;
-    const double xi = param->getProtonAnisotropy();
+    const double xi = param->subnucleon.protonAnisotropy;
 
 #pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
@@ -1042,7 +1050,7 @@ void Init::computeThicknessFromNucleons(
 void Init::computeNcollList(
     Parameters *param, double d2, double b, double phiRP, int &Ncoll) {
     stringstream strNcoll_name;
-    strNcoll_name << "NcollList" << param->getEventId() << ".dat";
+    strNcoll_name << "NcollList" << param->event.eventId << ".dat";
     string Ncoll_name;
     Ncoll_name = strNcoll_name.str();
 
@@ -1050,7 +1058,7 @@ void Init::computeNcollList(
 
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    const bool gaussianWounding = (param->getGaussianWounding() != 0);
+    const bool gaussianWounding = (param->collision.gaussianWounding != 0);
     const double G = 0.92;
     for (int i = 0; i < A1; i++) {
         for (int j = 0; j < A2; j++) {
@@ -1087,23 +1095,23 @@ void Init::computeNcollList(
 // Npart, Ncoll, averageQs, etc.
 // Determines Npart/Ncoll from the (already-sampled) nucleon positions in
 // nucleusA_/nucleusB_, writes NcollList*.dat/NpartList*.dat, and sets
-// param->setNpart. Returns false (having called param->setSuccess(0)) if
+// param->event.Npart. Returns false (having called param->event.success = 0) if
 // useFixedNpart is set and this event's Npart doesn't match, signaling the
 // caller to abort and resample.
 bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
-    const double d2 = param->getSigmaNN() * mbToFm2 / M_PI;  // in fm^2
-    const double b = param->getb();
-    const double phiRP = param->getPhiRP();
+    const double d2 = param->collision.SigmaNN * mbToFm2 / M_PI;  // in fm^2
+    const double b = param->event.b;
+    const double phiRP = param->event.phiRP;
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
     // Determine Npart, Ncoll. Do this only during the first stage, as in
     // the 2nd stage nuclei are shifted to b=0
-    if (param->getUseSmoothNucleus() == 0) {
+    if (param->nucleus.useSmoothNucleus == 0) {
         computeNcollList(param, d2, b, phiRP, Ncoll);
 
         stringstream strNpart_name;
-        strNpart_name << "NpartList" << param->getEventId() << ".dat";
+        strNpart_name << "NpartList" << param->event.eventId << ".dat";
         string Npart_name;
         Npart_name = strNpart_name.str();
 
@@ -1143,37 +1151,37 @@ bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
             }
         }
 
-        param->setNpart(Npart);
+        param->event.Npart = Npart;
 
-        if (param->getUseFixedNpart() != 0
-            && Npart != param->getUseFixedNpart()) {
+        if (param->collision.useFixedNpart != 0
+            && Npart != param->collision.useFixedNpart) {
             messager_ << "[Init::computeCollisionGeometryQuantities]: "
                          "Npart = "
                       << Npart
                       << " does not match the requested fixed "
                          "Npart = "
-                      << param->getUseFixedNpart() << "; resampling.";
+                      << param->collision.useFixedNpart << "; resampling.";
             messager_.flush("info");
-            param->setSuccess(0);
+            param->event.success = 0;
             return false;
         }
     } else {
         // Smooth nucleus
         Npart = 2;
         Ncoll = 2;
-        param->setNpart(Npart);
+        param->event.Npart = Npart;
     }
     return true;
 }
 
 // Sets param's running-coupling alpha_s from whichever Qs choice
-// param->getRunWithQs() selects (max/min/avg), or a fixed value when
-// running coupling is disabled or alpha_s runs with k_T instead (handled
+// param->coupling.runWith0Min1Avg2MaxQs selects (max/min/avg), or a fixed value
+// when running coupling is disabled or alpha_s runs with k_T instead (handled
 // per-cell elsewhere via computeRunningCouplingGfactor, which shares
 // RunningCoupling.h's computeAlphaS() with this function).
 void Init::computeAndSetRunningAlphaS(Parameters *param) {
     double alphas = 0.;
-    if (param->getRunningCoupling() && param->getRunWithkt() == 0) {
+    if (param->coupling.runningCoupling && param->coupling.runWithkt == 0) {
         // Uses the same regularized formula (and the same muZero/c) as
         // Evolution::computeRunningCouplingGfactor()/MyEigen, instead of
         // the unregularized formula this used to hardcode inline -- so
@@ -1181,69 +1189,71 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
         // actually used during evolution, and can no longer go negative
         // or singular at a small average Qs (ValidParameters() already
         // guarantees LambdaQCD < muZero whenever running coupling is on).
-        if (param->getRunWithQs() == 2) {
+        if (param->coupling.runWith0Min1Avg2MaxQs == 2) {
             messager_
                 << "[Init::computeCollisionGeometryQuantities]: running with "
-                << param->getRunWithThisFactorTimesQs() << " Q_s(max)";
+                << param->coupling.runWithThisFactorTimesQs << " Q_s(max)";
             messager_.flush("info");
             alphas = computeAlphaS(
-                param->getMuZero(), param->getc(), param->getLambdaQCD(),
-                param->getNFlavors(),
-                param->getRunWithThisFactorTimesQs() * param->getAverageQs());
+                param->coupling.muZero, param->coupling.c,
+                param->coupling.LambdaQCD, param->coupling.nFlavors,
+                param->coupling.runWithThisFactorTimesQs
+                    * param->event.averageQs);
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
-                      << param->getRunWithThisFactorTimesQs()
+                      << param->coupling.runWithThisFactorTimesQs
                       << " Qs_max)=" << alphas;
             messager_.flush("info");
-        } else if (param->getRunWithQs() == 0) {
+        } else if (param->coupling.runWith0Min1Avg2MaxQs == 0) {
             messager_
                 << "[Init::computeCollisionGeometryQuantities]: running with "
-                << param->getRunWithThisFactorTimesQs() << " Q_s(min)";
+                << param->coupling.runWithThisFactorTimesQs << " Q_s(min)";
             messager_.flush("info");
             alphas = computeAlphaS(
-                param->getMuZero(), param->getc(), param->getLambdaQCD(),
-                param->getNFlavors(),
-                param->getRunWithThisFactorTimesQs()
-                    * param->getAverageQsmin());
+                param->coupling.muZero, param->coupling.c,
+                param->coupling.LambdaQCD, param->coupling.nFlavors,
+                param->coupling.runWithThisFactorTimesQs
+                    * param->event.averageQsmin);
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
-                      << param->getRunWithThisFactorTimesQs()
+                      << param->coupling.runWithThisFactorTimesQs
                       << " Qs_min)=" << alphas;
             messager_.flush("info");
-        } else if (param->getRunWithQs() == 1) {
+        } else if (param->coupling.runWith0Min1Avg2MaxQs == 1) {
             messager_
                 << "[Init::computeCollisionGeometryQuantities]: running with "
-                << param->getRunWithThisFactorTimesQs() << " <Q_s>";
+                << param->coupling.runWithThisFactorTimesQs << " <Q_s>";
             messager_.flush("info");
             alphas = computeAlphaS(
-                param->getMuZero(), param->getc(), param->getLambdaQCD(),
-                param->getNFlavors(),
-                param->getRunWithThisFactorTimesQs()
-                    * param->getAverageQsAvg());
+                param->coupling.muZero, param->coupling.c,
+                param->coupling.LambdaQCD, param->coupling.nFlavors,
+                param->coupling.runWithThisFactorTimesQs
+                    * param->event.averageQsAvg);
             messager_ << "[Init::computeCollisionGeometryQuantities]: alpha_s("
-                      << param->getRunWithThisFactorTimesQs()
+                      << param->coupling.runWithThisFactorTimesQs
                       << " <Qs>)=" << alphas;
             messager_.flush("info");
         }
-    } else if (param->getRunningCoupling() && param->getRunWithkt() == 1) {
+    } else if (
+        param->coupling.runningCoupling && param->coupling.runWithkt == 1) {
         messager_.info(
             "[Init::computeCollisionGeometryQuantities]: Multiplicity with "
             "running alpha_s(k_T)");
     } else {
         messager_.info(
             "[Init::computeCollisionGeometryQuantities]: Using fixed alpha_s");
-        alphas = param->getg() * param->getg() / 4. / M_PI;
+        alphas = param->coupling.g * param->coupling.g / 4. / M_PI;
     }
-    param->setalphas(alphas);
+    param->event.alphas = alphas;
 }
 
 void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     int Npart = 0;
     int Ncoll = 0;
 
-    const double L = param->getL();
-    const int N = param->getSize();
+    const double L = param->lattice.L;
+    const int N = param->lattice.size;
     const double a = L / N;  // lattice spacing in fm
-    const double b = param->getb();
-    const double phiRP = param->getPhiRP();
+    const double b = param->event.b;
+    const double phiRP = param->event.phiRP;
 
     // Determine Npart, Ncoll only during the first stage, as in the 2nd
     // stage nuclei are shifted to b=0.
@@ -1263,11 +1273,11 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
         averageQs2min, averageQs2min2, Tpp, count);
 
     if (count == 0) {
-        param->setAverageQs(0.);
-        param->setAverageQsAvg(0.);
-        param->setAverageQsmin(0.);
-        param->setTpp(Tpp);
-        param->setSuccess(0);
+        param->event.averageQs = 0.;
+        param->event.averageQsAvg = 0.;
+        param->event.averageQsmin = 0.;
+        param->event.Tpp = Tpp;
+        param->event.success = 0;
         messager_.warning(
             "[Init::computeCollisionGeometryQuantities]: Rejected event -- "
             "no overlap region (count=0).");
@@ -1279,10 +1289,10 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     averageQs2Avg /= static_cast<double>(count) + smallEps;
     averageQs2min /= static_cast<double>(count) + smallEps;
 
-    param->setAverageQs(sqrt(averageQs2));
-    param->setAverageQsAvg(sqrt(averageQs2Avg));
-    param->setAverageQsmin(sqrt(averageQs2min));
-    param->setTpp(Tpp);
+    param->event.averageQs = sqrt(averageQs2);
+    param->event.averageQsAvg = sqrt(averageQs2Avg);
+    param->event.averageQsmin = sqrt(averageQs2min);
+    param->event.Tpp = Tpp;
 
     logCollisionGeometryQuantities(
         param, Npart, Ncoll, Tpp, a, averageQs2, averageQs2Avg, averageQs2min,
@@ -1293,25 +1303,27 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     // With running alpha_s(k_T) the coupling is evaluated per k_T bin in the
     // multiplicity, and computeAndSetRunningAlphaS() leaves alphas at 0.
     const bool alphasOk =
-        param->getalphas() > 0
-        || (param->getRunningCoupling() && param->getRunWithkt() == 1);
-    if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0
-        && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
+        param->event.alphas > 0
+        || (param->coupling.runningCoupling && param->coupling.runWithkt == 1);
+    if (param->event.averageQs > 0 && param->event.averageQsAvg > 0
+        && averageQs2 > 0 && param->event.averageQsmin > 0 && averageQs2Avg > 0
         && alphasOk && Npart >= 2
-        && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
-        param->setSuccess(1);
+        && averageQs2min2 * a * a / hbarc / hbarc
+               > param->colorCharge.minimumQs2ST) {
+        param->event.success = 1;
         writeUsedParametersFile(param, phiRP, Npart, Ncoll);
     } else {
-        param->setSuccess(0);
+        param->event.success = 0;
     }
-    if (averageQs2min2 * a * a / hbarc / hbarc < param->getMinimumQs2ST()) {
+    if (averageQs2min2 * a * a / hbarc / hbarc
+        < param->colorCharge.minimumQs2ST) {
         messager_ << "[Init::computeCollisionGeometryQuantities]: Rejected "
                      "event -- Qsmin^2 S_T="
                   << averageQs2min2 * a * a / hbarc / hbarc
                   << " is below "
                      "the "
                      "minimum ("
-                  << param->getMinimumQs2ST() << ").";
+                  << param->colorCharge.minimumQs2ST << ").";
         messager_.flush("warning");
     }
 
@@ -1323,7 +1335,7 @@ void Init::scanCollisionGeometry(
     Lattice *lat, Parameters *param, int N, double a, double b, double phiRP,
     double &averageQs, double &averageQs2, double &averageQs2Avg,
     double &averageQs2min, double &averageQs2min2, double &Tpp, int &count) {
-    const double L = param->getL();
+    const double L = param->lattice.L;
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
@@ -1365,13 +1377,13 @@ void Init::scanCollisionGeometry(
         }
 
         if (g2mu2B >= g2mu2A) {
-            averageQs2min2 += g2mu2A * param->getQsmuRatio()
-                              * param->getQsmuRatio() / a / a * hbarc * hbarc
-                              * param->getg() * param->getg();
+            averageQs2min2 += g2mu2A * param->colorCharge.QsmuRatio
+                              * param->colorCharge.QsmuRatio / a / a * hbarc
+                              * hbarc * param->coupling.g * param->coupling.g;
         } else {
-            averageQs2min2 += g2mu2B * param->getQsmuRatioB()
-                              * param->getQsmuRatioB() / a / a * hbarc * hbarc
-                              * param->getg() * param->getg();
+            averageQs2min2 += g2mu2B * param->event.QsmuRatioB
+                              * param->event.QsmuRatioB / a / a * hbarc * hbarc
+                              * param->coupling.g * param->coupling.g;
         }
 
         for (int i = 0; i < A1; i++) {
@@ -1379,7 +1391,7 @@ void Init::scanCollisionGeometry(
             double ym = nucleusA_.at(i).y + b / 2. * sin(phiRP);
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
-            if (r < sqrt(param->getSigmaNN() * mbToFm2 / M_PI)
+            if (r < sqrt(param->collision.SigmaNN * mbToFm2 / M_PI)
                 && nucleusA_.at(i).collided == 1) {
                 check = 1;
             }
@@ -1390,7 +1402,7 @@ void Init::scanCollisionGeometry(
             double ym = nucleusB_.at(i).y - b / 2. * sin(phiRP);
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
-            if (r < sqrt(param->getSigmaNN() * mbToFm2 / M_PI)
+            if (r < sqrt(param->collision.SigmaNN * mbToFm2 / M_PI)
                 && nucleusB_.at(i).collided == 1 && check == 1) {
                 check = 2;
             }
@@ -1398,36 +1410,42 @@ void Init::scanCollisionGeometry(
 
         // A smooth nucleus has no nucleons to test against: any cell where
         // both shifted thickness profiles are nonzero is in the overlap.
-        if (param->getUseSmoothNucleus() == 1 && TpA > 0. && TpB > 0.) {
+        if (param->nucleus.useSmoothNucleus == 1 && TpA > 0. && TpB > 0.) {
             check = 2;
         }
 
         if (check == 2) {
             if (g2mu2B > g2mu2A) {
                 averageQs += sqrt(
-                    g2mu2B * param->getQsmuRatioB() * param->getQsmuRatioB() / a
-                    / a * hbarc * hbarc * param->getg() * param->getg());
-                averageQs2 += g2mu2B * param->getQsmuRatioB()
-                              * param->getQsmuRatioB() / a / a * hbarc * hbarc
-                              * param->getg() * param->getg();
-                averageQs2min += g2mu2A * param->getQsmuRatio()
-                                 * param->getQsmuRatio() / a / a * hbarc * hbarc
-                                 * param->getg() * param->getg();
+                    g2mu2B * param->event.QsmuRatioB * param->event.QsmuRatioB
+                    / a / a * hbarc * hbarc * param->coupling.g
+                    * param->coupling.g);
+                averageQs2 += g2mu2B * param->event.QsmuRatioB
+                              * param->event.QsmuRatioB / a / a * hbarc * hbarc
+                              * param->coupling.g * param->coupling.g;
+                averageQs2min += g2mu2A * param->colorCharge.QsmuRatio
+                                 * param->colorCharge.QsmuRatio / a / a * hbarc
+                                 * hbarc * param->coupling.g
+                                 * param->coupling.g;
             } else {
                 averageQs += sqrt(
-                    g2mu2A * param->getQsmuRatio() * param->getQsmuRatio() / a
-                    / a * hbarc * hbarc * param->getg() * param->getg());
-                averageQs2 += g2mu2A * param->getQsmuRatio()
-                              * param->getQsmuRatio() / a / a * hbarc * hbarc
-                              * param->getg() * param->getg();
-                averageQs2min += g2mu2B * param->getQsmuRatioB()
-                                 * param->getQsmuRatioB() / a / a * hbarc
-                                 * hbarc * param->getg() * param->getg();
+                    g2mu2A * param->colorCharge.QsmuRatio
+                    * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                    * param->coupling.g * param->coupling.g);
+                averageQs2 += g2mu2A * param->colorCharge.QsmuRatio
+                              * param->colorCharge.QsmuRatio / a / a * hbarc
+                              * hbarc * param->coupling.g * param->coupling.g;
+                averageQs2min += g2mu2B * param->event.QsmuRatioB
+                                 * param->event.QsmuRatioB / a / a * hbarc
+                                 * hbarc * param->coupling.g
+                                 * param->coupling.g;
             }
             averageQs2Avg +=
-                (g2mu2B * param->getQsmuRatioB() * param->getQsmuRatioB()
-                 + g2mu2A * param->getQsmuRatio() * param->getQsmuRatio())
-                / 2. / a / a * hbarc * hbarc * param->getg() * param->getg();
+                (g2mu2B * param->event.QsmuRatioB * param->event.QsmuRatioB
+                 + g2mu2A * param->colorCharge.QsmuRatio
+                       * param->colorCharge.QsmuRatio)
+                / 2. / a / a * hbarc * hbarc * param->coupling.g
+                * param->coupling.g;
             count++;
         }
         // compute T_pp
@@ -1446,7 +1464,7 @@ void Init::logCollisionGeometryQuantities(
     messager_ << "[Init::computeCollisionGeometryQuantities]: N_coll=" << Ncoll;
     messager_.flush("info");
     messager_ << "[Init::computeCollisionGeometryQuantities]: T_pp("
-              << param->getb() << " fm) = " << Tpp << " 1/fm^2";
+              << param->event.b << " fm) = " << Tpp << " 1/fm^2";
     messager_.flush("info");
     messager_ << "[Init::computeCollisionGeometryQuantities]: Q_s^2(max) S_T = "
               << averageQs2 * a * a / hbarc / hbarc
@@ -1471,65 +1489,68 @@ void Init::logCollisionGeometryQuantities(
 
     messager_
         << "[Init::computeCollisionGeometryQuantities]: Average Qs(max) = "
-        << param->getAverageQs() << " GeV";
+        << param->event.averageQs << " GeV";
     messager_.flush("info");
     messager_
         << "[Init::computeCollisionGeometryQuantities]: Average Qs(avg) = "
-        << param->getAverageQsAvg() << " GeV";
+        << param->event.averageQsAvg << " GeV";
     messager_.flush("info");
     messager_
         << "[Init::computeCollisionGeometryQuantities]: Average Qs(min) = "
-        << param->getAverageQsmin() << " GeV";
+        << param->event.averageQsmin << " GeV";
     messager_.flush("info");
 
     messager_
         << "[Init::computeCollisionGeometryQuantities]: resulting Y(Qs(max)*"
-        << param->getxFromThisFactorTimesQs() << ") = "
+        << param->colorCharge.xFromThisFactorTimesQs << ") = "
         << log(0.01
-               / (param->getAverageQs() * param->getxFromThisFactorTimesQs()
-                  / param->getRoots()));
+               / (param->event.averageQs
+                  * param->colorCharge.xFromThisFactorTimesQs
+                  / param->collision.roots));
     messager_.flush("info");
     messager_
         << "[Init::computeCollisionGeometryQuantities]: resulting Y(Qs(avg)*"
-        << param->getxFromThisFactorTimesQs() << ") = "
+        << param->colorCharge.xFromThisFactorTimesQs << ") = "
         << log(0.01
-               / (param->getAverageQsAvg() * param->getxFromThisFactorTimesQs()
-                  / param->getRoots()));
+               / (param->event.averageQsAvg
+                  * param->colorCharge.xFromThisFactorTimesQs
+                  / param->collision.roots));
     messager_.flush("info");
     messager_
         << "[Init::computeCollisionGeometryQuantities]: resulting Y(Qs(min)*"
-        << param->getxFromThisFactorTimesQs() << ") =  "
+        << param->colorCharge.xFromThisFactorTimesQs << ") =  "
         << log(0.01
-               / (param->getAverageQsmin() * param->getxFromThisFactorTimesQs()
-                  / param->getRoots()));
+               / (param->event.averageQsmin
+                  * param->colorCharge.xFromThisFactorTimesQs
+                  / param->collision.roots));
     messager_.flush("info");
 }
 
 void Init::writeUsedParametersFile(
     Parameters *param, double phiRP, int Npart, int Ncoll) {
     stringstream strup_name;
-    strup_name << "usedParameters" << param->getEventId() << ".dat";
+    strup_name << "usedParameters" << param->event.eventId << ".dat";
     string up_name;
     up_name = strup_name.str();
 
     // comment lines, so the file stays a valid input file
     ofstream fout1(up_name.c_str(), std::ios::app);
     fout1 << "# Collision geometry of this event:" << endl;
-    fout1 << "# b = " << param->getb() << " fm" << endl;
+    fout1 << "# b = " << param->event.b << " fm" << endl;
     fout1 << "# phiRP = " << phiRP << endl;
     fout1 << "# Npart = " << Npart << endl;
     fout1 << "# Ncoll = " << Ncoll << endl;
-    if (param->getRunningCoupling()) {
-        if (param->getRunWithQs() == 2)
-            fout1 << "# <Q_s>(max) = " << param->getAverageQs() << endl;
-        else if (param->getRunWithQs() == 1)
-            fout1 << "# <Q_s>(avg) = " << param->getAverageQsAvg() << endl;
-        else if (param->getRunWithQs() == 0)
-            fout1 << "# <Q_s>(min) = " << param->getAverageQsmin() << endl;
-        fout1 << "# alpha_s(" << param->getRunWithThisFactorTimesQs()
-              << " <Q_s>) = " << param->getalphas() << endl;
+    if (param->coupling.runningCoupling) {
+        if (param->coupling.runWith0Min1Avg2MaxQs == 2)
+            fout1 << "# <Q_s>(max) = " << param->event.averageQs << endl;
+        else if (param->coupling.runWith0Min1Avg2MaxQs == 1)
+            fout1 << "# <Q_s>(avg) = " << param->event.averageQsAvg << endl;
+        else if (param->coupling.runWith0Min1Avg2MaxQs == 0)
+            fout1 << "# <Q_s>(min) = " << param->event.averageQsmin << endl;
+        fout1 << "# alpha_s(" << param->coupling.runWithThisFactorTimesQs
+              << " <Q_s>) = " << param->event.alphas << endl;
     } else
-        fout1 << "# using fixed coupling alpha_s=" << param->getalphas()
+        fout1 << "# using fixed coupling alpha_s=" << param->event.alphas
               << endl;
     fout1.close();
 }
@@ -1538,7 +1559,7 @@ void Init::writeNgluonEstimatorsFile(
     Parameters *param, double a, double averageQs2, double averageQs2Avg,
     double averageQs2min2, int count) {
     stringstream strNEst_name;
-    strNEst_name << "NgluonEstimators" << param->getEventId() << ".dat";
+    strNEst_name << "NgluonEstimators" << param->event.eventId << ".dat";
     string NEst_name;
     NEst_name = strNEst_name.str();
 
@@ -1577,8 +1598,8 @@ namespace {
  * \param[in] param Simulation parameters.
  */
 void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
-    const int N = param->getSize();
-    const double L = param->getL();
+    const int N = param->lattice.size;
+    const double L = param->lattice.L;
     const double a = L / static_cast<double>(N);
 
     // Payload: [beam, real_or_imag, x, y, row, col], C-order.
@@ -1631,16 +1652,16 @@ void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
              << "\"fields\":[\"VA\",\"VB\"],"
              << "\"complex_part\":[\"real\",\"imag\"],"
              << "\"native_site_index\":\"pos=x*N+y\","
-             << "\"event_id\":" << param->getEventId() << ","
+             << "\"event_id\":" << param->event.eventId << ","
              << "\"N\":" << N << ","
              << "\"Nc\":" << Nc << ","
              << "\"L_fm\":" << L << ","
              << "\"a_fm\":" << a << ","
-             << "\"rapidity\":" << param->getRapidity() << "}";
+             << "\"rapidity\":" << param->colorCharge.rapidity() << "}";
     const std::string metadataString = metadata.str();
 
     std::stringstream filename;
-    filename << "initialWilsonLines" << param->getEventId() << ".ipgw";
+    filename << "initialWilsonLines" << param->event.eventId << ".ipgw";
     std::ofstream output(
         filename.str().c_str(),
         std::ios::out | std::ios::binary | std::ios::trunc);
@@ -1722,17 +1743,17 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
-    const double d2 = param->getSigmaNN() * mbToFm2 / M_PI;  // in fm^2
-    const int N = param->getSize();
-    const int Ny = param->getNy();
+    const double d2 = param->collision.SigmaNN * mbToFm2 / M_PI;  // in fm^2
+    const int N = param->lattice.size;
+    const int Ny = param->colorCharge.Ny;
     const int sites = N * N;
     const int nn[2] = {N, N};
-    const double L = param->getL();
+    const double L = param->lattice.L;
     const double a = L / N;  // lattice spacing in fm
-    const double m = param->getm() * a / hbarc;
-    const double g = param->getg();
+    const double m = param->subnucleon.m * a / hbarc;
+    const double g = param->coupling.g;
     const double invNy = 1. / static_cast<double>(Ny);
-    double UVdamp = param->getUVdamp();  // GeV^-1
+    double UVdamp = param->subnucleon.UVdamp;  // GeV^-1
     UVdamp = UVdamp / a * hbarc;
 
     // The lattice Poisson/UV kernel depends only on transverse momentum and
@@ -1847,23 +1868,23 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     evolveNucleusWilsonLine(colorChargeScaleA, lat->U);
     evolveNucleusWilsonLine(colorChargeScaleB, lat->U2);
 
-    if (param->getWriteOutputs() == 5) {
+    if (param->output.writeOutputs == 5) {
         writeInitialWilsonTrainingData(lat, param);
     }
 
     // output U
-    if (param->getWriteWilsonLines() > 0
-        && (param->getSaveSnapshots() || !param->getUseJIMWLK())) {
+    if (param->wilsonLines.writeWilsonLines > 0
+        && (param->jimwlk.saveSnapshots || !param->jimwlk.useJIMWLK)) {
         double x_projectile, x_target;
-        if (param->getUseJIMWLK()) {
-            x_projectile = x_target = param->getJimwlk_x0();
+        if (param->jimwlk.useJIMWLK) {
+            x_projectile = x_target = param->jimwlk.jimwlk_ic_x;
         } else {
-            if (param->getUseFluctuatingx() == 1) {
+            if (param->colorCharge.useFluctuatingx == 1) {
                 // Initial condition does not correspond to a fixed x
                 x_projectile = x_target = -1;
             } else {
-                x_projectile = 0.01 * std::exp(-param->getRapidityA());
-                x_target = 0.01 * std::exp(-param->getRapidityB());
+                x_projectile = 0.01 * std::exp(-param->colorCharge.RapidityA);
+                x_target = 0.01 * std::exp(-param->colorCharge.RapidityB);
             }
         }
         lat->writeWilsonLines(param, NucleusRole::Projectile, x_projectile);
@@ -1871,7 +1892,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     }
 
     messager_ << "[Init::setV]: Wilson lines V_A and V_B set on rank "
-              << param->getMPIRank() << ". ";
+              << param->run.MPIRank << ". ";
     messager_.flush("info");
 }
 
@@ -1904,7 +1925,7 @@ void Init::readVFromFile(
     }
 
     messager_ << "[Init::readVFromFile]: Wilson lines V_A and V_B set on rank "
-              << param->getMPIRank() << ". ";
+              << param->run.MPIRank << ". ";
     messager_.flush("info");
 }
 
@@ -1912,9 +1933,9 @@ void Init::readWilsonLineText(
     const std::string &fileName, Parameters *param, NucleusRole role,
     std::vector<Matrix> &U) {
     const bool isProjectile = (role == NucleusRole::Projectile);
-    int N = param->getSize();
+    int N = param->lattice.size;
 
-    double L = param->getL();
+    double L = param->lattice.L;
     double a = L / static_cast<double>(N);
 
     Matrix temp(1.);
@@ -1951,7 +1972,7 @@ void Init::readWilsonLineText(
             temp.set(2, 1, complex<double>(Re[7], Im[7]));
             temp.set(2, 2, complex<double>(Re[8], Im[8]));
 
-            double bb = param->getb();
+            double bb = param->event.b;
             a = L / static_cast<double>(N);
 
             double xtemp = isProjectile ? (a * i - bb / 2.) : (a * i + bb / 2.);
@@ -1998,17 +2019,17 @@ void Init::readWilsonLineBinary(
     InStream.read(reinterpret_cast<char *>(&a), sizeof(double));
     InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
 
-    if (N != param->getSize()) {
+    if (N != param->lattice.size) {
         messager_ << "[Init::readVFromFile]: wrong lattice "
                      "size, data is "
-                  << N << " but you have specified " << param->getSize();
+                  << N << " but you have specified " << param->lattice.size;
         messager_.flush("error");
         exit(1);
     }
-    if (std::abs(L - param->getL()) > 1e-5) {
+    if (std::abs(L - param->lattice.L) > 1e-5) {
         messager_ << "[Init::readVFromFile]: wrong grid length, "
                      "data has "
-                  << L << " but you have specified " << param->getL();
+                  << L << " but you have specified " << param->lattice.L;
         messager_.flush("error");
         exit(1);
     }
@@ -2037,7 +2058,7 @@ void Init::readWilsonLineBinary(
             int ixRaw = latticeX(PositionIndx, N);
             int iy = latticeY(PositionIndx, N);
 
-            double bb = param->getb();
+            double bb = param->event.b;
             a = L / static_cast<double>(N);
 
             // shift here by half an impact parameter
@@ -2072,11 +2093,11 @@ void Init::readWilsonLineBinary(
 }
 
 void Init::sampleImpactParameter(Parameters *param) {
-    const double bmin = param->getbmin();
-    const double bmax = param->getbmax();
+    const double bmin = param->collision.bmin;
+    const double bmax = param->collision.bmax;
     double b = 0.;
     double xb = random_ptr_->genrand64_real1();
-    if (param->getUseNucleus() == 0) {
+    if (param->collision.useNucleus == 0) {
         // use b=0 fm for the constant g^2 mu case. Deferred flush: this
         // message's tag also covers the shared "b = ..." line below, same
         // as the other two branches.
@@ -2084,7 +2105,7 @@ void Init::sampleImpactParameter(Parameters *param) {
                      "color charge density case. ";
         b = 0;
     } else {
-        if (param->getLinearb() == 1) {
+        if (param->collision.samplebFromLinearDistribution == 1) {
             // use a linear probability distribution for b if we are doing
             // nuclei
             messager_ << "[Init::sampleImpactParameter]: Sampling linearly "
@@ -2099,12 +2120,12 @@ void Init::sampleImpactParameter(Parameters *param) {
             b = (bmax - bmin) * xb + bmin;
         }
     }
-    param->setb(b);
+    param->event.b = b;
     double phiRP = 0.;
-    if (param->getRotateReactionPlane()) {
+    if (param->collision.rotateReactionPlane) {
         phiRP = 2 * M_PI * random_ptr_->genrand64_real2();
     }
-    param->setPhiRP(phiRP);
+    param->event.phiRP = phiRP;
     messager_ << "b = " << b << " fm, phi_RP = " << phiRP;
     messager_.flush("info");
 
@@ -2124,29 +2145,31 @@ void Init::init(
 
     messager_.info("[Init::init]: Initializing fields ... ");
 
-    if (param->getUseNucleus() == 0) {
+    if (param->collision.useNucleus == 0) {
         // No real collision geometry in the constant-g^2mu case: skip
         // sampleImpactParameter() entirely, but still give b/phi_RP the
         // same defaults it would have produced.
-        param->setb(0.);
-        param->setPhiRP(0.);
-        param->setSuccess(1);
+        param->event.b = 0.;
+        param->event.phiRP = 0.;
+        param->event.success = 1;
     } else {
         readNuclearQs(param);
     }
 
     // The configuration files are only used by sampleTAFromConfigFiles();
     // don't require them to exist for Woods-Saxon sampling.
-    if (param->getUseNucleus() == 1 && param->getNucleonPositionsFromFile() == 1
+    if (param->collision.useNucleus == 1
+        && param->nucleus.nucleonPositionsFromFile == 1
         && init_method == InitializationMethod::SampleColorCharges) {
         readInNucleusConfigs(
             static_cast<int>(glauber->nucleusA1()),
-            param->getlightNucleusOption(), param->getPolarizationProjectile(),
-            param->getPolarizationProjectileJz(), nucleonPosArrA_, param);
+            param->nucleus.lightNucleusOption,
+            param->nucleus.polariztionProjectile,
+            param->nucleus.polarizationProjectileJz, nucleonPosArrA_, param);
         readInNucleusConfigs(
             static_cast<int>(glauber->nucleusA2()),
-            param->getlightNucleusOption(), param->getPolarizationTarget(),
-            param->getPolarizationTargetJz(), nucleonPosArrB_, param);
+            param->nucleus.lightNucleusOption, param->nucleus.polariztionTarget,
+            param->nucleus.polarizationTargetJz, nucleonPosArrB_, param);
     }
 
     if (init_method == InitializationMethod::ReadWlineBinary
@@ -2155,10 +2178,10 @@ void Init::init(
         readVFromFile(
             lat, param,
             (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
-        param->setSuccess(1);
+        param->event.success = 1;
     } else {
         // to generate your own Wilson lines
-        if (param->getUseNucleus() == 1) {
+        if (param->collision.useNucleus == 1) {
             nucleusA_.clear();
             nucleusB_.clear();
             // populate the lists nucleusA_ and nucleusB_ with position data
@@ -2174,20 +2197,20 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
     messager_.info(
         "[Init::shiftFieldsWithImpactParameter]: Shifting fields with impact "
         "parameter...");
-    const double b = param->getb();
-    const double phiRP = param->getPhiRP();
+    const double b = param->event.b;
+    const double phiRP = param->event.phiRP;
     messager_ << "[Init::shiftFieldsWithImpactParameter]: b = " << b
               << " fm, phi_RP = " << phiRP;
     messager_.flush("info");
 
-    const int N = param->getSize();
-    BufferLattice lat_tmp(param->getSize());
+    const int N = param->lattice.size;
+    BufferLattice lat_tmp(param->lattice.size);
     for (int ipos = 0; ipos < N * N; ipos++) {
         lat_tmp.buffer1[ipos] = lat->U[ipos];
         lat_tmp.buffer2[ipos] = lat->U2[ipos];
     }
 
-    const double L = param->getL();
+    const double L = param->lattice.L;
     const double a = L / N;  // lattice spacing in fm
     for (int ipos = 0; ipos < N * N; ipos++) {
         int ix = lat->xFromPosition(ipos);
@@ -2224,7 +2247,7 @@ void Init::initializeForwardLightCone(Lattice *lat, Parameters *param) {
     messager_.info(
         "[Init::initializeForwardLightCone]: Finding fields in forward "
         "lightcone...");
-    const int N = param->getSize();
+    const int N = param->lattice.size;
     const int N2 = N * N;
 #pragma omp parallel
     {
@@ -2305,7 +2328,7 @@ void Init::computeForwardLightconeUxUyTeam(
         scratch.UDx1 = lat->Ux1[pos];
         scratch.UDx2 = lat->Ux2[pos];
         const std::uint64_t retrySeedX = forwardLightconeRetrySeed(
-            param->getRandomSeed(), param->getEventId(), pos, 0);
+            param->run.randomSeed, param->event.eventId, pos, 0);
         bool status = findUInForwardLightcone(
             scratch.UDx1, scratch.UDx2, scratch.temp2, retrySeedX);
         lat->Ux[pos] = (scratch.temp2);
@@ -2316,15 +2339,15 @@ void Init::computeForwardLightconeUxUyTeam(
             localMessager << "[Init::initializeForwardLightCone]: Failed "
                              "to converge finding Ux in "
                              "the forward lightcone at pos x = "
-                          << pos / param->getSize()
-                          << " y = " << pos % param->getSize();
+                          << pos / param->lattice.size
+                          << " y = " << pos % param->lattice.size;
             localMessager.flush("warning");
         }
 
         scratch.UDy1 = lat->Uy1[pos];
         scratch.UDy2 = lat->Uy2[pos];
         const std::uint64_t retrySeedY = forwardLightconeRetrySeed(
-            param->getRandomSeed(), param->getEventId(), pos, 1);
+            param->run.randomSeed, param->event.eventId, pos, 1);
         status = findUInForwardLightcone(
             scratch.UDy1, scratch.UDy2, scratch.temp2, retrySeedY);
         lat->Uy[pos] = (scratch.temp2);
@@ -2335,8 +2358,8 @@ void Init::computeForwardLightconeUxUyTeam(
             localMessager << "[Init::initializeForwardLightCone]: Failed "
                              "to converge finding Uy in "
                              "the forward lightcone at pos x = "
-                          << pos / param->getSize()
-                          << " y = " << pos % param->getSize();
+                          << pos / param->lattice.size
+                          << " y = " << pos % param->lattice.size;
             localMessager.flush("warning");
         }
     }
@@ -2438,7 +2461,7 @@ void Init::computeForwardLightconePiTeam(
         // this is pi in lattice units as needed for the evolution. (later,
         // the a^4 gives the right units for the energy density
         lat->Ux2[pos] =
-            (complex<double>(0., -2. / param->getg()) * (lat->U[pos]));
+            (complex<double>(0., -2. / param->coupling.g) * (lat->U[pos]));
         // factor -2 because I have A^eta (note the 1/8 before)
         // but want \pi (E^z).
     }
@@ -2932,9 +2955,9 @@ double Init::sampleLogNormalDistribution(
 void Init::sampleQsNormalization(
     Random *random, Parameters *param, const int Nq,
     vector<double> &gauss_array) {
-    const double QsSmearWidth = param->getSmearingWidth();
+    const double QsSmearWidth = param->subnucleon.smearingWidth;
     gauss_array.assign(Nq, 1.);  // default norm = 1
-    if (param->getSmearQs() == 1) {
+    if (param->subnucleon.smearQs == 1) {
         // introduce a log-normal distribution for Qs normalization
         // dividing by exp(0.5 sigma^2) to ensure the mean is 1
         // the varirance in this case is exp(sigma) - 1 for the log-normal
@@ -2948,14 +2971,14 @@ void Init::sampleQsNormalization(
 }
 
 int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
-    double NqBase = param->getNqBase();
+    double NqBase = param->subnucleon.NqBase;
     int NqBaseInt = static_cast<int>(NqBase);
     double ran = random->genrand64_real2();
     int Nq = NqBaseInt;
     if (ran < NqBase - NqBaseInt) {
         Nq += 1;
     }
-    Nq += random->poisson(param->getNqFluc());
+    Nq += random->poisson(param->subnucleon.NqFluc);
     return (std::max(1, Nq));
 }
 

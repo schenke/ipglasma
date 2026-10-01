@@ -57,7 +57,7 @@ class GaugeFix {
      * place.
      * \param[in] group Unused; kept for interface consistency with
      * other lattice-observable methods that do need a Group instance.
-     * \param[in] param Simulation parameters; only `getSize()` is
+     * \param[in] param Simulation parameters; only `lattice.size` is
      * used.
      * \param[in] steps Maximum number of relaxation iterations to run
      * before giving up regardless of the residual.

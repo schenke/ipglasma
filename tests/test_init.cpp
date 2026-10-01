@@ -24,14 +24,14 @@ namespace {
 // std::ostringstream, so this takes an out-parameter rather than
 // returning by value.
 void makeInitTestParam(Parameters &param, int size) {
-    param.setSize(size);
-    param.setL(static_cast<double>(size));  // a = 1 fm
-    param.setMPIRank(0);
-    param.setEventId(0);
-    param.setSeed(0);
-    param.setMPISize(1);
-    param.setRapidityA(0.0);
-    param.setRapidityB(0.0);
+    param.lattice.size = size;
+    param.lattice.L = static_cast<double>(size);  // a = 1 fm
+    param.run.MPIRank = 0;
+    param.event.eventId = 0;
+    param.random.seed = 0;
+    param.run.MPISize = 1;
+    param.colorCharge.RapidityA = 0.0;
+    param.colorCharge.RapidityB = 0.0;
 }
 
 // A deterministic, position-dependent (not merely diagonal) matrix, so
@@ -63,9 +63,9 @@ TEST_CASE(
     "when usePseudoRapidity is off") {
     Parameters param;
     makeInitTestParam(param, 4);
-    param.setUsePseudoRapidity(0);
-    param.setRapidityA(1.5);
-    param.setRapidityB(-0.8);
+    param.colorCharge.usePseudoRapidity = 0;
+    param.colorCharge.RapidityA = 1.5;
+    param.colorCharge.RapidityB = -0.8;
 
     int nn[2] = {4, 4};
     Init init(nn);
@@ -81,11 +81,11 @@ TEST_CASE(
     "when enabled") {
     Parameters param;
     makeInitTestParam(param, 4);
-    param.setUsePseudoRapidity(1);
-    param.setRapidityA(1.0);
-    param.setRapidityB(1.0);
-    param.setJacobianm(0.14);
-    param.setRoots(200.0);
+    param.colorCharge.usePseudoRapidity = 1;
+    param.colorCharge.RapidityA = 1.0;
+    param.colorCharge.RapidityB = 1.0;
+    param.colorCharge.Jacobianm = 0.14;
+    param.collision.roots = 200.0;
 
     int nn[2] = {4, 4};
     Init init(nn);
@@ -107,26 +107,26 @@ TEST_CASE(
     "as Evolution::computeRunningCouplingGfactor()") {
     Parameters param;
     makeInitTestParam(param, 4);
-    param.setRunningCoupling(1);
-    param.setRunWithkt(0);
-    param.setRunWithQs(1);  // average Qs
-    param.setRunWithThisFactorTimesQs(0.5);
-    param.setAverageQsAvg(1.3);
-    param.setMuZero(0.3);
-    param.setc(0.2);
+    param.coupling.runningCoupling = 1;
+    param.coupling.runWithkt = 0;
+    param.coupling.runWith0Min1Avg2MaxQs = 1;  // average Qs
+    param.coupling.runWithThisFactorTimesQs = 0.5;
+    param.event.averageQsAvg = 1.3;
+    param.coupling.muZero = 0.3;
+    param.coupling.c = 0.2;
 
     int nn[2] = {4, 4};
     Init init(nn);
 
-    param.setNFlavors(3);
-    param.setLambdaQCD(0.2);
+    param.coupling.nFlavors = 3;
+    param.coupling.LambdaQCD = 0.2;
     init.computeAndSetRunningAlphaS(&param);
-    CHECK(param.getalphas() == doctest::Approx(0.5922901359561648));
+    CHECK(param.event.alphas == doctest::Approx(0.5922901359561648));
 
-    param.setNFlavors(4);
-    param.setLambdaQCD(0.25);
+    param.coupling.nFlavors = 4;
+    param.coupling.LambdaQCD = 0.25;
     init.computeAndSetRunningAlphaS(&param);
-    CHECK(param.getalphas() == doctest::Approx(0.789051392062008));
+    CHECK(param.event.alphas == doctest::Approx(0.789051392062008));
 }
 
 TEST_CASE(
@@ -194,9 +194,9 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.setUseGaussian(0);
-    param.setg2mu(6.0);
-    param.setg(2.0);
+    param.collision.useGaussian = 0;
+    param.collision.g2mu = 6.0;
+    param.coupling.g = 2.0;
     Lattice lat(&param, N);
 
     int nn[2] = {N, N};
@@ -207,7 +207,7 @@ TEST_CASE(
         CHECK(lat.cells[pos]->getg2mu2A() == doctest::Approx(9.0));
         CHECK(lat.cells[pos]->getg2mu2B() == doctest::Approx(9.0));
     }
-    CHECK(param.getSuccess() == 1);
+    CHECK(param.event.success == 1);
 }
 
 TEST_CASE(
@@ -216,9 +216,9 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.setUseGaussian(1);
-    param.setg2mu(6.0);
-    param.setg(2.0);
+    param.collision.useGaussian = 1;
+    param.collision.g2mu = 6.0;
+    param.coupling.g = 2.0;
     Lattice lat(&param, N);
 
     int nn[2] = {N, N};
@@ -240,8 +240,8 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.setUseConstituentQuarkProton(0);
-    param.setBG(1.0);
+    param.subnucleon.useConstituentQuarkProton = 0;
+    param.subnucleon.BG = 1.0;
 
     std::vector<ReturnValue> nucleus(1);
     nucleus[0].x = 0.0;
@@ -268,7 +268,7 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.setUseConstituentQuarkProton(1);
+    param.subnucleon.useConstituentQuarkProton = 1;
 
     std::vector<ReturnValue> nucleus(1);
     nucleus[0].x = 0.0;
@@ -297,7 +297,7 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.setb(3.0);
+    param.event.b = 3.0;
 
     int nn[2] = {N, N};
     Init init(nn);
@@ -339,7 +339,7 @@ TEST_CASE(
     {
         std::ofstream out(binPath, std::ios::out | std::ios::binary);
         int Nc = 3;
-        double L = param.getL();
+        double L = param.lattice.L;
         double a = L / N;
         double dummy = 0.;
         out.write(reinterpret_cast<const char *>(&N), sizeof(int));
@@ -494,9 +494,9 @@ TEST_CASE(
     "Init::computeNcollList (hard-sphere mode) marks a p+p pair collided and "
     "counts it once") {
     Parameters param;
-    param.setSigmaNN(4.2);
-    param.setGaussianWounding(0);
-    param.setEventId(0);
+    param.collision.SigmaNN = 4.2;
+    param.collision.gaussianWounding = 0;
+    param.event.eventId = 0;
 
     Glauber glauber;
     Random random;
@@ -507,10 +507,10 @@ TEST_CASE(
     glauber.initGlauber(
         4.2, "p", "p", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0., 0.,
         0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
-    param.setAverageOverNuclei(1);
+    param.collision.averageOverThisManyNuclei = 1;
     init.sampleTAWoodsSaxon(&param, &random, &glauber);
 
-    const double d2 = param.getSigmaNN() / (M_PI * 10.);  // in fm^2
+    const double d2 = param.collision.SigmaNN / (M_PI * 10.);  // in fm^2
     int Ncoll = 0;
     init.computeNcollList(&param, d2, /*b=*/0.0, /*phiRP=*/0.0, Ncoll);
 
@@ -544,7 +544,7 @@ TEST_CASE(
             }
         }
     }
-    param.setNuclearConfigurationsPath(dir);
+    param.nucleus.nuclearConfigurationsPath = dir;
 
     int nn[2] = {4, 4};
     Init init(nn);
@@ -581,7 +581,7 @@ TEST_CASE(
             out.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
         }
     }
-    param.setNuclearConfigurationsPath(dir);
+    param.nucleus.nuclearConfigurationsPath = dir;
 
     int nn[2] = {4, 4};
     for (const auto &[Jz, expectedTag] :
@@ -607,9 +607,9 @@ TEST_CASE(
         CAPTURE(format);
         Parameters param;
         makeInitTestParam(param, N);
-        param.setb(0.);
-        param.setWilsonLinePath(".");
-        param.setWriteWilsonLines(format);
+        param.event.b = 0.;
+        param.wilsonLines.wilsonLinePath = ".";
+        param.wilsonLines.writeWilsonLines = format;
 
         Lattice lat(&param, N);
         for (int pos = 0; pos < N * N; ++pos) {
@@ -657,13 +657,13 @@ TEST_CASE(
     const double a = L / N;
     Parameters param;
     makeInitTestParam(param, N);
-    param.setL(L);
-    param.setUseNucleus(1);
-    param.setUseSmoothNucleus(1);
-    param.setg(1.);
-    param.setQsmuRatio(0.643);
-    param.setQsmuRatioB(0.643);
-    param.setb(5.);  // a stale b must not shift the profiles
+    param.lattice.L = L;
+    param.collision.useNucleus = 1;
+    param.nucleus.useSmoothNucleus = 1;
+    param.coupling.g = 1.;
+    param.colorCharge.QsmuRatio = 0.643;
+    param.event.QsmuRatioB = 0.643;
+    param.event.b = 5.;  // a stale b must not shift the profiles
 
     Glauber glauber;
     glauber.initGlauber(

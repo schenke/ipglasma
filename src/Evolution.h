@@ -66,15 +66,15 @@ class Evolution {
      * (evolveStepPersistent(), an anonymous-namespace helper in
      * Evolution.cpp that runs one shared `#pragma omp parallel` team
      * through evolvePi()/evolveE()/evolvePhi()/evolveU() in order) up to
-     * `param->getMaxtime()` (or, if `getInverseQsForMaxTime()`, up to
-     * \f$1/Q_s\f$). At the final time step (and, if `getWriteOutputs()
+     * `param->evolution.maxtime` (or, if `evolution.inverseQsForMaxTime`, up to
+     * \f$1/Q_s\f$). At the final time step (and, if `output.writeOutputs
      * == 5`, at four additional fixed intermediate times), temporarily
      * recenters the momenta from \f$\tau_{n-1/2}\f$ to \f$\tau_n\f$ to
      * measure tmunu() and either u() or `MyEigen::writeTmunu4D()`
-     * (depending on `getWriteEpsilonUHydro()`), then restores the
+     * (depending on `output.writeEpsilonUHydro`), then restores the
      * unmodified momenta so the measurement cannot perturb the
      * trajectory. At the very end, runs checkGaussLaw(), and -- if
-     * `getComputeGluonMultiplicity()` -- eccentricity() and
+     * `output.computeGluonMultiplicity` -- eccentricity() and
      * multiplicity(), stopping early if multiplicity() reports no
      * collision.
      * \param[in,out] lat Lattice to evolve in place.
@@ -162,7 +162,7 @@ class Evolution {
      * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current time step index, used for the output file's
-     * time column and (on `it==1`) to seed `param->setPsi()`.
+     * time column and (on `it==1`) to seed `param->event.psi = `.
      * \param[in] cutoff Energy-density cutoff below which a cell is
      * excluded from the weighted averages [\f$\Lambda_{QCD}^4\f$-like
      * units, i.e. roughly 1/fm\f$^4\f$].
@@ -215,9 +215,9 @@ class Evolution {
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     /**
      * The final-time flow measurement of run(), after tmunu(): with
-     * `getWriteEpsilonUHydro()` the full u() solve and hydro output;
+     * `output.writeEpsilonUHydro` the full u() solve and hydro output;
      * otherwise only the raw \f$T^{\mu\nu}\f$ output, preceded by the
-     * flow-velocity solve if `getComputeGluonMultiplicity()` (so that
+     * flow-velocity solve if `output.computeGluonMultiplicity` (so that
      * eccentricity(), which weights by \f$\epsilon u^\tau\f$, sees the
      * solved fields).
      * \param[in,out] lat Lattice holding \f$T^{\mu\nu}\f$; receives
@@ -236,7 +236,7 @@ class Evolution {
      * \f$dN/d\eta\f$) and \f$dE/dy\f$, with separate cut sums above
      * \f$k_T>3\f$ and \f$6\f$ GeV. At the final time step, optionally
      * hadronizes the spectrum (hadronizeAndWriteMultiplicity(), if
-     * `getWriteOutputs()==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
+     * `output.writeOutputs==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
      * the `gluonMultiplicity<id>.json` target
      * (writeGluonMultiplicityTarget()).
      * \param[in,out] lat Lattice to read the fields from (gauge-fixed in
@@ -244,7 +244,7 @@ class Evolution {
      * \param[in] group Group instance, forwarded to `GaugeFix::fftChi`.
      * \param[in] param Simulation parameters.
      * \param[in] it Current time step index.
-     * \return `1` on success (`param->setSuccess(1)` is also called);
+     * \return `1` on success (`param->event.success = 1` is also called);
      * `0` if no collision was found (\f$dN/dy=0\f$), signaling the
      * caller (run()) to stop this event so it can be resampled with a
      * new random seed.
@@ -312,7 +312,7 @@ class Evolution {
      * Standalone post-processing utility: reads a previous run's
      * `multiplicity<id>.dat` (into \c nIn_) and `NpartdNdy<id>.dat`,
      * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
-     * (`param->getJacobianm()`/`getRoots()`), and writes
+     * (`param->colorCharge.Jacobianm`/`collision.roots`), and writes
      * `NpartdNdy-mod.dat`. Not part of the normal run() flow; terminates
      * the process (`exit(1)`) unconditionally when done, and also exits
      * early if either input file is missing.

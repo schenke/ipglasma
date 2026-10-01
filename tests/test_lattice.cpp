@@ -23,15 +23,15 @@ namespace {
 // a PrettyOstream member, which holds a non-copyable/non-movable
 // std::ostringstream -- see the identical note in test_parameters.cpp.
 void makeLatticeParam(Parameters &param, int size) {
-    param.setL(10.0);
-    param.setMPIRank(0);
-    param.setSize(size);
-    param.setEventId(0);
-    param.setSeed(0);
-    param.setMPISize(1);
-    param.setRapidityA(0.0);
-    param.setRapidityB(0.0);
-    param.setWilsonLinePath(".");
+    param.lattice.L = 10.0;
+    param.run.MPIRank = 0;
+    param.lattice.size = size;
+    param.event.eventId = 0;
+    param.random.seed = 0;
+    param.run.MPISize = 1;
+    param.colorCharge.RapidityA = 0.0;
+    param.colorCharge.RapidityB = 0.0;
+    param.wilsonLines.wilsonLinePath = ".";
 }
 }  // namespace
 
@@ -81,9 +81,9 @@ TEST_CASE("Lattice::writeWilsonLines (text format) writes a non-empty file") {
     const int length = 4;
     Parameters param;
     makeLatticeParam(param, length);
-    param.setWriteWilsonLines(1);  // text
-    param.setUseFluctuatingx(
-        1);  // with this option, no x value in the generated filename
+    param.wilsonLines.writeWilsonLines = 1;  // text
+    param.colorCharge.useFluctuatingx =
+        1;  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
     lat.writeWilsonLines(&param, NucleusRole::Projectile);
@@ -106,9 +106,9 @@ TEST_CASE(
     const int length = 4;
     Parameters param;
     makeLatticeParam(param, length);
-    param.setWriteWilsonLines(2);  // binary
-    param.setUseFluctuatingx(
-        1);  // with this option, no x value in the generated filename
+    param.wilsonLines.writeWilsonLines = 2;  // binary
+    param.colorCharge.useFluctuatingx =
+        1;  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
     // Give two off-diagonal sites (ix != iy, swapped between them) distinct
@@ -144,9 +144,9 @@ TEST_CASE(
 
     CHECK(n == length);
     CHECK(nc == 3);
-    CHECK(L == doctest::Approx(param.getL()));
-    CHECK(a == doctest::Approx(param.getL() / length));
-    CHECK(rapidity == doctest::Approx(param.getRapidityA()));
+    CHECK(L == doctest::Approx(param.lattice.L));
+    CHECK(a == doctest::Approx(param.lattice.L / length));
+    CHECK(rapidity == doctest::Approx(param.colorCharge.RapidityA));
 
     // The writer nests ix outer / iy inner (see Lattice.cpp), so the
     // site-th 9-(re, im)-pair block in the file must be lat.U[site], i.e.
@@ -172,16 +172,16 @@ TEST_CASE(
     "writeWilsonLines") {
     Parameters param;
     makeLatticeParam(param, 4);
-    param.setWilsonLinePath(".");
+    param.wilsonLines.wilsonLinePath = ".";
 
     // Reading binary (format 2) while writing text must not look for .txt
-    param.setWriteWilsonLines(1);
+    param.wilsonLines.writeWilsonLines = 1;
     CHECK(
         Lattice::generateWilsonLineDataFileName(
             &param, -1., NucleusRole::Projectile, 2)
         == "./WilsonLine_1");
     // and vice versa
-    param.setWriteWilsonLines(2);
+    param.wilsonLines.writeWilsonLines = 2;
     CHECK(
         Lattice::generateWilsonLineDataFileName(
             &param, -1., NucleusRole::Projectile, 1)
@@ -191,7 +191,7 @@ TEST_CASE(
         Lattice::generateWilsonLineDataFileName(
             &param, -1., NucleusRole::Projectile)
         == "./WilsonLine_1");
-    param.setWriteWilsonLines(1);
+    param.wilsonLines.writeWilsonLines = 1;
     CHECK(
         Lattice::generateWilsonLineDataFileName(
             &param, -1., NucleusRole::Projectile)

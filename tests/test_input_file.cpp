@@ -137,6 +137,18 @@ TEST_CASE("parseValue: integers must be written as integers") {
     CHECK_FALSE(parseValue("-1", u));
 }
 
+TEST_CASE("parseValue: flags must be 0 or 1") {
+    bool flag = false;
+    CHECK(parseValue("1", flag));
+    CHECK(flag == true);
+    CHECK(parseValue("0", flag));
+    CHECK(flag == false);
+    for (const char *bad : {"2", "-1", "true", "1.0", ""}) {
+        CAPTURE(bad);
+        CHECK_FALSE(parseValue(bad, flag));
+    }
+}
+
 TEST_CASE("parseValue: doubles must be finite numbers") {
     double d = 0.;
     CHECK(parseValue("0.5", d));
@@ -182,25 +194,26 @@ TEST_CASE("Parameters::readInput: the shipped input files are valid") {
 TEST_CASE("Parameters::readInput: reads values and sets derived ones") {
     Parameters param;
     REQUIRE(param.readInput(inputFromText(readSourceFile("input"))).empty());
-    CHECK(param.getSize() == 256);
-    CHECK(param.getL() == 30.);
-    CHECK(param.getProjectile() == "Pb");
-    CHECK(param.getxSnapshotList().size() == 5);
-    CHECK(param.getUseJIMWLK() == true);
+    CHECK(param.lattice.size == 256);
+    CHECK(param.lattice.L == 30.);
+    CHECK(param.collision.Projectile == "Pb");
+    CHECK(param.jimwlk.xSnapshotList.size() == 5);
+    CHECK(param.jimwlk.useJIMWLK == true);
     // derived: NqBase from useConstituentQuarkProton, dtau ~0.1 with
     // maxtime a whole number of steps
-    CHECK(param.getNqBase() == param.getUseConstituentQuarkProton());
-    const double a = param.getL() / param.getSize();
-    const double steps = param.getMaxtime() / (a * param.getdtau());
+    CHECK(
+        param.subnucleon.NqBase == param.subnucleon.useConstituentQuarkProton);
+    const double a = param.lattice.L / param.lattice.size;
+    const double steps = param.evolution.maxtime / (a * param.run.dtau);
     CHECK(steps == doctest::Approx(static_cast<int>(steps + 0.5)));
-    CHECK(param.getdtau() == doctest::Approx(0.1).epsilon(0.05));
+    CHECK(param.run.dtau == doctest::Approx(0.1).epsilon(0.05));
 }
 
 TEST_CASE("Parameters::readInput: maxtime 0 gives dtau 0.1, not NaN") {
     Parameters param;
     REQUIRE(param.readInput(inputFromText(exampleInputWith("maxtime", "0")))
                 .empty());
-    CHECK(param.getdtau() == 0.1);
+    CHECK(param.run.dtau == 0.1);
 }
 
 TEST_CASE("Parameters::readInput: unknown keys are errors, with a suggestion") {
@@ -225,15 +238,18 @@ TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
     Parameters param;
     REQUIRE(param.readInput(inputFromText(exampleInputWith("nFlavors", "")))
                 .empty());
-    CHECK(param.getNFlavors() == 3);
+    CHECK(param.coupling.nFlavors == 3);
     Parameters param2;
     REQUIRE(
         param2.readInput(inputFromText(exampleInputWith("wilsonLinePath", "")))
             .empty());
-    CHECK(param2.getWilsonLinePath() == "./");
+    CHECK(param2.wilsonLines.wilsonLinePath == "./");
 }
 
 TEST_CASE("Parameters::readInput: values must have the parameter's type") {
+    CHECK(anyContains(
+        readErrors(exampleInputWith("useJIMWLK", "2")),
+        "useJIMWLK '2' is not 0 or 1"));
     CHECK(anyContains(
         readErrors(exampleInputWith("size", "256.0")),
         "size '256.0' is not an integer"));
@@ -340,8 +356,9 @@ TEST_CASE(
     reread.writeInputParameters(rewritten);
     CHECK(rewritten.str() == written.str());
     // exact doubles, not rounded ones
-    CHECK(reread.getJimwlk_x_projectile() == param.getJimwlk_x_projectile());
-    CHECK(reread.getdtau() == param.getdtau());
+    CHECK(
+        reread.jimwlk.x_projectile_jimwlk == param.jimwlk.x_projectile_jimwlk);
+    CHECK(reread.run.dtau == param.run.dtau);
 }
 
 TEST_CASE("InputFile: skips a UTF-8 byte order mark") {
@@ -395,5 +412,5 @@ TEST_CASE(
     const std::vector<std::string> errors =
         readErrors(exampleInputWith("setWSDeformParams", "1.0"));
     REQUIRE(errors.size() == 1);
-    CHECK(anyContains(errors, "setWSDeformParams '1.0' is not an integer"));
+    CHECK(anyContains(errors, "setWSDeformParams '1.0' is not 0 or 1"));
 }

@@ -16,17 +16,17 @@ namespace {
 // std::ostringstream, so this takes an out-parameter rather than
 // returning by value.
 void makeEvolutionTestParam(Parameters &param, int size) {
-    param.setSize(size);
-    param.setL(static_cast<double>(size));  // a = 1 fm
-    param.setMPIRank(0);
-    param.setEventId(0);
-    param.setSeed(0);
-    param.setMPISize(1);
-    param.setRapidityA(0.0);
-    param.setRapidityB(0.0);
-    param.setg(1.0);
-    param.setdtau(0.1);
-    param.setRunningCoupling(0);  // gfactor == 1 everywhere; see below
+    param.lattice.size = size;
+    param.lattice.L = static_cast<double>(size);  // a = 1 fm
+    param.run.MPIRank = 0;
+    param.event.eventId = 0;
+    param.random.seed = 0;
+    param.run.MPISize = 1;
+    param.colorCharge.RapidityA = 0.0;
+    param.colorCharge.RapidityB = 0.0;
+    param.coupling.g = 1.0;
+    param.run.dtau = 0.1;
+    param.coupling.runningCoupling = 0;  // gfactor == 1 everywhere; see below
 }
 
 }  // namespace
@@ -37,8 +37,8 @@ TEST_CASE(
     const int N = 8;
     Parameters param;
     makeEvolutionTestParam(param, N);
-    param.setQsmuRatio(0.643);
-    param.setQsmuRatioB(0.643);
+    param.colorCharge.QsmuRatio = 0.643;
+    param.event.QsmuRatioB = 0.643;
     Lattice lat(&param, N);
 
     for (int ix = 0; ix < N; ++ix) {
@@ -120,13 +120,13 @@ TEST_CASE(
         CAPTURE(c.computeGluonMultiplicity);
         Parameters param;
         makeEvolutionTestParam(param, N);
-        param.setWriteOutputs(0);  // no output files
-        param.setWriteEpsilonUHydro(c.writeEpsilonUHydro);
-        param.setComputeGluonMultiplicity(c.computeGluonMultiplicity);
+        param.output.writeOutputs = 0;  // no output files
+        param.output.writeEpsilonUHydro = c.writeEpsilonUHydro;
+        param.output.computeGluonMultiplicity = c.computeGluonMultiplicity;
         Lattice lat(&param, N);
 
-        const double a = param.getL() / N;
-        const double tau = it * param.getdtau() * a;
+        const double a = param.lattice.L / N;
+        const double tau = it * param.run.dtau * a;
         for (int pos = 0; pos < N * N; ++pos) {
             Cell *cell = lat.cells[pos];
             cell->setTtautau((e + p) * gamma * gamma - p);

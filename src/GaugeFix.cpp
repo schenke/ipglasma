@@ -139,7 +139,7 @@ inline void expGaugeRotationSU3(const Matrix &chi, Matrix &out) {
 
 void GaugeFix::fftChi(
     FFT *fft, Lattice *lat, Group *group, Parameters *param, int steps) {
-    const int N = param->getSize();
+    const int N = param->lattice.size;
     int nn[2];
     nn[0] = N;
     nn[1] = N;

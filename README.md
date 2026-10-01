@@ -16,6 +16,14 @@ Dependencies
 * FFTW
 * GSL
 
+### Reproducible runs
+By default, FFTW picks its FFT algorithms by timing them when the program starts, so two runs with the same seed can differ by floating-point rounding (around 1e-14). For bit-identical output, build with
+```
+cmake -B build -DIPGLASMA_DETERMINISTIC_FFT=ON
+cmake --build build
+```
+The first run then stores the chosen FFT plans in `ipglasma_fftw_wisdom.dat` in its working directory, and later runs that find this file reuse them. Runs are only bit-identical if they use the same wisdom file, so run them in the same directory or copy the file there. Different machines or FFTW versions can still choose different plans.
+
 ## Unit tests
 A [doctest](https://github.com/doctest/doctest)-based unit test suite lives under `tests/` and covers small, fast, deterministic pieces of the code (matrix algebra, RNG stream properties, input parsing, ...) rather than full lattice evolution, so it runs in a fraction of a second. It is off by default; build and run it with:
 ```

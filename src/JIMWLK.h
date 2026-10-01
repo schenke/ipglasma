@@ -162,7 +162,7 @@ class JIMWLK {
      * \param[in] x Momentum-space \f$x\f$ coordinate, in units where
      * the lattice spans \f$[-1/2, 1/2]\f$.
      * \param[in] y Momentum-space \f$y\f$ coordinate, same units.
-     * \return `1.0` if `param_.jimwlk.m_jimwlk` is `0` (regulator
+     * \return `1.0` if `param_.jimwlk.mass` is `0` (regulator
      * disabled); otherwise \f$m r K_1(m r)\f$, or `0.0` if the Bessel
      * function evaluation fails.
      */
@@ -173,7 +173,7 @@ class JIMWLK {
      * \param[in] x Momentum-space \f$x\f$ coordinate, in units where
      * the lattice spans \f$[-1/2, 1/2]\f$.
      * \param[in] y Momentum-space \f$y\f$ coordinate, same units.
-     * \return `1.0` if `param_.jimwlk.alphas_jimwlk` is positive (fixed
+     * \return `1.0` if `param_.jimwlk.alphaS` is positive (fixed
      * coupling, where \f$\alpha_s\f$ enters only through the step count
      * in evolution()); otherwise a one-loop running-coupling evaluation
      * from the dipole size implied by \f$(x,y)\f$.
@@ -188,7 +188,7 @@ class JIMWLK {
     /**
      * Runs the full JIMWLK evolution: computes how many Langevin steps
      * each nucleus needs to reach its requested \f$x\f$ (fixed- or
-     * running-coupling formula, per `param_.jimwlk.alphas_jimwlk`), then
+     * running-coupling formula, per `param_.jimwlk.alphaS`), then
      * evolves the projectile and target in turn via runEvolutionLoop().
      */
     void evolution();

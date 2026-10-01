@@ -88,12 +88,12 @@ def generate_temp_input(source_input_file="input_vm_proton", seed=0, x_pom="0.00
         for line in lines:
             if line.lstrip().startswith("seed"):
                 f.write(f"seed {seed}\n")
-            elif line.lstrip().startswith("x_projectile_jimwlk"):
-                f.write(f"x_projectile_jimwlk {x_pom}\n")
-            elif line.lstrip().startswith("x_target_jimwlk"):
-                f.write(f"x_target_jimwlk {x_pom}\n")
-            elif line.lstrip().startswith("NucleusQsTableFileName") and qs_table_path:
-                f.write(f"NucleusQsTableFileName {qs_table_path}\n")
+            elif line.lstrip().startswith("jimwlkXProjectile"):
+                f.write(f"jimwlkXProjectile {x_pom}\n")
+            elif line.lstrip().startswith("jimwlkXTarget"):
+                f.write(f"jimwlkXTarget {x_pom}\n")
+            elif line.lstrip().startswith("nucleusQsTableFileName") and qs_table_path:
+                f.write(f"nucleusQsTableFileName {qs_table_path}\n")
             elif line.lstrip().startswith("nuclearConfigurationsPath"):
                 f.write(f"nuclearConfigurationsPath {ipglasma_path}/nucleusConfigurations/\n")
             elif line.lstrip().startswith("size "):
@@ -355,9 +355,9 @@ def main():
 
     # Read the Qs table file name from the input template (NucleusQsTableFileName)
     # instead of hardcoding it, so the template controls which table is used.
-    qs_table_name = read_input_value(input_file_path, "NucleusQsTableFileName") if os.path.isfile(input_file_path) else None
+    qs_table_name = read_input_value(input_file_path, "nucleusQsTableFileName") if os.path.isfile(input_file_path) else None
     if not qs_table_name:
-        raise FileNotFoundError(f"NucleusQsTableFileName not found in input template '{input_file_path}'.")
+        raise FileNotFoundError(f"nucleusQsTableFileName not found in input template '{input_file_path}'.")
     qs_table_path = os.path.join(ipglasma_path, qs_table_name)
 
     os.makedirs(datadir, exist_ok=True)

@@ -141,15 +141,15 @@ int main(int argc, char *argv[]) {
         // welcome
         if (rank == 0) display_logo();
 
-        if (param->subnucleon.SubNucleonParamType > 0) {
+        if (param->subnucleon.subNucleonParamType > 0) {
             IPG_PROFILE_SCOPE("initialization.subnucleon_parameters");
             // sample the sub-nucleon parameters from the posterior distribution
-            int iSubNucleonParamSet = param->subnucleon.SubNucleonParamSet;
+            int iSubNucleonParamSet = param->subnucleon.subNucleonParamSet;
             if (iSubNucleonParamSet == -1) {
                 iSubNucleonParamSet = random->genrand64_int63();
             }
             param->setParamsWithPosteriorParameterSet(
-                param->subnucleon.SubNucleonParamType, iSubNucleonParamSet);
+                param->subnucleon.subNucleonParamType, iSubNucleonParamSet);
         }
 
         // initialize helper class objects
@@ -189,13 +189,14 @@ int main(int argc, char *argv[]) {
         {
             IPG_PROFILE_SCOPE("glauber.initialize");
             glauber.initGlauber(
-                param->collision.SigmaNN, param->collision.Target,
-                param->collision.Projectile, param->event.b,
-                param->nucleus.setWSDeformParams, param->nucleus.R_WS,
-                param->nucleus.a_WS, param->nucleus.beta2, param->nucleus.beta3,
-                param->nucleus.beta4, param->nucleus.gamma,
-                param->nucleus.force_dmin_flag, param->nucleus.d_min,
-                param->nucleus.dR_np, param->nucleus.da_np, 100);
+                param->collision.sigmaNN, param->collision.target,
+                param->collision.projectile, param->event.b,
+                param->nucleus.useInputWSParams, param->nucleus.radiusWS,
+                param->nucleus.diffusenessWS, param->nucleus.beta2,
+                param->nucleus.beta3, param->nucleus.beta4,
+                param->nucleus.gamma, param->nucleus.forceDMin,
+                param->nucleus.dMin, param->nucleus.deltaRnp,
+                param->nucleus.deltaAnp, 100);
         }
 
         // initialize evolution object
@@ -227,7 +228,7 @@ int main(int argc, char *argv[]) {
             // First generate the V
             init.init(&lat, &group, param, random, &glauber, init_method);
 
-            if (param->jimwlk.useJIMWLK) {
+            if (param->jimwlk.enabled) {
                 messager.info("[main::main]: Start JIMWLK");
                 JIMWLK jimwlkSolver(*param, &group, &lat, random);
                 jimwlkSolver.evolution();
@@ -237,10 +238,9 @@ int main(int argc, char *argv[]) {
                 if (param->wilsonLines.writeWilsonLines > 0) {
                     lat.writeWilsonLines(
                         param, NucleusRole::Projectile,
-                        param->jimwlk.x_projectile_jimwlk);
+                        param->jimwlk.xProjectile);
                     lat.writeWilsonLines(
-                        param, NucleusRole::Target,
-                        param->jimwlk.x_target_jimwlk);
+                        param, NucleusRole::Target, param->jimwlk.xTarget);
                 }
             }
 
@@ -440,7 +440,7 @@ void writeparams(Parameters *param) {
              "# the random numbers also depend on the MPI rank and the "
              "event's position in\n"
              "# the run (and on the time with useTimeForSeed 1), and "
-             "SubNucleonParamSet -1\n"
+             "subNucleonParamSet -1\n"
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);
 }

@@ -66,7 +66,7 @@ class Evolution {
      * (evolveStepPersistent(), an anonymous-namespace helper in
      * Evolution.cpp that runs one shared `#pragma omp parallel` team
      * through evolvePi()/evolveE()/evolvePhi()/evolveU() in order) up to
-     * `param->evolution.maxtime` (or, if `evolution.inverseQsForMaxTime`, up to
+     * `param->evolution.maxTime` (or, if `evolution.inverseQsForMaxTime`, up to
      * \f$1/Q_s\f$). At the final time step (and, if `output.writeOutputs
      * == 5`, at four additional fixed intermediate times), temporarily
      * recenters the momenta from \f$\tau_{n-1/2}\f$ to \f$\tau_n\f$ to
@@ -312,7 +312,7 @@ class Evolution {
      * Standalone post-processing utility: reads a previous run's
      * `multiplicity<id>.dat` (into \c nIn_) and `NpartdNdy<id>.dat`,
      * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
-     * (`param->colorCharge.Jacobianm`/`collision.roots`), and writes
+     * (`param->colorCharge.jacobianMass`/`collision.sqrtS`), and writes
      * `NpartdNdy-mod.dat`. Not part of the normal run() flow; terminates
      * the process (`exit(1)`) unconditionally when done, and also exits
      * early if either input file is missing.

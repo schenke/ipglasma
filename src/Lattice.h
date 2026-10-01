@@ -151,7 +151,7 @@ class Lattice {
      * \param[in] param Simulation parameters; `lattice.size`, `lattice.L`,
      * `event.eventId`, `random.seed`, `run.MPISize`,
      * `wilsonLines.wilsonLinePath`, `wilsonLines.writeWilsonLines` and (binary
-     * format only) `colorCharge.RapidityA`/`colorCharge.RapidityB` are used.
+     * format only) `colorCharge.rapidityA`/`colorCharge.rapidityB` are used.
      * \param[in] nucleus Which of \c U (Projectile) / \c U2 (Target) to
      * write.
      * \param[in] x If non-negative, included in the generated file name

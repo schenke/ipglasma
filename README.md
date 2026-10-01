@@ -42,7 +42,7 @@ The input file has one `key value` pair per line:
 - A line with only `EndOfFile` ends the input; everything after it is ignored. It is optional.
 - Unknown keys, keys given twice, missing required keys and malformed values (e.g. `256.0` for an integer) are errors. All problems are reported at once before the run stops.
 
-Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, and with `SubNucleonParamSet -1` a new posterior parameter set is drawn.
+Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
 
 ### Lattice
 - **size**: controls the size of the lattice that is `size`$^2$.
@@ -53,24 +53,24 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **useNucleus**
   - 1: nucleus with finite geometry
   - 0: infinite target with constant color charge density controlled by `g2mu` (in lattice units)
-- **Projectile** and **Target**: specify nuclei
+- **projectile** and **target**: specify nuclei
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details
 - **m**: infrared regulator in GeV
 - **BG**: controls the nucleon width, density profile is $T \sim e^{-b^2/(2B)}$
 - **BGq**: controls the hot spot width (if nucleon substructure is enabled), hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
-- **useConstituentQuarkProton**: control nucleon substructure
+- **Nq**: control nucleon substructure
   - 0: no substructure
   - Positive value: number of hot spots
 - **shiftConstituentQuarkProtonOrigin**: whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations
 - **smearingWidth**: width of the saturation scale fluctuations, parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
-- **useFluctuatingx**: controls how to determine Bjorken-$x$ when generating the initial condition
+- **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition
   - 1: Dynamically determined $b_\perp$ dependent $x$
   - 0: Fixed $x$
-- **RapidityA** and **RapidityB**:
-  - If `useFluctuatingx 0`, then $x = 0.01 e^{-\mathrm{RapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{RapidityB}}$ for the target
-  - If `useFluctuatingx 1`, consider particle production at rapidity $y$
+- **rapidityA** and **rapidityB**:
+  - If `useFluctuatingX 0`, then $x = 0.01 e^{-\mathrm{RapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{RapidityB}}$ for the target
+  - If `useFluctuatingX 1`, consider particle production at rapidity $y$
 
 
 ### Output
@@ -94,18 +94,18 @@ Each event writes the values of all input parameters it used to `usedParameters<
  - **wilsonLinePath** (optional): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
 
 ### JIMWLK evolution
-Note that when using the JIMWLK evolution, one should use `useFluctuatingx 0` which corresponds to having a fixed $x$ at the initial state of the evolution.
+Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` which corresponds to having a fixed $x$ at the initial state of the evolution.
 
 - **useJIMWLK**: with JIMWLK (1), or no JIMWLK (0)
-- **jimwlk_ic_x**: Bjorken-x at the initial condition
-- **x_projectile_jimwlk**: Bjorken-$x$ to which the projectile is evolved
-- **x_target_jimwlk**: Bjorken-$x$ to which the target is evolved
-- **m_jimwlk**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
-- **alphas_jimwlk**: Coupling constant in the JIMWLK evolution
+- **jimwlkInitialX**: Bjorken-x at the initial condition
+- **jimwlkXProjectile**: Bjorken-$x$ to which the projectile is evolved
+- **jimwlkXTarget**: Bjorken-$x$ to which the target is evolved
+- **jimwlkMass**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
+- **jimwlkAlphaS**: Coupling constant in the JIMWLK evolution
   - 0: Use running coupling
-- **Lambda_QCD_jimwlk** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
-- **mu0_jimwlk**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
-- **Ds_jimwlk**: step size in JIMWLK evolution. Recommended values
+- **jimwlkLambdaQCD** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
+- **jimwlkMu0**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
+- **jimwlkDs**: step size in JIMWLK evolution. Recommended values
   - 0.005 with running coupling
   - 0.0005 with fixed coupling
 

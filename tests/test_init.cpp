@@ -30,8 +30,8 @@ void makeInitTestParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.RapidityA = 0.0;
-    param.colorCharge.RapidityB = 0.0;
+    param.colorCharge.rapidityA = 0.0;
+    param.colorCharge.rapidityB = 0.0;
 }
 
 // A deterministic, position-dependent (not merely diagonal) matrix, so
@@ -64,8 +64,8 @@ TEST_CASE(
     Parameters param;
     makeInitTestParam(param, 4);
     param.colorCharge.usePseudoRapidity = false;
-    param.colorCharge.RapidityA = 1.5;
-    param.colorCharge.RapidityB = -0.8;
+    param.colorCharge.rapidityA = 1.5;
+    param.colorCharge.rapidityB = -0.8;
 
     int nn[2] = {4, 4};
     Init init(nn);
@@ -82,10 +82,10 @@ TEST_CASE(
     Parameters param;
     makeInitTestParam(param, 4);
     param.colorCharge.usePseudoRapidity = true;
-    param.colorCharge.RapidityA = 1.0;
-    param.colorCharge.RapidityB = 1.0;
-    param.colorCharge.Jacobianm = 0.14;
-    param.collision.roots = 200.0;
+    param.colorCharge.rapidityA = 1.0;
+    param.colorCharge.rapidityB = 1.0;
+    param.colorCharge.jacobianMass = 0.14;
+    param.collision.sqrtS = 200.0;
 
     int nn[2] = {4, 4};
     Init init(nn);
@@ -108,11 +108,11 @@ TEST_CASE(
     Parameters param;
     makeInitTestParam(param, 4);
     param.coupling.runningCoupling = true;
-    param.coupling.runWithkt = false;
-    param.coupling.runWith0Min1Avg2MaxQs = 1;  // average Qs
-    param.coupling.runWithThisFactorTimesQs = 0.5;
+    param.coupling.runWithKt = false;
+    param.coupling.runWithQs = 1;  // average Qs
+    param.coupling.runningCouplingQsFactor = 0.5;
     param.event.averageQsAvg = 1.3;
-    param.coupling.muZero = 0.3;
+    param.coupling.mu0 = 0.3;
     param.coupling.c = 0.2;
 
     int nn[2] = {4, 4};
@@ -240,7 +240,7 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.subnucleon.useConstituentQuarkProton = 0;
+    param.subnucleon.Nq = 0;
     param.subnucleon.BG = 1.0;
 
     std::vector<ReturnValue> nucleus(1);
@@ -268,7 +268,7 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.subnucleon.useConstituentQuarkProton = 1;
+    param.subnucleon.Nq = 1;
 
     std::vector<ReturnValue> nucleus(1);
     nucleus[0].x = 0.0;
@@ -494,7 +494,7 @@ TEST_CASE(
     "Init::computeNcollList (hard-sphere mode) marks a p+p pair collided and "
     "counts it once") {
     Parameters param;
-    param.collision.SigmaNN = 4.2;
+    param.collision.sigmaNN = 4.2;
     param.collision.gaussianWounding = false;
     param.event.eventId = 0;
 
@@ -507,10 +507,10 @@ TEST_CASE(
     glauber.initGlauber(
         4.2, "p", "p", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0., 0.,
         0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
-    param.collision.averageOverThisManyNuclei = 1;
+    param.collision.nucleiToAverage = 1;
     init.sampleTAWoodsSaxon(&param, &random, &glauber);
 
-    const double d2 = param.collision.SigmaNN / (M_PI * 10.);  // in fm^2
+    const double d2 = param.collision.sigmaNN / (M_PI * 10.);  // in fm^2
     int Ncoll = 0;
     init.computeNcollList(&param, d2, /*b=*/0.0, /*phiRP=*/0.0, Ncoll);
 
@@ -661,8 +661,8 @@ TEST_CASE(
     param.collision.useNucleus = true;
     param.nucleus.useSmoothNucleus = true;
     param.coupling.g = 1.;
-    param.colorCharge.QsmuRatio = 0.643;
-    param.event.QsmuRatioB = 0.643;
+    param.colorCharge.QsMuRatio = 0.643;
+    param.event.QsMuRatioB = 0.643;
     param.event.b = 5.;  // a stale b must not shift the profiles
 
     Glauber glauber;

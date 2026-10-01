@@ -193,7 +193,7 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         # sizeOutput is the (independent) grid the energy density / Tmunu
         # snapshot is written on; keep it equal to the evolution grid here.
         "sizeOutput": size,
-        "NucleusQsTableFileName": qs_table_path,
+        "nucleusQsTableFileName": qs_table_path,
         "nuclearConfigurationsPath": ipglasma_path + "/nucleusConfigurations/",
         "writeOutputsToHDF5": 0,
         "writeWilsonLines": 0,
@@ -210,13 +210,13 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "useJIMWLK": 1 if use_jimwlk else 0,
         "useSeedList": 0,
         "useTimeForSeed": 0,
-        "saveSnapshots": 0,
+        "jimwlkSaveSnapshots": 0,
     }
     if L is not None:
         overrides["L"] = L
         overrides["LOutput"] = L
     if maxtime is not None:
-        overrides["maxtime"] = maxtime
+        overrides["maxTime"] = maxtime
 
     temp_input = generate_temp_input(template_path, overrides, seed, worker_dir)
     log_path = os.path.join(worker_dir, "run.log")
@@ -538,7 +538,7 @@ def main():
     ipglasma_binary = os.path.join(ipglasma_path, args.ipglasma_cmd)
     template_path = os.path.join(args.input_template)
 
-    qs_table_name = read_input_value(template_path, "NucleusQsTableFileName") \
+    qs_table_name = read_input_value(template_path, "nucleusQsTableFileName") \
         if os.path.isfile(template_path) else None
     qs_table_path = os.path.join(ipglasma_path, qs_table_name) \
         if qs_table_name else os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_200.in")
@@ -616,7 +616,7 @@ def main():
     exit_code = 1 if failures else 0
 
     run_meta = {
-        "size": args.size, "L": args.L, "maxtime": args.maxtime,
+        "size": args.size, "L": args.L, "maxTime": args.maxtime,
         "jimwlk": args.jimwlk,
     }
     if args.save_reference:

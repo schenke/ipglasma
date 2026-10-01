@@ -27,7 +27,14 @@ It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions
 
 
 ## Input parameters
-See `src/Parameters.h` for a more detailed description of parameters that are specified in the file `input`. If a command line argument is provided, that refers to the input file that will be used.
+The input file is given as the first command line argument (default: `input`). Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
+
+The input file has one `key value` pair per line:
+- `#` starts a comment that runs to the end of the line, and blank lines are ignored.
+- A line with only `EndOfFile` ends the input; everything after it is ignored. It is optional.
+- Unknown keys, keys given twice, missing required keys and malformed values (e.g. `256.0` for an integer) are errors. All problems are reported at once before the run stops.
+
+Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, and with `SubNucleonParamSet -1` a new posterior parameter set is drawn.
 
 ### Lattice
 - **size**: controls the size of the lattice that is `size`$^2$.

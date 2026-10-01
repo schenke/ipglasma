@@ -7,282 +7,99 @@
 #include "doctest.h"
 
 namespace {
-// Parameters' default constructor does not initialize every member (no
-// default member initializers), so every field ValidParameters() reads
-// must be set explicitly before calling it, or the test would depend on
-// indeterminate values.
+// Parameters' default constructor does not initialize every member, so every
+// field validationErrors() reads must be set explicitly.
 //
-// Takes an out-parameter rather than returning by value: Parameters now
-// holds a PrettyOstream member (for ValidParameters()'s own error
-// messages), and PrettyOstream holds a std::ostringstream, which is not
-// copyable or movable -- exactly like Lattice, which already explicitly
-// deletes its copy/move for the same reason.
+// Takes an out-parameter rather than returning by value: Parameters holds a
+// PrettyOstream member, which holds a non-copyable std::ostringstream.
+//
+// Checks of a single value run while reading the input file and are tested
+// in test_input_file.cpp; these tests cover the checks that combine several
+// parameters.
 void makeValidBaseline(Parameters &param) {
-    param.setSize(256);
     param.setWriteWilsonLines(2);
     param.setWilsonLinePath(".");
     param.setSaveSnapshots(0);
-    // Both gate one of ValidParameters()'s checks on their respective
-    // feature being enabled; disable both so the baseline doesn't depend
-    // on muZero/LambdaQCD/nFlavors/c_jimwlk's indeterminate default values.
     param.setRunningCoupling(0);
+    param.setMuZero(0.3);
+    param.setLambdaQCD(0.2);
     param.setUseJIMWLK(0);
-    param.setOmega(1.);
-    param.setSubNucleonParamType(0);
-    // Valid values for the fields only checked once a test enables running
-    // coupling or JIMWLK.
-    param.setc(0.2);
-    param.setRunWithkt(0);
-    param.setRunWithQs(2);
-    param.setNFlavors(3);
     param.setJimwlk_alphas(0.3);  // fixed JIMWLK coupling
     param.setMu0_jimwlk(0.28);
     param.setLambdaQCD_jimwlk(0.04);
 }
 }  // namespace
 
-TEST_CASE("Parameters::ValidParameters: accepts a normal configuration") {
+TEST_CASE("Parameters::validationErrors: accepts a normal configuration") {
     Parameters param;
     makeValidBaseline(param);
-    CHECK(param.ValidParameters() == true);
-}
-
-TEST_CASE("Parameters::ValidParameters: rejects a non-positive lattice size") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setSize(0);
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: rejects an invalid Wilson-line format") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setWriteWilsonLines(
-        3);  // only 0 (off), 1 (text), 2 (binary) are valid
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: writeWilsonLines=0 is valid by itself") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setWriteWilsonLines(0);
+    CHECK(param.validationErrors().empty());
     CHECK(param.ValidParameters() == true);
 }
 
 TEST_CASE(
-    "Parameters::ValidParameters: rejects saveSnapshots without "
+    "Parameters::validationErrors: rejects saveSnapshots without "
     "writeWilsonLines") {
     Parameters param;
     makeValidBaseline(param);
-    param.setWriteWilsonLines(0);
     param.setSaveSnapshots(1);
+    param.setWriteWilsonLines(0);
+    CHECK(param.validationErrors().size() == 1);
     CHECK(param.ValidParameters() == false);
+
+    param.setSaveSnapshots(0);
+    CHECK(param.validationErrors().empty());
 }
 
 TEST_CASE(
-    "Parameters::ValidParameters: accepts a valid running-coupling "
-    "configuration") {
+    "Parameters::validationErrors: rejects a missing Wilson-line directory "
+    "only when Wilson lines are written") {
     Parameters param;
     makeValidBaseline(param);
-    param.setRunningCoupling(1);
-    param.setMuZero(0.3);
-    param.setLambdaQCD(0.2);
-    param.setNFlavors(3);
-    CHECK(param.ValidParameters() == true);
+    param.setWilsonLinePath("this_directory_does_not_exist");
+    CHECK(param.validationErrors().size() == 1);
+    param.setWriteWilsonLines(0);
+    CHECK(param.validationErrors().empty());
 }
 
 TEST_CASE(
-    "Parameters::ValidParameters: rejects LambdaQCD >= muZero when running "
-    "coupling is enabled") {
+    "Parameters::validationErrors: rejects LambdaQCD >= muZero only with "
+    "running coupling") {
     Parameters param;
     makeValidBaseline(param);
-    param.setRunningCoupling(1);
-    param.setNFlavors(3);
-
     param.setMuZero(0.2);
     param.setLambdaQCD(0.2);  // equal: log argument is 0 at the boundary
-    CHECK(param.ValidParameters() == false);
+    CHECK(param.validationErrors().empty());
 
-    param.setMuZero(0.2);
+    param.setRunningCoupling(1);
+    CHECK(param.validationErrors().size() == 1);
     param.setLambdaQCD(0.3);  // larger: log argument is negative
-    CHECK(param.ValidParameters() == false);
+    CHECK(param.validationErrors().size() == 1);
+    param.setLambdaQCD(0.1);
+    CHECK(param.validationErrors().empty());
 }
 
 TEST_CASE(
-    "Parameters::ValidParameters: LambdaQCD >= muZero is not checked when "
-    "running coupling is disabled") {
+    "Parameters::validationErrors: rejects Lambda_QCD_jimwlk >= mu0_jimwlk "
+    "only with the JIMWLK running coupling") {
     Parameters param;
     makeValidBaseline(param);
-    param.setRunningCoupling(0);
-    param.setMuZero(0.2);
-    param.setLambdaQCD(0.3);
-    CHECK(param.ValidParameters() == true);
+    param.setLambdaQCD_jimwlk(0.3);           // >= mu0_jimwlk
+    CHECK(param.validationErrors().empty());  // JIMWLK off
+    param.setUseJIMWLK(1);
+    CHECK(param.validationErrors().empty());  // fixed JIMWLK coupling
+    param.setJimwlk_alphas(0.);
+    CHECK(param.validationErrors().size() == 1);
 }
 
-TEST_CASE(
-    "Parameters::ValidParameters: rejects nFlavors large enough to make "
-    "the beta-function coefficient (11*Nc - 2*nFlavors) non-positive") {
+TEST_CASE("Parameters::validationErrors: reports every failed check") {
     Parameters param;
     makeValidBaseline(param);
+    param.setSaveSnapshots(1);
+    param.setWriteWilsonLines(0);
     param.setRunningCoupling(1);
-    param.setMuZero(0.3);
-    param.setLambdaQCD(0.2);
-
-    param.setNFlavors(16);  // 11*3 - 2*16 = 1 > 0: still valid
-    CHECK(param.ValidParameters() == true);
-
-    param.setNFlavors(17);  // 11*3 - 2*17 = -1 <= 0: invalid
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: rejects non-positive c_jimwlk when "
-    "JIMWLK is enabled") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setUseJIMWLK(1);
-
-    param.setc_jimwlk(0.2);
-    CHECK(param.ValidParameters() == true);
-
-    param.setc_jimwlk(0.0);
-    CHECK(param.ValidParameters() == false);
-
-    param.setc_jimwlk(-0.1);
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: c_jimwlk is not checked when JIMWLK is "
-    "disabled") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setUseJIMWLK(0);
-    param.setc_jimwlk(0.0);
-    CHECK(param.ValidParameters() == true);
-}
-
-TEST_CASE("Parameters::ValidParameters: rejects an odd lattice size") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setSize(255);
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE("Parameters::ValidParameters: rejects a non-positive omega") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setOmega(0.);
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: rejects an unknown SubNucleonParamType") {
-    Parameters param;
-    makeValidBaseline(param);
-    for (int type : {0, 1, 2, 4}) {
-        param.setSubNucleonParamType(type);
-        CHECK(param.ValidParameters() == true);
-    }
-    param.setSubNucleonParamType(3);
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: rejects non-positive LambdaQCD/c and an "
-    "unknown runWith0Min1Avg2MaxQs with running coupling") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setRunningCoupling(1);
-    param.setMuZero(0.3);
-    param.setLambdaQCD(0.2);
-    CHECK(param.ValidParameters() == true);
-
-    param.setc(0.);
-    CHECK(param.ValidParameters() == false);
-    param.setc(0.2);
-
-    param.setLambdaQCD(-0.1);
-    CHECK(param.ValidParameters() == false);
-    param.setLambdaQCD(0.2);
-
-    param.setRunWithQs(3);
-    CHECK(param.ValidParameters() == false);
-    // not used with running alpha_s(k_T)
-    param.setRunWithkt(1);
-    CHECK(param.ValidParameters() == true);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: checks the JIMWLK running coupling even "
-    "when runningCoupling is off") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setUseJIMWLK(1);
-    param.setc_jimwlk(0.2);
-    param.setJimwlk_alphas(0.);  // JIMWLK running coupling
-    CHECK(param.ValidParameters() == true);
-
-    param.setNFlavors(17);
-    CHECK(param.ValidParameters() == false);
-    param.setNFlavors(3);
-
-    param.setLambdaQCD_jimwlk(0.3);  // >= mu0_jimwlk
-    CHECK(param.ValidParameters() == false);
-    param.setLambdaQCD_jimwlk(0.);
-    CHECK(param.ValidParameters() == false);
-
-    // none of this matters for a fixed JIMWLK coupling
-    param.setJimwlk_alphas(0.3);
-    CHECK(param.ValidParameters() == true);
-}
-
-TEST_CASE("Parameters::ValidParameters: runWithkt must be 0 or 1") {
-    Parameters param;
-    makeValidBaseline(param);
-    for (int kt : {0, 1}) {
-        param.setRunWithkt(kt);
-        CHECK(param.ValidParameters() == true);
-    }
-    param.setRunWithkt(2);
-    CHECK(param.ValidParameters() == false);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: rejects a negative alphas_jimwlk with "
-    "JIMWLK") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setUseJIMWLK(1);
-    param.setc_jimwlk(0.2);
-    param.setJimwlk_alphas(-0.3);
-    CHECK(param.ValidParameters() == false);
-    param.setJimwlk_alphas(0.3);  // fixed coupling
-    CHECK(param.ValidParameters() == true);
-}
-
-TEST_CASE(
-    "Parameters::ValidParameters: rejects a negative nFlavors for both "
-    "running couplings") {
-    Parameters param;
-    makeValidBaseline(param);
-    param.setNFlavors(-1);
-    CHECK(param.ValidParameters() == true);  // no running coupling at all
-
-    param.setRunningCoupling(1);
-    param.setMuZero(0.3);
-    param.setLambdaQCD(0.2);
-    CHECK(param.ValidParameters() == false);
-
-    param.setRunningCoupling(0);
-    param.setUseJIMWLK(1);
-    param.setc_jimwlk(0.2);
-    param.setJimwlk_alphas(0.);  // JIMWLK running coupling
-    CHECK(param.ValidParameters() == false);
-    param.setNFlavors(3);
-    CHECK(param.ValidParameters() == true);
+    param.setLambdaQCD(0.5);
+    CHECK(param.validationErrors().size() == 2);
 }
 
 TEST_CASE(

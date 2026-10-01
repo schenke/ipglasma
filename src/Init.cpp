@@ -1512,25 +1512,25 @@ void Init::writeUsedParametersFile(
     string up_name;
     up_name = strup_name.str();
 
+    // comment lines, so the file stays a valid input file
     ofstream fout1(up_name.c_str(), std::ios::app);
-    fout1 << " " << endl;
-    fout1 << " Output by setColorChargeDensity in Init.cpp: " << endl;
-    fout1 << " " << endl;
-    fout1 << "b = " << param->getb() << " fm" << endl;
-    fout1 << "phiRP = " << phiRP << endl;
-    fout1 << "Npart = " << Npart << endl;
-    fout1 << "Ncoll = " << Ncoll << endl;
+    fout1 << "# Collision geometry of this event:" << endl;
+    fout1 << "# b = " << param->getb() << " fm" << endl;
+    fout1 << "# phiRP = " << phiRP << endl;
+    fout1 << "# Npart = " << Npart << endl;
+    fout1 << "# Ncoll = " << Ncoll << endl;
     if (param->getRunningCoupling()) {
         if (param->getRunWithQs() == 2)
-            fout1 << "<Q_s>(max) = " << param->getAverageQs() << endl;
+            fout1 << "# <Q_s>(max) = " << param->getAverageQs() << endl;
         else if (param->getRunWithQs() == 1)
-            fout1 << "<Q_s>(avg) = " << param->getAverageQsAvg() << endl;
+            fout1 << "# <Q_s>(avg) = " << param->getAverageQsAvg() << endl;
         else if (param->getRunWithQs() == 0)
-            fout1 << "<Q_s>(min) = " << param->getAverageQsmin() << endl;
-        fout1 << "alpha_s(" << param->getRunWithThisFactorTimesQs()
+            fout1 << "# <Q_s>(min) = " << param->getAverageQsmin() << endl;
+        fout1 << "# alpha_s(" << param->getRunWithThisFactorTimesQs()
               << " <Q_s>) = " << param->getalphas() << endl;
     } else
-        fout1 << "using fixed coupling alpha_s=" << param->getalphas() << endl;
+        fout1 << "# using fixed coupling alpha_s=" << param->getalphas()
+              << endl;
     fout1.close();
 }
 

@@ -14,7 +14,7 @@ set(TEST_SOURCES
     test_su3.cpp
     test_group.cpp
     test_random.cpp
-    test_setup.cpp
+    test_input_file.cpp
     test_glauber.cpp
     test_parameters.cpp
     test_fft.cpp
@@ -35,6 +35,9 @@ target_include_directories(ipglasma_tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     )
 target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS})
+# lets tests read the shipped input files (input, validations/input_*)
+target_compile_definitions(ipglasma_tests PRIVATE
+    IPGLASMA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 if (APPLE)
     # Matches src/CMakeLists.txt: PrettyOstream::getMemoryUsage() reads
     # ru_maxrss in different units on macOS vs. Linux and picks the

@@ -6,7 +6,8 @@ set (IPGLASMA_LIB_SOURCES
     Fragmentation.cpp
     FFT.cpp
     Matrix.cpp
-    Setup.cpp
+    InputFile.cpp
+    ParameterTable.cpp
     Init.cpp
     JIMWLK.cpp
     Random.cpp

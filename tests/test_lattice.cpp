@@ -167,6 +167,37 @@ TEST_CASE(
     std::remove(path.c_str());
 }
 
+TEST_CASE(
+    "Lattice::generateWilsonLineDataFileName: an explicit format overrides "
+    "writeWilsonLines") {
+    Parameters param;
+    makeLatticeParam(param, 4);
+    param.setWilsonLinePath(".");
+
+    // Reading binary (format 2) while writing text must not look for .txt
+    param.setWriteWilsonLines(1);
+    CHECK(
+        Lattice::generateWilsonLineDataFileName(
+            &param, -1., NucleusRole::Projectile, 2)
+        == "./WilsonLine_1");
+    // and vice versa
+    param.setWriteWilsonLines(2);
+    CHECK(
+        Lattice::generateWilsonLineDataFileName(
+            &param, -1., NucleusRole::Projectile, 1)
+        == "./WilsonLine_1.txt");
+    // the default (format < 0) follows writeWilsonLines
+    CHECK(
+        Lattice::generateWilsonLineDataFileName(
+            &param, -1., NucleusRole::Projectile)
+        == "./WilsonLine_1");
+    param.setWriteWilsonLines(1);
+    CHECK(
+        Lattice::generateWilsonLineDataFileName(
+            &param, -1., NucleusRole::Projectile)
+        == "./WilsonLine_1.txt");
+}
+
 TEST_CASE("Lattice::writeSU3Matrices writes non-empty Phi/Pi files") {
     const int length = 4;
     Parameters param;

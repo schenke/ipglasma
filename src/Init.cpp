@@ -137,18 +137,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     messager_.info("[Init::sampleTA]: Sampling nucleon positions ... ");
 
-    const int nucleonPositionsFromFile =
-        param->nucleus.nucleonPositionsFromFile;
-    if (nucleonPositionsFromFile == 0) {
-        sampleTAWoodsSaxon(param, random, glauber);
-    } else if (nucleonPositionsFromFile == 1) {
+    if (param->nucleus.nucleonPositionsFromFile) {
         sampleTAFromConfigFiles(random, glauber);
     } else {
-        messager_ << "[Init::sampleTA]: nucleonPositionsFromFile must be 0 "
-                     "(sample nucleons) or 1 (read from files) -- you chose "
-                  << nucleonPositionsFromFile << ". Exiting.";
-        messager_.flush("error");
-        exit(1);
+        sampleTAWoodsSaxon(param, random, glauber);
     }
 
     // global rotation of the nucleus
@@ -711,7 +703,7 @@ double Init::computeFluctuatingXG2mu2(
 void Init::computeCellColorCharge(
     Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
     double rapidityB) {
-    if (param->colorCharge.useFluctuatingx == 1) {  // Local Qs dependent x
+    if (param->colorCharge.useFluctuatingx) {  // Local Qs dependent x
         lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
             param, a, rapidityA, lat->cells[ipos]->getTpA(),
             param->colorCharge.QsmuRatio, 1.));
@@ -752,7 +744,7 @@ void Init::setColorChargeDensity(
 
     param->event.QsmuRatioB = param->colorCharge.QsmuRatio;
 
-    if (param->collision.useNucleus == 0) {
+    if (!param->collision.useNucleus) {
         setConstantColorChargeDensity(lat, param);
         return;
     }
@@ -767,7 +759,7 @@ void Init::setColorChargeDensity(
     sampleConstituentQuarkGeometry(param, random);
 
     // test what a smooth Woods-Saxon would give
-    if (param->nucleus.useSmoothNucleus == 1) {
+    if (param->nucleus.useSmoothNucleus) {
         computeSmoothNucleusThickness(lat, param, glauber);
     } else {
         // Non-smooth nucleus add all T_p's (new in version 1.2)
@@ -786,7 +778,7 @@ void Init::setColorChargeDensity(
 
 void Init::computeEffectiveRapidities(
     Parameters *param, double &rapidityA, double &rapidityB) {
-    if (param->colorCharge.usePseudoRapidity == 0) {
+    if (!param->colorCharge.usePseudoRapidity) {
         rapidityA = param->colorCharge.RapidityA;
         rapidityB = param->colorCharge.RapidityB;
         return;
@@ -826,7 +818,7 @@ void Init::computeEffectiveRapidities(
 void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
     const int N = param->lattice.size;
     const double L = param->lattice.L;
-    if (param->collision.useGaussian == 1) {
+    if (param->collision.useGaussian) {
         double sigmax = 0.35;
         double sigmay = 0.5;
         for (int ix = 0; ix < N; ix++)  // loop over all positions
@@ -1058,7 +1050,7 @@ void Init::computeNcollList(
 
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    const bool gaussianWounding = (param->collision.gaussianWounding != 0);
+    const bool gaussianWounding = param->collision.gaussianWounding;
     const double G = 0.92;
     for (int i = 0; i < A1; i++) {
         for (int j = 0; j < A2; j++) {
@@ -1107,7 +1099,7 @@ bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
 
     // Determine Npart, Ncoll. Do this only during the first stage, as in
     // the 2nd stage nuclei are shifted to b=0
-    if (param->nucleus.useSmoothNucleus == 0) {
+    if (!param->nucleus.useSmoothNucleus) {
         computeNcollList(param, d2, b, phiRP, Ncoll);
 
         stringstream strNpart_name;
@@ -1181,7 +1173,7 @@ bool Init::determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll) {
 // RunningCoupling.h's computeAlphaS() with this function).
 void Init::computeAndSetRunningAlphaS(Parameters *param) {
     double alphas = 0.;
-    if (param->coupling.runningCoupling && param->coupling.runWithkt == 0) {
+    if (param->coupling.runningCoupling && !param->coupling.runWithkt) {
         // Uses the same regularized formula (and the same muZero/c) as
         // Evolution::computeRunningCouplingGfactor()/MyEigen, instead of
         // the unregularized formula this used to hardcode inline -- so
@@ -1232,8 +1224,7 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
                       << " <Qs>)=" << alphas;
             messager_.flush("info");
         }
-    } else if (
-        param->coupling.runningCoupling && param->coupling.runWithkt == 1) {
+    } else if (param->coupling.runningCoupling && param->coupling.runWithkt) {
         messager_.info(
             "[Init::computeCollisionGeometryQuantities]: Multiplicity with "
             "running alpha_s(k_T)");
@@ -1304,7 +1295,7 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
     // multiplicity, and computeAndSetRunningAlphaS() leaves alphas at 0.
     const bool alphasOk =
         param->event.alphas > 0
-        || (param->coupling.runningCoupling && param->coupling.runWithkt == 1);
+        || (param->coupling.runningCoupling && param->coupling.runWithkt);
     if (param->event.averageQs > 0 && param->event.averageQsAvg > 0
         && averageQs2 > 0 && param->event.averageQsmin > 0 && averageQs2Avg > 0
         && alphasOk && Npart >= 2
@@ -1410,7 +1401,7 @@ void Init::scanCollisionGeometry(
 
         // A smooth nucleus has no nucleons to test against: any cell where
         // both shifted thickness profiles are nonzero is in the overlap.
-        if (param->nucleus.useSmoothNucleus == 1 && TpA > 0. && TpB > 0.) {
+        if (param->nucleus.useSmoothNucleus && TpA > 0. && TpB > 0.) {
             check = 2;
         }
 
@@ -1879,7 +1870,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         if (param->jimwlk.useJIMWLK) {
             x_projectile = x_target = param->jimwlk.jimwlk_ic_x;
         } else {
-            if (param->colorCharge.useFluctuatingx == 1) {
+            if (param->colorCharge.useFluctuatingx) {
                 // Initial condition does not correspond to a fixed x
                 x_projectile = x_target = -1;
             } else {
@@ -2097,7 +2088,7 @@ void Init::sampleImpactParameter(Parameters *param) {
     const double bmax = param->collision.bmax;
     double b = 0.;
     double xb = random_ptr_->genrand64_real1();
-    if (param->collision.useNucleus == 0) {
+    if (!param->collision.useNucleus) {
         // use b=0 fm for the constant g^2 mu case. Deferred flush: this
         // message's tag also covers the shared "b = ..." line below, same
         // as the other two branches.
@@ -2105,7 +2096,7 @@ void Init::sampleImpactParameter(Parameters *param) {
                      "color charge density case. ";
         b = 0;
     } else {
-        if (param->collision.samplebFromLinearDistribution == 1) {
+        if (param->collision.samplebFromLinearDistribution) {
             // use a linear probability distribution for b if we are doing
             // nuclei
             messager_ << "[Init::sampleImpactParameter]: Sampling linearly "
@@ -2145,7 +2136,7 @@ void Init::init(
 
     messager_.info("[Init::init]: Initializing fields ... ");
 
-    if (param->collision.useNucleus == 0) {
+    if (!param->collision.useNucleus) {
         // No real collision geometry in the constant-g^2mu case: skip
         // sampleImpactParameter() entirely, but still give b/phi_RP the
         // same defaults it would have produced.
@@ -2158,8 +2149,7 @@ void Init::init(
 
     // The configuration files are only used by sampleTAFromConfigFiles();
     // don't require them to exist for Woods-Saxon sampling.
-    if (param->collision.useNucleus == 1
-        && param->nucleus.nucleonPositionsFromFile == 1
+    if (param->collision.useNucleus && param->nucleus.nucleonPositionsFromFile
         && init_method == InitializationMethod::SampleColorCharges) {
         readInNucleusConfigs(
             static_cast<int>(glauber->nucleusA1()),
@@ -2181,7 +2171,7 @@ void Init::init(
         param->event.success = 1;
     } else {
         // to generate your own Wilson lines
-        if (param->collision.useNucleus == 1) {
+        if (param->collision.useNucleus) {
             nucleusA_.clear();
             nucleusB_.clear();
             // populate the lists nucleusA_ and nucleusB_ with position data
@@ -2957,7 +2947,7 @@ void Init::sampleQsNormalization(
     vector<double> &gauss_array) {
     const double QsSmearWidth = param->subnucleon.smearingWidth;
     gauss_array.assign(Nq, 1.);  // default norm = 1
-    if (param->subnucleon.smearQs == 1) {
+    if (param->subnucleon.smearQs) {
         // introduce a log-normal distribution for Qs normalization
         // dividing by exp(0.5 sigma^2) to ensure the mean is 1
         // the varirance in this case is exp(sigma) - 1 for the log-normal

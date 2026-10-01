@@ -20,7 +20,7 @@ void makeValidBaseline(Parameters &param) {
     param.wilsonLines.writeWilsonLines = 2;
     param.wilsonLines.wilsonLinePath = ".";
     param.jimwlk.saveSnapshots = 0;
-    param.coupling.runningCoupling = 0;
+    param.coupling.runningCoupling = false;
     param.coupling.muZero = 0.3;
     param.coupling.LambdaQCD = 0.2;
     param.jimwlk.useJIMWLK = 0;
@@ -71,7 +71,7 @@ TEST_CASE(
     param.coupling.LambdaQCD = 0.2;  // equal: log argument is 0 at the boundary
     CHECK(param.validationErrors().empty());
 
-    param.coupling.runningCoupling = 1;
+    param.coupling.runningCoupling = true;
     CHECK(param.validationErrors().size() == 1);
     param.coupling.LambdaQCD = 0.3;  // larger: log argument is negative
     CHECK(param.validationErrors().size() == 1);
@@ -97,7 +97,7 @@ TEST_CASE("Parameters::validationErrors: reports every failed check") {
     makeValidBaseline(param);
     param.jimwlk.saveSnapshots = 1;
     param.wilsonLines.writeWilsonLines = 0;
-    param.coupling.runningCoupling = 1;
+    param.coupling.runningCoupling = true;
     param.coupling.LambdaQCD = 0.5;
     CHECK(param.validationErrors().size() == 2);
 }

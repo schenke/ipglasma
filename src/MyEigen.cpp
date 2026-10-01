@@ -427,7 +427,7 @@ void solveFlowVelocityAtCell(
  * \return `true` if binary output should be written.
  */
 bool binaryTmunuEnabled(Parameters *param) {
-    const bool inputDefault = param->output.writeTmunuBinary != 0;
+    const bool inputDefault = param->output.writeTmunuBinary;
     const char *value = std::getenv("IPGLASMA_BINARY_TMUNU");
     if (value == NULL || value[0] == '\0') return inputDefault;
 

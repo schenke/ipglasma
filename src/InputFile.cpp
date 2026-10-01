@@ -68,6 +68,14 @@ const InputFile::Entry *InputFile::find(const std::string &key) const {
 }
 
 namespace {
+/**
+ * Converts all of \p text to an integer of type \p T, accepting one
+ * leading `+`.
+ * \tparam T Integer type to convert to.
+ * \param[in] text The value as written in the input.
+ * \param[out] out Set to the value on success.
+ * \return Whether all of \p text is an integer in the range of \p T.
+ */
 template <typename T>
 bool parseInteger(const std::string &text, T &out) {
     T value {};

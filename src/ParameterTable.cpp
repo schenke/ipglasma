@@ -24,10 +24,13 @@
 
 namespace {
 
+/// Predicate on the parameters read so far, deciding whether a parameter
+/// is read at all (see Param::onlyIf()).
 using Condition = bool (*)(const Parameters &);
 
 /// One input parameter, with its type erased.
 struct ParameterSpec {
+    /// The parameter's input-file key.
     std::string name;
     /// Text of the default value; empty for a required parameter.
     std::string defaultValue;
@@ -43,24 +46,51 @@ struct ParameterSpec {
     std::function<void(const Parameters &param, std::ostream &out)> write;
 };
 
+/**
+ * Writes \p value as the shortest text that reads back to exactly the
+ * same double.
+ * \param[out] out Stream to write to.
+ * \param[in] value Value to write.
+ */
 void writeValue(std::ostream &out, double value) {
-    // shortest text that reads back to exactly the same double
     char buffer[64];
     const auto result = std::to_chars(buffer, buffer + sizeof(buffer), value);
     out.write(buffer, result.ptr - buffer);
 }
+/**
+ * Writes \p values comma-separated, in input-file syntax.
+ * \param[out] out Stream to write to.
+ * \param[in] values Values to write.
+ */
 void writeValue(std::ostream &out, const std::vector<double> &values) {
     for (std::size_t i = 0; i < values.size(); i++) {
         if (i > 0) out << ",";
         writeValue(out, values[i]);
     }
 }
+/**
+ * Writes \p value as `0` or `1`, in input-file syntax.
+ * \param[out] out Stream to write to.
+ * \param[in] value Value to write.
+ */
 void writeValue(std::ostream &out, bool value) { out << (value ? 1 : 0); }
+/**
+ * Writes any other \p value (integers, strings) with `operator<<`.
+ * \tparam T Type of the value.
+ * \param[out] out Stream to write to.
+ * \param[in] value Value to write.
+ */
 template <typename T>
 void writeValue(std::ostream &out, const T &value) {
     out << value;
 }
 
+/**
+ * Describes the values a parameter of type \p T accepts, for error
+ * messages.
+ * \tparam T Type of the parameter.
+ * \return E.g. "an integer" or "0 or 1".
+ */
 template <typename T>
 std::string typeName() {
     if constexpr (std::is_same_v<T, bool>) return "0 or 1";
@@ -78,11 +108,21 @@ std::string typeName() {
 template <typename T>
 using Check = std::function<std::string(const T &)>;
 
-/// Typed builder for a ParameterSpec, so the table reads
-/// `param("size", &P::lattice, &LatticeParameters::size).check(even())`.
+/**
+ * Typed builder for a ParameterSpec, so the table reads
+ * `param("size", &P::lattice, &LatticeParameters::size).check(even())`.
+ * \tparam T Type of the parameter's field.
+ */
 template <typename T>
 class Param {
   public:
+    /**
+     * Describes a required parameter stored in `param.*group.*field`.
+     * \tparam Group Type of the parameter group (e.g. LatticeParameters).
+     * \param[in] name The parameter's input-file key.
+     * \param[in] group The group member of Parameters.
+     * \param[in] field The field within the group.
+     */
     template <typename Group>
     Param(const char *name, Group Parameters::*group, T Group::*field)
         : name_(name),
@@ -93,21 +133,40 @@ class Param {
               writeValue(out, (p.*group).*field);
           }) {}
 
-    /// Makes the parameter optional, with this default (as input text).
+    /**
+     * Makes the parameter optional.
+     * \param[in] defaultValue Its default, as input-file text.
+     * \return This builder.
+     */
     Param &optional(const char *defaultValue) {
         defaultValue_ = defaultValue;
         return *this;
     }
-    /// Only reads the parameter when \p condition holds.
+    /**
+     * Only reads (and requires) the parameter when \p condition holds;
+     * otherwise its key is accepted but ignored.
+     * \param[in] condition Predicate on the parameters read before it.
+     * \return This builder.
+     */
     Param &onlyIf(Condition condition) {
         condition_ = condition;
         return *this;
     }
+    /**
+     * Adds a check that every value of the parameter must pass.
+     * \param[in] check The check, e.g. positive() or even().
+     * \return This builder.
+     */
     Param &check(Check<T> check) {
         checks_.push_back(std::move(check));
         return *this;
     }
 
+    /**
+     * Converts the builder into the type-erased table entry.
+     * \return The ParameterSpec that parses, checks, stores and writes
+     * the parameter.
+     */
     operator ParameterSpec() const {
         ParameterSpec spec;
         spec.name = name_;
@@ -131,15 +190,29 @@ class Param {
     }
 
   private:
+    /// The parameter's input-file key.
     std::string name_;
+    /// Default as input-file text; empty for a required parameter.
     std::string defaultValue_;
+    /// Condition for reading the parameter; `nullptr` to always read it.
     Condition condition_ = nullptr;
+    /// Stores a parsed value in its field.
     std::function<void(Parameters &, const T &)> set_;
+    /// Writes the field's value in input-file syntax.
     std::function<void(const Parameters &, std::ostream &)> write_;
+    /// Checks every parsed value must pass.
     std::vector<Check<T>> checks_;
 };
 
-/// One input parameter, stored in the field `param.*group.*field`.
+/**
+ * Starts a table entry for the parameter stored in `param.*group.*field`.
+ * \tparam Group Type of the parameter group (e.g. LatticeParameters).
+ * \tparam T Type of the field.
+ * \param[in] name The parameter's input-file key.
+ * \param[in] group The group member of Parameters.
+ * \param[in] field The field within the group.
+ * \return A builder for a required parameter; see Param.
+ */
 template <typename Group, typename T>
 Param<T> param(const char *name, Group Parameters::*group, T Group::*field) {
     return Param<T>(name, group, field);
@@ -147,20 +220,42 @@ Param<T> param(const char *name, Group Parameters::*group, T Group::*field) {
 
 // ---- checks ----
 
+/**
+ * Check that a value is positive.
+ * \tparam T Type of the value.
+ * \return The check.
+ */
 template <typename T = double>
 Check<T> positive() {
     return [](const T &v) { return v > 0 ? "" : "must be positive"; };
 }
 
+/**
+ * Check that a value is not negative.
+ * \tparam T Type of the value.
+ * \return The check.
+ */
 template <typename T = double>
 Check<T> nonNegative() {
     return [](const T &v) { return v >= 0 ? "" : "must not be negative"; };
 }
 
+/**
+ * Check that an integer is even.
+ * \return The check.
+ */
 Check<int> even() {
     return [](const int &v) { return v % 2 == 0 ? "" : "must be even"; };
 }
 
+/**
+ * Check that a value is one of \p allowed.
+ * \tparam T Type of the value.
+ * \param[in] allowed The allowed values.
+ * \param[in] note Appended to the error message, e.g. to explain the
+ * values.
+ * \return The check.
+ */
 template <typename T>
 Check<T> oneOf(std::initializer_list<T> allowed, const char *note = "") {
     std::vector<T> values(allowed);
@@ -178,6 +273,15 @@ Check<T> oneOf(std::initializer_list<T> allowed, const char *note = "") {
     };
 }
 
+/**
+ * Check that a value lies in [\p low, \p high].
+ * \tparam T Type of the value.
+ * \param[in] low Smallest allowed value.
+ * \param[in] high Largest allowed value.
+ * \param[in] note Appended to the error message, e.g. to explain the
+ * range.
+ * \return The check.
+ */
 template <typename T>
 Check<T> inRange(T low, T high, const char *note = "") {
     return [low, high, note = std::string(note)](const T &v) {
@@ -188,15 +292,30 @@ Check<T> inRange(T low, T high, const char *note = "") {
     };
 }
 
+/**
+ * Condition for the Woods-Saxon and deformation parameters.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useInputWSParams` is set.
+ */
 bool wsDeformParamsSet(const Parameters &p) {
     return p.nucleus.useInputWSParams;
 }
+/**
+ * Condition for the JIMWLK snapshot list.
+ * \param[in] p The parameters read so far.
+ * \return Whether `jimwlkSaveSnapshots` is set.
+ */
 bool saveSnapshotsSet(const Parameters &p) { return p.jimwlk.saveSnapshots; }
 
+/// Short name for the table entries.
 using P = Parameters;
 
-// Table order is the order parameters are read in (a condition can only
-// depend on parameters listed before it) and written to usedParameters*.dat.
+/**
+ * The table of all input parameters. Its order is the order parameters
+ * are read in (a condition can only depend on parameters listed before
+ * it) and written to usedParameters*.dat.
+ * \return The table, built on first use.
+ */
 const std::vector<ParameterSpec> &parameterTable() {
     static const std::vector<ParameterSpec> table = {
         // general setup
@@ -446,8 +565,11 @@ const std::vector<ParameterSpec> &parameterTable() {
     return table;
 }
 
-/// Input keys renamed in IP-Glasma 2.0 (issue #32), so an old input file
-/// gets told the new name instead of only "unknown parameter".
+/**
+ * Input keys renamed in IP-Glasma 2.0 (issue #32), so an old input file
+ * gets told the new name instead of only "unknown parameter".
+ * \return Map from each old key to its new key.
+ */
 const std::map<std::string, std::string> &renamedKeys() {
     static const std::map<std::string, std::string> renamed = {
         {"maxtime", "maxTime"},
@@ -499,7 +621,11 @@ const std::map<std::string, std::string> &renamedKeys() {
     return renamed;
 }
 
-/// The pre-2.0 name of \p name, or "" if it was not renamed.
+/**
+ * Looks up the pre-2.0 name of a parameter.
+ * \param[in] name Current input-file key.
+ * \return Its old key, or "" if it was not renamed.
+ */
 std::string oldNameOf(const std::string &name) {
     for (const auto &[oldName, newName] : renamedKeys()) {
         if (newName == name) return oldName;
@@ -507,6 +633,13 @@ std::string oldNameOf(const std::string &name) {
     return "";
 }
 
+/**
+ * Case-insensitive Levenshtein distance between two keys.
+ * \param[in] a First key.
+ * \param[in] b Second key.
+ * \return Number of single-character insertions, deletions and
+ * substitutions turning \p a into \p b.
+ */
 std::size_t editDistance(const std::string &a, const std::string &b) {
     std::vector<std::size_t> row(b.size() + 1);
     for (std::size_t j = 0; j <= b.size(); j++) row[j] = j;
@@ -525,7 +658,12 @@ std::size_t editDistance(const std::string &a, const std::string &b) {
     return row[b.size()];
 }
 
-/// The known parameter name closest to \p key, or "" if none is close.
+/**
+ * Finds a suggestion for an unknown key.
+ * \param[in] key The unknown key.
+ * \return The known parameter name closest to \p key, or "" if none is
+ * close enough to be a likely typo.
+ */
 std::string closestName(const std::string &key) {
     std::string best;
     std::size_t bestDistance = std::numeric_limits<std::size_t>::max();

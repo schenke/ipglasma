@@ -91,15 +91,19 @@ def generate_temp_input(template_path, overrides, tag, working_dir):
 
     remaining = dict(overrides)
     out_lines = []
+    end_of_file = len(lines)
     for line in lines:
         tokens = line.split()
+        if tokens[:1] == ["EndOfFile"]:
+            end_of_file = len(out_lines)
         if len(tokens) >= 2 and tokens[0] in remaining:
             out_lines.append("{0} {1}\n".format(tokens[0], remaining.pop(tokens[0])))
         else:
             out_lines.append(line)
-    # Any override keys not already present in the template are appended.
-    for key, value in remaining.items():
-        out_lines.append("{0} {1}\n".format(key, value))
+    # Override keys not already present in the template are inserted before
+    # EndOfFile (IP-Glasma ignores everything after it).
+    out_lines[end_of_file:end_of_file] = [
+        "{0} {1}\n".format(key, value) for key, value in remaining.items()]
 
     fd, temp_path = tempfile.mkstemp(
         prefix="input_ecc_{0}_".format(tag), suffix=".in", dir=working_dir)
@@ -193,8 +197,6 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "nuclearConfigurationsPath": ipglasma_path + "/nucleusConfigurations/",
         "writeOutputsToHDF5": 0,
         "writeWilsonLines": 0,
-        "writeInitialWilsonLines": 0,
-        "writeEvolution": 0,
         # writeOutputs must have its "value/4 == 1" bit set for
         # MyEigen::flowVelocity4DImpl to write any Tmunu snapshot at all
         # (see src/MyEigen.cpp); it returns immediately if writeOutputs<=0.

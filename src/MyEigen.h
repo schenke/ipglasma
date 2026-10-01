@@ -52,14 +52,27 @@ class MyEigen {
      * \param[in] it Current evolution time step.
      */
     void writeTmunu4D(Lattice *lat, Parameters *param, int it);
+    /**
+     * Solves for \f$u^\mu\f$/\f$\epsilon\f$/\f$\pi^{\mu\nu}\f$ at
+     * every site (in parallel) and stores them in the lattice cells,
+     * without writing any output. flowVelocity4D() calls this before
+     * writing; call it directly when only the cell values are needed
+     * (e.g. by Evolution::eccentricity(), which weights by
+     * \f$\epsilon u^\tau\f$).
+     * \param[in,out] lat Lattice to read \f$T^{\mu\nu}\f$ from and
+     * store the solution into.
+     * \param[in] param Simulation parameters.
+     * \param[in] it Current evolution time step.
+     */
+    void solveFlowVelocity(Lattice *lat, Parameters *param, int it);
 
   private:
     /**
      * Shared implementation of flowVelocity4D()/writeTmunu4D(): solves
      * for \f$u^\mu\f$/\f$\epsilon\f$/\f$\pi^{\mu\nu}\f$ at every site
-     * (in parallel; skipped entirely if \p tmunuOnly), then writes
-     * whichever of the hydro-text, raw-\f$T^{\mu\nu}\f$, and Jazma
-     * outputs `param->getWriteOutputs()` enables (only the raw
+     * (via solveFlowVelocity(); skipped entirely if \p tmunuOnly), then
+     * writes whichever of the hydro-text, raw-\f$T^{\mu\nu}\f$, and
+     * Jazma outputs `param->getWriteOutputs()` enables (only the raw
      * \f$T^{\mu\nu}\f$ writer runs if \p tmunuOnly).
      * \param[in] lat Lattice to read from and write into.
      * \param[in] param Simulation parameters.

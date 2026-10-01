@@ -1023,58 +1023,64 @@ void MyEigen::writeJazma(
     }
 }
 
-void MyEigen::flowVelocity4DImpl(
-    Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly) {
-    int N = param->getSize();
-    int count;
-    double L = param->getL();
-    double a = L / N;  // lattice spacing in fm
-    double x, y;
-    double dtau = param->getdtau();
+void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
+    const int N = param->getSize();
+    const double a = param->getL() / N;  // lattice spacing in fm
+    const double dtau = param->getdtau();
     double averageux = 0.;
     double averageuy = 0.;
     double averageueta = 0.;
     double averageeps = 0.;
-    count = 0;
+    int count = 0;
 
-    if (!tmunuOnly) {
-        // The per-cell flow-velocity solve is now independent across cells (the
-        // velocity carryover that previously serialized it has been removed via
-        // the rest-frame reset below), so it is parallelized over the lattice.
-        // Each thread allocates its own GSL workspace/eigenvalue/eigenvector
-        // objects once. All per-cell writes touch only cells[pos], so every
-        // DATA-FILE output is bit-for-bit identical to the serial version
-        // regardless of thread count. The four diagnostic averages (printed to
-        // stdout only) use an OpenMP reduction whose summation order differs
-        // from serial, so those logged numbers may differ in their last bits --
-        // no data file is affected.
+    // The per-cell flow-velocity solve is now independent across cells (the
+    // velocity carryover that previously serialized it has been removed via
+    // the rest-frame reset below), so it is parallelized over the lattice.
+    // Each thread allocates its own GSL workspace/eigenvalue/eigenvector
+    // objects once. All per-cell writes touch only cells[pos], so every
+    // DATA-FILE output is bit-for-bit identical to the serial version
+    // regardless of thread count. The four diagnostic averages (printed to
+    // stdout only) use an OpenMP reduction whose summation order differs
+    // from serial, so those logged numbers may differ in their last bits --
+    // no data file is affected.
 #pragma omp parallel reduction( \
         + : averageux, averageuy, averageueta, averageeps, count)
-        {
-            gsl_vector_complex *eval_ws = gsl_vector_complex_alloc(4);
-            gsl_matrix_complex *evec_ws = gsl_matrix_complex_alloc(4, 4);
-            gsl_eigen_nonsymmv_workspace *w_ws = gsl_eigen_nonsymmv_alloc(4);
+    {
+        gsl_vector_complex *eval_ws = gsl_vector_complex_alloc(4);
+        gsl_matrix_complex *evec_ws = gsl_matrix_complex_alloc(4, 4);
+        gsl_eigen_nonsymmv_workspace *w_ws = gsl_eigen_nonsymmv_alloc(4);
 
 #pragma omp for
-            for (int posLoop = 0; posLoop < N * N; posLoop++) {
-                const int si = posLoop / N;
-                const int sj = posLoop % N;
-                const int pos = posLoop;
-                solveFlowVelocityAtCell(
-                    lat, pos, si, sj, N, it, dtau, a, eval_ws, evec_ws, w_ws,
-                    averageux, averageuy, averageueta, averageeps, count);
-            }  // omp for over posLoop
+        for (int posLoop = 0; posLoop < N * N; posLoop++) {
+            const int si = posLoop / N;
+            const int sj = posLoop % N;
+            const int pos = posLoop;
+            solveFlowVelocityAtCell(
+                lat, pos, si, sj, N, it, dtau, a, eval_ws, evec_ws, w_ws,
+                averageux, averageuy, averageueta, averageeps, count);
+        }  // omp for over posLoop
 
-            gsl_eigen_nonsymmv_free(w_ws);
-            gsl_vector_complex_free(eval_ws);
-            gsl_matrix_complex_free(evec_ws);
-        }  // omp parallel
+        gsl_eigen_nonsymmv_free(w_ws);
+        gsl_vector_complex_free(eval_ws);
+        gsl_matrix_complex_free(evec_ws);
+    }  // omp parallel
 
-        messager_ << "[MyEigen::flowVelocity4DImpl]: tau=" << it * dtau * a
-                  << " fm/c: average u^x=" << sqrt(averageux / averageeps)
-                  << ", average u^y=" << sqrt(averageuy / averageeps)
-                  << ", average tau*u^eta=" << sqrt(averageueta / averageeps);
-        messager_.flush("info");
+    messager_ << "[MyEigen::solveFlowVelocity]: tau=" << it * dtau * a
+              << " fm/c: average u^x=" << sqrt(averageux / averageeps)
+              << ", average u^y=" << sqrt(averageuy / averageeps)
+              << ", average tau*u^eta=" << sqrt(averageueta / averageeps);
+    messager_.flush("info");
+}
+
+void MyEigen::flowVelocity4DImpl(
+    Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly) {
+    int N = param->getSize();
+    double L = param->getL();
+    double a = L / N;  // lattice spacing in fm
+    double dtau = param->getdtau();
+
+    if (!tmunuOnly) {
+        solveFlowVelocity(lat, param, it);
     }
 
     // output for hydro

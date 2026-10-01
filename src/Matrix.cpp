@@ -454,12 +454,10 @@ complex<double> Matrix::traceOfProductOfMatrix(Matrix &a, Matrix &b) const {
 std::string Matrix::MatrixToString() {
     std::stringstream output;
     output.precision(15);
-    output << e_[0].real() << " " << e_[0].imag() << " " << e_[3].real() << " "
-           << e_[3].imag() << " " << e_[6].real() << " " << e_[6].imag() << " "
-           << e_[1].real() << " " << e_[1].imag() << " " << e_[4].real() << " "
-           << e_[4].imag() << " " << e_[7].real() << " " << e_[7].imag() << " "
-           << e_[2].real() << " " << e_[2].imag() << " " << e_[5].real() << " "
-           << e_[5].imag() << " " << e_[8].real() << " " << e_[8].imag();
+    for (int i = 0; i < 9; i++) {
+        if (i > 0) output << " ";
+        output << e_[i].real() << " " << e_[i].imag();
+    }
     return output.str();
 }
 

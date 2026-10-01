@@ -596,3 +596,49 @@ TEST_CASE(
     std::remove(polpm1.c_str());
     std::remove(dir.c_str());
 }
+
+TEST_CASE(
+    "Lattice::writeWilsonLines -> Init::readWilsonLine{Text,Binary} "
+    "round-trips every matrix element unchanged") {
+    const int N = 4;
+    for (int format : {1, 2}) {
+        CAPTURE(format);
+        Parameters param;
+        makeInitTestParam(param, N);
+        param.setb(0.);
+        param.setWilsonLinePath(".");
+        param.setWriteWilsonLines(format);
+
+        Lattice lat(&param, N);
+        for (int pos = 0; pos < N * N; ++pos) {
+            lat.U[pos] = makeTestMatrix(pos);
+        }
+        lat.writeWilsonLines(&param, NucleusRole::Projectile);
+        const std::string path = Lattice::generateWilsonLineDataFileName(
+            &param, -1., NucleusRole::Projectile, format);
+
+        int nn[2] = {N, N};
+        Init init(nn);
+        Lattice lat2(&param, N);
+        if (format == 1) {
+            init.readWilsonLineText(
+                path, &param, NucleusRole::Projectile, lat2.U);
+        } else {
+            init.readWilsonLineBinary(
+                path, &param, NucleusRole::Projectile, lat2.U);
+        }
+        std::remove(path.c_str());
+
+        for (int pos = 0; pos < N * N; ++pos) {
+            CAPTURE(pos);
+            for (int k = 0; k < 9; ++k) {
+                CHECK(
+                    lat2.U[pos].get(k).real()
+                    == doctest::Approx(lat.U[pos].get(k).real()));
+                CHECK(
+                    lat2.U[pos].get(k).imag()
+                    == doctest::Approx(lat.U[pos].get(k).imag()));
+            }
+        }
+    }
+}

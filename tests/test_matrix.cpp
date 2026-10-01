@@ -268,21 +268,19 @@ TEST_CASE(
     CHECK(matricesClose(reconstructed, reference, 1e-9));
 }
 
-TEST_CASE("Matrix: MatrixToString formats elements in column-major order") {
-    // A non-symmetric matrix with a distinct value at every entry: on the
-    // identity matrix previously used here, M(i,j) == M(j,i), so a
-    // row-major implementation would have produced the same string as the
-    // required column-major order and gone undetected.
+TEST_CASE("Matrix: MatrixToString formats elements in row-major order") {
+    // A non-symmetric matrix with a distinct value at every entry, so a
+    // transposed (column-major) order would not go undetected.
     Matrix M(Matrix::noInit);
     for (int i = 0; i < 3; ++i) {
         for (int j = 0; j < 3; ++j) {
             M.set(i, j, std::complex<double>(10 * i + j, 100 + 10 * i + j));
         }
     }
-    // Column-major: (0,0),(1,0),(2,0), (0,1),(1,1),(2,1), (0,2),(1,2),(2,2).
+    // Row-major: (0,0),(0,1),(0,2), (1,0),(1,1),(1,2), (2,0),(2,1),(2,2).
     CHECK(
         M.MatrixToString()
-        == "0 100 10 110 20 120 1 101 11 111 21 121 2 102 12 112 22 122");
+        == "0 100 1 101 2 102 10 110 11 111 12 112 20 120 21 121 22 122");
 }
 
 TEST_CASE("Matrix: getNDim/getNN report the fixed 3x3 SU(3) shape") {

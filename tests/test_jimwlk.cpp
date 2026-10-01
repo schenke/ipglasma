@@ -87,6 +87,24 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "JIMWLK::getAlphas: fixed coupling returns 1 so alpha_s is not counted "
+    "twice (it is already in the step count)") {
+    const int N = 8;
+    Parameters param;
+    makeJimwlkTestParam(param, N);
+    param.setJimwlk_alphas(0.3);
+
+    Group group;
+    Random random;
+    random.init_genrand64(42ULL);
+    Lattice lat(&param, N);
+    JIMWLK jimwlk(param, &group, &lat, &random);
+
+    CHECK(jimwlk.getAlphas(0.1, 0.15) == doctest::Approx(1.0));
+    CHECK(jimwlk.getAlphas(-0.3, 0.2) == doctest::Approx(1.0));
+}
+
+TEST_CASE(
     "JIMWLK::getAlphas: running-coupling branch matches an independently "
     "computed reference value, and is sensitive to nFlavors/c_jimwlk") {
     const int N = 8;

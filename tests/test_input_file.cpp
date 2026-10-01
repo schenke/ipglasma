@@ -251,6 +251,9 @@ TEST_CASE("Parameters::readInput: values must have the parameter's type") {
         readErrors(exampleInputWith("useJIMWLK", "2")),
         "useJIMWLK '2' is not 0 or 1"));
     CHECK(anyContains(
+        readErrors(exampleInputWith("runWithkt", "2")),
+        "runWithkt '2' is not 0 or 1"));
+    CHECK(anyContains(
         readErrors(exampleInputWith("size", "256.0")),
         "size '256.0' is not an integer"));
     CHECK(anyContains(
@@ -269,7 +272,6 @@ TEST_CASE("Parameters::readInput: per-value checks") {
     };
     for (const Case &c : std::vector<Case> {
              {"size", "0", "must be positive"},
-             {"runWithkt", "2", "must be one of 0, 1"},
              {"alphas_jimwlk", "-0.3", "must not be negative"},
              {"nFlavors", "-1", "must be between 0 and 16"},
              {"size", "255", "must be even"},

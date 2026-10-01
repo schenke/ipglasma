@@ -26,7 +26,8 @@ void makeEvolutionTestParam(Parameters &param, int size) {
     param.colorCharge.RapidityB = 0.0;
     param.coupling.g = 1.0;
     param.run.dtau = 0.1;
-    param.coupling.runningCoupling = 0;  // gfactor == 1 everywhere; see below
+    param.coupling.runningCoupling =
+        false;  // gfactor == 1 everywhere; see below
 }
 
 }  // namespace

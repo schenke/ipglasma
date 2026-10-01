@@ -368,9 +368,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "runWithLocalQs", &P::coupling,
             &CouplingParameters::runWithLocalQs),
-        // read by the gluon spectrum even without running coupling
-        param("runWithkt", &P::coupling, &CouplingParameters::runWithkt)
-            .check(oneOf({0, 1})),
+        param("runWithkt", &P::coupling, &CouplingParameters::runWithkt),
 
         // observables
         param(
@@ -528,7 +526,7 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
                    : 0.1;
     // polarized nuclei are only available as configuration files
     if (nucleus.polariztionProjectile != 0 || nucleus.polariztionTarget != 0) {
-        nucleus.nucleonPositionsFromFile = 1;
+        nucleus.nucleonPositionsFromFile = true;
     }
     subnucleon.NqBase = subnucleon.useConstituentQuarkProton;
     if (subnucleon.SubNucleonParamType > 0) {

@@ -1343,7 +1343,7 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
  * event-averaged \f$Q_s\f$ choices, per
  * `param->coupling.runWithLocalQs`/`coupling.runWith0Min1Avg2MaxQs`).
  * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
- * from (only used when `coupling.runWithLocalQs==1`).
+ * from (only used when `coupling.runWithLocalQs`).
  * \param[in] param Simulation parameters.
  * \param[in] pos Flat cell index.
  * \param[in] N Lattice side length.
@@ -1364,7 +1364,7 @@ double computeRunningCouplingGfactor(
     const double lambdaQCD = param->coupling.LambdaQCD;
     const int nFlavors = param->coupling.nFlavors;
 
-    if (param->coupling.runWithLocalQs == 1) {
+    if (param->coupling.runWithLocalQs) {
         // run with the local (in transverse plane) coupling
         const bool inBounds =
             lat->xFromPosition(pos) > 0 && lat->xFromPosition(pos) < N - 1
@@ -1436,7 +1436,7 @@ void prepareSpectrumField(
             int pos = lat->positionFromXY(i, j);
             double gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
-            if (param->coupling.runWithkt == 0) {
+            if (!param->coupling.runWithkt) {
                 *E1[pos] = sourceField[pos] * sqrt(gfactor);
             } else {
                 *E1[pos] = sourceField[pos];
@@ -1526,7 +1526,7 @@ void accumulateGluonSpectrum(
                             * (((it - 0.5) * dtau)
                                * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     }
-                    if (param->coupling.runWithkt == 1) {
+                    if (param->coupling.runWithkt) {
                         nkt *= computeRunningCouplingGfactorFromScale(
                             g, muZero, c, param->coupling.LambdaQCD,
                             param->coupling.nFlavors,
@@ -1579,7 +1579,7 @@ void accumulateGluonSpectrum(
 double computeMultiplicityBinWeight(
     Parameters *param, double m, int ik, double dkt, double a) {
     const double base = (ik + 0.5) * dkt * dkt * 2. * M_PI;
-    if (param->colorCharge.usePseudoRapidity == 0) {
+    if (!param->colorCharge.usePseudoRapidity) {
         return base;
     }
     return base * cosh(param->colorCharge.rapidity())
@@ -1860,7 +1860,7 @@ void Evolution::writeGluonMultiplicityTarget(
     }
 
     const char *rapidityVariable =
-        (param->colorCharge.usePseudoRapidity == 0) ? "y" : "eta";
+        (!param->colorCharge.usePseudoRapidity) ? "y" : "eta";
     const double meanKt = (dNPrimary != 0.0) ? dEPrimary / dNPrimary : 0.0;
     const double spectrumUnitFactor = (a / hbarc) * (a / hbarc);
 
@@ -1931,7 +1931,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     double dtau = param->run.dtau;  // dtau is in lattice units
 
     double maxtime = param->evolution.maxtime;  // maxtime is in fm
-    if (param->evolution.inverseQsForMaxTime == 1) {
+    if (param->evolution.inverseQsForMaxTime) {
         maxtime = 1. / param->event.averageQs * hbarc;
         messager_ << "[Evolution::run]: maximal evolution time = " << maxtime
                   << " fm";
@@ -2007,7 +2007,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             tmunu(lat, param, it);
             //  Preserve the historical intermediate-time finalFlag=false path
             //  when hydro output is enabled.
-            if (param->output.writeEpsilonUHydro != 0) {
+            if (param->output.writeEpsilonUHydro) {
                 u(lat, param, it, false);
             } else {
                 MyEigen myeigen;
@@ -2090,7 +2090,7 @@ void Evolution::finalFlowMeasurement(Lattice *lat, Parameters *param, int it) {
     // Hydro flow fields are optional. Tmunu output remains available
     // through the lightweight writer when the expensive eigen solve is
     // disabled.
-    if (param->output.writeEpsilonUHydro != 0) {
+    if (param->output.writeEpsilonUHydro) {
         u(lat, param, it, true);
     } else {
         MyEigen myeigen;
@@ -2552,7 +2552,7 @@ void Evolution::readNkt(Parameters *param) {
     dNdeta2 = 0.;
 
     for (int ik = 0; ik < 100; ik++) {
-        if (param->colorCharge.usePseudoRapidity == 0) {
+        if (!param->colorCharge.usePseudoRapidity) {
             dNdeta2 += nIn_[ik] * (ik + 0.5) * dkt * dkt * 2.
                        * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
         } else {
@@ -2613,7 +2613,7 @@ void Evolution::hadronizeAndWriteMultiplicity(
             else
                 Ng = 0.;
 
-            if (param->colorCharge.usePseudoRapidity == 0) {
+            if (!param->colorCharge.usePseudoRapidity) {
                 zintegrand[iz] = 1. / (z * z) * Ng * kkp(7, 1, z, kt);
             } else {
                 zintegrand[iz] =
@@ -2706,7 +2706,7 @@ int Evolution::multiplicity(
     GaugeFix gaugefix;
 
     double maxtime;
-    if (param->evolution.inverseQsForMaxTime == 1) {
+    if (param->evolution.inverseQsForMaxTime) {
         maxtime = 1. / param->event.averageQs * hbarc;
         messager_ << "[Evolution::multiplicity]: maximal evolution time = "
                   << maxtime << " fm";
@@ -2836,7 +2836,7 @@ int Evolution::multiplicity(
         multiplicityPhaseStart = ipg::wallSeconds();
     }
 
-    if (param->colorCharge.usePseudoRapidity == 0 && param->run.MPIRank == 0) {
+    if (!param->colorCharge.usePseudoRapidity && param->run.MPIRank == 0) {
         messager_ << "[Evolution::multiplicity]: dN/dy 1 = " << dNdeta
                   << ", dE/dy 1 = " << dEdeta;
         messager_.flush("info");
@@ -2846,7 +2846,7 @@ int Evolution::multiplicity(
         messager_ << "[Evolution::multiplicity]: gluon <p_T> = "
                   << dEdeta / dNdeta;
         messager_.flush("info");
-    } else if (param->colorCharge.usePseudoRapidity == 1) {
+    } else if (param->colorCharge.usePseudoRapidity) {
         m = param->colorCharge.Jacobianm;                              // in GeV
         P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
         dNdeta *= cosh(param->colorCharge.rapidity())

@@ -442,7 +442,7 @@ class Init {
         Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
         double rapidityB);
     /**
-     * computeCellColorCharge()'s `useFluctuatingx==1` iterative solve
+     * computeCellColorCharge()'s `useFluctuatingx` iterative solve
      * for one nucleus's \f$g^2\mu^2\f$ at this cell: iterates the
      * self-consistent local rapidity/\f$Q_s\f$ relation (following the
      * \f$x\f$-dependent \f$Q_s\f$ suppression of \cite Rezaeian:2012ji
@@ -466,7 +466,7 @@ class Init {
     /**
      * Sets the color-charge density (\f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$)
      * over the whole lattice: either the constant-background case
-     * (`useNucleus==0`, via setConstantColorChargeDensity()) or the
+     * (`!useNucleus`, via setConstantColorChargeDensity()) or the
      * full nucleus pipeline -- sample proton-anisotropy angles and
      * constituent-quark geometry, compute each nucleus' thickness
      * function (smooth or nucleon-summed), then set
@@ -490,10 +490,10 @@ class Init {
     void computeEffectiveRapidities(
         Parameters *param, double &rapidityA, double &rapidityB);
     /**
-     * setColorChargeDensity()'s `useNucleus==0` (constant \f$g^2\mu\f$
+     * setColorChargeDensity()'s `!useNucleus` (constant \f$g^2\mu\f$
      * background) branch: sets every cell's \f$g^2\mu_A^2\f$/
      * \f$g^2\mu_B^2\f$ to `param->collision.g2mu`'s value, optionally
-     * modulated by a fixed Gaussian envelope (`useGaussian==1`); marks
+     * modulated by a fixed Gaussian envelope (`useGaussian`); marks
      * the event a success.
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
@@ -519,7 +519,7 @@ class Init {
      */
     void sampleConstituentQuarkGeometry(Parameters *param, Random *random);
     /**
-     * setColorChargeDensity()'s `useSmoothNucleus==1` branch: sets
+     * setColorChargeDensity()'s `useSmoothNucleus` branch: sets
      * \f$T_p^A\f$/\f$T_p^B\f$ from the smooth (undeformed) Woods-Saxon
      * thickness functions (Glauber::interNuPInSP() for the projectile
      * A, Glauber::interNuTInST() for the target B), centered at the

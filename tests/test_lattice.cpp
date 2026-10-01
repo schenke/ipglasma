@@ -83,7 +83,7 @@ TEST_CASE("Lattice::writeWilsonLines (text format) writes a non-empty file") {
     makeLatticeParam(param, length);
     param.wilsonLines.writeWilsonLines = 1;  // text
     param.colorCharge.useFluctuatingx =
-        1;  // with this option, no x value in the generated filename
+        true;  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
     lat.writeWilsonLines(&param, NucleusRole::Projectile);
@@ -108,7 +108,7 @@ TEST_CASE(
     makeLatticeParam(param, length);
     param.wilsonLines.writeWilsonLines = 2;  // binary
     param.colorCharge.useFluctuatingx =
-        1;  // with this option, no x value in the generated filename
+        true;  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
     // Give two off-diagonal sites (ix != iy, swapped between them) distinct

@@ -83,8 +83,8 @@ int main(int argc, char *argv[]) {
     Random randomStorage;
     Random *random = &randomStorage;
     unsigned long long int rnum;
-    if (param->random.useSeedList == 0) {
-        if (param->random.useTimeForSeed == 1) {
+    if (!param->random.useSeedList) {
+        if (param->random.useTimeForSeed) {
             std::random_device ran_dev;
             rnum = ran_dev();
         } else {
@@ -94,7 +94,7 @@ int main(int argc, char *argv[]) {
             messager.flush("info");
         }
         param->run.randomSeed = rnum + rank * 1000;
-        if (param->random.useTimeForSeed == 1) {
+        if (param->random.useTimeForSeed) {
             messager << "[main::main]: Random seed = " << param->run.randomSeed;
             messager.flush("info");
         }
@@ -202,7 +202,7 @@ int main(int argc, char *argv[]) {
         Evolution evolution(nn);
 
         // either read k_T spectrum from file or do a fresh start
-        if (param->output.readMultFromFile == 1) {
+        if (param->output.readMultFromFile) {
             evolution.readNkt(param);
         }
 
@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
 #endif
 
             messager.info("[main::main]: One event finished");
-            if (param->output.writeOutputsToHDF5 == 1) {
+            if (param->output.writeOutputsToHDF5) {
                 IPG_PROFILE_SCOPE("output.hdf5_collect_event");
                 int status = 0;
                 stringstream h5output_filename;

@@ -29,7 +29,7 @@ struct EvolutionParameters {
     double maxtime = 0.;
     /// Whether to use \f$1/Q_s\f$ as the maximal evolution time (`1`)
     /// or the manually entered \c maxtime (`0`).
-    int inverseQsForMaxTime = 0;
+    bool inverseQsForMaxTime = false;
 };
 
 /// Random-number seeding.
@@ -39,10 +39,10 @@ struct RandomParameters {
     unsigned long long int seed = 0;
     /// Whether to read random seeds from a file (`1`); overrides \c
     /// useTimeForSeed if set.
-    int useSeedList = 0;
+    bool useSeedList = false;
     /// Whether to use the system time to generate a random seed (`1`)
     /// or not (`0`).
-    int useTimeForSeed = 0;
+    bool useTimeForSeed = false;
 };
 
 /// Collision system, impact parameter and nucleon wounding.
@@ -61,15 +61,15 @@ struct CollisionParameters {
     double bmax = 0.;
     /// Whether to sample the impact parameter from a linear (`1`) or
     /// uniform (`0`) distribution.
-    int samplebFromLinearDistribution = 0;
+    bool samplebFromLinearDistribution = false;
     /// Whether to randomly rotate the event's reaction plane.
     bool rotateReactionPlane = false;
     /// Whether to use nuclei with finite geometry (`1`) or a constant
     /// \f$g^2\mu\f$ distribution over the lattice (`0`).
-    int useNucleus = 0;
+    bool useNucleus = false;
     /// Whether to use a Gaussian profile on top of the constant
     /// background (`1`).
-    int useGaussian = 0;
+    bool useGaussian = false;
     /// \f$g^2\mu\f$ [lattice units], used for the constant
     /// (`useNucleus=0`) color-charge-density mode.
     double g2mu = 0.;
@@ -82,7 +82,7 @@ struct CollisionParameters {
     int averageOverThisManyNuclei = 0;
     /// Whether to use a hard-sphere profile (`0`) or Gaussian cross
     /// section (`1`) to decide whether a nucleon is wounded.
-    int gaussianWounding = 0;
+    bool gaussianWounding = false;
 };
 
 /// Nucleon positions: configuration files, polarization and the (deformed)
@@ -90,7 +90,7 @@ struct CollisionParameters {
 struct NucleusParameters {
     /// Whether to sample nucleon positions (`0`) or read them from a
     /// file (`1`).
-    int nucleonPositionsFromFile = 0;
+    bool nucleonPositionsFromFile = false;
     /// Path to the nuclear configuration files (used when \c
     /// nucleonPositionsFromFile is `1`).
     std::string nuclearConfigurationsPath;
@@ -108,7 +108,7 @@ struct NucleusParameters {
     double polarizationTargetJz = 0.;
     /// Whether to use a smooth Woods-Saxon distribution for a heavy
     /// nucleus (`1`) instead of sampling discrete nucleons.
-    int useSmoothNucleus = 0;
+    bool useSmoothNucleus = false;
     /// Whether `R_WS`/`a_WS`/`beta2`/`beta3`/`beta4`/\c
     /// gamma override a nucleus species' built-in deformation
     /// parameters.
@@ -173,7 +173,7 @@ struct SubnucleonParameters {
     double NqFluc = 0.;
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).
-    int shiftConstituentQuarkProtonOrigin = 0;
+    bool shiftConstituentQuarkProtonOrigin = false;
     /// Anisotropy \f$\xi\f$ of the proton thickness function,
     /// \f$T \propto \exp[-(x^2+\xi y^2)/2B]/(2\pi B\sqrt{\xi})\f$ (an
     /// initial test parameter).
@@ -188,7 +188,7 @@ struct SubnucleonParameters {
     int SubNucleonParamSet = 0;
     /// Whether to smear \f$Q_s\f$ using a Poisson distribution around
     /// its mean at every transverse position (`1`) or not (`0`).
-    int smearQs = 0;
+    bool smearQs = false;
     /// Width of the Gaussian smearing around the mean \f$g^2\mu^2\f$
     /// (parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
     double smearingWidth = 0.;
@@ -216,14 +216,14 @@ struct ColorChargeParameters {
     double RapidityB = 0.;
     /// Whether `RapidityA`/`RapidityB` hold pseudorapidity instead
     /// of rapidity (`1`), applying the corresponding Jacobian.
-    int usePseudoRapidity = 0;
+    bool usePseudoRapidity = false;
     /// Mass term [GeV] in the Jacobian converting rapidity \f$y\f$ to
     /// pseudorapidity \f$\eta\f$.
     double Jacobianm = 0.;
     /// Whether Bjorken \f$x\f$ should fluctuate as the local \f$Q_s\f$
     /// (`1`, \f$x = Q_s\beta/\sqrt{s}\f$) or always use the input
     /// file's rapidity value (`0`).
-    int useFluctuatingx = 0;
+    bool useFluctuatingx = false;
     /// Factor \f$\beta\f$ in \f$x = Q_s\beta/\sqrt{s}\f$; only used
     /// when \c useFluctuatingx is set.
     double xFromThisFactorTimesQs = 0.;
@@ -238,7 +238,7 @@ struct CouplingParameters {
     /// (e.g. the Wilson-line exponential).
     double g = 0.;
     /// Whether \f$\alpha_s\f$ should run: `0` fixed, `1` running.
-    int runningCoupling = 0;
+    bool runningCoupling = false;
     /// \f$\mu_0\f$ in the running-coupling formula (keeps it infrared
     /// finite).
     double muZero = 0.;
@@ -263,10 +263,10 @@ struct CouplingParameters {
     /// Whether \f$\alpha_s\f$ should run with the local \f$Q_s\f$ from
     /// nuclei A and B (`1`) or the average (`0`); both still use \c
     /// runWith0Min1Avg2MaxQs's max/average/min choice.
-    int runWithLocalQs = 0;
+    bool runWithLocalQs = false;
     /// Whether \f$\alpha_s\f$ should run with \f$k_T\f$ (`1`) instead;
     /// overrides any \c runWith0Min1Avg2MaxQs-based running if set.
-    int runWithkt = 0;
+    bool runWithkt = false;
 };
 
 /// Observables and output files.
@@ -276,19 +276,19 @@ struct OutputParameters {
     bool computeGluonMultiplicity = false;
     /// Whether to read the gluon spectrum \f$dN/d^2k_T\f$ from file and
     /// compute the integrated rate from it (`1`).
-    int readMultFromFile = 0;
+    bool readMultFromFile = false;
     /// Whether to write large output files such as hydro input data
     /// (`1`) or not (`0`); see README.md's "writeOutputs" bit values.
     int writeOutputs = 0;
     /// Whether to run the flow-velocity/hydro-output calculation (`1`)
     /// or write only \f$T^{\mu\nu}\f$ at measurement times (`0`).
-    int writeEpsilonUHydro = 0;
+    bool writeEpsilonUHydro = false;
     /// Whether to write \f$T^{\mu\nu}\f$ as compact binary `.ipgt`
     /// (`1`) or formatted text `.dat` (`0`).
-    int writeTmunuBinary = 0;
+    bool writeTmunuBinary = false;
     /// Whether to collect all output files into one HDF5 file (`1`) or
     /// not (`0`).
-    int writeOutputsToHDF5 = 0;
+    bool writeOutputsToHDF5 = false;
     /// Physical lattice size for the output grid [fm].
     double LOutput = 0.;
     /// Lattice side length for hydro/Tmunu output; must be `<= size`.

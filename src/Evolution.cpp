@@ -2001,6 +2001,11 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
                 u(lat, param, it, true);
             } else {
                 MyEigen myeigen;
+                // eccentricity() weights by epsilon * u^tau, which only the
+                // flow-velocity solve sets.
+                if (param->getComputeGluonMultiplicity()) {
+                    myeigen.solveFlowVelocity(lat, param, it);
+                }
                 myeigen.writeTmunu4D(lat, param, it);
             }
         }

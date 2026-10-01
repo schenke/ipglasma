@@ -225,11 +225,6 @@ class Glauber {
      * before using any other method.
      */
     Glauber() {};
-    /**
-     * Removes the scratch file `tmp.dat` some callers may have written
-     * (harmless if it doesn't exist).
-     */
-    ~Glauber() { remove("tmp.dat"); }
 
     /**
      * Returns the projectile's mass number.

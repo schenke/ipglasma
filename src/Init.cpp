@@ -938,49 +938,35 @@ void Init::computeSmoothNucleusThickness(
     const int N = param->getSize();
     const double L = param->getL();
     const double a = L / N;
-    double xA, xB;
-    double y;
-    double T;
-    double localpos;
+    // Both profiles are centered at the origin: the impact parameter is
+    // sampled later and applied by shiftFieldsWithImpactParameter(), the
+    // same as for nucleon-based nuclei. Nucleus A is the projectile.
     double normA = 0.;
     double normB = 0.;
-    double bb = param->getb();
-    double r = 0.;
-    for (int ix = 0; ix < N; ix++)  // loop over all positions
-    {
-        xA = -L / 2. + a * ix - bb / 2.;
-        xB = -L / 2. + a * ix + bb / 2.;
+    for (int ix = 0; ix < N; ix++) {
+        const double x = -L / 2. + a * ix;
         for (int iy = 0; iy < N; iy++) {
-            y = -L / 2. + a * iy;
+            const double y = -L / 2. + a * iy;
+            const int localpos = ix * N + iy;
+            const double r = sqrt(x * x + y * y);
 
-            localpos = ix * N + iy;
+            double TA = glauber->interNuPInSP(r);
+            double TB = glauber->interNuTInST(r);
+            normA += TA * a * a;
+            normB += TB * a * a;
 
-            // nucleus A
-            r = sqrt(xA * xA + y * y);
-            T = glauber->interNuTInST(r);
-            lat->cells[localpos]->setTpA(T);
-
-            normA += T * a * a;
-
-            // nucleus B
-            r = sqrt(xB * xB + y * y);
-            T = glauber->interNuPInSP(r);
-            lat->cells[localpos]->setTpB(T);
-
-            normB += T * a * a;
-
-            // remove potential stuff outside the interaction region
-            if (lat->cells[localpos]->getTpA() < 0.001
-                || lat->cells[localpos]->getTpB() < 0.001) {
-                lat->cells[localpos]->setTpA(0.);
-                lat->cells[localpos]->setTpB(0.);
-            }
+            // remove the far tails of each nucleus separately (the overlap
+            // region is not known before b is sampled)
+            if (TA < 0.001) TA = 0.;
+            if (TB < 0.001) TB = 0.;
+            lat->cells[localpos]->setTpA(TA);
+            lat->cells[localpos]->setTpB(TB);
         }
     }
-    for (int ix = 0; ix < N; ix++)  // loop over all positions
-    {
+
+    for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
-            localpos = ix * N + iy;
+            const int localpos = ix * N + iy;
             lat->cells[localpos]->setTpA(
                 lat->cells[localpos]->getTpA() / normA * glauber->nucleusA1()
                 * hbarc * hbarc);
@@ -989,8 +975,6 @@ void Init::computeSmoothNucleusThickness(
                 * hbarc * hbarc);
         }
     }
-
-    param->setSuccess(1);
 }
 
 double Init::computeNucleonThicknessAtCell(
@@ -1405,6 +1389,12 @@ void Init::scanCollisionGeometry(
                 && nucleusB_.at(i).collided == 1 && check == 1) {
                 check = 2;
             }
+        }
+
+        // A smooth nucleus has no nucleons to test against: any cell where
+        // both shifted thickness profiles are nonzero is in the overlap.
+        if (param->getUseSmoothNucleus() == 1 && TpA > 0. && TpB > 0.) {
+            check = 2;
         }
 
         if (check == 2) {

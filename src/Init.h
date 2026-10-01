@@ -520,9 +520,10 @@ class Init {
     /**
      * setColorChargeDensity()'s `useSmoothNucleus==1` branch: sets
      * \f$T_p^A\f$/\f$T_p^B\f$ from the smooth (undeformed) Woods-Saxon
-     * thickness functions (Glauber::interNuTInST()/interNuPInSP()),
-     * normalized to each nucleus' mass number; marks the event a
-     * success.
+     * thickness functions (Glauber::interNuPInSP() for the projectile
+     * A, Glauber::interNuTInST() for the target B), centered at the
+     * origin and normalized to each nucleus' mass number. The impact
+     * parameter is applied later by shiftFieldsWithImpactParameter().
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
      * \param[in] glauber Configured Glauber instance.

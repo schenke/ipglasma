@@ -129,9 +129,11 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
 }
 
 double JIMWLK::getAlphas(const double x, const double y) const {
-    double alphas = param_.getJimwlk_alphas();
-    if (alphas > 1e-10) {
-        return alphas;
+    // Fixed coupling: alpha_s is already absorbed into the evolution step
+    // count in evolution() (ds = alpha_s dy / pi^2), so the kernel must not
+    // carry it again.
+    if (param_.getJimwlk_alphas() > 1e-10) {
+        return 1.0;
     }
 
     const double c = param_.getc_jimwlk();
@@ -145,7 +147,7 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     double phys_r2 = phys_x * phys_x + phys_y * phys_y;
 
     // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
-    alphas =
+    double alphas =
         4. * M_PI
         / ((11. * Nc - 2. * Nf) / 3. * c
            * log((

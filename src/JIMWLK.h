@@ -173,9 +173,10 @@ class JIMWLK {
      * \param[in] x Momentum-space \f$x\f$ coordinate, in units where
      * the lattice spans \f$[-1/2, 1/2]\f$.
      * \param[in] y Momentum-space \f$y\f$ coordinate, same units.
-     * \return `param_.getJimwlk_alphas()` directly if positive (fixed
-     * coupling); otherwise a one-loop running-coupling evaluation from
-     * the dipole size implied by \f$(x,y)\f$.
+     * \return `1.0` if `param_.getJimwlk_alphas()` is positive (fixed
+     * coupling, where \f$\alpha_s\f$ enters only through the step count
+     * in evolution()); otherwise a one-loop running-coupling evaluation
+     * from the dipole size implied by \f$(x,y)\f$.
      */
     double getAlphas(const double x, const double y) const;
     /**

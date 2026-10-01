@@ -748,7 +748,8 @@ double Glauber::nuIntHulthen(double xi) {
 
     f = 2.0 * a_WS * rho * (glauberData_.sigmaNN);
     g = (1.0 / r) * (exp(-r) - exp(-(b_WS / a_WS) * r));
-    f *= g * g;
+    // dz = -dxi / (a xi)
+    f *= g * g / xi;
 
     return f;
 } /* nuIntHulthen */

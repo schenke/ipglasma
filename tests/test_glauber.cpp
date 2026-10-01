@@ -1,3 +1,4 @@
+#include <cmath>
 #include <string>
 
 #include "Glauber.h"
@@ -85,5 +86,39 @@ TEST_CASE(
         glauber.calcRho(&nucleus);
 
         CHECK(anumForProfile(glauber, nucleus) == doctest::Approx(nucleus.A));
+    }
+}
+
+TEST_CASE(
+    "Glauber::nuInS: the transverse integral of T(s) reproduces A for the "
+    "Woods-Saxon and Hulthen profiles") {
+    const double sigmaNN = 42.;  // mb
+    for (const char *name : {"Pb", "d"}) {
+        CAPTURE(name);
+        Glauber glauber;
+        // initGlauber sets sigma_NN; calcRho selects the nucleus nuInS uses
+        glauber.initGlauber(
+            sigmaNN, name, name, 0., /*setWSDeformParams=*/false, 0., 0., 0.,
+            0., 0., 0., /*forceDminFlag=*/false, 0., 0., 0., 100);
+        Nucleus nucleus {};
+        glauber.findNucleusData(
+            &nucleus, name, /*setWSDeformParams=*/false, 0., 0., 0., 0., 0., 0.,
+            /*forceDminFlag=*/false, 0., 0., 0.);
+        glauber.calcRho(&nucleus);
+        const double A = nucleus.A;
+
+        // nuInS includes a factor sigma_NN [fm^2]; integrate 2 pi s T(s)
+        // with the trapezoidal rule out to where T is negligible.
+        const double sigmaFm2 = sigmaNN * 0.1;
+        const double sMax = 40.;
+        const int nSteps = 4000;
+        const double ds = sMax / nSteps;
+        double integral = 0.;
+        for (int i = 1; i <= nSteps; i++) {
+            const double s = i * ds;
+            const double weight = (i == nSteps) ? 0.5 : 1.0;
+            integral += weight * 2. * M_PI * s * glauber.nuInS(s) * ds;
+        }
+        CHECK(integral / sigmaFm2 == doctest::Approx(A).epsilon(1e-3));
     }
 }

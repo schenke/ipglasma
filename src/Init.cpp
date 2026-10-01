@@ -1290,9 +1290,14 @@ void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
 
     computeAndSetRunningAlphaS(param);
 
+    // With running alpha_s(k_T) the coupling is evaluated per k_T bin in the
+    // multiplicity, and computeAndSetRunningAlphaS() leaves alphas at 0.
+    const bool alphasOk =
+        param->getalphas() > 0
+        || (param->getRunningCoupling() && param->getRunWithkt() == 1);
     if (param->getAverageQs() > 0 && param->getAverageQsAvg() > 0
         && averageQs2 > 0 && param->getAverageQsmin() > 0 && averageQs2Avg > 0
-        && param->getalphas() > 0 && Npart >= 2
+        && alphasOk && Npart >= 2
         && averageQs2min2 * a * a / hbarc / hbarc > param->getMinimumQs2ST()) {
         param->setSuccess(1);
         writeUsedParametersFile(param, phiRP, Npart, Ncoll);

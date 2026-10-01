@@ -478,7 +478,10 @@ void Init::readInNucleusConfigs(
             for (int j = 0; j < Nentry; j++) {
                 float temp;
                 inFile.read(reinterpret_cast<char *>(&temp), sizeof(float));
-                tempPos.push_back(temp);
+                // Au197/Pb208 files carry a 4th per-nucleon entry; only
+                // (x, y, z) are kept so callers can index with 3 * iA.
+                // Protons are assigned afterwards by assignProtons().
+                if (j < 3) tempPos.push_back(temp);
             }
         }
         if (inFile.eof()) break;

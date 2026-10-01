@@ -154,6 +154,11 @@ The main categories for changes in this file are:
 * Fix a race on MPI runs with `writeOutputsToHDF5 1` where rank 0 merged and deleted the per-rank HDF5 files while other ranks were still writing their last event.
 * Fix polarized deuterons with `Jz = 0` loading the `Jz = +-1` configurations.
 * Fix the deuteron (Hulthen) thickness function missing the Jacobian of its integration variable, which made `T(s)` 17-44% too low and too compact (it integrated to 1.45 instead of A = 2).
+* Fix `runningCoupling 1` with `runWithkt 1` rejecting every event (alpha_s is evaluated per k_T bin there, but the event-acceptance cut required the unset global alpha_s to be positive), so the run never finished.
+* Fix a NaN time step when `maxtime` is shorter than one step (e.g. `maxtime 0` to only produce Wilson lines); `dtau` now falls back to 0.1 and no evolution step is run.
+* Fix the input parser hanging forever instead of reporting a missing required key when the input file has no `EndOfFile` line.
+* Fix `Glauber`'s destructor deleting any `tmp.dat` file in the working directory.
+* Add `Parameters::ValidParameters()` checks rejecting an odd lattice `size` (the FFTs assume even sizes), `omega <= 0`, an unknown `SubNucleonParamType`, `LambdaQCD <= 0` or `c <= 0` and a `runWith0Min1Avg2MaxQs` outside 0-2 with running coupling, and, for the JIMWLK running coupling (`alphas_jimwlk 0`), a too-large `nFlavors` and a `Lambda_QCD_jimwlk` that is not positive or not below `mu0_jimwlk`.
 
 ### Removed
 * Remove functions that were declared or defined but never called, including `Evolution::evolveUfast`/`multiplicitynkxky`/`correlations`/`anisotropy`, `GaugeFix::gaugeTransform`, the `Spinor` class and `Matrix::reu`/`reu2`/`imag`, `Init::solveAxbComplex`/`multiplicity`/the 2-argument `rotate_nucleus` overload/`findUInForwardLightconeBjoern`, `MyEigen::test`, `FFT::fftnMany`, `Glauber::FindXorg`/`PAB`/`AnumHulthenInt`, and about a dozen unused `Parameters` getter/setter pairs.

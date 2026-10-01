@@ -234,7 +234,10 @@ struct ColorChargeParameters {
     /// when \c useFluctuatingX is set.
     double xQsFactor = 0.;
 
-    /// Mean of the projectile's and target's rapidity.
+    /**
+     * Returns the mean of the projectile's and target's rapidity.
+     * \return \f$(\text{rapidityA} + \text{rapidityB})/2\f$.
+     */
     double rapidity() const { return (rapidityA + rapidityB) / 2.; }
 };
 

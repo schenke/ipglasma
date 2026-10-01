@@ -213,8 +213,9 @@ class Matrix {
 
     /**
      * Serializes this matrix's 9 elements as a single-line,
-     * space-separated string, column-major (`Re(0,0) Im(0,0) Re(1,0)
-     * Im(1,0) Re(2,0) Im(2,0) Re(0,1) ...`), at 15-digit precision --
+     * space-separated string, row-major (`Re(0,0) Im(0,0) Re(0,1)
+     * Im(0,1) Re(0,2) Im(0,2) Re(1,0) ...`, the same element order as
+     * the binary Wilson-line format), at 15-digit precision --
      * the format writeSU3Matrices()/writeWilsonLines()'s text output
      * uses.
      * \return The serialized string.

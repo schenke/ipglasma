@@ -91,6 +91,27 @@ bool Parameters::ValidParameters() {
         messager_.flush("error");
         return false;
     }
+    if (size_ % 2 != 0) {
+        messager_ << "[Parameters::ValidParameters]: Lattice size (" << size_
+                  << ") must be even; the FFTs used by the gauge fixing and "
+                     "JIMWLK assume even lattice dimensions.";
+        messager_.flush("error");
+        return false;
+    }
+    if (getOmega() <= 0.) {
+        messager_ << "[Parameters::ValidParameters]: omega (" << getOmega()
+                  << ") must be positive.";
+        messager_.flush("error");
+        return false;
+    }
+    if (getSubNucleonParamType() != 0 && getSubNucleonParamType() != 1
+        && getSubNucleonParamType() != 2 && getSubNucleonParamType() != 4) {
+        messager_ << "[Parameters::ValidParameters]: SubNucleonParamType ("
+                  << getSubNucleonParamType()
+                  << ") must be 0 (use the input values), 1, 2 or 4.";
+        messager_.flush("error");
+        return false;
+    }
     if (getWriteWilsonLines() != 0
         and !Lattice::IsValidWilsonLineDataFormat(getWriteWilsonLines())) {
         messager_ << "[Parameters::ValidParameters]: Invalid Wilson line "
@@ -122,6 +143,21 @@ bool Parameters::ValidParameters() {
     }
 
     if (getRunningCoupling()) {
+        if (getLambdaQCD() <= 0. || getc() <= 0.) {
+            messager_ << "[Parameters::ValidParameters]: LambdaQCD ("
+                      << getLambdaQCD() << ") and c (" << getc()
+                      << ") must be positive.";
+            messager_.flush("error");
+            return false;
+        }
+        if (getRunWithkt() == 0 && getRunWithQs() != 0 && getRunWithQs() != 1
+            && getRunWithQs() != 2) {
+            messager_ << "[Parameters::ValidParameters]: "
+                         "runWith0Min1Avg2MaxQs ("
+                      << getRunWithQs() << ") must be 0, 1 or 2.";
+            messager_.flush("error");
+            return false;
+        }
         if (getLambdaQCD() >= getMuZero()) {
             messager_ << "[Parameters::ValidParameters]: LambdaQCD ("
                       << getLambdaQCD() << ") must be smaller than muZero ("
@@ -149,6 +185,31 @@ bool Parameters::ValidParameters() {
                   << getc_jimwlk() << ") must be positive.";
         messager_.flush("error");
         return false;
+    }
+
+    // JIMWLK running coupling (alphas_jimwlk 0), independent of
+    // runningCoupling.
+    if (getUseJIMWLK() && getJimwlk_alphas() <= 1e-10) {
+        if (11. * PhysConst::Nc - 2. * getNFlavors() <= 0.) {
+            messager_ << "[Parameters::ValidParameters]: nFlavors ("
+                      << getNFlavors()
+                      << ") is too large for the JIMWLK running coupling -- "
+                         "the one-loop beta-function coefficient (11*Nc - "
+                         "2*nFlavors) must be positive.";
+            messager_.flush("error");
+            return false;
+        }
+        if (getLambdaQCD_jimwlk() <= 0.
+            || getLambdaQCD_jimwlk() >= getMu0_jimwlk()) {
+            messager_ << "[Parameters::ValidParameters]: Lambda_QCD_jimwlk ("
+                      << getLambdaQCD_jimwlk()
+                      << ") must be positive and smaller than mu0_jimwlk ("
+                      << getMu0_jimwlk()
+                      << "); otherwise the JIMWLK running coupling is "
+                         "singular or negative at large dipole sizes.";
+            messager_.flush("error");
+            return false;
+        }
     }
 
     return true;

@@ -17,6 +17,7 @@ namespace {
 // in test_input_file.cpp; these tests cover the checks that combine several
 // parameters.
 void makeValidBaseline(Parameters &param) {
+    param.collision.useNucleus = true;
     param.wilsonLines.writeWilsonLines = 2;
     param.wilsonLines.wilsonLinePath = ".";
     param.jimwlk.saveSnapshots = 0;
@@ -34,7 +35,6 @@ TEST_CASE("Parameters::validationErrors: accepts a normal configuration") {
     Parameters param;
     makeValidBaseline(param);
     CHECK(param.validationErrors().empty());
-    CHECK(param.ValidParameters() == true);
 }
 
 TEST_CASE(
@@ -45,7 +45,6 @@ TEST_CASE(
     param.jimwlk.saveSnapshots = 1;
     param.wilsonLines.writeWilsonLines = 0;
     CHECK(param.validationErrors().size() == 1);
-    CHECK(param.ValidParameters() == false);
 
     param.jimwlk.saveSnapshots = 0;
     CHECK(param.validationErrors().empty());
@@ -100,6 +99,47 @@ TEST_CASE("Parameters::validationErrors: reports every failed check") {
     param.coupling.runningCoupling = true;
     param.coupling.LambdaQCD = 0.5;
     CHECK(param.validationErrors().size() == 2);
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: inverseQsForMaxTime and running coupling "
+    "need the event-averaged Qs") {
+    for (int setting = 0; setting < 2; ++setting) {
+        CAPTURE(setting);
+        Parameters param;
+        makeValidBaseline(param);
+        if (setting == 0) {
+            param.evolution.inverseQsForMaxTime = true;
+        } else {
+            param.coupling.runningCoupling = true;
+            param.coupling.mu0 = 0.3;
+            param.coupling.LambdaQCD = 0.2;
+        }
+        CHECK(param.validationErrors().empty());
+        param.collision.useNucleus = false;
+        CHECK(param.validationErrors().size() == 1);
+        param.collision.useNucleus = true;
+        param.wilsonLines.readInitialWilsonLines = 2;
+        CHECK(param.validationErrors().size() == 1);
+    }
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: posterior types 2 and 4 need Nq 0 or 3") {
+    Parameters param;
+    makeValidBaseline(param);
+    for (int type : {2, 4}) {
+        CAPTURE(type);
+        param.subnucleon.subNucleonParamType = type;
+        for (double nq : {0., 3.}) {
+            param.subnucleon.Nq = nq;
+            CHECK(param.validationErrors().empty());
+        }
+        param.subnucleon.Nq = 5.;
+        CHECK(param.validationErrors().size() == 1);
+    }
+    param.subnucleon.subNucleonParamType = 1;  // variable Nq
+    CHECK(param.validationErrors().empty());
 }
 
 namespace {

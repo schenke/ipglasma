@@ -273,6 +273,11 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"size", "0", "must be positive"},
              {"jimwlkAlphaS", "-0.3", "must not be negative"},
              {"nFlavors", "-1", "must be between 0 and 16"},
+             {"L", "0", "must be positive"},
+             {"maxTime", "-1", "must not be negative"},
+             {"nucleiToAverage", "0", "must be positive"},
+             {"polarizationTarget", "3", "must be one of 0, 1, 2"},
+             {"Nq", "-1", "must not be negative"},
              {"size", "255", "must be even"},
              {"omega", "0", "must be positive"},
              {"subNucleonParamType", "3", "must be one of 0, 1, 2, 4"},
@@ -450,4 +455,19 @@ TEST_CASE(
     for (const auto &[newKey, oldKey] : renames) {
         CHECK(anyContains(errors, oldKey + " was renamed to " + newKey));
     }
+}
+
+TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {
+    Parameters param;
+    REQUIRE(
+        param.readInput(inputFromText(exampleInputWith("Nq", "2.5"))).empty());
+    CHECK(param.subnucleon.Nq == 2.5);
+    CHECK(param.subnucleon.NqBase == 2.5);
+}
+
+TEST_CASE("Parameters::readInput: rejects a maxTime needing too many steps") {
+    const std::vector<std::string> errors =
+        readErrors(exampleInputWith("maxTime", "1e12"));
+    REQUIRE(errors.size() == 1);
+    CHECK(anyContains(errors, "more than 1e8 time steps"));
 }

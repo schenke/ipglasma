@@ -662,7 +662,6 @@ TEST_CASE(
     param.nucleus.useSmoothNucleus = true;
     param.coupling.g = 1.;
     param.colorCharge.QsMuRatio = 0.643;
-    param.event.QsMuRatioB = 0.643;
     param.event.b = 5.;  // a stale b must not shift the profiles
 
     Glauber glauber;

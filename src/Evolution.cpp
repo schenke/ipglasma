@@ -2251,8 +2251,8 @@ void Evolution::eccentricity(
                 g2mu2B = lat->cells[pos]->getg2mu2B();
                 avgQs2AQs2B += g2mu2A * param->colorCharge.QsMuRatio
                                * param->colorCharge.QsMuRatio * g2mu2B
-                               * param->event.QsMuRatioB
-                               * param->event.QsMuRatioB / a / a / a / a;
+                               * param->colorCharge.QsMuRatio
+                               * param->colorCharge.QsMuRatio / a / a / a / a;
             }
             avx += x * weight;
             avy += y * weight;

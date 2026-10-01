@@ -152,6 +152,11 @@ Check<T> positive() {
     return [](const T &v) { return v > 0 ? "" : "must be positive"; };
 }
 
+template <typename T = double>
+Check<T> nonNegative() {
+    return [](const T &v) { return v >= 0 ? "" : "must not be negative"; };
+}
+
 Check<int> even() {
     return [](const int &v) { return v % 2 == 0 ? "" : "must be even"; };
 }
@@ -199,12 +204,13 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("size", &P::lattice, &LatticeParameters::size)
             .check(positive<int>())
             .check(even()),  // the FFTs assume even lattice dimensions
-        param("L", &P::lattice, &LatticeParameters::L),
+        param("L", &P::lattice, &LatticeParameters::L).check(positive()),
         param("Ny", &P::colorCharge, &ColorChargeParameters::Ny),
         param("sqrtS", &P::collision, &CollisionParameters::sqrtS),
         param("g", &P::coupling, &CouplingParameters::g),
         param("g2mu", &P::collision, &CollisionParameters::g2mu),
-        param("maxTime", &P::evolution, &EvolutionParameters::maxTime),
+        param("maxTime", &P::evolution, &EvolutionParameters::maxTime)
+            .check(nonNegative()),
         param(
             "inverseQsForMaxTime", &P::evolution,
             &EvolutionParameters::inverseQsForMaxTime),
@@ -236,7 +242,8 @@ const std::vector<ParameterSpec> &parameterTable() {
             &CollisionParameters::useFixedNpart),
         param(
             "nucleiToAverage", &P::collision,
-            &CollisionParameters::nucleiToAverage),
+            &CollisionParameters::nucleiToAverage)
+            .check(positive<int>()),
         param(
             "gaussianWounding", &P::collision,
             &CollisionParameters::gaussianWounding),
@@ -254,10 +261,16 @@ const std::vector<ParameterSpec> &parameterTable() {
             &NucleusParameters::lightNucleusOption),
         param(
             "polarizationProjectile", &P::nucleus,
-            &NucleusParameters::polarizationProjectile),
+            &NucleusParameters::polarizationProjectile)
+            .check(oneOf(
+                {0, 1, 2},
+                " (0: random orientation, 1: longitudinal, 2: transverse)")),
         param(
             "polarizationTarget", &P::nucleus,
-            &NucleusParameters::polarizationTarget),
+            &NucleusParameters::polarizationTarget)
+            .check(oneOf(
+                {0, 1, 2},
+                " (0: random orientation, 1: longitudinal, 2: transverse)")),
         param(
             "polarizationProjectileJz", &P::nucleus,
             &NucleusParameters::polarizationProjectileJz),
@@ -298,7 +311,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin),
         param("omega", &P::subnucleon, &SubnucleonParameters::omega)
             .check(positive()),
-        param("Nq", &P::subnucleon, &SubnucleonParameters::Nq),
+        param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
+            .check(nonNegative()),
         param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc),
         param(
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
@@ -415,11 +429,9 @@ const std::vector<ParameterSpec> &parameterTable() {
             .optional("0.2")
             .check(positive()),
         param("jimwlkMass", &P::jimwlk, &JimwlkParameters::mass),
+        // 0 selects the running coupling, > 0 a fixed coupling
         param("jimwlkAlphaS", &P::jimwlk, &JimwlkParameters::alphaS)
-            .check([](const double &v) {
-                // 0 selects the running coupling, > 0 a fixed coupling
-                return v >= 0 ? "" : "must not be negative";
-            }),
+            .check(nonNegative()),
         param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds),
         param("jimwlkInitialX", &P::jimwlk, &JimwlkParameters::initialX),
         param("jimwlkXProjectile", &P::jimwlk, &JimwlkParameters::xProjectile),
@@ -596,8 +608,14 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     // of steps. With fewer than one step (e.g. maxTime 0 to only produce
     // Wilson lines) use 0.1 instead of dividing by zero.
     const double latticeSpacing = lattice.L / static_cast<double>(lattice.size);
-    const int timeSteps =
-        static_cast<int>(10 * evolution.maxTime / latticeSpacing);
+    const double steps = 10 * evolution.maxTime / latticeSpacing;
+    if (steps > 1e8) {
+        errors.push_back(
+            source + ": maxTime " + std::to_string(evolution.maxTime)
+            + " needs more than 1e8 time steps on this lattice");
+        return errors;
+    }
+    const int timeSteps = static_cast<int>(steps);
     run.dtau = (timeSteps > 0)
                    ? evolution.maxTime / (timeSteps * latticeSpacing)
                    : 0.1;
@@ -608,7 +626,9 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     }
     subnucleon.NqBase = subnucleon.Nq;
     if (subnucleon.subNucleonParamType > 0) {
-        loadPosteriorParameterSets(subnucleon.subNucleonParamType);
+        const std::string problem =
+            loadPosteriorParameterSets(subnucleon.subNucleonParamType);
+        if (!problem.empty()) errors.push_back(problem);
     }
     return errors;
 }

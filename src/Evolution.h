@@ -162,7 +162,8 @@ class Evolution {
      * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current time step index, used for the output file's
-     * time column and (on `it==1`) to seed `param->event.psi = `.
+     * time column and (on `it==1`) to store \f$\Psi\f$ in
+     * `param->event.psi`.
      * \param[in] cutoff Energy-density cutoff below which a cell is
      * excluded from the weighted averages [\f$\Lambda_{QCD}^4\f$-like
      * units, i.e. roughly 1/fm\f$^4\f$].

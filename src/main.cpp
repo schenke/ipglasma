@@ -146,7 +146,8 @@ int main(int argc, char *argv[]) {
             // sample the sub-nucleon parameters from the posterior distribution
             int iSubNucleonParamSet = param->subnucleon.subNucleonParamSet;
             if (iSubNucleonParamSet == -1) {
-                iSubNucleonParamSet = random->genrand64_int63();
+                iSubNucleonParamSet =
+                    static_cast<int>(random->genrand64_int63() % 2147483647ULL);
             }
             param->setParamsWithPosteriorParameterSet(
                 param->subnucleon.subNucleonParamType, iSubNucleonParamSet);
@@ -443,4 +444,11 @@ void writeparams(Parameters *param) {
              "subNucleonParamSet -1\n"
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);
+    if (param->subnucleon.subNucleonParamType > 0) {
+        fout1 << "# Posterior parameter set used: "
+              << param->event.subNucleonParamSet
+              << " (m, BG, BGq, smearingWidth, QsMuRatio and dqMin above are "
+                 "its values; NqBase = "
+              << param->subnucleon.NqBase << ")\n";
+    }
 }

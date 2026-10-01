@@ -92,7 +92,7 @@ python3 parallel_test_vector_meson_production.py \
 
 Useful flags:
 - `--input-template FILE` — IP-Glasma input file to use as a template
-  (default `input_vm_proton`); the lattice `NucleusQsTableFileName` is read
+  (default `input_vm_proton`); the lattice `nucleusQsTableFileName` is read
   from this file rather than hardcoded.
 - `--plot-only` — skip the simulation and only regenerate the comparison
   plot from data files already in `--datadir`.

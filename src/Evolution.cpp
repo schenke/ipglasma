@@ -1341,7 +1341,7 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
  * quantities when running coupling is enabled (\f$\alpha_s\f$ runs
  * with either the local \f$Q_s\f$ at this cell or one of the
  * event-averaged \f$Q_s\f$ choices, per
- * `param->coupling.runWithLocalQs`/`coupling.runWith0Min1Avg2MaxQs`).
+ * `param->coupling.runWithLocalQs`/`coupling.runWithQs`).
  * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
  * from (only used when `coupling.runWithLocalQs`).
  * \param[in] param Simulation parameters.
@@ -1373,38 +1373,38 @@ double computeRunningCouplingGfactor(
         const double g2mu2B = inBounds ? lat->cells[pos]->getg2mu2B() : 0;
 
         double Qs = 0.;
-        if (param->coupling.runWith0Min1Avg2MaxQs == 2) {
+        if (param->coupling.runWithQs == 2) {
             Qs = sqrt(
-                std::max(g2mu2A, g2mu2B) * param->colorCharge.QsmuRatio
-                * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                std::max(g2mu2A, g2mu2B) * param->colorCharge.QsMuRatio
+                * param->colorCharge.QsMuRatio / a / a * hbarc * hbarc
                 * param->coupling.g * param->coupling.g);
-        } else if (param->coupling.runWith0Min1Avg2MaxQs == 0) {
+        } else if (param->coupling.runWithQs == 0) {
             Qs = sqrt(
-                std::min(g2mu2A, g2mu2B) * param->colorCharge.QsmuRatio
-                * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                std::min(g2mu2A, g2mu2B) * param->colorCharge.QsMuRatio
+                * param->colorCharge.QsMuRatio / a / a * hbarc * hbarc
                 * param->coupling.g * param->coupling.g);
-        } else if (param->coupling.runWith0Min1Avg2MaxQs == 1) {
+        } else if (param->coupling.runWithQs == 1) {
             Qs = sqrt(
-                (g2mu2A + g2mu2B) / 2. * param->colorCharge.QsmuRatio
-                * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                (g2mu2A + g2mu2B) / 2. * param->colorCharge.QsMuRatio
+                * param->colorCharge.QsMuRatio / a / a * hbarc * hbarc
                 * param->coupling.g * param->coupling.g);
         }
 
         return computeRunningCouplingGfactorFromScale(
             g, muZero, c, lambdaQCD, nFlavors,
-            param->coupling.runWithThisFactorTimesQs * Qs);
+            param->coupling.runningCouplingQsFactor * Qs);
     } else {
         double averageQs = 0.;
-        if (param->coupling.runWith0Min1Avg2MaxQs == 0)
+        if (param->coupling.runWithQs == 0)
             averageQs = param->event.averageQsmin;
-        else if (param->coupling.runWith0Min1Avg2MaxQs == 1)
+        else if (param->coupling.runWithQs == 1)
             averageQs = param->event.averageQsAvg;
-        else if (param->coupling.runWith0Min1Avg2MaxQs == 2)
+        else if (param->coupling.runWithQs == 2)
             averageQs = param->event.averageQs;
 
         return computeRunningCouplingGfactorFromScale(
             g, muZero, c, lambdaQCD, nFlavors,
-            param->coupling.runWithThisFactorTimesQs * averageQs);
+            param->coupling.runningCouplingQsFactor * averageQs);
     }
 }
 
@@ -1436,7 +1436,7 @@ void prepareSpectrumField(
             int pos = lat->positionFromXY(i, j);
             double gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
-            if (!param->coupling.runWithkt) {
+            if (!param->coupling.runWithKt) {
                 *E1[pos] = sourceField[pos] * sqrt(gfactor);
             } else {
                 *E1[pos] = sourceField[pos];
@@ -1526,11 +1526,11 @@ void accumulateGluonSpectrum(
                             * (((it - 0.5) * dtau)
                                * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     }
-                    if (param->coupling.runWithkt) {
+                    if (param->coupling.runWithKt) {
                         nkt *= computeRunningCouplingGfactorFromScale(
                             g, muZero, c, param->coupling.LambdaQCD,
                             param->coupling.nFlavors,
-                            param->coupling.runWithThisFactorTimesQs * sqrt(kt2)
+                            param->coupling.runningCouplingQsFactor * sqrt(kt2)
                                 * hbarc / a);
                     }
                 }
@@ -1570,7 +1570,7 @@ void accumulateGluonSpectrum(
  * three times -- unconditionally, and again inside the \f$k_T>3\f$
  * and \f$k_T>6\f$ GeV cuts -- for both `usePseudoRapidity` branches).
  * \param[in] param Simulation parameters.
- * \param[in] m Jacobian mass term [GeV] (`param->colorCharge.Jacobianm`).
+ * \param[in] m Jacobian mass term [GeV] (`param->colorCharge.jacobianMass`).
  * \param[in] ik Bin index.
  * \param[in] dkt Momentum-bin width [lattice units].
  * \param[in] a Lattice spacing [fm].
@@ -1930,7 +1930,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     // for now I use the \tau=0 value at \tau=d\tau/2.
     double dtau = param->run.dtau;  // dtau is in lattice units
 
-    double maxtime = param->evolution.maxtime;  // maxtime is in fm
+    double maxtime = param->evolution.maxTime;  // maxtime is in fm
     if (param->evolution.inverseQsForMaxTime) {
         maxtime = 1. / param->event.averageQs * hbarc;
         messager_ << "[Evolution::run]: maximal evolution time = " << maxtime
@@ -2194,7 +2194,7 @@ void Evolution::eccentricity(
 
     double g2mu2A, g2mu2B, gfactor, alphas = 0., Qs = 0.;
     double c = param->coupling.c;
-    double muZero = param->coupling.muZero;
+    double muZero = param->coupling.mu0;
 
     double weight;
 
@@ -2249,10 +2249,10 @@ void Evolution::eccentricity(
                            * gfactor;  // GeV/fm^3
                 g2mu2A = lat->cells[pos]->getg2mu2A();
                 g2mu2B = lat->cells[pos]->getg2mu2B();
-                avgQs2AQs2B += g2mu2A * param->colorCharge.QsmuRatio
-                               * param->colorCharge.QsmuRatio * g2mu2B
-                               * param->event.QsmuRatioB
-                               * param->event.QsmuRatioB / a / a / a / a;
+                avgQs2AQs2B += g2mu2A * param->colorCharge.QsMuRatio
+                               * param->colorCharge.QsMuRatio * g2mu2B
+                               * param->event.QsMuRatioB
+                               * param->event.QsMuRatioB / a / a / a / a;
             }
             avx += x * weight;
             avy += y * weight;
@@ -2546,8 +2546,8 @@ void Evolution::readNkt(Parameters *param) {
     }
 
     double m, P;
-    m = param->colorCharge.Jacobianm;                              // in GeV
-    P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
+    m = param->colorCharge.jacobianMass;                           // in GeV
+    P = 0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
     double dNdeta2;
     dNdeta2 = 0.;
 
@@ -2712,7 +2712,7 @@ int Evolution::multiplicity(
                   << maxtime << " fm";
         messager_.flush("info");
     } else {
-        maxtime = param->evolution.maxtime;  // maxtime is in fm
+        maxtime = param->evolution.maxTime;  // maxtime is in fm
     }
 
     int itmax = static_cast<int>(floor(maxtime / (a * dtau) + 1e-10));
@@ -2734,7 +2734,7 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
 
     double c = param->coupling.c;
-    double muZero = param->coupling.muZero;
+    double muZero = param->coupling.mu0;
 
     prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, E1);
     addPhaseAndRestart(
@@ -2801,8 +2801,8 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.spectrum_pi", multiplicityPhaseStart);
 
     double m, P;
-    m = param->colorCharge.Jacobianm;                              // in GeV
-    P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
+    m = param->colorCharge.jacobianMass;                           // in GeV
+    P = 0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
 
     for (int ik = 0; ik < bins; ik++) {
         if (counter[ik] > 0) {
@@ -2847,8 +2847,8 @@ int Evolution::multiplicity(
                   << dEdeta / dNdeta;
         messager_.flush("info");
     } else if (param->colorCharge.usePseudoRapidity) {
-        m = param->colorCharge.Jacobianm;                              // in GeV
-        P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
+        m = param->colorCharge.jacobianMass;                           // in GeV
+        P = 0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
         dNdeta *= cosh(param->colorCharge.rapidity())
                   / (sqrt(
                       pow(cosh(param->colorCharge.rapidity()), 2.)
@@ -2906,7 +2906,7 @@ int Evolution::multiplicity(
                << computeRunningCouplingGfactorFromScale(
                       g, muZero, c, param->coupling.LambdaQCD,
                       param->coupling.nFlavors,
-                      param->coupling.runWithThisFactorTimesQs
+                      param->coupling.runningCouplingQsFactor
                           * param->event.averageQs)
                << endl;
         foutNN.close();

@@ -26,9 +26,9 @@ struct EvolutionParameters {
     /// disk.
     int mode = 0;
     /// Maximal evolution time [fm/c].
-    double maxtime = 0.;
+    double maxTime = 0.;
     /// Whether to use \f$1/Q_s\f$ as the maximal evolution time (`1`)
-    /// or the manually entered \c maxtime (`0`).
+    /// or the manually entered \c maxTime (`0`).
     bool inverseQsForMaxTime = false;
 };
 
@@ -48,20 +48,20 @@ struct RandomParameters {
 /// Collision system, impact parameter and nucleon wounding.
 struct CollisionParameters {
     /// Projectile nucleus' species name.
-    std::string Projectile;
+    std::string projectile;
     /// Target nucleus' species name (see Glauber::findNucleusData()).
-    std::string Target;
+    std::string target;
     /// Center-of-mass energy \f$\sqrt{s}\f$ of the collision [GeV].
-    double roots = 0.;
+    double sqrtS = 0.;
     /// Inelastic nucleon-nucleon cross section [mb].
-    double SigmaNN = 0.;
+    double sigmaNN = 0.;
     /// Minimum impact parameter [fm] to sample from.
-    double bmin = 0.;
+    double bMin = 0.;
     /// Maximum impact parameter [fm] to sample to.
-    double bmax = 0.;
+    double bMax = 0.;
     /// Whether to sample the impact parameter from a linear (`1`) or
     /// uniform (`0`) distribution.
-    bool samplebFromLinearDistribution = false;
+    bool sampleBFromLinearDistribution = false;
     /// Whether to randomly rotate the event's reaction plane.
     bool rotateReactionPlane = false;
     /// Whether to use nuclei with finite geometry (`1`) or a constant
@@ -79,7 +79,7 @@ struct CollisionParameters {
     int useFixedNpart = 0;
     /// Number of nuclei to average over, for a smoother thickness
     /// distribution.
-    int averageOverThisManyNuclei = 0;
+    int nucleiToAverage = 0;
     /// Whether to use a hard-sphere profile (`0`) or Gaussian cross
     /// section (`1`) to decide whether a nucleon is wounded.
     bool gaussianWounding = false;
@@ -99,9 +99,9 @@ struct NucleusParameters {
     int lightNucleusOption = 0;
     /// Projectile polarization: `0` unpolarized, `1` longitudinally
     /// polarized, `2` transversely polarized.
-    int polariztionProjectile = 0;
-    /// Same as \c polariztionProjectile, for the target.
-    int polariztionTarget = 0;
+    int polarizationProjectile = 0;
+    /// Same as \c polarizationProjectile, for the target.
+    int polarizationTarget = 0;
     /// Projectile's \f$J_z\f$ polarization.
     double polarizationProjectileJz = 0.;
     /// Target's \f$J_z\f$ polarization.
@@ -109,14 +109,14 @@ struct NucleusParameters {
     /// Whether to use a smooth Woods-Saxon distribution for a heavy
     /// nucleus (`1`) instead of sampling discrete nucleons.
     bool useSmoothNucleus = false;
-    /// Whether `R_WS`/`a_WS`/`beta2`/`beta3`/`beta4`/\c
+    /// Whether `radiusWS`/`diffusenessWS`/`beta2`/`beta3`/`beta4`/\c
     /// gamma override a nucleus species' built-in deformation
     /// parameters.
-    bool setWSDeformParams = false;
+    bool useInputWSParams = false;
     /// Woods-Saxon half-density radius [fm] override.
-    double R_WS = 0.;
+    double radiusWS = 0.;
     /// Woods-Saxon surface diffuseness [fm] override.
-    double a_WS = 0.;
+    double diffusenessWS = 0.;
     /// Quadrupole deformation parameter \f$\beta_2\f$ override (e.g.
     /// to test sensitivity in Uranium).
     double beta2 = 0.;
@@ -128,21 +128,21 @@ struct NucleusParameters {
     double gamma = 0.;
     /// Neutron-skin radius offset [fm] between proton and neutron
     /// density profiles.
-    double dR_np = 0.;
+    double deltaRnp = 0.;
     /// Neutron-skin diffuseness offset [fm] between proton and neutron
     /// density profiles.
-    double da_np = 0.;
-    /// Whether to enforce \c d_min as a minimum inter-nucleon
+    double deltaAnp = 0.;
+    /// Whether to enforce \c dMin as a minimum inter-nucleon
     /// distance when sampling nucleon positions.
-    bool force_dmin_flag = false;
+    bool forceDMin = false;
     /// Minimum inter-nucleon distance [fm], enforced when \c
     /// force_dmin_flag is set.
-    double d_min = 0.;
+    double dMin = 0.;
 };
 
 /// Nucleon substructure (constituent quarks) and its Bayesian-posterior
-/// parameter sets. With SubNucleonParamType > 0, m, BG, BGq, smearingWidth,
-/// NqBase, QsmuRatio and dqMin are overwritten from the posterior set every
+/// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,
+/// NqBase, QsMuRatio and dqMin are overwritten from the posterior set every
 /// event.
 struct SubnucleonParameters {
     /// Infrared mass regulator [GeV] cutting off the Coulomb tail;
@@ -165,7 +165,7 @@ struct SubnucleonParameters {
     double omega = 0.;
     /// If `>0`, use a proton made of this many constituent quarks
     /// ("hot spots").
-    int useConstituentQuarkProton = 0;
+    int Nq = 0;
     /// Base number of constituent quarks (posterior-fit parameter; see
     /// setParamsWithPosteriorParameterSet()).
     double NqBase = 0.;
@@ -182,10 +182,10 @@ struct SubnucleonParameters {
     /// setParamsWithPosteriorParameterSet() draws from: `1` (variable
     /// \f$N_q\f$) or `2`/`4` (fixed
     /// \f$N_q=3\f$); see loadPosteriorParameterSets().
-    int SubNucleonParamType = 0;
+    int subNucleonParamType = 0;
     /// Index into the posterior parameter set selected by \c
-    /// SubNucleonParamType, modulo the table's row count.
-    int SubNucleonParamSet = 0;
+    /// subNucleonParamType, modulo the table's row count.
+    int subNucleonParamSet = 0;
     /// Whether to smear \f$Q_s\f$ using a Poisson distribution around
     /// its mean at every transverse position (`1`) or not (`0`).
     bool smearQs = false;
@@ -193,17 +193,17 @@ struct SubnucleonParameters {
     /// (parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
     double smearingWidth = 0.;
     /// UV damping parameter.
-    double UVdamp = 0.;
+    double UVDamp = 0.;
 };
 
 /// Saturation scale, color charges and rapidity/x of the nuclei.
 struct ColorChargeParameters {
     /// Ratio between \f$Q_s\f$ and \f$\mu\f$ for nucleus A:
-    /// \f$Q_s = \text{QsmuRatio} \cdot g^2\mu\f$.
-    double QsmuRatio = 0.;
+    /// \f$Q_s = \text{QsMuRatio} \cdot g^2\mu\f$.
+    double QsMuRatio = 0.;
     /// File name of the table giving \f$Q_s^2\f$ as a function of
     /// rapidity \f$Y\f$ and \f$Q_s^2(Y=0)\f$.
-    std::string NucleusQsTableFileName;
+    std::string nucleusQsTableFileName;
     /// If `>0`, exclude events with \f$Q_{s,\min}^2 S_T <\f$ this
     /// value (used to trigger on high-multiplicity events).
     int minimumQs2ST = 0;
@@ -211,25 +211,25 @@ struct ColorChargeParameters {
     int Ny = 0;
     /// Rapidity used to pick Bjorken \f$x\f$ from IP-Sat for the
     /// projectile.
-    double RapidityA = 0.;
-    /// Same as \c RapidityA, for the target.
-    double RapidityB = 0.;
-    /// Whether `RapidityA`/`RapidityB` hold pseudorapidity instead
+    double rapidityA = 0.;
+    /// Same as \c rapidityA, for the target.
+    double rapidityB = 0.;
+    /// Whether `rapidityA`/`rapidityB` hold pseudorapidity instead
     /// of rapidity (`1`), applying the corresponding Jacobian.
     bool usePseudoRapidity = false;
     /// Mass term [GeV] in the Jacobian converting rapidity \f$y\f$ to
     /// pseudorapidity \f$\eta\f$.
-    double Jacobianm = 0.;
+    double jacobianMass = 0.;
     /// Whether Bjorken \f$x\f$ should fluctuate as the local \f$Q_s\f$
     /// (`1`, \f$x = Q_s\beta/\sqrt{s}\f$) or always use the input
     /// file's rapidity value (`0`).
-    bool useFluctuatingx = false;
+    bool useFluctuatingX = false;
     /// Factor \f$\beta\f$ in \f$x = Q_s\beta/\sqrt{s}\f$; only used
-    /// when \c useFluctuatingx is set.
-    double xFromThisFactorTimesQs = 0.;
+    /// when \c useFluctuatingX is set.
+    double xQsFactor = 0.;
 
     /// Mean of the projectile's and target's rapidity.
-    double rapidity() const { return (RapidityA + RapidityB) / 2.; }
+    double rapidity() const { return (rapidityA + rapidityB) / 2.; }
 };
 
 /// Fixed and running coupling.
@@ -241,7 +241,7 @@ struct CouplingParameters {
     bool runningCoupling = false;
     /// \f$\mu_0\f$ in the running-coupling formula (keeps it infrared
     /// finite).
-    double muZero = 0.;
+    double mu0 = 0.;
     /// Controls how smooth the running-coupling cutoff is.
     double c = 0.;
     /// Number of active quark flavors \f$N_f\f$ in the one-loop QCD
@@ -250,23 +250,23 @@ struct CouplingParameters {
     /// (see computeAlphaS()) and JIMWLK::getAlphas().
     int nFlavors = 0;
     /// \f$\Lambda_{QCD}\f$ [GeV] in the running-coupling formula (see
-    /// computeAlphaS()); distinct from \c Lambda_QCD_jimwlk, which
+    /// computeAlphaS()); distinct from \c jimwlkLambdaQCD, which
     /// scales the separate JIMWLK small-x evolution coupling.
     double LambdaQCD = 0.;
     /// Whether \f$\alpha_s\f$ should run with the maximum (`2`),
     /// average (`1`), or minimum (`0`) of \f$Q_s\f$ from nuclei A and
     /// B.
-    int runWith0Min1Avg2MaxQs = 0;
+    int runWithQs = 0;
     /// Factor multiplying \f$Q_s\f$ under the log in the running
     /// \f$\alpha_s\f$ formula.
-    double runWithThisFactorTimesQs = 0.;
+    double runningCouplingQsFactor = 0.;
     /// Whether \f$\alpha_s\f$ should run with the local \f$Q_s\f$ from
     /// nuclei A and B (`1`) or the average (`0`); both still use \c
     /// runWith0Min1Avg2MaxQs's max/average/min choice.
     bool runWithLocalQs = false;
     /// Whether \f$\alpha_s\f$ should run with \f$k_T\f$ (`1`) instead;
-    /// overrides any \c runWith0Min1Avg2MaxQs-based running if set.
-    bool runWithkt = false;
+    /// overrides any \c runWithQs-based running if set.
+    bool runWithKt = false;
 };
 
 /// Observables and output files.
@@ -296,7 +296,7 @@ struct OutputParameters {
     /// Lattice side length in rapidity for the output data.
     int etaSizeOutput = 0;
     /// Output-grid step size in rapidity.
-    double detaOutput = 0.;
+    double dEtaOutput = 0.;
 };
 
 /// Writing and reading Wilson lines.
@@ -317,38 +317,38 @@ struct WilsonLineParameters {
 struct JimwlkParameters {
     /// Whether to run JIMWLK evolution before the classical Yang-Mills
     /// stage.
-    bool useJIMWLK = false;
+    bool enabled = false;
     /// Regulator [GeV] in JIMWLK's running \f$\alpha_s(r)\f$ (Eq. (22)
     /// of \cite Mantysaari:2022sux).
-    double mu0_jimwlk = 0.;
+    double mu0 = 0.;
     /// \f$\Lambda_{QCD}\f$ [GeV] in JIMWLK's running \f$\alpha_s(r)\f$
     /// (Eq. (22) of \cite Mantysaari:2022sux).
-    double Lambda_QCD_jimwlk = 0.;
+    double LambdaQCD = 0.;
     /// Cutoff smoothness parameter in JIMWLK's running \f$\alpha_s(r)\f$
     /// (Eq. (22) of \cite Mantysaari:2022sux); distinct from \c c, the
     /// analogous parameter in the classical-evolution/hydro-output
     /// running-coupling formula (see computeAlphaS()). \c nFlavors is
     /// shared between the two formulas instead, since \f$N_f\f$ is the
     /// same physical quantity in both.
-    double c_jimwlk = 0.;
+    double c = 0.;
     /// Infrared regulator [GeV] in the JIMWLK kernel (see Eq. (21) of
     /// \cite Mantysaari:2022sux).
-    double m_jimwlk = 0.;
+    double mass = 0.;
     /// JIMWLK coupling: `0` running coupling, a positive value fixed
     /// coupling.
-    double alphas_jimwlk = 0.;
+    double alphaS = 0.;
     /// JIMWLK evolution step size (recommended `0.005` with running
     /// coupling, `0.0005` with fixed coupling).
-    double Ds_jimwlk = 0.;
+    double Ds = 0.;
     /// Bjorken \f$x\f$ at the initial condition of the JIMWLK
     /// evolution.
-    double jimwlk_ic_x = 0.;
+    double initialX = 0.;
     /// Bjorken \f$x\f$ the projectile (nucleus A) is evolved to.
-    double x_projectile_jimwlk = 0.;
+    double xProjectile = 0.;
     /// Bjorken \f$x\f$ the target (nucleus B) is evolved to.
-    double x_target_jimwlk = 0.;
+    double xTarget = 0.;
     /// Whether to save Wilson-line snapshots at the \f$x\f$ values in
-    /// \c xSnapshotList during JIMWLK evolution.
+    /// \c jimwlkXSnapshotList during JIMWLK evolution.
     bool saveSnapshots = false;
     /// Bjorken \f$x\f$ values to save a JIMWLK snapshot at, if \c
     /// saveSnapshots.
@@ -390,7 +390,7 @@ struct EventState {
     /// Initial event-plane angle \f$\Psi_2\f$ (geometric/spatial).
     double psi = 0.;
     /// Average \f$Q_s\f$ (maximum of nuclei A and B), used as the
-    /// running-coupling scale when \c runWith0Min1Avg2MaxQs selects the
+    /// running-coupling scale when \c runWithQs selects the
     /// maximum.
     double averageQs = 0.;
     /// Average \f$Q_s\f$ (average of nuclei A and B), used when \c
@@ -402,8 +402,8 @@ struct EventState {
     /// \f$\alpha_s\f$ computed at the scale set by the chosen average
     /// \f$Q_s\f$.
     double alphas = 0.;
-    /// Same as \c QsmuRatio, for nucleus B.
-    double QsmuRatioB = 0.;
+    /// Same as \c QsMuRatio, for nucleus B.
+    double QsMuRatioB = 0.;
 };
 
 /**
@@ -412,7 +412,7 @@ struct EventState {
  * values the program sets during a run (\c run) and an event (\c event).
  *
  * The fields are plain public members, e.g. `param->lattice.size` or
- * `param->jimwlk.mu0_jimwlk`; input parameters are named like their
+ * `param->jimwlk.mu0`; input parameters are named like their
  * input-file key.
  */
 class Parameters {
@@ -442,8 +442,8 @@ class Parameters {
     /// Woods-Saxon distribution.
     NucleusParameters nucleus;
     /// Nucleon substructure (constituent quarks) and its Bayesian-posterior
-    /// parameter sets. With SubNucleonParamType > 0, m, BG, BGq, smearingWidth,
-    /// NqBase, QsmuRatio and dqMin are overwritten from the posterior set every
+    /// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,
+    /// NqBase, QsMuRatio and dqMin are overwritten from the posterior set every
     /// event.
     SubnucleonParameters subnucleon;
     /// Saturation scale, color charges and rapidity/x of the nuclei.
@@ -485,7 +485,7 @@ class Parameters {
      * Applies one row of a loaded posterior-fit table to this
      * instance's
      * `subnucleon.m`/`subnucleon.BG`/`subnucleon.BGq`/`subnucleon.smearingWidth`/`subnucleon.NqBase`/\c
-     * colorCharge.QsmuRatio/\c subnucleon.dqMin.
+     * colorCharge.QsMuRatio/\c subnucleon.dqMin.
      * \param[in] itype `1` uses \c posteriorParamSets_ (also sets \c
      * subnucleon.NqBase from the table); `2` or `4` use \c
      * posteriorParamSetsNq3_ (fixing \c subnucleon.NqBase to `3`); any other

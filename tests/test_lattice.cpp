@@ -29,8 +29,8 @@ void makeLatticeParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.RapidityA = 0.0;
-    param.colorCharge.RapidityB = 0.0;
+    param.colorCharge.rapidityA = 0.0;
+    param.colorCharge.rapidityB = 0.0;
     param.wilsonLines.wilsonLinePath = ".";
 }
 }  // namespace
@@ -82,7 +82,7 @@ TEST_CASE("Lattice::writeWilsonLines (text format) writes a non-empty file") {
     Parameters param;
     makeLatticeParam(param, length);
     param.wilsonLines.writeWilsonLines = 1;  // text
-    param.colorCharge.useFluctuatingx =
+    param.colorCharge.useFluctuatingX =
         true;  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
@@ -107,7 +107,7 @@ TEST_CASE(
     Parameters param;
     makeLatticeParam(param, length);
     param.wilsonLines.writeWilsonLines = 2;  // binary
-    param.colorCharge.useFluctuatingx =
+    param.colorCharge.useFluctuatingX =
         true;  // with this option, no x value in the generated filename
     Lattice lat(&param, length);
 
@@ -146,7 +146,7 @@ TEST_CASE(
     CHECK(nc == 3);
     CHECK(L == doctest::Approx(param.lattice.L));
     CHECK(a == doctest::Approx(param.lattice.L / length));
-    CHECK(rapidity == doctest::Approx(param.colorCharge.RapidityA));
+    CHECK(rapidity == doctest::Approx(param.colorCharge.rapidityA));
 
     // The writer nests ix outer / iy inner (see Lattice.cpp), so the
     // site-th 9-(re, im)-pair block in the file must be lat.U[site], i.e.

@@ -1093,16 +1093,16 @@ void MyEigen::flowVelocity4DImpl(
     int hy = hx;
     int heta = param->output.etaSizeOutput;
     double hL = param->output.LOutput;
-    double deta = param->output.detaOutput;
+    double deta = param->output.dEtaOutput;
     double c = param->coupling.c;
-    double muZero = param->coupling.muZero;
+    double muZero = param->coupling.mu0;
 
     if (param->coupling.runningCoupling) {
         // run with average Q_s only ! local makes no sense here (stuff has
         // moved in the mean time)
         gfactor = computeRunningCouplingGfactorFromScale(
             g, muZero, c, param->coupling.LambdaQCD, param->coupling.nFlavors,
-            param->coupling.runWithThisFactorTimesQs
+            param->coupling.runningCouplingQsFactor
                 * param->event.averageQsmin);
     } else {
         gfactor = 1.;

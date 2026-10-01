@@ -21,12 +21,12 @@ void makeValidBaseline(Parameters &param) {
     param.wilsonLines.wilsonLinePath = ".";
     param.jimwlk.saveSnapshots = 0;
     param.coupling.runningCoupling = false;
-    param.coupling.muZero = 0.3;
+    param.coupling.mu0 = 0.3;
     param.coupling.LambdaQCD = 0.2;
-    param.jimwlk.useJIMWLK = 0;
-    param.jimwlk.alphas_jimwlk = 0.3;  // fixed JIMWLK coupling
-    param.jimwlk.mu0_jimwlk = 0.28;
-    param.jimwlk.Lambda_QCD_jimwlk = 0.04;
+    param.jimwlk.enabled = 0;
+    param.jimwlk.alphaS = 0.3;  // fixed JIMWLK coupling
+    param.jimwlk.mu0 = 0.28;
+    param.jimwlk.LambdaQCD = 0.04;
 }
 }  // namespace
 
@@ -38,7 +38,7 @@ TEST_CASE("Parameters::validationErrors: accepts a normal configuration") {
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: rejects saveSnapshots without "
+    "Parameters::validationErrors: rejects jimwlkSaveSnapshots without "
     "writeWilsonLines") {
     Parameters param;
     makeValidBaseline(param);
@@ -63,11 +63,11 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: rejects LambdaQCD >= muZero only with "
+    "Parameters::validationErrors: rejects LambdaQCD >= mu0 only with "
     "running coupling") {
     Parameters param;
     makeValidBaseline(param);
-    param.coupling.muZero = 0.2;
+    param.coupling.mu0 = 0.2;
     param.coupling.LambdaQCD = 0.2;  // equal: log argument is 0 at the boundary
     CHECK(param.validationErrors().empty());
 
@@ -80,15 +80,15 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: rejects Lambda_QCD_jimwlk >= mu0_jimwlk "
+    "Parameters::validationErrors: rejects jimwlkLambdaQCD >= jimwlkMu0 "
     "only with the JIMWLK running coupling") {
     Parameters param;
     makeValidBaseline(param);
-    param.jimwlk.Lambda_QCD_jimwlk = 0.3;     // >= mu0_jimwlk
+    param.jimwlk.LambdaQCD = 0.3;             // >= jimwlkMu0
     CHECK(param.validationErrors().empty());  // JIMWLK off
-    param.jimwlk.useJIMWLK = 1;
+    param.jimwlk.enabled = 1;
     CHECK(param.validationErrors().empty());  // fixed JIMWLK coupling
-    param.jimwlk.alphas_jimwlk = 0.;
+    param.jimwlk.alphaS = 0.;
     CHECK(param.validationErrors().size() == 1);
 }
 

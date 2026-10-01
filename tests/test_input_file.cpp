@@ -196,22 +196,21 @@ TEST_CASE("Parameters::readInput: reads values and sets derived ones") {
     REQUIRE(param.readInput(inputFromText(readSourceFile("input"))).empty());
     CHECK(param.lattice.size == 256);
     CHECK(param.lattice.L == 30.);
-    CHECK(param.collision.Projectile == "Pb");
+    CHECK(param.collision.projectile == "Pb");
     CHECK(param.jimwlk.xSnapshotList.size() == 5);
-    CHECK(param.jimwlk.useJIMWLK == true);
-    // derived: NqBase from useConstituentQuarkProton, dtau ~0.1 with
-    // maxtime a whole number of steps
-    CHECK(
-        param.subnucleon.NqBase == param.subnucleon.useConstituentQuarkProton);
+    CHECK(param.jimwlk.enabled == true);
+    // derived: NqBase from Nq, dtau ~0.1 with
+    // maxTime a whole number of steps
+    CHECK(param.subnucleon.NqBase == param.subnucleon.Nq);
     const double a = param.lattice.L / param.lattice.size;
-    const double steps = param.evolution.maxtime / (a * param.run.dtau);
+    const double steps = param.evolution.maxTime / (a * param.run.dtau);
     CHECK(steps == doctest::Approx(static_cast<int>(steps + 0.5)));
     CHECK(param.run.dtau == doctest::Approx(0.1).epsilon(0.05));
 }
 
-TEST_CASE("Parameters::readInput: maxtime 0 gives dtau 0.1, not NaN") {
+TEST_CASE("Parameters::readInput: maxTime 0 gives dtau 0.1, not NaN") {
     Parameters param;
-    REQUIRE(param.readInput(inputFromText(exampleInputWith("maxtime", "0")))
+    REQUIRE(param.readInput(inputFromText(exampleInputWith("maxTime", "0")))
                 .empty());
     CHECK(param.run.dtau == 0.1);
 }
@@ -229,9 +228,9 @@ TEST_CASE("Parameters::readInput: unknown keys are errors, with a suggestion") {
 
 TEST_CASE("Parameters::readInput: required keys must be given") {
     const std::vector<std::string> errors =
-        readErrors(exampleInputWith("muZero", ""));
+        readErrors(exampleInputWith("mu0", ""));
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "test: muZero is required but not given");
+    CHECK(errors[0] == "test: mu0 is required but not given");
 }
 
 TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
@@ -251,8 +250,8 @@ TEST_CASE("Parameters::readInput: values must have the parameter's type") {
         readErrors(exampleInputWith("useJIMWLK", "2")),
         "useJIMWLK '2' is not 0 or 1"));
     CHECK(anyContains(
-        readErrors(exampleInputWith("runWithkt", "2")),
-        "runWithkt '2' is not 0 or 1"));
+        readErrors(exampleInputWith("runWithKt", "2")),
+        "runWithKt '2' is not 0 or 1"));
     CHECK(anyContains(
         readErrors(exampleInputWith("size", "256.0")),
         "size '256.0' is not an integer"));
@@ -260,8 +259,8 @@ TEST_CASE("Parameters::readInput: values must have the parameter's type") {
         readErrors(exampleInputWith("m", "0.4GeV")),
         "m '0.4GeV' is not a number"));
     CHECK(anyContains(
-        readErrors(exampleInputWith("xSnapshotList", "1e-3;1e-4")),
-        "xSnapshotList '1e-3;1e-4' is not a comma-separated list"));
+        readErrors(exampleInputWith("jimwlkXSnapshotList", "1e-3;1e-4")),
+        "jimwlkXSnapshotList '1e-3;1e-4' is not a comma-separated list"));
 }
 
 TEST_CASE("Parameters::readInput: per-value checks") {
@@ -272,17 +271,17 @@ TEST_CASE("Parameters::readInput: per-value checks") {
     };
     for (const Case &c : std::vector<Case> {
              {"size", "0", "must be positive"},
-             {"alphas_jimwlk", "-0.3", "must not be negative"},
+             {"jimwlkAlphaS", "-0.3", "must not be negative"},
              {"nFlavors", "-1", "must be between 0 and 16"},
              {"size", "255", "must be even"},
              {"omega", "0", "must be positive"},
-             {"SubNucleonParamType", "3", "must be one of 0, 1, 2, 4"},
-             {"runWith0Min1Avg2MaxQs", "3", "must be one of 0, 1, 2"},
+             {"subNucleonParamType", "3", "must be one of 0, 1, 2, 4"},
+             {"runWithQs", "3", "must be one of 0, 1, 2"},
              {"nFlavors", "17", "must be between 0 and 16"},
              {"LambdaQCD", "0", "must be positive"},
              {"c", "-0.2", "must be positive"},
-             {"c_jimwlk", "0", "must be positive"},
-             {"Lambda_QCD_jimwlk", "0", "must be positive"},
+             {"jimwlkC", "0", "must be positive"},
+             {"jimwlkLambdaQCD", "0", "must be positive"},
              {"writeWilsonLines", "3", "must be one of 0, 1, 2"},
              {"readInitialWilsonLines", "3", "must be one of 0, 1, 2"},
          }) {
@@ -314,14 +313,14 @@ TEST_CASE("Parameters::readInput: reports every problem at once") {
 
 TEST_CASE(
     "Parameters::readInput: Woods-Saxon deformation parameters are only "
-    "read with setWSDeformParams 1") {
-    // without them, setWSDeformParams 0 is fine and 1 is not
+    "read with useInputWSParams 1") {
+    // without them, useInputWSParams 0 is fine and 1 is not
     std::string text;
     {
-        std::istringstream in(exampleInputWith("setWSDeformParams", "0"));
+        std::istringstream in(exampleInputWith("useInputWSParams", "0"));
         std::string line;
         while (std::getline(in, line)) {
-            if (line.rfind("R_WS ", 0) != 0) text += line + "\n";
+            if (line.rfind("radiusWS ", 0) != 0) text += line + "\n";
         }
     }
     CHECK(readErrors(text).empty());
@@ -331,14 +330,14 @@ TEST_CASE(
         std::istringstream in(text);
         std::string line;
         while (std::getline(in, line)) {
-            text1 += (line.rfind("setWSDeformParams ", 0) == 0)
-                         ? "setWSDeformParams 1\n"
+            text1 += (line.rfind("useInputWSParams ", 0) == 0)
+                         ? "useInputWSParams 1\n"
                          : line + "\n";
         }
     }
     const std::vector<std::string> errors = readErrors(text1);
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "test: R_WS is required but not given");
+    CHECK(errors[0] == "test: radiusWS is required but not given");
 }
 
 TEST_CASE(
@@ -358,8 +357,7 @@ TEST_CASE(
     reread.writeInputParameters(rewritten);
     CHECK(rewritten.str() == written.str());
     // exact doubles, not rounded ones
-    CHECK(
-        reread.jimwlk.x_projectile_jimwlk == param.jimwlk.x_projectile_jimwlk);
+    CHECK(reread.jimwlk.xProjectile == param.jimwlk.xProjectile);
     CHECK(reread.run.dtau == param.run.dtau);
 }
 
@@ -390,29 +388,66 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::readInput: xSnapshotList is only read with saveSnapshots 1") {
+    "Parameters::readInput: jimwlkXSnapshotList is only read with "
+    "jimwlkSaveSnapshots 1") {
     std::string text;
     {
-        std::istringstream in(exampleInputWith("xSnapshotList", ""));
+        std::istringstream in(exampleInputWith("jimwlkXSnapshotList", ""));
         std::string line;
         while (std::getline(in, line)) {
-            text += (line.rfind("saveSnapshots ", 0) == 0) ? "saveSnapshots 0\n"
-                                                           : line + "\n";
+            text += (line.rfind("jimwlkSaveSnapshots ", 0) == 0)
+                        ? "jimwlkSaveSnapshots 0\n"
+                        : line + "\n";
         }
     }
     CHECK(readErrors(text).empty());
 
-    const std::vector<std::string> errors =
-        readErrors(exampleInputWith("xSnapshotList", ""));  // saveSnapshots 1
+    const std::vector<std::string> errors = readErrors(
+        exampleInputWith("jimwlkXSnapshotList", ""));  // jimwlkSaveSnapshots 1
     REQUIRE(errors.size() == 1);
-    CHECK(errors[0] == "test: xSnapshotList is required but not given");
+    CHECK(errors[0] == "test: jimwlkXSnapshotList is required but not given");
 }
 
 TEST_CASE(
     "Parameters::readInput: a malformed condition key gives one error, not "
     "an indeterminate set of follow-up errors") {
     const std::vector<std::string> errors =
-        readErrors(exampleInputWith("setWSDeformParams", "1.0"));
+        readErrors(exampleInputWith("useInputWSParams", "1.0"));
     REQUIRE(errors.size() == 1);
-    CHECK(anyContains(errors, "setWSDeformParams '1.0' is not 0 or 1"));
+    CHECK(anyContains(errors, "useInputWSParams '1.0' is not 0 or 1"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: keys renamed in IP-Glasma 2.0 name their new key") {
+    const std::vector<std::string> errors = readErrors(
+        insertBeforeEndOfFile(exampleInputWith("dMin", ""), "d_min 0.9\n"));
+    REQUIRE(errors.size() == 1);
+    CHECK(anyContains(errors, "d_min was renamed to dMin"));
+
+    // given together with the new key, the old one is just unknown
+    const std::vector<std::string> both = readErrors(
+        insertBeforeEndOfFile(readSourceFile("input"), "d_min 0.9\n"));
+    REQUIRE(both.size() == 1);
+    CHECK(anyContains(both, "unknown parameter d_min (renamed to dMin)"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: a pre-2.0 input file reports each rename once") {
+    std::istringstream in(readSourceFile("input"));
+    std::string line, oldInput;
+    const std::vector<std::pair<std::string, std::string>> renames = {
+        {"maxTime", "maxtime"}, {"dMin", "d_min"}, {"jimwlkC", "c_jimwlk"}};
+    while (std::getline(in, line)) {
+        for (const auto &[newKey, oldKey] : renames) {
+            if (line.rfind(newKey + " ", 0) == 0) {
+                line = oldKey + line.substr(newKey.size());
+            }
+        }
+        oldInput += line + "\n";
+    }
+    const std::vector<std::string> errors = readErrors(oldInput);
+    CHECK(errors.size() == renames.size());
+    for (const auto &[newKey, oldKey] : renames) {
+        CHECK(anyContains(errors, oldKey + " was renamed to " + newKey));
+    }
 }

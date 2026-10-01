@@ -337,7 +337,7 @@ class Init {
     void resetForwardLightconeFieldsTeam(Lattice *lat, int N2);
     /**
      * Samples this event's impact parameter \f$b\f$ (linearly or
-     * uniformly distributed between `collision.bmin`/`collision.bmax`, or `0`
+     * uniformly distributed between `collision.bMin`/`collision.bMax`, or `0`
      * for the constant-color-charge-density case) and reaction-plane angle, and
      * resets every nucleon's `.collided` flag to `0`.
      * \param[in,out] param Simulation parameters; `event.b`/`event.phiRP`
@@ -364,7 +364,7 @@ class Init {
      * Glauber::sampleTARejection() and its neutron-proton distance
      * convention).
      * \param[in,out] param Simulation parameters; exits with an error
-     * if `collision.averageOverThisManyNuclei > 1` and either nucleus is a
+     * if `collision.nucleiToAverage > 1` and either nucleus is a
      * proton.
      * \param[in,out] random Random-number source.
      * \param[in] glauber Configured Glauber instance providing nuclear
@@ -397,7 +397,7 @@ class Init {
         std::vector<ReturnValue> &nucleus);
     /**
      * Reads the \f$Q_s^2(T_p, y)\f$ lookup table (\c Qs2Nuclear_/\c
-     * Tlist_) from `param->colorCharge.NucleusQsTableFileName`.
+     * Tlist_) from `param->colorCharge.nucleusQsTableFileName`.
      * \param[in] param Simulation parameters; exits with an error if
      * the file doesn't exist or ends prematurely.
      */
@@ -442,7 +442,7 @@ class Init {
         Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
         double rapidityB);
     /**
-     * computeCellColorCharge()'s `useFluctuatingx` iterative solve
+     * computeCellColorCharge()'s `useFluctuatingX` iterative solve
      * for one nucleus's \f$g^2\mu^2\f$ at this cell: iterates the
      * self-consistent local rapidity/\f$Q_s\f$ relation (following the
      * \f$x\f$-dependent \f$Q_s\f$ suppression of \cite Rezaeian:2012ji
@@ -482,7 +482,7 @@ class Init {
      * Converts \p param's input rapidity to true rapidity when it's
      * flagged as pseudorapidity, otherwise passes it through unchanged.
      * \param[in] param Simulation parameters; `colorCharge.usePseudoRapidity`
-     * selects the conversion, `colorCharge.Jacobianm`/`collision.roots`
+     * selects the conversion, `colorCharge.jacobianMass`/`collision.sqrtS`
      * parameterize it.
      * \param[out] rapidityA Projectile's effective rapidity.
      * \param[out] rapidityB Target's effective rapidity.
@@ -513,7 +513,7 @@ class Init {
      * \f$Q_s\f$-normalization factor (via sampleQsNormalization()), for
      * both nuclei.
      * \param[in] param Simulation parameters;
-     * `subnucleon.useConstituentQuarkProton` selects whether substructure is
+     * `subnucleon.Nq` selects whether substructure is
      * sampled at all.
      * \param[in,out] random Random-number source.
      */
@@ -538,7 +538,7 @@ class Init {
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
      * \param[in] nucleiInAverage Number of nuclei being averaged over
-     * (`param->collision.averageOverThisManyNuclei`), used to normalize the
+     * (`param->collision.nucleiToAverage`), used to normalize the
      * sum.
      */
     void computeThicknessFromNucleons(
@@ -546,7 +546,7 @@ class Init {
     /**
      * computeThicknessFromNucleons()'s per-cell, per-nucleus \f$T_p\f$
      * sum (constituent-quark or single-Gaussian, depending on
-     * `param->subnucleon.useConstituentQuarkProton`); called once per
+     * `param->subnucleon.Nq`); called once per
      * nucleus.
      * \param[in] param Simulation parameters.
      * \param[in] nucleus Nucleon positions to sum over.
@@ -602,7 +602,7 @@ class Init {
         Parameters *param, double d2, double b, double phiRP, int &Ncoll);
     /**
      * Sets \p param's running-coupling \f$\alpha_s\f$ from whichever
-     * \f$Q_s\f$ choice `param->coupling.runWith0Min1Avg2MaxQs` selects, or a
+     * \f$Q_s\f$ choice `param->coupling.runWithQs` selects, or a
      * fixed value if running coupling is disabled or \f$\alpha_s\f$ runs with
      * \f$k_T\f$ instead (handled per-cell elsewhere via
      * `computeRunningCouplingGfactor`, which shares computeAlphaS()
@@ -926,9 +926,10 @@ class Init {
      * Generates an undeformed (spherically symmetric) Woods-Saxon
      * nucleon configuration: samples each nucleon's radius via
      * sampleRFromWoodsSaxon() (protons and neutrons from
-     * possibly-different `a_WS`/`R_WS`, via `dR_np`/`da_np`), then
-     * places them at random angles subject to a best-effort (up to 100
-     * retries) minimum-distance rejection, and recenters the result.
+     * possibly-different `diffusenessWS`/`radiusWS`, via
+     * `deltaRnp`/`deltaAnp`), then places them at random angles subject to a
+     * best-effort (up to 100 retries) minimum-distance rejection, and recenters
+     * the result.
      * \param[in,out] random Random-number source.
      * \param[in] A Mass number.
      * \param[in] Z Atomic number.

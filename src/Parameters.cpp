@@ -59,7 +59,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         subnucleon.BGq = posteriorParamSets_[iset][2];
         subnucleon.smearingWidth = posteriorParamSets_[iset][3];
         subnucleon.NqBase = posteriorParamSets_[iset][4];
-        colorCharge.QsmuRatio = posteriorParamSets_[iset][5];
+        colorCharge.QsMuRatio = posteriorParamSets_[iset][5];
         subnucleon.dqMin = posteriorParamSets_[iset][6];
     } else if (itype == 2 || itype == 4) {
         // fixed Nq = 3
@@ -73,7 +73,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         subnucleon.BGq = posteriorParamSetsNq3_[iset][2];
         subnucleon.smearingWidth = posteriorParamSetsNq3_[iset][3];
         subnucleon.NqBase = 3.;
-        colorCharge.QsmuRatio = posteriorParamSetsNq3_[iset][4];
+        colorCharge.QsMuRatio = posteriorParamSetsNq3_[iset][4];
         subnucleon.dqMin = posteriorParamSetsNq3_[iset][5];
     }
 }
@@ -88,7 +88,7 @@ std::vector<std::string> Parameters::validationErrors() const {
 
     if (jimwlk.saveSnapshots && wilsonLines.writeWilsonLines == 0) {
         std::ostringstream message;
-        message << "saveSnapshots = 1 requires writing Wilson lines "
+        message << "jimwlkSaveSnapshots = 1 requires writing Wilson lines "
                    "(writeWilsonLines = 1 or 2)";
         fail(message);
     }
@@ -103,22 +103,22 @@ std::vector<std::string> Parameters::validationErrors() const {
         }
     }
 
-    if (coupling.runningCoupling && coupling.LambdaQCD >= coupling.muZero) {
+    if (coupling.runningCoupling && coupling.LambdaQCD >= coupling.mu0) {
         std::ostringstream message;
         message << "LambdaQCD (" << coupling.LambdaQCD
-                << ") must be smaller than muZero (" << coupling.muZero
+                << ") must be smaller than mu0 (" << coupling.mu0
                 << ") with running coupling; otherwise alpha_s is singular "
                    "or negative where the local scale is zero";
         fail(message);
     }
 
-    // JIMWLK running coupling (alphas_jimwlk 0), independent of
+    // JIMWLK running coupling (jimwlkAlphaS 0), independent of
     // runningCoupling
-    if (jimwlk.useJIMWLK && jimwlk.alphas_jimwlk <= 1e-10
-        && jimwlk.Lambda_QCD_jimwlk >= jimwlk.mu0_jimwlk) {
+    if (jimwlk.enabled && jimwlk.alphaS <= 1e-10
+        && jimwlk.LambdaQCD >= jimwlk.mu0) {
         std::ostringstream message;
-        message << "Lambda_QCD_jimwlk (" << jimwlk.Lambda_QCD_jimwlk
-                << ") must be smaller than mu0_jimwlk (" << jimwlk.mu0_jimwlk
+        message << "jimwlkLambdaQCD (" << jimwlk.LambdaQCD
+                << ") must be smaller than jimwlkMu0 (" << jimwlk.mu0
                 << ") with the JIMWLK running coupling; otherwise alpha_s "
                    "is singular or negative at large dipole sizes";
         fail(message);

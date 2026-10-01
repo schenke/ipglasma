@@ -22,8 +22,8 @@ void makeEvolutionTestParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.RapidityA = 0.0;
-    param.colorCharge.RapidityB = 0.0;
+    param.colorCharge.rapidityA = 0.0;
+    param.colorCharge.rapidityB = 0.0;
     param.coupling.g = 1.0;
     param.run.dtau = 0.1;
     param.coupling.runningCoupling =
@@ -38,8 +38,8 @@ TEST_CASE(
     const int N = 8;
     Parameters param;
     makeEvolutionTestParam(param, N);
-    param.colorCharge.QsmuRatio = 0.643;
-    param.event.QsmuRatioB = 0.643;
+    param.colorCharge.QsMuRatio = 0.643;
+    param.event.QsMuRatioB = 0.643;
     Lattice lat(&param, N);
 
     for (int ix = 0; ix < N; ++ix) {

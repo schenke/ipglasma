@@ -141,8 +141,8 @@ void Lattice::writeWilsonLines(
         Outfile1.open(wLineFile, std::ios::out | std::ios::binary);
 
         double temp = (nucleus == NucleusRole::Projectile)
-                          ? param->colorCharge.RapidityA
-                          : param->colorCharge.RapidityB;
+                          ? param->colorCharge.rapidityA
+                          : param->colorCharge.rapidityB;
 
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));

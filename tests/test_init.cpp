@@ -642,3 +642,76 @@ TEST_CASE(
         }
     }
 }
+
+TEST_CASE(
+    "Init::computeSmoothNucleusThickness builds centered projectile (A) and "
+    "target (B) profiles, and scanCollisionGeometry finds their shifted "
+    "overlap") {
+    // Note: Glauber::interNuPInSP()/interNuTInST() cache their tables in
+    // function-local statics on first use, so they hold Cu/Au for every
+    // later call in this test binary.
+    const int N = 64;
+    const double L = 30.;
+    const double a = L / N;
+    Parameters param;
+    makeInitTestParam(param, N);
+    param.setL(L);
+    param.setUseNucleus(1);
+    param.setUseSmoothNucleus(1);
+    param.setg(1.);
+    param.setQsmuRatio(0.643);
+    param.setQsmuRatioB(0.643);
+    param.setb(5.);  // a stale b must not shift the profiles
+
+    Glauber glauber;
+    glauber.initGlauber(
+        42., /*target=*/"Au", /*projectile=*/"Cu", 0., false, 0., 0., 0., 0.,
+        0., 0., false, 0., 0., 0., 1000);
+    REQUIRE(glauber.nucleusA1() == 63);   // projectile
+    REQUIRE(glauber.nucleusA2() == 197);  // target
+
+    int nn[2] = {N, N};
+    Init init(nn);
+    Lattice lat(&param, N);
+    init.computeSmoothNucleusThickness(&lat, &param, &glauber);
+
+    // each profile integrates to its own mass number (up to the cut tails)
+    // and is centered at the origin
+    double sumA = 0., sumB = 0., xA = 0., xB = 0.;
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const int pos = ix * N + iy;
+            const double x = -L / 2. + a * ix;
+            const double TA = lat.cells[pos]->getTpA() * a * a / hbarc / hbarc;
+            const double TB = lat.cells[pos]->getTpB() * a * a / hbarc / hbarc;
+            sumA += TA;
+            sumB += TB;
+            xA += x * TA;
+            xB += x * TB;
+            // g2mu2 is only used for the Qs averages; any positive
+            // profile will do for the overlap test below
+            lat.cells[pos]->setg2mu2A(lat.cells[pos]->getTpA());
+            lat.cells[pos]->setg2mu2B(lat.cells[pos]->getTpB());
+        }
+    }
+    CHECK(sumA == doctest::Approx(63.).epsilon(0.02));
+    CHECK(sumB == doctest::Approx(197.).epsilon(0.02));
+    CHECK(std::abs(xA / sumA) < a);
+    CHECK(std::abs(xB / sumB) < a);
+
+    auto overlapCells = [&](double b) {
+        double averageQs = 0., averageQs2 = 0., averageQs2Avg = 0.,
+               averageQs2min = 0., averageQs2min2 = 0., Tpp = 0.;
+        int count = 0;
+        init.scanCollisionGeometry(
+            &lat, &param, N, a, b, /*phiRP=*/0., averageQs, averageQs2,
+            averageQs2Avg, averageQs2min, averageQs2min2, Tpp, count);
+        return count;
+    };
+    const int central = overlapCells(0.);
+    const int shifted = overlapCells(4.);
+    CHECK(central > 0);
+    CHECK(shifted > 0);
+    CHECK(shifted < central);
+    CHECK(overlapCells(40.) == 0);
+}

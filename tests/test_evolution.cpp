@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "Cell.h"
 #include "Evolution.h"
 #include "Lattice.h"
 #include "Parameters.h"
@@ -93,4 +94,61 @@ TEST_CASE(
 
     std::remove("anisotropy0.dat");
     std::remove("eccentricities0.dat");
+}
+
+TEST_CASE(
+    "Evolution::finalFlowMeasurement fills epsilon and u^tau for "
+    "eccentricity() also with writeEpsilonUHydro off") {
+    // Every cell holds the T^{mu nu} of an ideal fluid with energy density
+    // e, pressure p = e/3 and velocity v along x, so the flow solve must
+    // return epsilon = e and u^tau = gamma.
+    const int N = 4;
+    const int it = 5;
+    const double e = 1.0;
+    const double p = e / 3.;
+    const double v = 0.2;
+    const double gamma = 1. / std::sqrt(1. - v * v);
+
+    struct Case {
+        int writeEpsilonUHydro;
+        int computeGluonMultiplicity;
+        bool expectSolve;
+    };
+    for (const Case &c :
+         std::vector<Case> {{0, 1, true}, {1, 0, true}, {0, 0, false}}) {
+        CAPTURE(c.writeEpsilonUHydro);
+        CAPTURE(c.computeGluonMultiplicity);
+        Parameters param;
+        makeEvolutionTestParam(param, N);
+        param.setWriteOutputs(0);  // no output files
+        param.setWriteEpsilonUHydro(c.writeEpsilonUHydro);
+        param.setComputeGluonMultiplicity(c.computeGluonMultiplicity);
+        Lattice lat(&param, N);
+
+        const double a = param.getL() / N;
+        const double tau = it * param.getdtau() * a;
+        for (int pos = 0; pos < N * N; ++pos) {
+            Cell *cell = lat.cells[pos];
+            cell->setTtautau((e + p) * gamma * gamma - p);
+            cell->setTtaux((e + p) * gamma * gamma * v);
+            cell->setTxx((e + p) * gamma * gamma * v * v + p);
+            cell->setTyy(p);
+            cell->setTetaeta(p / (tau * tau));
+        }
+
+        int nn[2] = {N, N};
+        Evolution evolution(nn);
+        evolution.finalFlowMeasurement(&lat, &param, it);
+
+        for (int pos = 0; pos < N * N; ++pos) {
+            CAPTURE(pos);
+            if (c.expectSolve) {
+                CHECK(lat.cells[pos]->getEpsilon() == doctest::Approx(e));
+                CHECK(lat.cells[pos]->getutau() == doctest::Approx(gamma));
+            } else {
+                // the expensive solve is skipped when nothing needs it
+                CHECK(lat.cells[pos]->getutau() == 0.);
+            }
+        }
+    }
 }

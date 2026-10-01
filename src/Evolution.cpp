@@ -1994,20 +1994,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
         if (finalTmunuMeasurement) {
             tmunu(lat, param, it);
-            // Hydro flow fields are optional. Tmunu output remains available
-            // through the lightweight writer when the expensive eigen solve is
-            // disabled.
-            if (param->getWriteEpsilonUHydro() != 0) {
-                u(lat, param, it, true);
-            } else {
-                MyEigen myeigen;
-                // eccentricity() weights by epsilon * u^tau, which only the
-                // flow-velocity solve sets.
-                if (param->getComputeGluonMultiplicity()) {
-                    myeigen.solveFlowVelocity(lat, param, it);
-                }
-                myeigen.writeTmunu4D(lat, param, it);
-            }
+            finalFlowMeasurement(lat, param, it);
         }
 
         if (intermediateTmunuMeasurement) {
@@ -2091,6 +2078,23 @@ void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
         TmunuOffDiagonalScratch offDiagonalScratch;
         tmunuOffDiagonalTeam(lat, N, it, dtau, g, a, one, offDiagonalScratch);
     }  // omp parallel
+}
+
+void Evolution::finalFlowMeasurement(Lattice *lat, Parameters *param, int it) {
+    // Hydro flow fields are optional. Tmunu output remains available
+    // through the lightweight writer when the expensive eigen solve is
+    // disabled.
+    if (param->getWriteEpsilonUHydro() != 0) {
+        u(lat, param, it, true);
+    } else {
+        MyEigen myeigen;
+        // eccentricity() weights by epsilon * u^tau, which only the
+        // flow-velocity solve sets.
+        if (param->getComputeGluonMultiplicity()) {
+            myeigen.solveFlowVelocity(lat, param, it);
+        }
+        myeigen.writeTmunu4D(lat, param, it);
+    }
 }
 
 void Evolution::u(Lattice *lat, Parameters *param, int it, bool finalFlag) {

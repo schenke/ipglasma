@@ -94,8 +94,12 @@ struct NucleusParameters {
     /// Path to the nuclear configuration files (used when \c
     /// nucleonPositionsFromFile is `1`).
     std::string nuclearConfigurationsPath;
-    /// Light-nucleus (carbon, oxygen) sampling method: `1` Woods-Saxon,
-    /// `2` variational Monte Carlo, `3` alpha clusters.
+    /// Which configuration file to use for light nuclei with
+    /// nucleonPositionsFromFile (see Init::readInNucleusConfigs()): `0`
+    /// the default (variational Monte Carlo; clustered PGCM for Ne20),
+    /// `1` alpha clusters (C, O) or triton (A = 3), `2`/`3`
+    /// clustered/uniform PGCM (O, Ne), `4`/`5` NLEFT with
+    /// positive/negative weights (O, Ne; `4` also for Ar).
     int lightNucleusOption = 0;
     /// Projectile polarization: `0` unpolarized, `1` longitudinally
     /// polarized, `2` transversely polarized.
@@ -136,7 +140,7 @@ struct NucleusParameters {
     /// distance when sampling nucleon positions.
     bool forceDMin = false;
     /// Minimum inter-nucleon distance [fm], enforced when \c
-    /// force_dmin_flag is set.
+    /// forceDMin is set.
     double dMin = 0.;
 };
 
@@ -163,9 +167,11 @@ struct SubnucleonParameters {
     /// radial-position sampling (see Random::setGammaIncCDF()); `1`
     /// reduces to plain 3D Gaussian sampling.
     double omega = 0.;
-    /// If `>0`, use a proton made of this many constituent quarks
-    /// ("hot spots").
-    int Nq = 0;
+    /// Mean number of constituent quarks ("hot spots") per nucleon; `0`
+    /// disables substructure. Sets NqBase: each nucleon gets
+    /// floor(NqBase) quarks, one more with probability equal to the
+    /// fractional part, plus a Poisson fluctuation of mean NqFluc.
+    double Nq = 0.;
     /// Base number of constituent quarks (posterior-fit parameter; see
     /// setParamsWithPosteriorParameterSet()).
     double NqBase = 0.;
@@ -192,7 +198,7 @@ struct SubnucleonParameters {
     /// Width of the Gaussian smearing around the mean \f$g^2\mu^2\f$
     /// (parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
     double smearingWidth = 0.;
-    /// UV damping parameter.
+    /// UV damping length of the color-charge correlator [GeV\f$^{-1}\f$].
     double UVDamp = 0.;
 };
 
@@ -262,7 +268,7 @@ struct CouplingParameters {
     double runningCouplingQsFactor = 0.;
     /// Whether \f$\alpha_s\f$ should run with the local \f$Q_s\f$ from
     /// nuclei A and B (`1`) or the average (`0`); both still use \c
-    /// runWith0Min1Avg2MaxQs's max/average/min choice.
+    /// runWithQs's max/average/min choice.
     bool runWithLocalQs = false;
     /// Whether \f$\alpha_s\f$ should run with \f$k_T\f$ (`1`) instead;
     /// overrides any \c runWithQs-based running if set.
@@ -394,16 +400,17 @@ struct EventState {
     /// maximum.
     double averageQs = 0.;
     /// Average \f$Q_s\f$ (average of nuclei A and B), used when \c
-    /// runWith0Min1Avg2MaxQs selects the average.
+    /// runWithQs selects the average.
     double averageQsAvg = 0.;
     /// Average \f$Q_s\f$ (minimum of nuclei A and B), used when \c
-    /// runWith0Min1Avg2MaxQs selects the minimum.
+    /// runWithQs selects the minimum.
     double averageQsmin = 0.;
     /// \f$\alpha_s\f$ computed at the scale set by the chosen average
     /// \f$Q_s\f$.
     double alphas = 0.;
-    /// Same as \c QsMuRatio, for nucleus B.
-    double QsMuRatioB = 0.;
+    /// Index of the posterior parameter set used by this event (see
+    /// setParamsWithPosteriorParameterSet()); `-1` if none.
+    int subNucleonParamSet = -1;
 };
 
 /**
@@ -479,8 +486,10 @@ class Parameters {
      * \f$N_q\f$); `2` loads `tables/posterior_Nq3.csv`; `4` loads
      * `tables/posterior5020_Nq3.csv` (both fixed \f$N_q=3\f$); any
      * other value is a no-op.
+     * \return An error message if the table is empty or a row has too
+     * few values, otherwise an empty string.
      */
-    void loadPosteriorParameterSets(const int itype);
+    std::string loadPosteriorParameterSets(const int itype);
     /**
      * Applies one row of a loaded posterior-fit table to this
      * instance's
@@ -516,15 +525,10 @@ class Parameters {
     void writeInputParameters(std::ostream &out) const;
     /**
      * Checks that combine several parameters (e.g. snapshots require
-     * writing Wilson lines, LambdaQCD < muZero with running coupling).
+     * writing Wilson lines, LambdaQCD < mu0 with running coupling).
      * Checks of a single value run in readInput().
      * \return One message per failed check; empty if all pass.
      */
     std::vector<std::string> validationErrors() const;
-    /**
-     * Logs every validationErrors() message as an error.
-     * \return `true` if there are none.
-     */
-    bool ValidParameters();
 };
 #endif  // SRC_PARAMETERS_H_

@@ -39,7 +39,6 @@ TEST_CASE(
     Parameters param;
     makeEvolutionTestParam(param, N);
     param.colorCharge.QsMuRatio = 0.643;
-    param.event.QsMuRatioB = 0.643;
     Lattice lat(&param, N);
 
     for (int ix = 0; ix < N; ++ix) {

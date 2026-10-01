@@ -709,7 +709,7 @@ void Init::computeCellColorCharge(
             param->colorCharge.QsMuRatio, 1.));
         lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
             param, a, rapidityB, lat->cells[ipos]->getTpB(),
-            param->event.QsMuRatioB, -1.));
+            param->colorCharge.QsMuRatio, -1.));
     } else {  // Fixed x
         // nucleus A
         lat->cells[ipos]->setg2mu2A(
@@ -721,8 +721,8 @@ void Init::computeCellColorCharge(
         // nucleus B
         lat->cells[ipos]->setg2mu2B(
             getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
-            / param->event.QsMuRatioB / param->event.QsMuRatioB * a * a / hbarc
-            / hbarc / param->coupling.g / param->coupling.g);
+            / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
+            * a / hbarc / hbarc / param->coupling.g / param->coupling.g);
     }
 }
 
@@ -741,8 +741,6 @@ void Init::setColorChargeDensity(
 
     double nucleiInAverage =
         static_cast<double>(param->collision.nucleiToAverage);
-
-    param->event.QsMuRatioB = param->colorCharge.QsMuRatio;
 
     if (!param->collision.useNucleus) {
         setConstantColorChargeDensity(lat, param);
@@ -884,7 +882,7 @@ void Init::sampleNucleonAnisotropyAngles(Parameters *param, Random *random) {
 void Init::sampleConstituentQuarkGeometry(Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    const int NqFlag = param->subnucleon.Nq;
+    const double NqFlag = param->subnucleon.Nq;
     vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
     xq1_.clear();
     xq2_.clear();
@@ -1179,7 +1177,7 @@ void Init::computeAndSetRunningAlphaS(Parameters *param) {
         // the unregularized formula this used to hardcode inline -- so
         // this diagnostic/event-acceptance alpha_s always matches the one
         // actually used during evolution, and can no longer go negative
-        // or singular at a small average Qs (ValidParameters() already
+        // or singular at a small average Qs (validationErrors() already
         // guarantees LambdaQCD < muZero whenever running coupling is on).
         if (param->coupling.runWithQs == 2) {
             messager_
@@ -1372,9 +1370,9 @@ void Init::scanCollisionGeometry(
                               * param->colorCharge.QsMuRatio / a / a * hbarc
                               * hbarc * param->coupling.g * param->coupling.g;
         } else {
-            averageQs2min2 += g2mu2B * param->event.QsMuRatioB
-                              * param->event.QsMuRatioB / a / a * hbarc * hbarc
-                              * param->coupling.g * param->coupling.g;
+            averageQs2min2 += g2mu2B * param->colorCharge.QsMuRatio
+                              * param->colorCharge.QsMuRatio / a / a * hbarc
+                              * hbarc * param->coupling.g * param->coupling.g;
         }
 
         for (int i = 0; i < A1; i++) {
@@ -1408,12 +1406,12 @@ void Init::scanCollisionGeometry(
         if (check == 2) {
             if (g2mu2B > g2mu2A) {
                 averageQs += sqrt(
-                    g2mu2B * param->event.QsMuRatioB * param->event.QsMuRatioB
-                    / a / a * hbarc * hbarc * param->coupling.g
-                    * param->coupling.g);
-                averageQs2 += g2mu2B * param->event.QsMuRatioB
-                              * param->event.QsMuRatioB / a / a * hbarc * hbarc
-                              * param->coupling.g * param->coupling.g;
+                    g2mu2B * param->colorCharge.QsMuRatio
+                    * param->colorCharge.QsMuRatio / a / a * hbarc * hbarc
+                    * param->coupling.g * param->coupling.g);
+                averageQs2 += g2mu2B * param->colorCharge.QsMuRatio
+                              * param->colorCharge.QsMuRatio / a / a * hbarc
+                              * hbarc * param->coupling.g * param->coupling.g;
                 averageQs2min += g2mu2A * param->colorCharge.QsMuRatio
                                  * param->colorCharge.QsMuRatio / a / a * hbarc
                                  * hbarc * param->coupling.g
@@ -1426,17 +1424,17 @@ void Init::scanCollisionGeometry(
                 averageQs2 += g2mu2A * param->colorCharge.QsMuRatio
                               * param->colorCharge.QsMuRatio / a / a * hbarc
                               * hbarc * param->coupling.g * param->coupling.g;
-                averageQs2min += g2mu2B * param->event.QsMuRatioB
-                                 * param->event.QsMuRatioB / a / a * hbarc
+                averageQs2min += g2mu2B * param->colorCharge.QsMuRatio
+                                 * param->colorCharge.QsMuRatio / a / a * hbarc
                                  * hbarc * param->coupling.g
                                  * param->coupling.g;
             }
-            averageQs2Avg +=
-                (g2mu2B * param->event.QsMuRatioB * param->event.QsMuRatioB
-                 + g2mu2A * param->colorCharge.QsMuRatio
-                       * param->colorCharge.QsMuRatio)
-                / 2. / a / a * hbarc * hbarc * param->coupling.g
-                * param->coupling.g;
+            averageQs2Avg += (g2mu2B * param->colorCharge.QsMuRatio
+                                  * param->colorCharge.QsMuRatio
+                              + g2mu2A * param->colorCharge.QsMuRatio
+                                    * param->colorCharge.QsMuRatio)
+                             / 2. / a / a * hbarc * hbarc * param->coupling.g
+                             * param->coupling.g;
             count++;
         }
         // compute T_pp

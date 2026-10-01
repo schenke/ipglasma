@@ -19,8 +19,8 @@
  * local-coupling factor from some \f$Q_s\f$- or \f$k_T\f$-like scale
  * (Evolution::computeRunningCouplingGfactor() and its callers,
  * MyEigen::flowVelocity4DImpl()); distinct from JIMWLK::getAlphas(),
- * which uses its own formula and its own \c c_jimwlk_/\c
- * LambdaQCD_jimwlk_ parameters for the separate small-x evolution
+ * which uses its own formula and its own \c jimwlk.c/\c
+ * jimwlk.LambdaQCD parameters for the separate small-x evolution
  * coupling, though it shares this \p nFlavors, since \f$N_f\f$ is the
  * same physical quantity in both.
  * \param[in] muZero \f$\mu_0\f$ [GeV], keeps \f$\alpha_s\f$ infrared

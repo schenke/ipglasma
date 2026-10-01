@@ -33,23 +33,41 @@ void Parameters::loadPosteriorParameterSetsFromFile(
     posteriorFile.close();
 }
 
-void Parameters::loadPosteriorParameterSets(const int itype) {
+std::string Parameters::loadPosteriorParameterSets(const int itype) {
+    std::string fileName;
+    std::vector<std::vector<float>> *table = nullptr;
+    std::size_t columns = 0;
     if (itype == 1) {
-        loadPosteriorParameterSetsFromFile(
-            "tables/posterior.csv", posteriorParamSets_);
-    } else if (itype == 2) {
-        loadPosteriorParameterSetsFromFile(
-            "tables/posterior_Nq3.csv", posteriorParamSetsNq3_);
-    } else if (itype == 4) {
-        loadPosteriorParameterSetsFromFile(
-            "tables/posterior5020_Nq3.csv", posteriorParamSetsNq3_);
+        fileName = "tables/posterior.csv";
+        table = &posteriorParamSets_;
+        columns = 7;  // m, BG, BGq, smearingWidth, NqBase, QsMuRatio, dqMin
+    } else if (itype == 2 || itype == 4) {
+        fileName = (itype == 2) ? "tables/posterior_Nq3.csv"
+                                : "tables/posterior5020_Nq3.csv";
+        table = &posteriorParamSetsNq3_;
+        columns = 6;  // m, BG, BGq, smearingWidth, QsMuRatio, dqMin
+    } else {
+        return "";
     }
+    loadPosteriorParameterSetsFromFile(fileName, *table);
+    if (table->empty()) {
+        return fileName + " contains no parameter sets";
+    }
+    for (std::size_t row = 0; row < table->size(); row++) {
+        if ((*table)[row].size() < columns) {
+            return fileName + ": parameter set " + std::to_string(row) + " has "
+                   + std::to_string((*table)[row].size()) + " values, expected "
+                   + std::to_string(columns);
+        }
+    }
+    return "";
 }
 
 void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
     if (itype == 1) {
         // variant Nq
         iset = (iset % posteriorParamSets_.size());
+        event.subNucleonParamSet = iset;
         messager_ << "[Parameters::setParamsWithPosteriorParameterSet]: "
                      "Using subnucleon parameter set "
                   << iset << " (variable Nq).";
@@ -64,6 +82,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
     } else if (itype == 2 || itype == 4) {
         // fixed Nq = 3
         iset = (iset % posteriorParamSetsNq3_.size());
+        event.subNucleonParamSet = iset;
         messager_ << "[Parameters::setParamsWithPosteriorParameterSet]: "
                      "Using subnucleon parameter set "
                   << iset << " (Nq = 3).";
@@ -124,14 +143,37 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
-    return errors;
-}
-
-bool Parameters::ValidParameters() {
-    const std::vector<std::string> errors = validationErrors();
-    for (const std::string &error : errors) {
-        messager_ << "[Parameters::ValidParameters]: " << error << ".";
-        messager_.flush("error");
+    // <Qs> is only computed from the collision geometry of a sampled
+    // nucleus; without it, 1/<Qs> and the running coupling at the
+    // event-averaged Qs (used at least for the hydro output) are undefined
+    const bool noAverageQs =
+        !collision.useNucleus || wilsonLines.readInitialWilsonLines != 0;
+    if (noAverageQs && evolution.inverseQsForMaxTime) {
+        std::ostringstream message;
+        message << "inverseQsForMaxTime = 1 needs the event-averaged Qs, which "
+                   "is not computed with useNucleus = 0 or "
+                   "readInitialWilsonLines = 1 or 2";
+        fail(message);
     }
-    return errors.empty();
+    if (noAverageQs && coupling.runningCoupling) {
+        std::ostringstream message;
+        message << "runningCoupling = 1 needs the event-averaged Qs, which is "
+                   "not computed with useNucleus = 0 or "
+                   "readInitialWilsonLines = 1 or 2";
+        fail(message);
+    }
+
+    // posterior types 2 and 4 are fits with a fixed NqBase = 3
+    if ((subnucleon.subNucleonParamType == 2
+         || subnucleon.subNucleonParamType == 4)
+        && subnucleon.Nq != 0. && subnucleon.Nq != 3.) {
+        std::ostringstream message;
+        message << "subNucleonParamType = " << subnucleon.subNucleonParamType
+                << " uses 3 constituent quarks; set Nq to 3 (or 0 for no "
+                   "substructure), not "
+                << subnucleon.Nq;
+        fail(message);
+    }
+
+    return errors;
 }

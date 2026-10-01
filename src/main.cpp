@@ -512,9 +512,14 @@ int readInput(
     }
     param->setg2mu(setup->dFind(file_name, "g2mu"));
     param->setMaxtime(setup->dFind(file_name, "maxtime"));
+    // dtau (in lattice units) is ~0.1, adjusted so maxtime is a whole number
+    // of steps. With fewer than one step (e.g. maxtime 0 to only produce
+    // Wilson lines) use 0.1 instead of dividing by zero.
     double lattice_a = param->getL() / static_cast<double>(param->getSize());
     int iTimeSteps = static_cast<int>(10 * param->getMaxtime() / lattice_a);
-    param->setdtau(param->getMaxtime() / (iTimeSteps * lattice_a));
+    param->setdtau(
+        (iTimeSteps > 0) ? param->getMaxtime() / (iTimeSteps * lattice_a)
+                         : 0.1);
     param->setRunWithQs(setup->iFind(file_name, "runWith0Min1Avg2MaxQs"));
     param->setRunWithkt(setup->iFind(file_name, "runWithkt"));
     param->setRunWithLocalQs(setup->iFind(file_name, "runWithLocalQs"));

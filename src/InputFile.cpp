@@ -82,6 +82,12 @@ bool parseInteger(const std::string &text, T &out) {
 }
 }  // namespace
 
+bool parseValue(const std::string &text, bool &out) {
+    if (text != "0" && text != "1") return false;
+    out = (text == "1");
+    return true;
+}
+
 bool parseValue(const std::string &text, int &out) {
     return parseInteger(text, out);
 }

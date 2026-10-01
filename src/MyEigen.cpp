@@ -419,7 +419,7 @@ void solveFlowVelocityAtCell(
 /**
  * Decides whether writeRawTmunu() should write binary (`.ipgt`) or
  * text (`.dat`) output.
- * \param[in] param Simulation parameters; `getWriteTmunuBinary()` is
+ * \param[in] param Simulation parameters; `output.writeTmunuBinary` is
  * the default, overridable at runtime by `IPGLASMA_BINARY_TMUNU` (any
  * value other than empty/`0`/`false`/`off`/`no`, case-insensitively,
  * enables binary output) -- a convenient override for benchmarking and
@@ -427,7 +427,7 @@ void solveFlowVelocityAtCell(
  * \return `true` if binary output should be written.
  */
 bool binaryTmunuEnabled(Parameters *param) {
-    const bool inputDefault = param->getWriteTmunuBinary() != 0;
+    const bool inputDefault = param->output.writeTmunuBinary != 0;
     const char *value = std::getenv("IPGLASMA_BINARY_TMUNU");
     if (value == NULL || value[0] == '\0') return inputDefault;
 
@@ -552,8 +552,9 @@ double MyEigen::writeHydroText(
     int N, double L, double a, double dtau, double gfactor, int hx, int hy,
     int heta, double hL, double deta, double ha, double tau0) {
     double Etot = 0.;
-    const bool writeText = param->getWriteOutputs() % 2 == 1;
-    const bool needsEtot = writeText || (param->getWriteOutputs() % 4) / 2 == 1;
+    const bool writeText = param->output.writeOutputs % 2 == 1;
+    const bool needsEtot =
+        writeText || (param->output.writeOutputs % 4) / 2 == 1;
     if (tmunuOnly || !needsEtot) return Etot;
 
     IPG_PROFILE_SCOPE("output.hydro_text");
@@ -563,11 +564,11 @@ double MyEigen::writeHydroText(
     if (writeText) {
         stringstream streuH_name;
         if (finalFlag) {
-            streuH_name << "epsilon-u-Hydro-TauHydro-" << param->getEventId()
+            streuH_name << "epsilon-u-Hydro-TauHydro-" << param->event.eventId
                         << ".dat";
         } else {
             streuH_name << "epsilon-u-Hydro-t" << it * dtau * a << "-"
-                        << param->getEventId() << ".dat";
+                        << param->event.eventId << ".dat";
         }
         outputFilename = streuH_name.str();
         outputBuffer.resize(kTextOutputBufferBytes);
@@ -730,13 +731,13 @@ void MyEigen::writeRawTmunu(
     Lattice *lat, Parameters *param, int it, int N, double L, double a,
     double dtau, double gfactor, int hx, int hy, int heta, double hL,
     double deta, double ha, double tau0) {
-    if (static_cast<int>(param->getWriteOutputs() / 4) != 1) return;
+    if (static_cast<int>(param->output.writeOutputs / 4) != 1) return;
 
     double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
     double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
     const bool writeBinaryTmunu = binaryTmunuEnabled(param);
     stringstream strTmunu_name;
-    strTmunu_name << "Tmunu-t" << it * dtau * a << "-" << param->getEventId()
+    strTmunu_name << "Tmunu-t" << it * dtau * a << "-" << param->event.eventId
                   << (writeBinaryTmunu ? ".ipgt" : ".dat");
     IPG_PROFILE_SCOPE(
         writeBinaryTmunu ? "output.tmunu_binary" : "output.tmunu_text");
@@ -747,7 +748,7 @@ void MyEigen::writeRawTmunu(
     if (writeBinaryTmunu) {
         openTmunuBinaryOutput(
             foutEps1, outputFilename, hx, hy, heta, tau0, deta, ha,
-            param->getEventId());
+            param->event.eventId);
         binaryRow.resize(static_cast<std::size_t>(hx) * 10u);
     } else {
         outputBuffer.resize(kTextOutputBufferBytes);
@@ -891,7 +892,7 @@ void MyEigen::writeJazma(
     Lattice *lat, Parameters *param, int it, double Etot, int N, double L,
     double a, double dtau, int hx, int hy, int heta, double hL, double deta,
     double ha) {
-    if (static_cast<int>((param->getWriteOutputs() % 4) / 2) != 1) return;
+    if (static_cast<int>((param->output.writeOutputs % 4) / 2) != 1) return;
 
     int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
     double fracx, fracy, xlow, ylow, x, y;
@@ -951,7 +952,7 @@ void MyEigen::writeJazma(
 
     stringstream strJaz_name;
     strJaz_name << "Jazma-Hydro-t" << it * dtau * a << "-"
-                << param->getEventId() << ".dat";
+                << param->event.eventId << ".dat";
     std::string Jaz_name;
     Jaz_name = strJaz_name.str();
 
@@ -1024,9 +1025,9 @@ void MyEigen::writeJazma(
 }
 
 void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
-    const int N = param->getSize();
-    const double a = param->getL() / N;  // lattice spacing in fm
-    const double dtau = param->getdtau();
+    const int N = param->lattice.size;
+    const double a = param->lattice.L / N;  // lattice spacing in fm
+    const double dtau = param->run.dtau;
     double averageux = 0.;
     double averageuy = 0.;
     double averageueta = 0.;
@@ -1074,34 +1075,35 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
 
 void MyEigen::flowVelocity4DImpl(
     Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly) {
-    int N = param->getSize();
-    double L = param->getL();
+    int N = param->lattice.size;
+    double L = param->lattice.L;
     double a = L / N;  // lattice spacing in fm
-    double dtau = param->getdtau();
+    double dtau = param->run.dtau;
 
     if (!tmunuOnly) {
         solveFlowVelocity(lat, param, it);
     }
 
     // output for hydro
-    if (param->getWriteOutputs() <= 0) return;
+    if (param->output.writeOutputs <= 0) return;
 
-    double g = param->getg();
+    double g = param->coupling.g;
     double gfactor;
-    int hx = param->getSizeOutput();
+    int hx = param->output.sizeOutput;
     int hy = hx;
-    int heta = param->getEtaSizeOutput();
-    double hL = param->getLOutput();
-    double deta = param->getDetaOutput();
-    double c = param->getc();
-    double muZero = param->getMuZero();
+    int heta = param->output.etaSizeOutput;
+    double hL = param->output.LOutput;
+    double deta = param->output.detaOutput;
+    double c = param->coupling.c;
+    double muZero = param->coupling.muZero;
 
-    if (param->getRunningCoupling()) {
+    if (param->coupling.runningCoupling) {
         // run with average Q_s only ! local makes no sense here (stuff has
         // moved in the mean time)
         gfactor = computeRunningCouplingGfactorFromScale(
-            g, muZero, c, param->getLambdaQCD(), param->getNFlavors(),
-            param->getRunWithThisFactorTimesQs() * param->getAverageQsmin());
+            g, muZero, c, param->coupling.LambdaQCD, param->coupling.nFlavors,
+            param->coupling.runWithThisFactorTimesQs
+                * param->event.averageQsmin);
     } else {
         gfactor = 1.;
     }

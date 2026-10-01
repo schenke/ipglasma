@@ -10,21 +10,21 @@
 
 namespace {
 void makeJimwlkTestParam(Parameters &param, int size) {
-    param.setSize(size);
-    param.setL(static_cast<double>(size));
-    param.setMPIRank(0);
-    param.setEventId(0);
-    param.setSeed(0);
-    param.setMPISize(1);
-    param.setRapidityA(0.0);
-    param.setRapidityB(0.0);
-    param.setMu0_jimwlk(0.2);
-    param.setLambdaQCD_jimwlk(0.2);
-    param.setc_jimwlk(0.2);
-    param.setNFlavors(3);
-    param.setm_jimwlk(0.0);       // skips the Bessel mass-regulator branch
-    param.setJimwlk_alphas(0.3);  // fixed coupling, skips running-coupling
-    param.setDs_jimwlk(0.001);
+    param.lattice.size = size;
+    param.lattice.L = static_cast<double>(size);
+    param.run.MPIRank = 0;
+    param.event.eventId = 0;
+    param.random.seed = 0;
+    param.run.MPISize = 1;
+    param.colorCharge.RapidityA = 0.0;
+    param.colorCharge.RapidityB = 0.0;
+    param.jimwlk.mu0_jimwlk = 0.2;
+    param.jimwlk.Lambda_QCD_jimwlk = 0.2;
+    param.jimwlk.c_jimwlk = 0.2;
+    param.coupling.nFlavors = 3;
+    param.jimwlk.m_jimwlk = 0.0;       // skips the Bessel mass-regulator branch
+    param.jimwlk.alphas_jimwlk = 0.3;  // fixed coupling, skips running-coupling
+    param.jimwlk.Ds_jimwlk = 0.001;
 }
 }  // namespace
 
@@ -62,13 +62,13 @@ TEST_CASE(
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);
-    param.setSaveSnapshots(0);
-    param.setxSnapshotList(std::vector<double>());
-    // Fixed coupling (getJimwlk_alphas() > 0): steps_1 = as*log(x0/x_proj) /
+    param.jimwlk.saveSnapshots = 0;
+    param.jimwlk.xSnapshotList = std::vector<double>();
+    // Fixed coupling (jimwlk.alphas_jimwlk > 0): steps_1 = as*log(x0/x_proj) /
     // (pi^2*ds) + 0.5. These values give steps_1 = steps_2 = 1.
-    param.setJimwlk_x0(0.01);
-    param.setJimwlk_x_projectile(0.008);
-    param.setJimwlk_x_target(0.008);
+    param.jimwlk.jimwlk_ic_x = 0.01;
+    param.jimwlk.x_projectile_jimwlk = 0.008;
+    param.jimwlk.x_target_jimwlk = 0.008;
 
     Group group;
     Random random;
@@ -92,7 +92,7 @@ TEST_CASE(
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);
-    param.setJimwlk_alphas(0.3);
+    param.jimwlk.alphas_jimwlk = 0.3;
 
     Group group;
     Random random;
@@ -110,9 +110,9 @@ TEST_CASE(
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);
-    param.setMu0_jimwlk(0.28);
-    param.setLambdaQCD_jimwlk(0.04);
-    param.setJimwlk_alphas(0.0);  // forces the running-coupling branch
+    param.jimwlk.mu0_jimwlk = 0.28;
+    param.jimwlk.Lambda_QCD_jimwlk = 0.04;
+    param.jimwlk.alphas_jimwlk = 0.0;  // forces the running-coupling branch
 
     Group group;
     Random random;
@@ -130,13 +130,13 @@ TEST_CASE(
     const double alphasDefault = jimwlk.getAlphas(x, y);
     CHECK(alphasDefault == doctest::Approx(0.3482995062039298));
 
-    param.setNFlavors(4);
+    param.coupling.nFlavors = 4;
     const double alphasNf4 = jimwlk.getAlphas(x, y);
     CHECK(alphasNf4 == doctest::Approx(0.37616346670024414));
     CHECK(alphasNf4 > alphasDefault);
-    param.setNFlavors(3);
+    param.coupling.nFlavors = 3;
 
-    param.setc_jimwlk(0.25);
+    param.jimwlk.c_jimwlk = 0.25;
     const double alphasC025 = jimwlk.getAlphas(x, y);
     CHECK(alphasC025 == doctest::Approx(0.3453365551834896));
 }

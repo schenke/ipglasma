@@ -54,13 +54,13 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
                      "Using subnucleon parameter set "
                   << iset << " (variable Nq).";
         messager_.flush("info");
-        setm(posteriorParamSets_[iset][0]);
-        setBG(posteriorParamSets_[iset][1]);
-        setBGq(posteriorParamSets_[iset][2]);
-        setSmearingWidth(posteriorParamSets_[iset][3]);
-        setNqBase(posteriorParamSets_[iset][4]);
-        setQsmuRatio(posteriorParamSets_[iset][5]);
-        setDqmin(posteriorParamSets_[iset][6]);
+        subnucleon.m = posteriorParamSets_[iset][0];
+        subnucleon.BG = posteriorParamSets_[iset][1];
+        subnucleon.BGq = posteriorParamSets_[iset][2];
+        subnucleon.smearingWidth = posteriorParamSets_[iset][3];
+        subnucleon.NqBase = posteriorParamSets_[iset][4];
+        colorCharge.QsmuRatio = posteriorParamSets_[iset][5];
+        subnucleon.dqMin = posteriorParamSets_[iset][6];
     } else if (itype == 2 || itype == 4) {
         // fixed Nq = 3
         iset = (iset % posteriorParamSetsNq3_.size());
@@ -68,13 +68,13 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
                      "Using subnucleon parameter set "
                   << iset << " (Nq = 3).";
         messager_.flush("info");
-        setm(posteriorParamSetsNq3_[iset][0]);
-        setBG(posteriorParamSetsNq3_[iset][1]);
-        setBGq(posteriorParamSetsNq3_[iset][2]);
-        setSmearingWidth(posteriorParamSetsNq3_[iset][3]);
-        setNqBase(3.);
-        setQsmuRatio(posteriorParamSetsNq3_[iset][4]);
-        setDqmin(posteriorParamSetsNq3_[iset][5]);
+        subnucleon.m = posteriorParamSetsNq3_[iset][0];
+        subnucleon.BG = posteriorParamSetsNq3_[iset][1];
+        subnucleon.BGq = posteriorParamSetsNq3_[iset][2];
+        subnucleon.smearingWidth = posteriorParamSetsNq3_[iset][3];
+        subnucleon.NqBase = 3.;
+        colorCharge.QsmuRatio = posteriorParamSetsNq3_[iset][4];
+        subnucleon.dqMin = posteriorParamSetsNq3_[iset][5];
     }
 }
 
@@ -86,15 +86,15 @@ std::vector<std::string> Parameters::validationErrors() const {
         errors.push_back(message.str());
     };
 
-    if (getSaveSnapshots() && getWriteWilsonLines() == 0) {
+    if (jimwlk.saveSnapshots && wilsonLines.writeWilsonLines == 0) {
         std::ostringstream message;
         message << "saveSnapshots = 1 requires writing Wilson lines "
                    "(writeWilsonLines = 1 or 2)";
         fail(message);
     }
 
-    if (getWriteWilsonLines() != 0) {
-        const std::filesystem::path outputPath(getWilsonLinePath());
+    if (wilsonLines.writeWilsonLines != 0) {
+        const std::filesystem::path outputPath(wilsonLines.wilsonLinePath);
         if (!std::filesystem::is_directory(outputPath)) {
             std::ostringstream message;
             message << "wilsonLinePath " << outputPath.string()
@@ -103,10 +103,10 @@ std::vector<std::string> Parameters::validationErrors() const {
         }
     }
 
-    if (getRunningCoupling() && getLambdaQCD() >= getMuZero()) {
+    if (coupling.runningCoupling && coupling.LambdaQCD >= coupling.muZero) {
         std::ostringstream message;
-        message << "LambdaQCD (" << getLambdaQCD()
-                << ") must be smaller than muZero (" << getMuZero()
+        message << "LambdaQCD (" << coupling.LambdaQCD
+                << ") must be smaller than muZero (" << coupling.muZero
                 << ") with running coupling; otherwise alpha_s is singular "
                    "or negative where the local scale is zero";
         fail(message);
@@ -114,11 +114,11 @@ std::vector<std::string> Parameters::validationErrors() const {
 
     // JIMWLK running coupling (alphas_jimwlk 0), independent of
     // runningCoupling
-    if (getUseJIMWLK() && getJimwlk_alphas() <= 1e-10
-        && getLambdaQCD_jimwlk() >= getMu0_jimwlk()) {
+    if (jimwlk.useJIMWLK && jimwlk.alphas_jimwlk <= 1e-10
+        && jimwlk.Lambda_QCD_jimwlk >= jimwlk.mu0_jimwlk) {
         std::ostringstream message;
-        message << "Lambda_QCD_jimwlk (" << getLambdaQCD_jimwlk()
-                << ") must be smaller than mu0_jimwlk (" << getMu0_jimwlk()
+        message << "Lambda_QCD_jimwlk (" << jimwlk.Lambda_QCD_jimwlk
+                << ") must be smaller than mu0_jimwlk (" << jimwlk.mu0_jimwlk
                 << ") with the JIMWLK running coupling; otherwise alpha_s "
                    "is singular or negative at large dipole sizes";
         fail(message);

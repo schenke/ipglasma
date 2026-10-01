@@ -33,7 +33,7 @@ class MyEigen {
     /**
      * Solves for the local flow velocity/energy density/shear tensor
      * at every site (see flowVelocity4DImpl()) and writes every output
-     * `param->getWriteOutputs()` enables.
+     * `param->output.writeOutputs` enables.
      * \param[in] lat Lattice to read \f$T^{\mu\nu}\f$ from and write
      * \f$u^\mu\f$/\f$\epsilon\f$/\f$\pi^{\mu\nu}\f$ into.
      * \param[in] param Simulation parameters.
@@ -72,7 +72,7 @@ class MyEigen {
      * for \f$u^\mu\f$/\f$\epsilon\f$/\f$\pi^{\mu\nu}\f$ at every site
      * (via solveFlowVelocity(); skipped entirely if \p tmunuOnly), then
      * writes whichever of the hydro-text, raw-\f$T^{\mu\nu}\f$, and
-     * Jazma outputs `param->getWriteOutputs()` enables (only the raw
+     * Jazma outputs `param->output.writeOutputs` enables (only the raw
      * \f$T^{\mu\nu}\f$ writer runs if \p tmunuOnly).
      * \param[in] lat Lattice to read from and write into.
      * \param[in] param Simulation parameters.
@@ -113,7 +113,7 @@ class MyEigen {
      * \param[in] tau0 Current proper time [fm/c].
      * \return The total energy \f$E_{\text{tot}}\f$ integrated over the
      * grid, computed whenever either this text output or writeJazma()'s
-     * output is enabled (`param->getWriteOutputs()` bit 0 or bit 1) --
+     * output is enabled (`param->output.writeOutputs` bit 0 or bit 1) --
      * writeJazma() needs \f$E_{\text{tot}}\f$ even when this writer's
      * own text file is off (e.g. `writeOutputs=2`, "standalone Jazma
      * output" per README.md).
@@ -127,8 +127,8 @@ class MyEigen {
      * Writes the raw/binary Tmunu output (`Tmunu-t*.dat` or `*.ipgt`):
      * per-cell interpolated \f$T^{\mu\nu}\f$ components on the output
      * grid, in text or a little-endian binary format depending on
-     * `param->getWriteTmunuBinary()`/`IPGLASMA_BINARY_TMUNU`. A no-op
-     * unless `param->getWriteOutputs()`'s bit 2 (value `4`) is set.
+     * `param->output.writeTmunuBinary`/`IPGLASMA_BINARY_TMUNU`. A no-op
+     * unless `param->output.writeOutputs`'s bit 2 (value `4`) is set.
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.
@@ -153,7 +153,7 @@ class MyEigen {
     /**
      * Writes the Jazma output (`Jazma-Hydro-t*.dat`): per-cell
      * \f$g^2\mu_A^2 g^2\mu_B^2\f$, normalized so its grid integral
-     * matches \p Etot. A no-op unless `param->getWriteOutputs()`'s bit
+     * matches \p Etot. A no-op unless `param->output.writeOutputs`'s bit
      * 1 (value `2`) is set.
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.

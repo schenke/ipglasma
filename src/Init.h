@@ -152,7 +152,7 @@ class Init {
      * with the identity outside the lattice bounds.
      * \param[in,out] lat Lattice whose `U`/`U2` fields are shifted in
      * place.
-     * \param[in] param Simulation parameters; `getb()`/`getPhiRP()`
+     * \param[in] param Simulation parameters; `event.b`/`event.phiRP`
      * give the impact parameter and reaction-plane angle.
      */
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
@@ -226,8 +226,8 @@ class Init {
      * \param[in,out] lat Lattice to read `Ux1`/`Uy1`/`Ux2`/`Uy2`
      * from and write `Ux`/`Uy` into.
      * \param[in] param Simulation parameters; only used for the
-     * warning message's cell coordinates and `getRandomSeed()`/
-     * `getEventId()` (to seed findUInForwardLightcone()'s deterministic
+     * warning message's cell coordinates and `run.randomSeed`/
+     * `event.eventId` (to seed findUInForwardLightcone()'s deterministic
      * retry stream).
      * \param[in] N2 Total number of lattice sites.
      * \param[in,out] scratch Thread-local scratch storage.
@@ -323,7 +323,7 @@ class Init {
      * computed by computeForwardLightconeElectricFieldTeam()).
      * \param[in,out] lat Lattice to read \c U from and write \c Ux2
      * into.
-     * \param[in] param Simulation parameters; `getg()` is used.
+     * \param[in] param Simulation parameters; `coupling.g` is used.
      * \param[in] N2 Total number of lattice sites.
      */
     void computeForwardLightconePiTeam(Lattice *lat, Parameters *param, int N2);
@@ -337,17 +337,17 @@ class Init {
     void resetForwardLightconeFieldsTeam(Lattice *lat, int N2);
     /**
      * Samples this event's impact parameter \f$b\f$ (linearly or
-     * uniformly distributed between `getbmin()`/`getbmax()`, or `0` for
-     * the constant-color-charge-density case) and reaction-plane angle,
-     * and resets every nucleon's `.collided` flag to `0`.
-     * \param[in,out] param Simulation parameters; `setb()`/`setPhiRP()`
+     * uniformly distributed between `collision.bmin`/`collision.bmax`, or `0`
+     * for the constant-color-charge-density case) and reaction-plane angle, and
+     * resets every nucleon's `.collided` flag to `0`.
+     * \param[in,out] param Simulation parameters; `event.b`/`event.phiRP`
      * store the sampled values.
      */
     void sampleImpactParameter(Parameters *param);
     /**
      * Samples nucleon positions for both nuclei (via
      * sampleTAWoodsSaxon()/sampleTAFromConfigFiles(), depending on
-     * `param->getNucleonPositionsFromFile()`) and applies each
+     * `param->nucleus.nucleonPositionsFromFile`) and applies each
      * nucleus' global polarization rotation. Both nuclei are centered
      * at the origin.
      * \param[in,out] param Simulation parameters.
@@ -364,7 +364,8 @@ class Init {
      * Glauber::sampleTARejection() and its neutron-proton distance
      * convention).
      * \param[in,out] param Simulation parameters; exits with an error
-     * if `getAverageOverNuclei() > 1` and either nucleus is a proton.
+     * if `collision.averageOverThisManyNuclei > 1` and either nucleus is a
+     * proton.
      * \param[in,out] random Random-number source.
      * \param[in] glauber Configured Glauber instance providing nuclear
      * geometry.
@@ -396,7 +397,7 @@ class Init {
         std::vector<ReturnValue> &nucleus);
     /**
      * Reads the \f$Q_s^2(T_p, y)\f$ lookup table (\c Qs2Nuclear_/\c
-     * Tlist_) from `param->getNucleusQsTableFileName()`.
+     * Tlist_) from `param->colorCharge.NucleusQsTableFileName`.
      * \param[in] param Simulation parameters; exits with an error if
      * the file doesn't exist or ends prematurely.
      */
@@ -480,9 +481,9 @@ class Init {
     /**
      * Converts \p param's input rapidity to true rapidity when it's
      * flagged as pseudorapidity, otherwise passes it through unchanged.
-     * \param[in] param Simulation parameters; `getUsePseudoRapidity()`
-     * selects the conversion, `getJacobianm()`/`getRoots()` parameterize
-     * it.
+     * \param[in] param Simulation parameters; `colorCharge.usePseudoRapidity`
+     * selects the conversion, `colorCharge.Jacobianm`/`collision.roots`
+     * parameterize it.
      * \param[out] rapidityA Projectile's effective rapidity.
      * \param[out] rapidityB Target's effective rapidity.
      */
@@ -491,7 +492,7 @@ class Init {
     /**
      * setColorChargeDensity()'s `useNucleus==0` (constant \f$g^2\mu\f$
      * background) branch: sets every cell's \f$g^2\mu_A^2\f$/
-     * \f$g^2\mu_B^2\f$ to `param->getg2mu()`'s value, optionally
+     * \f$g^2\mu_B^2\f$ to `param->collision.g2mu`'s value, optionally
      * modulated by a fixed Gaussian envelope (`useGaussian==1`); marks
      * the event a success.
      * \param[in,out] lat Lattice to populate.
@@ -500,7 +501,7 @@ class Init {
     void setConstantColorChargeDensity(Lattice *lat, Parameters *param);
     /**
      * Samples each nucleon's proton-anisotropy angle \f$\phi\f$
-     * (uniform in \f$[0, 2\pi)\f$ if `param->getProtonAnisotropy()` is
+     * (uniform in \f$[0, 2\pi)\f$ if `param->subnucleon.protonAnisotropy` is
      * nonzero, `0` otherwise) for both nuclei.
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.
@@ -512,7 +513,7 @@ class Init {
      * \f$Q_s\f$-normalization factor (via sampleQsNormalization()), for
      * both nuclei.
      * \param[in] param Simulation parameters;
-     * `getUseConstituentQuarkProton()` selects whether substructure is
+     * `subnucleon.useConstituentQuarkProton` selects whether substructure is
      * sampled at all.
      * \param[in,out] random Random-number source.
      */
@@ -537,14 +538,15 @@ class Init {
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
      * \param[in] nucleiInAverage Number of nuclei being averaged over
-     * (`param->getAverageOverNuclei()`), used to normalize the sum.
+     * (`param->collision.averageOverThisManyNuclei`), used to normalize the
+     * sum.
      */
     void computeThicknessFromNucleons(
         Lattice *lat, Parameters *param, double nucleiInAverage);
     /**
      * computeThicknessFromNucleons()'s per-cell, per-nucleus \f$T_p\f$
      * sum (constituent-quark or single-Gaussian, depending on
-     * `param->getUseConstituentQuarkProton()`); called once per
+     * `param->subnucleon.useConstituentQuarkProton`); called once per
      * nucleus.
      * \param[in] param Simulation parameters.
      * \param[in] nucleus Nucleon positions to sum over.
@@ -557,7 +559,7 @@ class Init {
      * \param[in] x Cell's \f$x\f$ position [fm].
      * \param[in] y Cell's \f$y\f$ position [fm].
      * \param[in] xi Proton thickness-function anisotropy
-     * (`param->getProtonAnisotropy()`); only used in the
+     * (`param->subnucleon.protonAnisotropy`); only used in the
      * single-Gaussian branch.
      * \param[in] nucleiInAverage Number of nuclei being averaged over,
      * used to normalize the sum.
@@ -573,11 +575,11 @@ class Init {
      * Determines \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$ from the
      * (already-sampled) nucleon positions, writes
      * `NcollList*.dat`/`NpartList*.dat`, and sets
-     * `param->setNpart()`.
+     * `param->event.Npart = `.
      * \param[in] param Simulation parameters.
      * \param[out] Npart Number of participants.
      * \param[out] Ncoll Number of binary collisions.
-     * \return `false` (having called `param->setSuccess(0)`) if
+     * \return `false` (having called `param->event.success = 0`) if
      * `useFixedNpart` is set and this event's \f$N_{\text{part}}\f$
      * doesn't match, signaling the caller to abort and resample;
      * `true` otherwise.
@@ -588,7 +590,7 @@ class Init {
      * `NcollList<id>.dat` and marks each colliding nucleon pair's
      * `.collided`, using either a hard-sphere (\f$d_{ij}^2 <\f$ \p d2)
      * or Gaussian-profile wounding criterion depending on
-     * `param->getGaussianWounding()`.
+     * `param->collision.gaussianWounding`.
      * \param[in] param Simulation parameters.
      * \param[in] d2 Squared wounding distance
      * (\f$\sigma_{NN}/(10\pi)\f$) [fm\f$^2\f$].
@@ -600,13 +602,13 @@ class Init {
         Parameters *param, double d2, double b, double phiRP, int &Ncoll);
     /**
      * Sets \p param's running-coupling \f$\alpha_s\f$ from whichever
-     * \f$Q_s\f$ choice `param->getRunWithQs()` selects, or a fixed
-     * value if running coupling is disabled or \f$\alpha_s\f$ runs
-     * with \f$k_T\f$ instead (handled per-cell elsewhere via
+     * \f$Q_s\f$ choice `param->coupling.runWith0Min1Avg2MaxQs` selects, or a
+     * fixed value if running coupling is disabled or \f$\alpha_s\f$ runs with
+     * \f$k_T\f$ instead (handled per-cell elsewhere via
      * `computeRunningCouplingGfactor`, which shares computeAlphaS()
      * with this function).
      * \param[in,out] param Simulation parameters;
-     * `setalphas()` stores the result.
+     * `event.alphas` stores the result.
      */
     void computeAndSetRunningAlphaS(Parameters *param);
     /**
@@ -616,7 +618,7 @@ class Init {
      * `usedParameters*.dat`/`NgluonEstimators*.dat` files, and marks
      * the event a success or failure (e.g. no overlap region, no
      * physical \f$Q_s\f$, or \f$Q_{s,\min}^2 S_T\f$ below
-     * `param->getMinimumQs2ST()`).
+     * `param->colorCharge.minimumQs2ST`).
      * \param[in] lat Lattice to read color-charge densities from.
      * \param[in,out] param Simulation parameters.
      */
@@ -701,8 +703,8 @@ class Init {
     /**
      * Constructs both nuclei's Wilson lines by solving the classical
      * color-source Poisson problem in momentum space, one longitudinal
-     * sheet (of `param->getNy()`) at a time: sample Gaussian color-charge
-     * fluctuations, FFT to momentum space, apply the lattice
+     * sheet (of `param->colorCharge.Ny`) at a time: sample Gaussian
+     * color-charge fluctuations, FFT to momentum space, apply the lattice
      * Poisson/UV-damping kernel (computeWilsonLineMomentumKernel()),
      * inverse FFT, exponentiate into an incremental SU(3) rotation
      * (getUfromExponent()), and left-multiply onto the running Wilson
@@ -885,7 +887,7 @@ class Init {
      * \param[out] nucleonPosArr Filled with one row per configuration
      * read from the file.
      * \param[in] param Simulation parameters;
-     * `getNuclearConfigurationsPath()` gives the directory to read
+     * `nucleus.nuclearConfigurationsPath` gives the directory to read
      * from.
      */
     void readInNucleusConfigs(
@@ -1126,7 +1128,7 @@ class Init {
      * their radial distances (3D Gaussian if `omega==1`, otherwise a
      * gamma-distribution-based 2D radial profile via
      * Random::sampleGammaInc()), and their angular placement subject to
-     * a minimum-distance (`param->getDqmin()`) rejection criterion, with
+     * a minimum-distance (`param->subnucleon.dqMin`) rejection criterion, with
      * an optional recentering of the constituent-quark center of mass.
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.
@@ -1161,7 +1163,7 @@ class Init {
     /**
      * Samples each of \p Nq constituent quarks' (or, if substructure is
      * off, the single nucleon's) \f$Q_s\f$-normalization factor: `1`
-     * for every quark if `param->getSmearQs()` is off, otherwise an
+     * for every quark if `param->subnucleon.smearQs` is off, otherwise an
      * independent log-normal draw (mean 1) per quark.
      * \param[in,out] random Random-number source.
      * \param[in] param Simulation parameters.
@@ -1173,9 +1175,9 @@ class Init {
         std::vector<double> &gauss_array);
     /**
      * Samples the number of constituent quarks for one nucleon: the
-     * integer part of `param->getNqBase()`, rounded up with probability
+     * integer part of `param->subnucleon.NqBase`, rounded up with probability
      * equal to its fractional part, plus a Poisson-distributed
-     * fluctuation (`param->getNqFluc()`'s mean).
+     * fluctuation (`param->subnucleon.NqFluc`'s mean).
      * \param[in,out] random Random-number source.
      * \param[in] param Simulation parameters.
      * \return The sampled quark count, at least `1`.

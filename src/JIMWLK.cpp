@@ -19,10 +19,10 @@ using PhysConst::smallEps;
 
 JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     : param_(param),
-      Ngrid_(param.getSize()),
-      Ncells_(param.getSize() * param.getSize()) {
-    nn_[0] = param_.getSize();
-    nn_[1] = param_.getSize();
+      Ngrid_(param.lattice.size),
+      Ncells_(param.lattice.size * param.lattice.size) {
+    nn_[0] = param_.lattice.size;
+    nn_[1] = param_.lattice.size;
 
     fft_ptr_ = std::make_shared<FFT>(nn_);
 
@@ -59,9 +59,9 @@ void JIMWLK::initializeK() {
         K_[i] = &K_storage_[i];
     }
 
-    double mu0 = param_.getMu0_jimwlk();
+    double mu0 = param_.jimwlk.mu0_jimwlk;
     double Lambda2 =
-        param_.getLambdaQCD_jimwlk() * param_.getLambdaQCD_jimwlk();
+        param_.jimwlk.Lambda_QCD_jimwlk * param_.jimwlk.Lambda_QCD_jimwlk;
 
     // set once here rather than on every getMassRegulator() call below
     gsl_set_error_handler_off();
@@ -99,11 +99,11 @@ double JIMWLK::getMassRegulator(const double x, const double y) const {
     // if m suppresses long distance tails,
     // K is multiplied by this, which is m*r*K_1(m*r)
     double mass_regulator = 1.0;
-    double m = param_.getm_jimwlk();
+    double m = param_.jimwlk.m_jimwlk;
     if (m < smallEps) {
         return mass_regulator;
     }
-    double length = param_.getL();
+    double length = param_.lattice.L;
 
     // Lattice units
     // Here x is [-N/2, N/2]
@@ -132,16 +132,16 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     // Fixed coupling: alpha_s is already absorbed into the evolution step
     // count in evolution() (ds = alpha_s dy / pi^2), so the kernel must not
     // carry it again.
-    if (param_.getJimwlk_alphas() > 1e-10) {
+    if (param_.jimwlk.alphas_jimwlk > 1e-10) {
         return 1.0;
     }
 
-    const double c = param_.getc_jimwlk();
-    const int Nf = param_.getNFlavors();
-    const double length = param_.getL();
-    const double mu0 = param_.getMu0_jimwlk();
+    const double c = param_.jimwlk.c_jimwlk;
+    const int Nf = param_.coupling.nFlavors;
+    const double length = param_.lattice.L;
+    const double mu0 = param_.jimwlk.mu0_jimwlk;
     const double Lambda2 =
-        param_.getLambdaQCD_jimwlk() * param_.getLambdaQCD_jimwlk();
+        param_.jimwlk.Lambda_QCD_jimwlk * param_.jimwlk.Lambda_QCD_jimwlk;
     double phys_x = x * length;  // in fm
     double phys_y = y * length;
     double phys_r2 = phys_x * phys_x + phys_y * phys_y;
@@ -181,31 +181,33 @@ void JIMWLK::evolution() {
     initializeNoise();
 
     // Calculate evolution steps for different nuclei
-    double x0 = param_.getJimwlk_x0();
-    double ds = param_.getDs_jimwlk();
-    bool saveSnapshots = param_.getSaveSnapshots();
-    std::vector<double> xSnapshotList = param_.getxSnapshotList();
+    double x0 = param_.jimwlk.jimwlk_ic_x;
+    double ds = param_.jimwlk.Ds_jimwlk;
+    bool saveSnapshots = param_.jimwlk.saveSnapshots;
+    std::vector<double> xSnapshotList = param_.jimwlk.xSnapshotList;
     double dlogx = M_PI * M_PI * ds;
     int steps_1 = 0;
     int steps_2 = 0;
-    double as = param_.getJimwlk_alphas();
+    double as = param_.jimwlk.alphas_jimwlk;
     if (as > 1e-10) {
         // Fixed coupling
         steps_1 = static_cast<int>(
-            as * std::log(x0 / param_.getJimwlk_x_projectile())
+            as * std::log(x0 / param_.jimwlk.x_projectile_jimwlk)
                 / (M_PI * M_PI * ds)
             + 0.5);
         steps_2 = static_cast<int>(
-            as * std::log(x0 / param_.getJimwlk_x_target()) / (M_PI * M_PI * ds)
+            as * std::log(x0 / param_.jimwlk.x_target_jimwlk)
+                / (M_PI * M_PI * ds)
             + 0.5);
         dlogx = M_PI * M_PI * ds / as;
     } else {
         // Running coupling
         steps_1 = static_cast<int>(
-            std::log(x0 / param_.getJimwlk_x_projectile()) / (M_PI * M_PI * ds)
+            std::log(x0 / param_.jimwlk.x_projectile_jimwlk)
+                / (M_PI * M_PI * ds)
             + 0.5);
         steps_2 = static_cast<int>(
-            std::log(x0 / param_.getJimwlk_x_target()) / (M_PI * M_PI * ds)
+            std::log(x0 / param_.jimwlk.x_target_jimwlk) / (M_PI * M_PI * ds)
             + 0.5);
     }
 
@@ -256,7 +258,7 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
         evolveProjectile ? lat_ptr_->U : lat_ptr_->U2;
 
     const complex<double> I(0., 1.);
-    const double ds_sqrt = std::sqrt(param_.getDs_jimwlk());
+    const double ds_sqrt = std::sqrt(param_.jimwlk.Ds_jimwlk);
     const complex<double> negI_dssqrt = -I * ds_sqrt;
     const complex<double> posI_dssqrt = I * ds_sqrt;
 

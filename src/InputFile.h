@@ -70,9 +70,11 @@ class InputFile {
  * Strict conversion of an input value. Each overload returns `false`
  * (leaving \p out unchanged) unless all of \p text is a valid value of
  * that type: an `int` or `unsigned long long` must be an integer
- * (no decimal point or exponent), a `double` must be finite, and a
+ * (no decimal point or exponent), a `bool` must be `0` or `1`, a
+ * `double` must be finite, and a
  * list is a comma-separated sequence of doubles.
  */
+bool parseValue(const std::string &text, bool &out);
 bool parseValue(const std::string &text, int &out);
 bool parseValue(const std::string &text, unsigned long long &out);
 bool parseValue(const std::string &text, double &out);

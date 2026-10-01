@@ -422,8 +422,8 @@ void evolveStepPersistent(
     Lattice *lat, Parameters *param, double dtau, double tau,
     bool updateCoordinates) {
     IPG_PROFILE_SCOPE("evolution.parallel_step");
-    const int N = param->getSize();
-    const double g = param->getg();
+    const int N = param->lattice.size;
+    const double g = param->coupling.g;
     double phaseStart = 0.0;
 
 #pragma omp parallel shared(phaseStart)
@@ -1341,9 +1341,9 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
  * quantities when running coupling is enabled (\f$\alpha_s\f$ runs
  * with either the local \f$Q_s\f$ at this cell or one of the
  * event-averaged \f$Q_s\f$ choices, per
- * `param->getRunWithLocalQs()`/`getRunWithQs()`).
+ * `param->coupling.runWithLocalQs`/`coupling.runWith0Min1Avg2MaxQs`).
  * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
- * from (only used when `getRunWithLocalQs()==1`).
+ * from (only used when `coupling.runWithLocalQs==1`).
  * \param[in] param Simulation parameters.
  * \param[in] pos Flat cell index.
  * \param[in] N Lattice side length.
@@ -1359,12 +1359,12 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
 double computeRunningCouplingGfactor(
     Lattice *lat, Parameters *param, int pos, int N, double a, double g,
     double c, double muZero) {
-    if (!param->getRunningCoupling()) return 1.;
+    if (!param->coupling.runningCoupling) return 1.;
 
-    const double lambdaQCD = param->getLambdaQCD();
-    const int nFlavors = param->getNFlavors();
+    const double lambdaQCD = param->coupling.LambdaQCD;
+    const int nFlavors = param->coupling.nFlavors;
 
-    if (param->getRunWithLocalQs() == 1) {
+    if (param->coupling.runWithLocalQs == 1) {
         // run with the local (in transverse plane) coupling
         const bool inBounds =
             lat->xFromPosition(pos) > 0 && lat->xFromPosition(pos) < N - 1
@@ -1373,38 +1373,38 @@ double computeRunningCouplingGfactor(
         const double g2mu2B = inBounds ? lat->cells[pos]->getg2mu2B() : 0;
 
         double Qs = 0.;
-        if (param->getRunWithQs() == 2) {
+        if (param->coupling.runWith0Min1Avg2MaxQs == 2) {
             Qs = sqrt(
-                std::max(g2mu2A, g2mu2B) * param->getQsmuRatio()
-                * param->getQsmuRatio() / a / a * hbarc * hbarc * param->getg()
-                * param->getg());
-        } else if (param->getRunWithQs() == 0) {
+                std::max(g2mu2A, g2mu2B) * param->colorCharge.QsmuRatio
+                * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                * param->coupling.g * param->coupling.g);
+        } else if (param->coupling.runWith0Min1Avg2MaxQs == 0) {
             Qs = sqrt(
-                std::min(g2mu2A, g2mu2B) * param->getQsmuRatio()
-                * param->getQsmuRatio() / a / a * hbarc * hbarc * param->getg()
-                * param->getg());
-        } else if (param->getRunWithQs() == 1) {
+                std::min(g2mu2A, g2mu2B) * param->colorCharge.QsmuRatio
+                * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                * param->coupling.g * param->coupling.g);
+        } else if (param->coupling.runWith0Min1Avg2MaxQs == 1) {
             Qs = sqrt(
-                (g2mu2A + g2mu2B) / 2. * param->getQsmuRatio()
-                * param->getQsmuRatio() / a / a * hbarc * hbarc * param->getg()
-                * param->getg());
+                (g2mu2A + g2mu2B) / 2. * param->colorCharge.QsmuRatio
+                * param->colorCharge.QsmuRatio / a / a * hbarc * hbarc
+                * param->coupling.g * param->coupling.g);
         }
 
         return computeRunningCouplingGfactorFromScale(
             g, muZero, c, lambdaQCD, nFlavors,
-            param->getRunWithThisFactorTimesQs() * Qs);
+            param->coupling.runWithThisFactorTimesQs * Qs);
     } else {
         double averageQs = 0.;
-        if (param->getRunWithQs() == 0)
-            averageQs = param->getAverageQsmin();
-        else if (param->getRunWithQs() == 1)
-            averageQs = param->getAverageQsAvg();
-        else if (param->getRunWithQs() == 2)
-            averageQs = param->getAverageQs();
+        if (param->coupling.runWith0Min1Avg2MaxQs == 0)
+            averageQs = param->event.averageQsmin;
+        else if (param->coupling.runWith0Min1Avg2MaxQs == 1)
+            averageQs = param->event.averageQsAvg;
+        else if (param->coupling.runWith0Min1Avg2MaxQs == 2)
+            averageQs = param->event.averageQs;
 
         return computeRunningCouplingGfactorFromScale(
             g, muZero, c, lambdaQCD, nFlavors,
-            param->getRunWithThisFactorTimesQs() * averageQs);
+            param->coupling.runWithThisFactorTimesQs * averageQs);
     }
 }
 
@@ -1436,7 +1436,7 @@ void prepareSpectrumField(
             int pos = lat->positionFromXY(i, j);
             double gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
-            if (param->getRunWithkt() == 0) {
+            if (param->coupling.runWithkt == 0) {
                 *E1[pos] = sourceField[pos] * sqrt(gfactor);
             } else {
                 *E1[pos] = sourceField[pos];
@@ -1526,11 +1526,11 @@ void accumulateGluonSpectrum(
                             * (((it - 0.5) * dtau)
                                * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     }
-                    if (param->getRunWithkt() == 1) {
+                    if (param->coupling.runWithkt == 1) {
                         nkt *= computeRunningCouplingGfactorFromScale(
-                            g, muZero, c, param->getLambdaQCD(),
-                            param->getNFlavors(),
-                            param->getRunWithThisFactorTimesQs() * sqrt(kt2)
+                            g, muZero, c, param->coupling.LambdaQCD,
+                            param->coupling.nFlavors,
+                            param->coupling.runWithThisFactorTimesQs * sqrt(kt2)
                                 * hbarc / a);
                     }
                 }
@@ -1570,7 +1570,7 @@ void accumulateGluonSpectrum(
  * three times -- unconditionally, and again inside the \f$k_T>3\f$
  * and \f$k_T>6\f$ GeV cuts -- for both `usePseudoRapidity` branches).
  * \param[in] param Simulation parameters.
- * \param[in] m Jacobian mass term [GeV] (`param->getJacobianm()`).
+ * \param[in] m Jacobian mass term [GeV] (`param->colorCharge.Jacobianm`).
  * \param[in] ik Bin index.
  * \param[in] dkt Momentum-bin width [lattice units].
  * \param[in] a Lattice spacing [fm].
@@ -1579,12 +1579,12 @@ void accumulateGluonSpectrum(
 double computeMultiplicityBinWeight(
     Parameters *param, double m, int ik, double dkt, double a) {
     const double base = (ik + 0.5) * dkt * dkt * 2. * M_PI;
-    if (param->getUsePseudoRapidity() == 0) {
+    if (param->colorCharge.usePseudoRapidity == 0) {
         return base;
     }
-    return base * cosh(param->getRapidity())
+    return base * cosh(param->colorCharge.rapidity())
            / (sqrt(
-               pow(cosh(param->getRapidity()), 2.)
+               pow(cosh(param->colorCharge.rapidity()), 2.)
                + m * m
                      / (((ik + 0.5) * dkt / a * hbarc)
                         * ((ik + 0.5) * dkt / a * hbarc))));
@@ -1595,8 +1595,8 @@ double computeMultiplicityBinWeight(
 void Evolution::evolveU(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolveU");
-    const int N = param->getSize();
-    const double g = param->getg();
+    const int N = param->lattice.size;
+    const double g = param->coupling.g;
 
 #pragma omp parallel
     {
@@ -1608,7 +1608,7 @@ void Evolution::evolveU(
 void Evolution::evolvePhi(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolvePhi");
-    const int N = param->getSize();
+    const int N = param->lattice.size;
 
 #pragma omp parallel
     {
@@ -1620,7 +1620,7 @@ void Evolution::evolvePhi(
 void Evolution::evolvePi(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolvePi");
-    const int N = param->getSize();
+    const int N = param->lattice.size;
 
 #pragma omp parallel
     {
@@ -1632,8 +1632,8 @@ void Evolution::evolvePi(
 void Evolution::evolveE(
     Lattice *lat, Parameters *param, double dtau, double tau) {
     IPG_PROFILE_SCOPE("evolution.evolveE");
-    const int N = param->getSize();
-    const double g = param->getg();
+    const int N = param->lattice.size;
+    const double g = param->coupling.g;
 
 #pragma omp parallel
     {
@@ -1644,7 +1644,7 @@ void Evolution::evolveE(
 
 void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     IPG_PROFILE_SCOPE("diagnostics.gauss_law");
-    const int N = param->getSize();
+    const int N = param->lattice.size;
 
     Matrix Ux;
     Matrix UxXm1;
@@ -1716,9 +1716,9 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
 
 void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("output.evolved_fields");
-    const int N = param->getSize();
-    const double a = param->getL() / static_cast<double>(N);
-    const double dtau = param->getdtau();
+    const int N = param->lattice.size;
+    const double a = param->lattice.L / static_cast<double>(N);
+    const double dtau = param->run.dtau;
     const double tauLattice = static_cast<double>(it) * dtau;
     const double tauFm = a * tauLattice;
     const double momentumTauFm =
@@ -1799,7 +1799,7 @@ void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
                 "\"Uy\"],"
              << "\"complex_part\":[\"real\",\"imag\"],"
              << "\"native_site_index\":\"pos=x*N+y\","
-             << "\"event_id\":" << param->getEventId() << ","
+             << "\"event_id\":" << param->event.eventId << ","
              << "\"step\":" << it << ","
              << "\"tau_lattice\":" << tauLattice << ","
              << "\"tau_fm\":" << tauFm << ","
@@ -1812,7 +1812,7 @@ void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
     const std::string metadataString = metadata.str();
 
     stringstream filename;
-    filename << "evolvedFields" << param->getEventId() << "_it" << std::setw(8)
+    filename << "evolvedFields" << param->event.eventId << "_it" << std::setw(8)
              << std::setfill('0') << it << ".ipgf";
 
     ofstream output(
@@ -1852,7 +1852,7 @@ void Evolution::writeGluonMultiplicityTarget(
     const double *spectrumE, const int *spectrumCounts, int bins, double dkt) {
     IPG_PROFILE_SCOPE("output.gluon_target");
     stringstream filename;
-    filename << "gluonMultiplicity" << param->getEventId() << ".json";
+    filename << "gluonMultiplicity" << param->event.eventId << ".json";
     ofstream output(filename.str().c_str(), std::ios::out | std::ios::trunc);
     if (!output) {
         throw std::runtime_error(
@@ -1860,14 +1860,14 @@ void Evolution::writeGluonMultiplicityTarget(
     }
 
     const char *rapidityVariable =
-        (param->getUsePseudoRapidity() == 0) ? "y" : "eta";
+        (param->colorCharge.usePseudoRapidity == 0) ? "y" : "eta";
     const double meanKt = (dNPrimary != 0.0) ? dEPrimary / dNPrimary : 0.0;
     const double spectrumUnitFactor = (a / hbarc) * (a / hbarc);
 
     output << std::setprecision(17) << "{\n"
            << "  \"format\": \"ipglasma-gluon-target\",\n"
            << "  \"version\": 1,\n"
-           << "  \"event_id\": " << param->getEventId() << ",\n"
+           << "  \"event_id\": " << param->event.eventId << ",\n"
            << "  \"step\": " << it << ",\n"
            << "  \"tau_fm\": " << static_cast<double>(it) * dtau * a << ",\n"
            << "  \"rapidity_variable\": \"" << rapidityVariable << "\",\n"
@@ -1880,10 +1880,10 @@ void Evolution::writeGluonMultiplicityTarget(
            << "  \"dE_kT_gt_3_GeV\": " << dECut3 << ",\n"
            << "  \"dN_kT_gt_6_GeV\": " << dNCut6 << ",\n"
            << "  \"dE_kT_gt_6_GeV\": " << dECut6 << ",\n"
-           << "  \"Npart\": " << param->getNpart() << ",\n"
-           << "  \"Tpp\": " << param->getTpp() << ",\n"
-           << "  \"impact_parameter_fm\": " << param->getb() << ",\n"
-           << "  \"random_seed\": " << param->getRandomSeed() << ",\n"
+           << "  \"Npart\": " << param->event.Npart << ",\n"
+           << "  \"Tpp\": " << param->event.Tpp << ",\n"
+           << "  \"impact_parameter_fm\": " << param->event.b << ",\n"
+           << "  \"random_seed\": " << param->run.randomSeed << ",\n"
            << "  \"spectrum_definition\": \"azimuthally averaged Coulomb-gauge "
               "gluon spectrum used by Evolution::multiplicity\",\n"
            << "  \"kt_GeV\": [";
@@ -1923,16 +1923,16 @@ void Evolution::writeGluonMultiplicityTarget(
 
 void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     IPG_PROFILE_SCOPE("evolution.total");
-    int N = param->getSize();
-    double a = param->getL() / N;  // lattice spacing in fm
+    int N = param->lattice.size;
+    double a = param->lattice.L / N;  // lattice spacing in fm
 
     // do the first half step of the momenta (E1,E2,pi)
     // for now I use the \tau=0 value at \tau=d\tau/2.
-    double dtau = param->getdtau();  // dtau is in lattice units
+    double dtau = param->run.dtau;  // dtau is in lattice units
 
-    double maxtime = param->getMaxtime();  // maxtime is in fm
-    if (param->getInverseQsForMaxTime() == 1) {
-        maxtime = 1. / param->getAverageQs() * hbarc;
+    double maxtime = param->evolution.maxtime;  // maxtime is in fm
+    if (param->evolution.inverseQsForMaxTime == 1) {
+        maxtime = 1. / param->event.averageQs * hbarc;
         messager_ << "[Evolution::run]: maximal evolution time = " << maxtime
                   << " fm";
         messager_.flush("info");
@@ -1964,7 +1964,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     messager_ << "[Evolution::run]: Starting evolution: num of time steps="
               << itmax;
     messager_.flush("info");
-    if ((param->getWriteOutputs() == 5)) {
+    if ((param->output.writeOutputs == 5)) {
         messager_ << "[Evolution::run]: Measuring at times " << it0 * a * dtau
                   << ", " << it1 * a * dtau << ", " << it2 * a * dtau << ", "
                   << it3 * a * dtau << ", " << itmax * a * dtau << ". ";
@@ -1981,7 +1981,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     for (int it = 1; it <= itmax; it++) {
         const bool finalTmunuMeasurement = (it == itmax);
         const bool intermediateTmunuMeasurement =
-            (param->getWriteOutputs() == 5)
+            (param->output.writeOutputs == 5)
             && (it == it0 || it == it1 || it == it2 || it == it3);
         const bool measureTmunu =
             finalTmunuMeasurement || intermediateTmunuMeasurement;
@@ -2007,7 +2007,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             tmunu(lat, param, it);
             //  Preserve the historical intermediate-time finalFlag=false path
             //  when hydro output is enabled.
-            if (param->getWriteEpsilonUHydro() != 0) {
+            if (param->output.writeEpsilonUHydro != 0) {
                 u(lat, param, it, false);
             } else {
                 MyEigen myeigen;
@@ -2044,7 +2044,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         int success = 1;
-        if (param->getComputeGluonMultiplicity()) {
+        if (param->output.computeGluonMultiplicity) {
             if (it == itmax) {
                 eccentricity(lat, param, it, 0.0, 0);
                 // eccentricity(lat, param, it, 0.1, 0);
@@ -2061,11 +2061,11 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
 void Evolution::tmunu(Lattice *lat, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.Tmunu");
-    int N = param->getSize();
-    double L = param->getL();
+    int N = param->lattice.size;
+    double L = param->lattice.L;
     double a = L / N;  // lattice spacing in fm
-    double g = param->getg();
-    double dtau = param->getdtau();
+    double g = param->coupling.g;
+    double dtau = param->run.dtau;
     Matrix one(1.);
 
 #pragma omp parallel
@@ -2090,13 +2090,13 @@ void Evolution::finalFlowMeasurement(Lattice *lat, Parameters *param, int it) {
     // Hydro flow fields are optional. Tmunu output remains available
     // through the lightweight writer when the expensive eigen solve is
     // disabled.
-    if (param->getWriteEpsilonUHydro() != 0) {
+    if (param->output.writeEpsilonUHydro != 0) {
         u(lat, param, it, true);
     } else {
         MyEigen myeigen;
         // eccentricity() weights by epsilon * u^tau, which only the
         // flow-velocity solve sets.
-        if (param->getComputeGluonMultiplicity()) {
+        if (param->output.computeGluonMultiplicity) {
             myeigen.solveFlowVelocity(lat, param, it);
         }
         myeigen.writeTmunu4D(lat, param, it);
@@ -2172,15 +2172,15 @@ void Evolution::eccentricity(
     Lattice *lat, Parameters *param, int it, double cutoff, int doAniso) {
     IPG_PROFILE_SCOPE("observables.eccentricity");
     stringstream strecc_name;
-    strecc_name << "eccentricities" << param->getEventId() << ".dat";
+    strecc_name << "eccentricities" << param->event.eventId << ".dat";
     string ecc_name;
     ecc_name = strecc_name.str();
 
     // cutoff on energy density is 'cutoff' times Lambda_QCD^4
-    int N = param->getSize();
+    int N = param->lattice.size;
     int pos;
     double rA, phiA, x, y;
-    double L = param->getL();
+    double L = param->lattice.L;
     double a = L / N;  // lattice spacing in fm
     double eccentricity1, eccentricity2, eccentricity3, eccentricity4,
         eccentricity5, eccentricity6;
@@ -2190,11 +2190,11 @@ void Evolution::eccentricity(
     double Rbar;
     double Psi1, Psi2, Psi3, Psi4, Psi5, Psi6;
     double maxEps = 0;
-    double g = param->getg();
+    double g = param->coupling.g;
 
     double g2mu2A, g2mu2B, gfactor, alphas = 0., Qs = 0.;
-    double c = param->getc();
-    double muZero = param->getMuZero();
+    double c = param->coupling.c;
+    double muZero = param->coupling.muZero;
 
     double weight;
 
@@ -2249,10 +2249,10 @@ void Evolution::eccentricity(
                            * gfactor;  // GeV/fm^3
                 g2mu2A = lat->cells[pos]->getg2mu2A();
                 g2mu2B = lat->cells[pos]->getg2mu2B();
-                avgQs2AQs2B += g2mu2A * param->getQsmuRatio()
-                               * param->getQsmuRatio() * g2mu2B
-                               * param->getQsmuRatioB() * param->getQsmuRatioB()
-                               / a / a / a / a;
+                avgQs2AQs2B += g2mu2A * param->colorCharge.QsmuRatio
+                               * param->colorCharge.QsmuRatio * g2mu2B
+                               * param->event.QsmuRatioB
+                               * param->event.QsmuRatioB / a / a / a / a;
             }
             avx += x * weight;
             avy += y * weight;
@@ -2264,7 +2264,7 @@ void Evolution::eccentricity(
     avy /= toteps;
     avgeden /= double(sum);
     avgQs2AQs2B /= double(sum);
-    param->setArea(area);
+    param->event.area = area;
 
     xshift = static_cast<int>(floor(avx / a + 0.00000000001));
     yshift = static_cast<int>(floor(avy / a + 0.00000000001));
@@ -2411,25 +2411,25 @@ void Evolution::eccentricity(
     avySq /= toteps;
     avrSq /= toteps;
     Rbar = 1. / sqrt(1. / avxSq + 1. / avySq);
-    if (it == 1) param->setPsi(Psi2);
+    if (it == 1) param->event.psi = Psi2;
 
     if (doAniso == 0) {
         ofstream foutEcc(ecc_name.c_str(), std::ios::app);
-        foutEcc << it * a * param->getdtau() << " " << eccentricity1 << " "
+        foutEcc << it * a * param->run.dtau << " " << eccentricity1 << " "
                 << Psi1 << " " << eccentricity2 << " " << Psi2 << " "
                 << eccentricity3 << " " << Psi3 << " " << eccentricity4 << " "
                 << Psi4 << " " << eccentricity5 << " " << Psi5 << " "
                 << eccentricity6 << " " << Psi6 << " " << cutoff << " "
                 << sqrt(avrSq) << " " << maxX << " " << maxY << " "
-                << param->getb() << " " << param->getTpp() << " "
-                << param->getArea() << " " << Rbar << " " << avgeden << " "
+                << param->event.b << " " << param->event.Tpp << " "
+                << param->event.area << " " << Rbar << " " << avgeden << " "
                 << avgQs2AQs2B * hbarc << endl;
         foutEcc.close();
     }
 
     if (doAniso == 1) {
         stringstream straniso_name;
-        straniso_name << "anisotropy" << param->getEventId() << ".dat";
+        straniso_name << "anisotropy" << param->event.eventId << ".dat";
         string aniso_name;
         aniso_name = straniso_name.str();
 
@@ -2456,12 +2456,12 @@ void Evolution::eccentricity(
                   << ", sin(PsiU)=" << sin(PsiU) << endl;
 
         // Sample the rotated-tensor anisotropy at Psi = PsiU + k*Pi/8 for
-        // k=0..9 (k=0: Psi = PsiU;  // param->getPsi();//-Pi/2.;).
+        // k=0..9 (k=0: Psi = PsiU;  // param->event.psi;//-Pi/2.;).
         for (int k = 0; k < 10; ++k) {
             const double Psi = PsiU + static_cast<double>(k) * M_PI / 8.;
             const AnisotropyResult result =
                 computeRotatedAnisotropy(lat, N, Psi);
-            foutAniso << it * a * param->getdtau() << " "
+            foutAniso << it * a * param->run.dtau << " "
                       << result.num / result.den << " "
                       << result.num2 / result.den2 << " angle=" << Psi << endl;
         }
@@ -2482,7 +2482,7 @@ void Evolution::readNkt(Parameters *param) {
 
     ifstream fin;
     stringstream strmult_name;
-    strmult_name << "multiplicity" << param->getEventId() << ".dat";
+    strmult_name << "multiplicity" << param->event.eventId << ".dat";
     string mult_name;
     mult_name = strmult_name.str();
     fin.open(mult_name.c_str());
@@ -2493,7 +2493,7 @@ void Evolution::readNkt(Parameters *param) {
 
     ifstream fin2;
     stringstream strmult_name2;
-    strmult_name2 << "NpartdNdy" << param->getEventId() << ".dat";
+    strmult_name2 << "NpartdNdy" << param->event.eventId << ".dat";
     string mult_name2;
     mult_name2 = strmult_name2.str();
     fin2.open(mult_name2.c_str());
@@ -2546,27 +2546,28 @@ void Evolution::readNkt(Parameters *param) {
     }
 
     double m, P;
-    m = param->getJacobianm();                                // in GeV
-    P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
+    m = param->colorCharge.Jacobianm;                              // in GeV
+    P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
     double dNdeta2;
     dNdeta2 = 0.;
 
     for (int ik = 0; ik < 100; ik++) {
-        if (param->getUsePseudoRapidity() == 0) {
+        if (param->colorCharge.usePseudoRapidity == 0) {
             dNdeta2 += nIn_[ik] * (ik + 0.5) * dkt * dkt * 2.
                        * M_PI;  // integrate, gives a ik*dkt*2pi*dkt
         } else {
             dNdeta2 +=
                 nIn_[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                * cosh(param->getRapidity())
+                * cosh(param->colorCharge.rapidity())
                 / (sqrt(
-                    pow(cosh(param->getRapidity()), 2.)
+                    pow(cosh(param->colorCharge.rapidity()), 2.)
                     + m * m / (((ik + 0.5) * dkt) * ((ik + 0.5) * dkt))));
         }
     }
 
-    dNdeta *= cosh(param->getRapidity())
-              / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / P / P));
+    dNdeta *=
+        cosh(param->colorCharge.rapidity())
+        / (sqrt(pow(cosh(param->colorCharge.rapidity()), 2.) + m * m / P / P));
 
     ofstream foutNN("NpartdNdy-mod.dat", std::ios::out);
     foutNN << Npart << " " << dNdeta << " " << dNdeta2 << " "
@@ -2612,22 +2613,22 @@ void Evolution::hadronizeAndWriteMultiplicity(
             else
                 Ng = 0.;
 
-            if (param->getUsePseudoRapidity() == 0) {
+            if (param->colorCharge.usePseudoRapidity == 0) {
                 zintegrand[iz] = 1. / (z * z) * Ng * kkp(7, 1, z, kt);
             } else {
                 zintegrand[iz] =
                     1. / (z * z) * Ng * 2.
-                    * (kkp(1, 1, z, kt) * cosh(param->getRapidity())
+                    * (kkp(1, 1, z, kt) * cosh(param->colorCharge.rapidity())
                            / (sqrt(
-                               pow(cosh(param->getRapidity()), 2.)
+                               pow(cosh(param->colorCharge.rapidity()), 2.)
                                + m_pion * m_pion / (mypt * mypt)))
-                       + kkp(2, 1, z, kt) * cosh(param->getRapidity())
+                       + kkp(2, 1, z, kt) * cosh(param->colorCharge.rapidity())
                              / (sqrt(
-                                 pow(cosh(param->getRapidity()), 2.)
+                                 pow(cosh(param->colorCharge.rapidity()), 2.)
                                  + m_kaon * m_kaon / (mypt * mypt)))
-                       + kkp(4, 1, z, kt) * cosh(param->getRapidity())
+                       + kkp(4, 1, z, kt) * cosh(param->colorCharge.rapidity())
                              / (sqrt(
-                                 pow(cosh(param->getRapidity()), 2.)
+                                 pow(cosh(param->colorCharge.rapidity()), 2.)
                                  + m_proton * m_proton / (mypt * mypt))));
             }
         }
@@ -2642,7 +2643,7 @@ void Evolution::hadronizeAndWriteMultiplicity(
     gsl_interp_accel_free(zacc);
 
     stringstream strmultHad_name;
-    strmultHad_name << "multiplicityHadrons" << param->getEventId() << ".dat";
+    strmultHad_name << "multiplicityHadrons" << param->event.eventId << ".dat";
     string multHad_name;
     multHad_name = strmultHad_name.str();
 
@@ -2651,7 +2652,7 @@ void Evolution::hadronizeAndWriteMultiplicity(
         if (ih % 10 == 0)
             foutdNdpt << ih * 20. / static_cast<double>(hbins) << " "
                       << Nhgsl[ih] << " " << 0. << " " << 0. << " "
-                      << param->getTpp() << " " << param->getb()
+                      << param->event.Tpp << " " << param->event.b
                       << endl;  // leaving out the L and H ones for now
     }
     foutdNdpt.close();
@@ -2667,16 +2668,16 @@ void Evolution::hadronizeAndWriteMultiplicity(
 int Evolution::multiplicity(
     Lattice *lat, Group *group, Parameters *param, int it) {
     IPG_PROFILE_SCOPE("observables.gluon_multiplicity");
-    int N = param->getSize();
+    int N = param->lattice.size;
     int npos, pos;
-    double L = param->getL();
+    double L = param->lattice.L;
     double a = L / N;  // lattice spacing in fm
     double kx, ky, kt2, omega2;
-    double g = param->getg();
+    double g = param->coupling.g;
     int nn[2];
     nn[0] = N;
     nn[1] = N;
-    double dtau = param->getdtau();
+    double dtau = param->run.dtau;
     double nkt;
     const int bins = 100;
     double n[bins];   // k_T array
@@ -2695,7 +2696,7 @@ int Evolution::multiplicity(
 
     stringstream strNpartdNdy_name;
     strNpartdNdy_name << "NpartdNdy-t" << it * dtau * a << "-"
-                      << param->getEventId() << ".dat";
+                      << param->event.eventId << ".dat";
     string NpartdNdy_name;
     NpartdNdy_name = strNpartdNdy_name.str();
     messager_ << "[Evolution::multiplicity]: Measuring multiplicity ... ";
@@ -2705,13 +2706,13 @@ int Evolution::multiplicity(
     GaugeFix gaugefix;
 
     double maxtime;
-    if (param->getInverseQsForMaxTime() == 1) {
-        maxtime = 1. / param->getAverageQs() * hbarc;
+    if (param->evolution.inverseQsForMaxTime == 1) {
+        maxtime = 1. / param->event.averageQs * hbarc;
         messager_ << "[Evolution::multiplicity]: maximal evolution time = "
                   << maxtime << " fm";
         messager_.flush("info");
     } else {
-        maxtime = param->getMaxtime();  // maxtime is in fm
+        maxtime = param->evolution.maxtime;  // maxtime is in fm
     }
 
     int itmax = static_cast<int>(floor(maxtime / (a * dtau) + 1e-10));
@@ -2732,8 +2733,8 @@ int Evolution::multiplicity(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
 
-    double c = param->getc();
-    double muZero = param->getMuZero();
+    double c = param->coupling.c;
+    double muZero = param->coupling.muZero;
 
     prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, E1);
     addPhaseAndRestart(
@@ -2800,8 +2801,8 @@ int Evolution::multiplicity(
         "observables.gluon_multiplicity.spectrum_pi", multiplicityPhaseStart);
 
     double m, P;
-    m = param->getJacobianm();                                // in GeV
-    P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
+    m = param->colorCharge.Jacobianm;                              // in GeV
+    P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
 
     for (int ik = 0; ik < bins; ik++) {
         if (counter[ik] > 0) {
@@ -2830,12 +2831,12 @@ int Evolution::multiplicity(
         multiplicityPhaseStart);
 
     // compute hadrons using fragmentation function
-    if (it == itmax && param->getWriteOutputs() == 3) {
+    if (it == itmax && param->output.writeOutputs == 3) {
         hadronizeAndWriteMultiplicity(param, a, dkt, bins, n, Nhgsl, hbins);
         multiplicityPhaseStart = ipg::wallSeconds();
     }
 
-    if (param->getUsePseudoRapidity() == 0 && param->getMPIRank() == 0) {
+    if (param->colorCharge.usePseudoRapidity == 0 && param->run.MPIRank == 0) {
         messager_ << "[Evolution::multiplicity]: dN/dy 1 = " << dNdeta
                   << ", dE/dy 1 = " << dEdeta;
         messager_.flush("info");
@@ -2845,17 +2846,19 @@ int Evolution::multiplicity(
         messager_ << "[Evolution::multiplicity]: gluon <p_T> = "
                   << dEdeta / dNdeta;
         messager_.flush("info");
-    } else if (param->getUsePseudoRapidity() == 1) {
-        m = param->getJacobianm();                                // in GeV
-        P = 0.13 + 0.32 * pow(param->getRoots() / 1000., 0.115);  // in GeV
-        dNdeta *=
-            cosh(param->getRapidity())
-            / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / (P * P)));
-        dEdeta *=
-            cosh(param->getRapidity())
-            / (sqrt(pow(cosh(param->getRapidity()), 2.) + m * m / (P * P)));
+    } else if (param->colorCharge.usePseudoRapidity == 1) {
+        m = param->colorCharge.Jacobianm;                              // in GeV
+        P = 0.13 + 0.32 * pow(param->collision.roots / 1000., 0.115);  // in GeV
+        dNdeta *= cosh(param->colorCharge.rapidity())
+                  / (sqrt(
+                      pow(cosh(param->colorCharge.rapidity()), 2.)
+                      + m * m / (P * P)));
+        dEdeta *= cosh(param->colorCharge.rapidity())
+                  / (sqrt(
+                      pow(cosh(param->colorCharge.rapidity()), 2.)
+                      + m * m / (P * P)));
 
-        if (param->getMPIRank() == 0) {
+        if (param->run.MPIRank == 0) {
             messager_ << "[Evolution::multiplicity]: dN/deta 1 = " << dNdeta
                       << ", dE/deta 1 = " << dEdeta;
             messager_.flush("info");
@@ -2880,7 +2883,7 @@ int Evolution::multiplicity(
     if (dNdeta == 0.) {
         messager_ << "[Evolution::multiplicity]: No collision happened on "
                      "rank "
-                  << param->getMPIRank()
+                  << param->run.MPIRank
                   << ". Restarting with new random number...";
         messager_.flush("warning");
         addPhaseAndRestart(
@@ -2890,9 +2893,9 @@ int Evolution::multiplicity(
 
     if (it == itmax) {
         ofstream foutNN(NpartdNdy_name.c_str(), std::ios::out);
-        foutNN << param->getNpart() << " " << dNdeta << " " << param->getTpp()
-               << " " << param->getb() << " " << dEdeta << " "
-               << param->getRandomSeed() << " "
+        foutNN << param->event.Npart << " " << dNdeta << " " << param->event.Tpp
+               << " " << param->event.b << " " << dEdeta << " "
+               << param->run.randomSeed << " "
                << "N/A"
                << " "
                << "N/A"
@@ -2901,9 +2904,10 @@ int Evolution::multiplicity(
                << " " << dNdetaCut << " " << dEdetaCut << " " << dNdetaCut2
                << " " << dEdetaCut2 << " "
                << computeRunningCouplingGfactorFromScale(
-                      g, muZero, c, param->getLambdaQCD(), param->getNFlavors(),
-                      param->getRunWithThisFactorTimesQs()
-                          * param->getAverageQs())
+                      g, muZero, c, param->coupling.LambdaQCD,
+                      param->coupling.nFlavors,
+                      param->coupling.runWithThisFactorTimesQs
+                          * param->event.averageQs)
                << endl;
         foutNN.close();
         writeGluonMultiplicityTarget(
@@ -2917,6 +2921,6 @@ int Evolution::multiplicity(
 
     messager_ << "[Evolution::multiplicity]:  done.";
     messager_.flush("info");
-    param->setSuccess(1);
+    param->event.success = 1;
     return 1;
 }

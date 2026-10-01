@@ -68,8 +68,8 @@ int main(int argc, char *argv[]) {
 
     Parameters paramStorage;
     Parameters *param = &paramStorage;
-    param->setMPIRank(rank);
-    param->setMPISize(size);
+    param->run.MPIRank = rank;
+    param->run.MPISize = size;
 
     // read and validate the parameters from the input file
     if (!readInput(param, argc, argv, rank)) {
@@ -83,20 +83,19 @@ int main(int argc, char *argv[]) {
     Random randomStorage;
     Random *random = &randomStorage;
     unsigned long long int rnum;
-    if (param->getUseSeedList() == 0) {
-        if (param->getUseTimeForSeed() == 1) {
+    if (param->random.useSeedList == 0) {
+        if (param->random.useTimeForSeed == 1) {
             std::random_device ran_dev;
             rnum = ran_dev();
         } else {
-            rnum = param->getSeed();
+            rnum = param->random.seed;
             messager << "[main::main]: Random seed = " << rnum + (rank * 1000)
                      << " - entered directly +rank*1000.";
             messager.flush("info");
         }
-        param->setRandomSeed(rnum + rank * 1000);
-        if (param->getUseTimeForSeed() == 1) {
-            messager << "[main::main]: Random seed = "
-                     << param->getRandomSeed();
+        param->run.randomSeed = rnum + rank * 1000;
+        if (param->random.useTimeForSeed == 1) {
+            messager << "[main::main]: Random seed = " << param->run.randomSeed;
             messager.flush("info");
         }
         random->init_genrand64(rnum + rank * 1000);
@@ -122,14 +121,14 @@ int main(int argc, char *argv[]) {
             exit(1);
         }
         fin.close();
-        param->setRandomSeed(seedList[rank]);
+        param->run.randomSeed = seedList[rank];
         random->init_genrand64(seedList[rank]);
         random->gslRandomInit(seedList[rank]);
         messager << "[main::main]: Random seed on rank " << rank << " = "
                  << seedList[rank] << " read from list.";
         messager.flush("info");
     }
-    random->setGammaIncCDF(param->getOmega());
+    random->setGammaIncCDF(param->subnucleon.omega);
 
     // event loop starts ...
     for (int iev = 0; iev < nev; iev++) {
@@ -142,21 +141,21 @@ int main(int argc, char *argv[]) {
         // welcome
         if (rank == 0) display_logo();
 
-        if (param->getSubNucleonParamType() > 0) {
+        if (param->subnucleon.SubNucleonParamType > 0) {
             IPG_PROFILE_SCOPE("initialization.subnucleon_parameters");
             // sample the sub-nucleon parameters from the posterior distribution
-            int iSubNucleonParamSet = param->getSubNucleonParamSet();
+            int iSubNucleonParamSet = param->subnucleon.SubNucleonParamSet;
             if (iSubNucleonParamSet == -1) {
                 iSubNucleonParamSet = random->genrand64_int63();
             }
             param->setParamsWithPosteriorParameterSet(
-                param->getSubNucleonParamType(), iSubNucleonParamSet);
+                param->subnucleon.SubNucleonParamType, iSubNucleonParamSet);
         }
 
         // initialize helper class objects
 
-        param->setEventId(rank + iev * size);
-        param->setSuccess(0);
+        param->event.eventId = rank + iev * size;
+        param->event.success = 0;
 
         {
             IPG_PROFILE_SCOPE("parameters.write");
@@ -164,16 +163,16 @@ int main(int argc, char *argv[]) {
         }
 
         int nn[2];
-        nn[0] = param->getSize();
-        nn[1] = param->getSize();
+        nn[0] = param->lattice.size;
+        nn[1] = param->lattice.size;
 
         stringstream strup_name;
-        strup_name << "usedParameters" << param->getEventId() << ".dat";
+        strup_name << "usedParameters" << param->event.eventId << ".dat";
         string up_name;
         up_name = strup_name.str();
         ofstream fout1(up_name.c_str(), std::ios::app);
         fout1 << "# Random seed used on rank " << rank << ": "
-              << param->getRandomSeed() << endl;
+              << param->run.randomSeed << endl;
         fout1.close();
 
         // initialize init object
@@ -183,26 +182,27 @@ int main(int argc, char *argv[]) {
         Group group;
 
         // initialize Glauber class
-        messager << "[main::main]: Init Glauber on rank " << param->getMPIRank()
+        messager << "[main::main]: Init Glauber on rank " << param->run.MPIRank
                  << " ... ";
         messager.flush("info");
         Glauber glauber;
         {
             IPG_PROFILE_SCOPE("glauber.initialize");
             glauber.initGlauber(
-                param->getSigmaNN(), param->getTarget(), param->getProjectile(),
-                param->getb(), param->getSetWSDeformParams(), param->getR_WS(),
-                param->getA_WS(), param->getBeta2(), param->getBeta3(),
-                param->getBeta4(), param->getGamma(), param->getForceDmin(),
-                param->getDmin(), param->getWSdR_np(), param->getWSda_np(),
-                100);
+                param->collision.SigmaNN, param->collision.Target,
+                param->collision.Projectile, param->event.b,
+                param->nucleus.setWSDeformParams, param->nucleus.R_WS,
+                param->nucleus.a_WS, param->nucleus.beta2, param->nucleus.beta3,
+                param->nucleus.beta4, param->nucleus.gamma,
+                param->nucleus.force_dmin_flag, param->nucleus.d_min,
+                param->nucleus.dR_np, param->nucleus.da_np, 100);
         }
 
         // initialize evolution object
         Evolution evolution(nn);
 
         // either read k_T spectrum from file or do a fresh start
-        if (param->getReadMultFromFile() == 1) {
+        if (param->output.readMultFromFile == 1) {
             evolution.readNkt(param);
         }
 
@@ -210,42 +210,42 @@ int main(int argc, char *argv[]) {
         // before the per-event profile is written.
         {
             // allocate lattice
-            Lattice lat(param, param->getSize());
+            Lattice lat(param, param->lattice.size);
             messager.info("[main::main]: Lattice generated.");
 
-            param->setSuccess(0);
+            param->event.success = 0;
 
             // initialize U-fields on the lattice
             InitializationMethod init_method;
-            if (param->getReadInitialWilsonLines() == 0) {
+            if (param->wilsonLines.readInitialWilsonLines == 0) {
                 init_method = InitializationMethod::SampleColorCharges;
             } else {
-                init_method = (param->getReadInitialWilsonLines() == 1)
+                init_method = (param->wilsonLines.readInitialWilsonLines == 1)
                                   ? InitializationMethod::ReadWlineText
                                   : InitializationMethod::ReadWlineBinary;
             }
             // First generate the V
             init.init(&lat, &group, param, random, &glauber, init_method);
 
-            if (param->getUseJIMWLK()) {
+            if (param->jimwlk.useJIMWLK) {
                 messager.info("[main::main]: Start JIMWLK");
                 JIMWLK jimwlkSolver(*param, &group, &lat, random);
                 jimwlkSolver.evolution();
                 messager.info("[main::main]: Finish JIMWLK");
 
                 // Store final Wilson lines after JIMWLK evolution
-                if (param->getWriteWilsonLines() > 0) {
+                if (param->wilsonLines.writeWilsonLines > 0) {
                     lat.writeWilsonLines(
                         param, NucleusRole::Projectile,
-                        param->getJimwlk_x_projectile());
+                        param->jimwlk.x_projectile_jimwlk);
                     lat.writeWilsonLines(
                         param, NucleusRole::Target,
-                        param->getJimwlk_x_target());
+                        param->jimwlk.x_target_jimwlk);
                 }
             }
 
-            if (param->getMode() == 1) {
-                while (param->getSuccess() == 0) {
+            if (param->evolution.mode == 1) {
+                while (param->event.success == 0) {
                     // sample collision impact parameter
                     // and compute Npart, Ncoll,etc, and check if there was a
                     // collision
@@ -268,7 +268,7 @@ int main(int argc, char *argv[]) {
 #endif
 
             messager.info("[main::main]: One event finished");
-            if (param->getWriteOutputsToHDF5() == 1) {
+            if (param->output.writeOutputsToHDF5 == 1) {
                 IPG_PROFILE_SCOPE("output.hdf5_collect_event");
                 int status = 0;
                 stringstream h5output_filename;
@@ -277,7 +277,7 @@ int main(int argc, char *argv[]) {
                 collect_command
                     << "python3 utilities/combine_events_into_hdf5.py ."
                     << " --output_filename " << h5output_filename.str()
-                    << " --event_id " << param->getEventId();
+                    << " --event_id " << param->event.eventId;
                 status = system(collect_command.str().c_str());
                 if (status == 0) {
                     messager << "[main::main]: Collected this event's "
@@ -296,7 +296,7 @@ int main(int argc, char *argv[]) {
 
             {
                 IPG_PROFILE_SCOPE("correctness.fingerprint");
-                ipg::writeLatticeFingerprint(&lat, rank, param->getEventId());
+                ipg::writeLatticeFingerprint(&lat, rank, param->event.eventId);
             }
         }  // lattice lifetime
 
@@ -430,11 +430,11 @@ void writeparams(Parameters *param) {
     // write the values of all input parameters this event used to
     // "usedParameters<id>.dat", in input-file syntax
     stringstream strup_name;
-    strup_name << "usedParameters" << param->getEventId() << ".dat";
+    strup_name << "usedParameters" << param->event.eventId << ".dat";
     ofstream fout1(strup_name.str());
     time_t rawtime = time(0);
     fout1 << "# Input parameters used by IP-Glasma for event "
-          << param->getEventId() << ", written " << ctime(&rawtime);
+          << param->event.eventId << ", written " << ctime(&rawtime);
     fout1 << "# This file is a valid input file. Running it does not "
              "reproduce this event:\n"
              "# the random numbers also depend on the MPI rank and the "

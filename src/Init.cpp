@@ -400,7 +400,7 @@ void Init::readInNucleusConfigs(
     bool readFlag = true;
     if (nucleusA == 2) {
         fileName = "DeuteronPol0Configs.bin.in";
-        if ((std::abs(polJz) - 1) < 1e-8)
+        if (std::abs(std::abs(polJz) - 1.) < 1e-8)
             fileName = "DeuteronPolpm1Configs.bin.in";
         if (polarizationFlag == 0) {
             auto ran = random_ptr_->genrand64_real1();

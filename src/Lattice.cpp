@@ -210,7 +210,8 @@ std::string Lattice::generateWilsonLineDataFileName(
           << param->getEventId()
                  + (iA + 2 * param->getSeed()) * param->getMPISize();
 
-    if (param->getWriteWilsonLines() == 1 or format == 1) Vname << ".txt";
+    const int fileFormat = (format < 0) ? param->getWriteWilsonLines() : format;
+    if (fileFormat == 1) Vname << ".txt";
 
     return Vname.str();
 }

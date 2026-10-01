@@ -5,6 +5,7 @@
 #include <fstream>
 #include <limits>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Glauber.h"
@@ -558,5 +559,40 @@ TEST_CASE(
         }
     }
     std::remove(file.c_str());
+    std::remove(dir.c_str());
+}
+
+TEST_CASE(
+    "Init::readInNucleusConfigs picks the deuteron file matching the "
+    "requested Jz") {
+    Parameters param;
+    makeInitTestParam(param, 4);
+    const std::string dir = "test_deuteron_configs_tmp";
+    REQUIRE(std::system(("mkdir -p " + dir).c_str()) == 0);
+    // one configuration of 2 nucleons each; all entries tag the file
+    const std::string pol0 = dir + "/DeuteronPol0Configs.bin.in";
+    const std::string polpm1 = dir + "/DeuteronPolpm1Configs.bin.in";
+    for (const auto &[file, tag] :
+         {std::pair<std::string, float> {pol0, 0.f}, {polpm1, 1.f}}) {
+        std::ofstream out(file, std::ios::binary);
+        for (int k = 0; k < 2 * 3; k++) {
+            out.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
+        }
+    }
+    param.setNuclearConfigurationsPath(dir);
+
+    int nn[2] = {4, 4};
+    for (const auto &[Jz, expectedTag] :
+         {std::pair<double, float> {0., 0.f}, {1., 1.f}, {-1., 1.f}}) {
+        CAPTURE(Jz);
+        Init init(nn);
+        std::vector<std::vector<float>> configs;
+        // polarizationFlag != 0: the file is chosen by Jz, not randomly
+        init.readInNucleusConfigs(2, 0, 1, Jz, configs, &param);
+        REQUIRE(configs.size() == 1);
+        CHECK(configs[0][0] == expectedTag);
+    }
+    std::remove(pol0.c_str());
+    std::remove(polpm1.c_str());
     std::remove(dir.c_str());
 }

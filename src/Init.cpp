@@ -2132,14 +2132,19 @@ void Init::init(
         readNuclearQs(param);
     }
 
-    readInNucleusConfigs(
-        static_cast<int>(glauber->nucleusA1()), param->getlightNucleusOption(),
-        param->getPolarizationProjectile(),
-        param->getPolarizationProjectileJz(), nucleonPosArrA_, param);
-    readInNucleusConfigs(
-        static_cast<int>(glauber->nucleusA2()), param->getlightNucleusOption(),
-        param->getPolarizationTarget(), param->getPolarizationTargetJz(),
-        nucleonPosArrB_, param);
+    // The configuration files are only used by sampleTAFromConfigFiles();
+    // don't require them to exist for Woods-Saxon sampling.
+    if (param->getUseNucleus() == 1 && param->getNucleonPositionsFromFile() == 1
+        && init_method == InitializationMethod::SampleColorCharges) {
+        readInNucleusConfigs(
+            static_cast<int>(glauber->nucleusA1()),
+            param->getlightNucleusOption(), param->getPolarizationProjectile(),
+            param->getPolarizationProjectileJz(), nucleonPosArrA_, param);
+        readInNucleusConfigs(
+            static_cast<int>(glauber->nucleusA2()),
+            param->getlightNucleusOption(), param->getPolarizationTarget(),
+            param->getPolarizationTargetJz(), nucleonPosArrB_, param);
+    }
 
     if (init_method == InitializationMethod::ReadWlineBinary
         or init_method == InitializationMethod::ReadWlineText) {

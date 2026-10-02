@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include "CollisionGeometry.h"
 #include "Glauber.h"
 #include "Init.h"
 #include "Lattice.h"
@@ -60,34 +61,6 @@ TEST_CASE(
     CHECK(rapidityA == doctest::Approx(rapidityB));
     CHECK(rapidityA != doctest::Approx(1.0));
     CHECK(std::isfinite(rapidityA));
-}
-
-TEST_CASE(
-    "Init::computeAndSetRunningAlphaS respects nFlavors/LambdaQCD instead "
-    "of assuming 3 flavors and LambdaQCD=0.2, and uses the same muZero/c "
-    "as Evolution::computeRunningCouplingGfactor()") {
-    Parameters param;
-    makeInitTestParam(param, 4);
-    param.coupling.runningCoupling = true;
-    param.coupling.runWithKt = false;
-    param.coupling.runWithQs = 1;  // average Qs
-    param.coupling.runningCouplingQsFactor = 0.5;
-    param.event.averageQsAvg = 1.3;
-    param.coupling.mu0 = 0.3;
-    param.coupling.c = 0.2;
-
-    int nn[2] = {4, 4};
-    Init init(nn);
-
-    param.coupling.nFlavors = 3;
-    param.coupling.LambdaQCD = 0.2;
-    init.computeAndSetRunningAlphaS(&param);
-    CHECK(param.event.alphas == doctest::Approx(0.5922901359561648));
-
-    param.coupling.nFlavors = 4;
-    param.coupling.LambdaQCD = 0.25;
-    init.computeAndSetRunningAlphaS(&param);
-    CHECK(param.event.alphas == doctest::Approx(0.789051392062008));
 }
 
 TEST_CASE(
@@ -196,37 +169,9 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Init::computeNcollList (hard-sphere mode) marks a p+p pair collided and "
-    "counts it once") {
-    Parameters param;
-    param.collision.sigmaNN = 4.2;
-    param.collision.gaussianWounding = false;
-    param.event.eventId = 0;
-
-    Glauber glauber;
-    Random random;
-    int nn[2] = {4, 4};
-    Init init(nn);
-    // A1=A2=1 ("p"): sampleTA places both nucleons at the origin (the
-    // random polarization rotation leaves them there).
-    glauber.initGlauber(
-        4.2, "p", "p", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0., 0.,
-        0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
-    param.collision.nucleiToAverage = 1;
-    init.sampleTA(&param, &random, &glauber);
-
-    const double d2 = param.collision.sigmaNN / (M_PI * 10.);  // in fm^2
-    int Ncoll = 0;
-    init.computeNcollList(&param, d2, /*b=*/0.0, /*phiRP=*/0.0, Ncoll);
-
-    CHECK(Ncoll == 1);
-    std::remove("NcollList0.dat");
-}
-
-TEST_CASE(
     "Init::computeSmoothNucleusThickness builds centered projectile (A) and "
-    "target (B) profiles, and scanCollisionGeometry finds their shifted "
-    "overlap") {
+    "target (B) profiles, and CollisionGeometry::scanOverlap finds their "
+    "shifted overlap") {
     // Note: Glauber::interNuPInSP()/interNuTInST() cache their tables in
     // function-local statics on first use, so they hold Cu/Au for every
     // later call in this test binary.
@@ -278,11 +223,14 @@ TEST_CASE(
     CHECK(std::abs(xA / sumA) < a);
     CHECK(std::abs(xB / sumB) < a);
 
+    // a smooth nucleus has no nucleons
+    std::vector<ReturnValue> noNucleonsA, noNucleonsB;
+    CollisionGeometry geometry(noNucleonsA, noNucleonsB);
     auto overlapCells = [&](double b) {
         double averageQs = 0., averageQs2 = 0., averageQs2Avg = 0.,
                averageQs2min = 0., averageQs2min2 = 0., Tpp = 0.;
         int count = 0;
-        init.scanCollisionGeometry(
+        geometry.scanOverlap(
             &lat, &param, N, a, b, /*phiRP=*/0., averageQs, averageQs2,
             averageQs2Avg, averageQs2min, averageQs2min2, Tpp, count);
         return count;

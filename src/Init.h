@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <memory>
 
+#include "CollisionGeometry.h"
 #include "FFT.h"
 #include "Glauber.h"
 #include "Group.h"
@@ -50,9 +51,6 @@ class Init {
     /// The nuclear \f$Q_s^2(T_p, y)\f$ table, read by init().
     NuclearQsTable qsTable_;
 
-    /// Samples the nucleon positions (\c nucleusA_/\c nucleusB_).
-    NucleusSampler nucleusSampler_;
-
     /// This event's sampled projectile nucleon positions.
     std::vector<ReturnValue> nucleusA_;
     /// This event's sampled target nucleon positions.
@@ -62,6 +60,11 @@ class Init {
     std::vector<std::unique_ptr<NucleonProfile>> profilesA_;
     /// Same as \c profilesA_, for nucleus B.
     std::vector<std::unique_ptr<NucleonProfile>> profilesB_;
+    /// Samples the nucleon positions (\c nucleusA_/\c nucleusB_).
+    NucleusSampler nucleusSampler_;
+    /// Impact parameter, wounded nucleons and overlap averages of
+    /// \c nucleusA_/\c nucleusB_ (declared after them, which it refers to).
+    CollisionGeometry collisionGeometry_ {nucleusA_, nucleusB_};
 
     /// Log sink for progress/warning/error messages.
     PrettyOstream messager_;
@@ -114,10 +117,8 @@ class Init {
      */
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     /**
-     * Samples this event's impact parameter \f$b\f$ (linearly or
-     * uniformly distributed between `collision.bMin`/`collision.bMax`, or `0`
-     * for the constant-color-charge-density case) and reaction-plane angle, and
-     * resets every nucleon's `.collided` flag to `0`.
+     * Samples this event's impact parameter and reaction-plane angle
+     * (CollisionGeometry::sampleImpactParameter()).
      * \param[in,out] param Simulation parameters; `event.b`/`event.phiRP`
      * store the sampled values.
      */
@@ -263,134 +264,12 @@ class Init {
     void computeThicknessFromNucleons(
         Lattice *lat, Parameters *param, double nucleiInAverage);
     /**
-     * Determines \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$ from the
-     * (already-sampled) nucleon positions, writes
-     * `NcollList*.dat`/`NpartList*.dat`, and sets
-     * `param->event.Npart = `.
-     * \param[in] param Simulation parameters.
-     * \param[out] Npart Number of participants.
-     * \param[out] Ncoll Number of binary collisions.
-     * \return `false` (having called `param->event.success = 0`) if
-     * `useFixedNpart` is set and this event's \f$N_{\text{part}}\f$
-     * doesn't match, signaling the caller to abort and resample;
-     * `true` otherwise.
-     */
-    bool determineNpartAndNcoll(Parameters *param, int &Npart, int &Ncoll);
-    /**
-     * determineNpartAndNcoll()'s binary-collision pair loop: writes
-     * `NcollList<id>.dat` and marks each colliding nucleon pair's
-     * `.collided`, using either a hard-sphere (\f$d_{ij}^2 <\f$ \p d2)
-     * or Gaussian-profile wounding criterion depending on
-     * `param->collision.gaussianWounding`.
-     * \param[in] param Simulation parameters.
-     * \param[in] d2 Squared wounding distance
-     * (\f$\sigma_{NN}/(10\pi)\f$) [fm\f$^2\f$].
-     * \param[in] b Impact parameter [fm].
-     * \param[in] phiRP Reaction-plane angle [rad].
-     * \param[in,out] Ncoll Incremented for each colliding pair found.
-     */
-    void computeNcollList(
-        Parameters *param, double d2, double b, double phiRP, int &Ncoll);
-    /**
-     * Sets \p param's running-coupling \f$\alpha_s\f$ from whichever
-     * \f$Q_s\f$ choice `param->coupling.runWithQs` selects, or a
-     * fixed value if running coupling is disabled or \f$\alpha_s\f$ runs with
-     * \f$k_T\f$ instead (handled per-cell elsewhere via
-     * `computeRunningCouplingGfactor`, which shares computeAlphaS()
-     * with this function).
-     * \param[in,out] param Simulation parameters;
-     * `event.alphas` stores the result.
-     */
-    void computeAndSetRunningAlphaS(Parameters *param);
-    /**
-     * Computes and logs this event's collision-geometry summary
-     * (\f$N_{\text{part}}\f$, \f$N_{\text{coll}}\f$, \f$T_{pp}\f$,
-     * average \f$Q_s\f$, \f$\alpha_s\f$), writes the
-     * `usedParameters*.dat`/`NgluonEstimators*.dat` files, and marks
-     * the event a success or failure (e.g. no overlap region, no
-     * physical \f$Q_s\f$, or \f$Q_{s,\min}^2 S_T\f$ below
-     * `param->colorCharge.minimumQs2ST`).
+     * Computes this event's collision geometry and decides whether it is
+     * accepted (CollisionGeometry::computeQuantities()).
      * \param[in] lat Lattice to read color-charge densities from.
      * \param[in,out] param Simulation parameters.
      */
     void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
-    /**
-     * Scans the full lattice, accumulating the \f$Q_s\f$/\f$T_{pp}\f$
-     * collision-geometry averages computeCollisionGeometryQuantities()
-     * reports and stores (only over cells within the wounding distance
-     * of at least one collided nucleon from each nucleus).
-     * \param[in] lat Lattice to read color-charge densities from.
-     * \param[in] param Simulation parameters.
-     * \param[in] N Lattice side length.
-     * \param[in] a Lattice spacing [fm].
-     * \param[in] b Impact parameter [fm].
-     * \param[in] phiRP Reaction-plane angle [rad].
-     * \param[out] averageQs Running sum of \f$Q_s\f$ (max of the two
-     * nuclei at each cell).
-     * \param[out] averageQs2 Running sum of \f$Q_s^2\f$ (max).
-     * \param[out] averageQs2Avg Running sum of \f$Q_s^2\f$ (average of
-     * the two nuclei).
-     * \param[out] averageQs2min Running sum of \f$Q_s^2\f$ (min).
-     * \param[out] averageQs2min2 Running sum of \f$Q_s^2\f$ (min),
-     * accumulated over every lattice cell rather than just the
-     * overlap region.
-     * \param[out] Tpp Running sum of \f$T_p^A T_p^B\f$ [fm\f$^{-2}\f$].
-     * \param[out] count Number of cells included in the overlap-region
-     * averages.
-     */
-    void scanCollisionGeometry(
-        Lattice *lat, Parameters *param, int N, double a, double b,
-        double phiRP, double &averageQs, double &averageQs2,
-        double &averageQs2Avg, double &averageQs2min, double &averageQs2min2,
-        double &Tpp, int &count);
-    /**
-     * Logs computeCollisionGeometryQuantities()'s
-     * \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$/\f$T_{pp}\f$/\f$Q_s\f$/
-     * \f$\alpha_s\f$ summary.
-     * \param[in] param Simulation parameters.
-     * \param[in] Npart Number of participants.
-     * \param[in] Ncoll Number of binary collisions.
-     * \param[in] Tpp \f$T_{pp}\f$ [fm\f$^{-2}\f$].
-     * \param[in] a Lattice spacing [fm].
-     * \param[in] averageQs2 Average \f$Q_s^2\f$ (max).
-     * \param[in] averageQs2Avg Average \f$Q_s^2\f$ (average).
-     * \param[in] averageQs2min Average \f$Q_s^2\f$ (min).
-     * \param[in] averageQs2min2 Average \f$Q_s^2\f$ (min), whole
-     * lattice.
-     * \param[in] count Number of cells the overlap-region averages were
-     * computed over.
-     */
-    void logCollisionGeometryQuantities(
-        Parameters *param, int Npart, int Ncoll, double Tpp, double a,
-        double averageQs2, double averageQs2Avg, double averageQs2min,
-        double averageQs2min2, int count);
-    /**
-     * Appends this event's `usedParameters<id>.dat` entry (called only
-     * when computeCollisionGeometryQuantities() marks the event a
-     * success).
-     * \param[in] param Simulation parameters.
-     * \param[in] phiRP Reaction-plane angle [rad].
-     * \param[in] Npart Number of participants.
-     * \param[in] Ncoll Number of binary collisions.
-     */
-    void writeUsedParametersFile(
-        Parameters *param, double phiRP, int Npart, int Ncoll);
-    /**
-     * Writes this event's `NgluonEstimators<id>.dat` file (rough
-     * gluon-multiplicity estimator inputs: \f$Q_s^2 S_T\f$ combinations
-     * for the min/average/max \f$Q_s\f$ choices).
-     * \param[in] param Simulation parameters.
-     * \param[in] a Lattice spacing [fm].
-     * \param[in] averageQs2 Average \f$Q_s^2\f$ (max).
-     * \param[in] averageQs2Avg Average \f$Q_s^2\f$ (average).
-     * \param[in] averageQs2min2 Average \f$Q_s^2\f$ (min), whole
-     * lattice.
-     * \param[in] count Number of cells the overlap-region averages were
-     * computed over.
-     */
-    void writeNgluonEstimatorsFile(
-        Parameters *param, double a, double averageQs2, double averageQs2Avg,
-        double averageQs2min2, int count);
     /**
      * Constructs both nuclei's Wilson lines by solving the classical
      * color-source Poisson problem in momentum space, one longitudinal

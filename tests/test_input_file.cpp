@@ -575,3 +575,67 @@ TEST_CASE(
         std::filesystem::remove("tables", ignored);
     }
 }
+
+TEST_CASE("Parameters::readInput: protonAnisotropy must be larger than -1") {
+    const std::string gaussian = exampleInputWith("nucleonModel", "gaussian");
+    auto withAnisotropy = [&gaussian](const std::string &value) {
+        std::istringstream in(gaussian);
+        std::string line, text;
+        while (std::getline(in, line)) {
+            if (line.rfind("protonAnisotropy ", 0) == 0) {
+                line = "protonAnisotropy " + value;
+            }
+            text += line + "\n";
+        }
+        return text;
+    };
+    CHECK(anyContains(
+        readErrors(withAnisotropy("-1")),
+        "protonAnisotropy -1: must be larger than -1"));
+    CHECK(readErrors(withAnisotropy("-0.5")).empty());
+}
+
+TEST_CASE(
+    "Parameters::readInput: useConstituentQuarkProton points to "
+    "nucleonModel") {
+    std::istringstream in(readSourceFile("input"));
+    std::string line, oldInput;
+    while (std::getline(in, line)) {
+        if (line.rfind("nucleonModel ", 0) == 0) continue;
+        if (line.rfind("Nq ", 0) == 0) line = "useConstituentQuarkProton 3";
+        oldInput += line + "\n";
+    }
+    const std::vector<std::string> errors = readErrors(oldInput);
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(anyContains(
+        errors,
+        "unknown parameter useConstituentQuarkProton (replaced by "
+        "nucleonModel"));
+    CHECK(anyContains(errors, "nucleonModel is required"));
+    CHECK_FALSE(anyContains(errors, "renamed to Nq"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: a posterior set with gaussian nucleons is "
+    "reported as such, without needing the posterior table") {
+    Parameters param;
+    std::string text;
+    {
+        std::istringstream in(exampleInputWith("nucleonModel", "gaussian"));
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("subNucleonParamType ", 0) == 0) {
+                line = "subNucleonParamType 4";
+            }
+            text += line + "\n";
+        }
+    }
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(text));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(anyContains(
+        param.validationErrors(),
+        "subNucleonParamType = 4 (a posterior parameter set) requires "
+        "nucleonModel hotspots"));
+}

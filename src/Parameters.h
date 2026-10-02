@@ -481,12 +481,13 @@ class Parameters {
     /**
      * Loads a posterior-fit parameter table from a CSV file (skipping
      * its header row) into \p ParamSet.
-     * \param[in] posteriorFileName Path to the CSV file; exits with an
-     * error if it can't be opened.
+     * \param[in] posteriorFileName Path to the CSV file.
      * \param[out] ParamSet Appended with one row per CSV data line,
      * each a vector of the comma-separated values parsed as `float`.
+     * \return An error message if the file can't be opened or a value is
+     * not a number, otherwise an empty string.
      */
-    void loadPosteriorParameterSetsFromFile(
+    std::string loadPosteriorParameterSetsFromFile(
         std::string posteriorFileName,
         std::vector<std::vector<float>> &ParamSet);
     /**
@@ -496,8 +497,8 @@ class Parameters {
      * \f$N_q\f$); `2` loads `tables/posterior_Nq3.csv`; `4` loads
      * `tables/posterior5020_Nq3.csv` (both fixed \f$N_q=3\f$); any
      * other value is a no-op.
-     * \return An error message if the table is empty or a row has too
-     * few values, otherwise an empty string.
+     * \return An error message if the file can't be read, the table is
+     * empty or a row has too few values, otherwise an empty string.
      */
     std::string loadPosteriorParameterSets(const int itype);
     /**

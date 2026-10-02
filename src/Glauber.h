@@ -7,15 +7,15 @@
 #include "PrettyOstream.h"
 #include "Random.h"
 
-/// Adaptive-quadrature convergence tolerance used by integral()/qnc7().
-#define TOL (1.0e-6)
+/// Relative tolerance of Glauber::integral()'s adaptive quadrature.
+#define QUADRATURE_TOLERANCE (1.0e-6)
+/// Maximum number of subintervals Glauber::integral()'s adaptive
+/// quadrature may use.
+#define QUADRATURE_INTERVALS 200
 /// Small-number regularizer used throughout the density-profile
 /// integrands to keep \f$\xi=0\f$/\f$\xi=1\f$ away from a
 /// \f$\log(0)\f$ or division-by-zero singularity.
 #define TINY (1.0e-10)
-/// Maximum number of integrand evaluations qnc7() will perform before
-/// giving up on reaching \c TOL and returning its best estimate so far.
-#define LIMIT 10000
 
 /**
  * Which of the two colliding nuclei a lattice/nucleon-sampling operation
@@ -29,7 +29,7 @@ enum class NucleusRole {
 };
 
 /**
- * Selects which integrand evaluateIntegrand()/integral()/qnc7() sample.
+ * Selects which integrand evaluateIntegrand()/integral() sample.
  *
  * `NuInt2HO`/`NuInt3Gauss`/`NuInt3Fermi`/`NuIntHulthen` mirror
  * `Nucleus::densityFunc`'s values (1/2/3/8) and are used for nuInS()'s
@@ -168,8 +168,7 @@ struct Data {
     double sCutoff;
     /// Number of grid points used by Glauber::interNuPInSP()/
     /// interNuTInST()'s interpolation tables; set from
-    /// Glauber::initGlauber()'s \c imax. Unrelated to qnc7(), whose
-    /// evaluation-count bound is the fixed \c LIMIT macro.
+    /// Glauber::initGlauber()'s \c imax.
     int interMax;
 };
 
@@ -548,43 +547,24 @@ class Glauber {
     double nuIntHulthen(double xi);
 
     /**
-     * Adaptive Newton-Cotes (7-point) quadrature of the density
-     * profile integrand selected by \p id, over `[down, up]`.
+     * Fixed-point Gauss-Legendre quadrature (GSL, \c QUADRATURE_POINTS
+     * points) of the density-profile integrand selected by \p id, over
+     * `[down, up]`. The integrands are smooth on the open interval, and
+     * the rule never evaluates them at the endpoints.
      * \param[in] id Which integrand to sample (see evaluateIntegrand()).
      * \param[in] down Lower integration bound.
      * \param[in] up Upper integration bound.
-     * \param[in] tol Relative convergence tolerance for qnc7()'s
-     * adaptive subdivision.
-     * \param[out] count Number of integrand evaluations used; capped at
-     * \c LIMIT by qnc7().
-     * \return The integral's estimated value (`0.0` if `down == up`).
+     * \return The integral's value (`0.0` if `down == up`).
      */
-    double integral(
-        IntegrandId id, double down, double up, double tol, int *count);
+    double integral(IntegrandId id, double down, double up);
     /**
-     * Recursive adaptive step of the 7-point Newton-Cotes quadrature
-     * used by integral(): estimates the integral over the left and
-     * right halves of `[down, down+12*dx]` and recurses into whichever
-     * half hasn't converged to \p tol yet.
-     * \param[in] id Which integrand to sample (see evaluateIntegrand()).
-     * \param[in] tol Relative convergence tolerance for this level's
-     * halves.
-     * \param[in] down Lower bound of this call's interval.
-     * \param[in] dx One-sixth of this call's interval width.
-     * \param[in] f_of Integrand values at the 7 equally-spaced points
-     * across this call's interval.
-     * \param[in] pre_sum This interval's estimate from the parent call,
-     * used to judge convergence.
-     * \param[in] area Running estimate of the total absolute area
-     * integrated so far, used to scale the convergence test.
-     * \param[in,out] count Number of integrand evaluations used so
-     * far; recursion stops once this reaches \c LIMIT regardless of
-     * convergence.
-     * \return This interval's integral estimate.
+     * GSL callback for integral(): evaluates the integrand chosen by
+     * \p params at \p x.
+     * \param[in] x Integration variable.
+     * \param[in] params Pointer to the integral()'s IntegrandCall.
+     * \return The integrand's value at \p x.
      */
-    double qnc7(
-        IntegrandId id, double tol, double down, double dx, double *f_of,
-        double pre_sum, double area, int *count);
+    static double integrandCallback(double x, void *params);
     /**
      * Dispatches to the density-profile integrand selected by \p id.
      * \param[in] id Which integrand to evaluate.

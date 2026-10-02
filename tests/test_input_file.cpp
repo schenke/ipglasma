@@ -1,3 +1,6 @@
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -512,4 +515,45 @@ TEST_CASE(
     for (const std::string &error : errors) CAPTURE(error);
     CHECK(errors.empty());
     CHECK(param.subnucleon.nucleonModel == "gaussian");
+}
+
+TEST_CASE(
+    "Parameters::readInput: a posterior parameter set replaces m, BG, BGq, "
+    "smearingWidth, QsMuRatio, dqMin and Nq, which are then not read") {
+    // readInput() loads tables/posterior_Nq3.csv for type 2; provide a
+    // one-row table if none exists in the working directory
+    const std::string table = "tables/posterior_Nq3.csv";
+    const bool ownTable = !std::filesystem::exists(table);
+    if (ownTable) {
+        std::filesystem::create_directories("tables");
+        std::ofstream out(table);
+        out << "m,BG,BGq,smearingWidth,QsmuRatio,dqmin\n"
+            << "0.3,4.0,0.3,0.5,0.6,0.2\n";
+    }
+
+    std::string text;
+    {
+        std::istringstream in(exampleInputWith("subNucleonParamType", "2"));
+        std::string line;
+        while (std::getline(in, line)) {
+            bool replaced = false;
+            for (const char *key :
+                 {"m ", "BG ", "BGq ", "smearingWidth ", "QsMuRatio ", "dqMin ",
+                  "Nq "}) {
+                if (line.rfind(key, 0) == 0) replaced = true;
+            }
+            if (!replaced) text += line + "\n";
+        }
+    }
+    Parameters param;
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(text));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(param.validationErrors().empty());
+
+    if (ownTable) {
+        std::remove(table.c_str());
+        std::filesystem::remove("tables");  // only if now empty
+    }
 }

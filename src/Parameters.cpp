@@ -163,13 +163,14 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
-    // posterior types 2 and 4 are fits with a fixed NqBase = 3
-    if ((subnucleon.subNucleonParamType == 2
-         || subnucleon.subNucleonParamType == 4)
-        && subnucleon.nucleonModel == "hotspots" && subnucleon.Nq != 3.) {
+    // the posterior parameter sets are fits of hot-spot nucleons
+    if (subnucleon.subNucleonParamType != 0
+        && subnucleon.nucleonModel != "hotspots") {
         std::ostringstream message;
         message << "subNucleonParamType = " << subnucleon.subNucleonParamType
-                << " uses 3 hot spots; set Nq to 3, not " << subnucleon.Nq;
+                << " (a posterior parameter set) requires nucleonModel "
+                   "hotspots, not "
+                << subnucleon.nucleonModel;
         fail(message);
     }
 

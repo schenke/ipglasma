@@ -62,6 +62,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)
   - `hotspots`: `Nq` Gaussian hot spots of width `BGq`, whose positions are distributed with width `BG`
   The parameters of the other model are not read.
+- **subNucleonParamType**: `0` uses the input values for the nucleon substructure; `1`, `2` or `4` draw them every event from a Bayesian posterior parameter set (`tables/posterior.csv` with variable Nq, `tables/posterior_Nq3.csv` or `tables/posterior5020_Nq3.csv` with Nq = 3), selected by **subNucleonParamSet** (`-1`: random). The posterior sets are fits of hot-spot nucleons, so they require `nucleonModel hotspots`. They replace `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `dqMin` and the number of hot spots, which are then not read from the input; `usedParameters<event>.dat` lists the values an event used.
 - **BGq** (`hotspots`): controls the hot spot width, hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
 - **Nq** (`hotspots`): mean number of hot spots per nucleon, at least 1; a fractional value such as 2.5 gives 2 or 3 hot spots with the corresponding probabilities (plus the fluctuation set by `NqFluc`)
 - **shiftConstituentQuarkProtonOrigin** (`hotspots`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions

@@ -125,23 +125,18 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: posterior types 2 and 4 need Nq 3 for "
-    "hot-spot nucleons") {
+    "Parameters::validationErrors: posterior parameter sets require hot-spot "
+    "nucleons") {
     Parameters param;
     makeValidBaseline(param);
-    for (int type : {2, 4}) {
+    for (int type : {1, 2, 4}) {
         CAPTURE(type);
         param.subnucleon.subNucleonParamType = type;
         param.subnucleon.nucleonModel = "hotspots";
-        param.subnucleon.Nq = 3.;
         CHECK(param.validationErrors().empty());
-        param.subnucleon.Nq = 5.;
+        param.subnucleon.nucleonModel = "gaussian";
         CHECK(param.validationErrors().size() == 1);
-        param.subnucleon.nucleonModel = "gaussian";  // Nq not used
-        CHECK(param.validationErrors().empty());
     }
-    param.subnucleon.subNucleonParamType = 1;  // variable Nq
-    CHECK(param.validationErrors().empty());
 }
 
 namespace {

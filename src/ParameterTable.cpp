@@ -325,6 +325,33 @@ bool hotSpotNucleons(const Parameters &p) {
     return p.subnucleon.nucleonModel == "hotspots";
 }
 
+/**
+ * Condition for the parameters a posterior parameter set replaces.
+ * \param[in] p The parameters read so far.
+ * \return Whether `subNucleonParamType` is 0 (no posterior set).
+ */
+bool inputParameters(const Parameters &p) {
+    return p.subnucleon.subNucleonParamType == 0;
+}
+
+/**
+ * Condition for the parameters of a posterior parameter set.
+ * \param[in] p The parameters read so far.
+ * \return Whether `subNucleonParamType` selects a posterior set.
+ */
+bool posteriorParameters(const Parameters &p) {
+    return p.subnucleon.subNucleonParamType != 0;
+}
+
+/**
+ * Condition for the hot-spot parameters a posterior set replaces.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `hotspots` without a posterior set.
+ */
+bool hotSpotsFromInput(const Parameters &p) {
+    return hotSpotNucleons(p) && inputParameters(p);
+}
+
 /// Short name for the table entries.
 using P = Parameters;
 
@@ -441,11 +468,24 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("dMin", &P::nucleus, &NucleusParameters::dMin),
 
         // nucleon substructure and color charges
-        param("m", &P::subnucleon, &SubnucleonParameters::m),
         param(
             "nucleonModel", &P::subnucleon, &SubnucleonParameters::nucleonModel)
             .check(oneOf<std::string>({"gaussian", "hotspots"})),
-        param("BG", &P::subnucleon, &SubnucleonParameters::BG),
+        // a posterior parameter set replaces m, BG, BGq, smearingWidth,
+        // NqBase, QsMuRatio and dqMin every event, so those are only read
+        // without one
+        param(
+            "subNucleonParamType", &P::subnucleon,
+            &SubnucleonParameters::subNucleonParamType)
+            .check(oneOf({0, 1, 2, 4}, " (0: use the input values)")),
+        param(
+            "subNucleonParamSet", &P::subnucleon,
+            &SubnucleonParameters::subNucleonParamSet)
+            .onlyIf(posteriorParameters),
+        param("m", &P::subnucleon, &SubnucleonParameters::m)
+            .onlyIf(inputParameters),
+        param("BG", &P::subnucleon, &SubnucleonParameters::BG)
+            .onlyIf(inputParameters),
         // gaussian nucleons
         param(
             "protonAnisotropy", &P::subnucleon,
@@ -453,16 +493,16 @@ const std::vector<ParameterSpec> &parameterTable() {
             .onlyIf(gaussianNucleons),
         // hot-spot nucleons
         param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
-            .onlyIf(hotSpotNucleons),
+            .onlyIf(hotSpotsFromInput),
         param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
             .onlyIf(hotSpotNucleons),
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
-            .onlyIf(hotSpotNucleons),
+            .onlyIf(hotSpotsFromInput),
         param("omega", &P::subnucleon, &SubnucleonParameters::omega)
             .onlyIf(hotSpotNucleons)
             .check(positive()),
         param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
-            .onlyIf(hotSpotNucleons)
+            .onlyIf(hotSpotsFromInput)
             .check([](const double &v) {
                 return v >= 1. ? "" : "must be at least 1";
             }),
@@ -472,18 +512,13 @@ const std::vector<ParameterSpec> &parameterTable() {
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
             &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)
             .onlyIf(hotSpotNucleons),
-        param(
-            "subNucleonParamType", &P::subnucleon,
-            &SubnucleonParameters::subNucleonParamType)
-            .check(oneOf({0, 1, 2, 4}, " (0: use the input values)")),
-        param(
-            "subNucleonParamSet", &P::subnucleon,
-            &SubnucleonParameters::subNucleonParamSet),
-        param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio),
+        param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio)
+            .onlyIf(inputParameters),
         param("smearQs", &P::subnucleon, &SubnucleonParameters::smearQs),
         param(
             "smearingWidth", &P::subnucleon,
-            &SubnucleonParameters::smearingWidth),
+            &SubnucleonParameters::smearingWidth)
+            .onlyIf(inputParameters),
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp),
         param(
             "minimumQs2ST", &P::colorCharge,

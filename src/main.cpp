@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <sstream>
@@ -452,10 +453,15 @@ void writeparams(Parameters *param) {
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);
     if (param->subnucleon.subNucleonParamType > 0) {
-        fout1 << "# Posterior parameter set used: "
-              << param->event.subNucleonParamSet
-              << " (m, BG, BGq, smearingWidth, QsMuRatio and dqMin above are "
-                 "its values; NqBase = "
-              << param->subnucleon.NqBase << ")\n";
+        // these values are not input parameters in this case, so they are
+        // not in the list above
+        fout1 << std::setprecision(9) << "# Posterior parameter set used: "
+              << param->event.subNucleonParamSet << "\n#   m "
+              << param->subnucleon.m << ", BG " << param->subnucleon.BG
+              << ", BGq " << param->subnucleon.BGq << ", smearingWidth "
+              << param->subnucleon.smearingWidth << ", NqBase "
+              << param->subnucleon.NqBase << ", QsMuRatio "
+              << param->colorCharge.QsMuRatio << ", dqMin "
+              << param->subnucleon.dqMin << "\n";
     }
 }

@@ -8,7 +8,7 @@
 #include <omp.h>
 #endif
 
-#include "FFT.h"
+#include "GluonMultiplicity.h"
 #include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
@@ -23,18 +23,13 @@
  * and are updated by evolvePi()/evolveE(). Also computes the
  * energy-momentum tensor (EnergyMomentumTensor::compute()), derived observables
  * (eccentricity(), u()), and an optional final-time gluon spectrum/multiplicity
- * estimate (multiplicity()) via Coulomb-gauge fixing and FFT.
+ * estimate (GluonMultiplicity::compute()) via Coulomb-gauge fixing and FFT.
  */
 class Evolution {
   private:
-    /// Owned FFT instance, sized to the lattice at construction; used by
-    /// multiplicity() to Fourier-transform the gauge-fixed fields.
-    FFT *fft_;
-    /// \f$n(k_T)\f$ spectrum read by readNkt() from a previous run's
-    /// `multiplicity<id>.dat`; zero-initialized so a short input file
-    /// (fewer than 100 rows) leaves untouched entries at a defined `0`
-    /// rather than uninitialized garbage.
-    double nIn_[100] = {};
+    /// Gluon spectrum/multiplicity measurement at the final time (owns
+    /// the FFT used for it).
+    GluonMultiplicity gluonMultiplicity_;
     /// Log sink for progress/warning/error messages.
     PrettyOstream messager_;
 
@@ -42,21 +37,9 @@ class Evolution {
     /**
      * Constructs an Evolution for a lattice of the given dimensions.
      * \param[in] nn Two-element array `{N, N}`, the transverse lattice
-     * dimensions, forwarded to the owned FFT instance.
+     * dimensions, forwarded to the gluon-multiplicity FFT.
      */
-    Evolution(const int nn[]) { fft_ = new FFT(nn); }
-
-    /**
-     * Destroys this Evolution, freeing the owned FFT instance.
-     */
-    ~Evolution() { delete fft_; }
-
-    /// Owns \c fft_, a raw pointer freed in the destructor; default
-    /// copies would double-free it, so disable copying (nothing needs
-    /// it).
-    Evolution(const Evolution &) = delete;
-    /// \copydoc Evolution(const Evolution &)
-    Evolution &operator=(const Evolution &) = delete;
+    explicit Evolution(const int nn[]) : gluonMultiplicity_(nn) {}
 
     /**
      * Top-level evolution driver: after an initial coordinate half-step
@@ -75,10 +58,11 @@ class Evolution {
      * then restores the unmodified momenta so the measurement cannot perturb
      * the trajectory. At the very end, runs checkGaussLaw(), and -- if
      * `output.computeGluonMultiplicity` -- eccentricity() and
-     * multiplicity(), stopping early if multiplicity() reports no
+     * GluonMultiplicity::compute(), stopping early if it reports no
      * collision.
      * \param[in,out] lat Lattice to evolve in place.
-     * \param[in] group Group instance, forwarded to multiplicity().
+     * \param[in] group Group instance, forwarded to
+     * GluonMultiplicity::compute().
      * \param[in,out] param Simulation parameters.
      */
     void run(Lattice *lat, Group *group, Parameters *param);
@@ -209,99 +193,6 @@ class Evolution {
      * \param[in] it Final time step index.
      */
     void finalFlowMeasurement(Lattice *lat, Parameters *param, int it);
-    /**
-     * Fixes transverse Coulomb gauge (`GaugeFix::fftChi`), then computes
-     * the azimuthally averaged gluon transverse-momentum spectrum by
-     * Fourier-transforming the gauge-fixed electric fields \c U, \c U2,
-     * and \f$\pi\f$ (via the anonymous-namespace `prepareSpectrumField`/
-     * `accumulateGluonSpectrum` helpers) and binning \f$dN/d^2k_T\f$ and
-     * \f$dE/d^2k_T\f$. Integrates these into \f$dN/dy\f$ (or
-     * \f$dN/d\eta\f$) and \f$dE/dy\f$, with separate cut sums above
-     * \f$k_T>3\f$ and \f$6\f$ GeV. At the final time step, optionally
-     * hadronizes the spectrum (hadronizeAndWriteMultiplicity(), if
-     * `output.writeOutputs==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
-     * the `gluonMultiplicity<id>.json` target
-     * (writeGluonMultiplicityTarget()).
-     * \param[in,out] lat Lattice to read the fields from (gauge-fixed in
-     * place by `GaugeFix::fftChi`).
-     * \param[in] group Group instance, forwarded to `GaugeFix::fftChi`.
-     * \param[in] param Simulation parameters.
-     * \param[in] it Current time step index.
-     * \return `1` on success (`param->event.success = 1` is also called);
-     * `0` if no collision was found (\f$dN/dy=0\f$), signaling the
-     * caller (run()) to stop this event so it can be resampled with a
-     * new random seed.
-     */
-    int multiplicity(Lattice *lat, Group *group, Parameters *param, int it);
-    /**
-     * multiplicity()'s `writeOutputs==3` hadronization step: convolves
-     * the binned gluon spectrum \p n with the KKP fragmentation function
-     * (`Fragmentation::kkp`), integrated over the fragmentation variable
-     * \f$z\f$ via a GSL cubic spline, to get a hadron \f$p_T\f$ spectrum,
-     * writing `multiplicityHadrons<id>.dat`. \p Nhgsl (length
-     * `hbins+1`) is scratch/output space owned by the caller.
-     * \param[in] param Simulation parameters.
-     * \param[in] a Lattice spacing [fm].
-     * \param[in] dkt Momentum-bin width [lattice units].
-     * \param[in] bins Number of gluon-spectrum bins in \p n.
-     * \param[in] n Binned, azimuthally averaged gluon spectrum
-     * \f$dN/d^2k_T\f$ [lattice units], length \p bins.
-     * \param[out] Nhgsl Filled with the hadron \f$dN/dp_T\f$ spectrum,
-     * length `hbins+1`.
-     * \param[in] hbins Number of hadron-spectrum bins.
-     */
-    void hadronizeAndWriteMultiplicity(
-        Parameters *param, double a, double dkt, int bins, const double *n,
-        double *Nhgsl, int hbins);
-
-    /**
-     * Writes `gluonMultiplicity<id>.json`, a structured summary of this
-     * event's gluon spectrum and integrated multiplicity/energy
-     * (including the cut sums above 3 and 6 GeV and the binned spectrum
-     * itself), intended as a downstream analysis/ML training target.
-     * \param[in] param Simulation parameters.
-     * \param[in] it Current time step index.
-     * \param[in] a Lattice spacing [fm].
-     * \param[in] dtau Time step [lattice units], used to convert \p it
-     * to a physical time.
-     * \param[in] dNPrimary \f$dN/dy\f$ (or \f$d\eta\f$) from the direct
-     * per-bin sum.
-     * \param[in] dNBinned \f$dN/dy\f$ from the alternate binned-weight
-     * integration, included as a cross-check.
-     * \param[in] dEPrimary \f$dE/dy\f$ from the direct per-bin sum
-     * [GeV].
-     * \param[in] dEBinned \f$dE/dy\f$ from the alternate binned-weight
-     * integration [GeV], included as a cross-check.
-     * \param[in] dNCut3 \f$dN/dy\f$ restricted to \f$k_T>3\f$ GeV.
-     * \param[in] dECut3 \f$dE/dy\f$ restricted to \f$k_T>3\f$ GeV [GeV].
-     * \param[in] dNCut6 \f$dN/dy\f$ restricted to \f$k_T>6\f$ GeV.
-     * \param[in] dECut6 \f$dE/dy\f$ restricted to \f$k_T>6\f$ GeV [GeV].
-     * \param[in] spectrumN Binned \f$dN/d^2k_T\f$ [lattice units],
-     * length \p bins.
-     * \param[in] spectrumE Binned \f$dE/d^2k_T\f$ [lattice units],
-     * length \p bins.
-     * \param[in] spectrumCounts Number of lattice momentum modes
-     * averaged into each bin, length \p bins.
-     * \param[in] bins Number of spectrum bins.
-     * \param[in] dkt Momentum-bin width [lattice units].
-     */
-    void writeGluonMultiplicityTarget(
-        Parameters *param, int it, double a, double dtau, double dNPrimary,
-        double dNBinned, double dEPrimary, double dEBinned, double dNCut3,
-        double dECut3, double dNCut6, double dECut6, const double *spectrumN,
-        const double *spectrumE, const int *spectrumCounts, int bins,
-        double dkt);
-    /**
-     * Standalone post-processing utility: reads a previous run's
-     * `multiplicity<id>.dat` (into \c nIn_) and `NpartdNdy<id>.dat`,
-     * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
-     * (`param->colorCharge.jacobianMass`/`collision.sqrtS`), and writes
-     * `NpartdNdy-mod.dat`. Not part of the normal run() flow; terminates
-     * the process (`exit(1)`) unconditionally when done, and also exits
-     * early if either input file is missing.
-     * \param[in] param Simulation parameters.
-     */
-    void readNkt(Parameters *param);
 };
 
 #endif  // SRC_EVOLUTION_H_

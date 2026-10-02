@@ -416,7 +416,7 @@ void CollisionGeometry::computeAndSetRunningAlphaS(Parameters *param) {
     double alphas = 0.;
     if (param->coupling.runningCoupling && !param->coupling.runWithKt) {
         // Uses the same regularized formula (and the same muZero/c) as
-        // Evolution::computeRunningCouplingGfactor()/MyEigen, instead of
+        // computeRunningCouplingGfactor()/MyEigen, instead of
         // the unregularized formula this used to hardcode inline -- so
         // this diagnostic/event-acceptance alpha_s always matches the one
         // actually used during evolution, and can no longer go negative

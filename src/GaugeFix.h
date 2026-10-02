@@ -13,7 +13,7 @@
 /**
  * Fixes the lattice gauge fields to transverse (Coulomb) gauge.
  *
- * Used by Evolution::multiplicity() before extracting the gluon
+ * Used by GluonMultiplicity::compute() before extracting the gluon
  * multiplicity spectrum, since a physical gluon number density is only
  * well-defined once the classical Yang-Mills fields are expressed in a
  * fixed gauge.

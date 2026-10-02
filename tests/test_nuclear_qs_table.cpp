@@ -49,3 +49,21 @@ TEST_CASE(
     const double Tmax = 0.5 + 0.1 * 239;
     CHECK(table.qs2(100., 2.1) == doctest::Approx(2. * Tmax + 3. * 2.1));
 }
+
+TEST_CASE("NuclearQsTable stays inside the table at its upper edges") {
+    const std::string fileName = writeLinearTable();
+    NuclearQsTable table;
+    table.read(fileName);
+    std::remove(fileName.c_str());
+
+    // the largest tabulated T_p (written as "24.4") and rapidity
+    const double Tmax = 24.4;
+    const double ymax = 10.75;
+    for (double T : {24.35, Tmax}) {
+        for (double y : {0., 10.6, ymax}) {
+            CAPTURE(T);
+            CAPTURE(y);
+            CHECK(table.qs2(T, y) == doctest::Approx(2. * T + 3. * y));
+        }
+    }
+}

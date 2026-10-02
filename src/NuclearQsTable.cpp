@@ -58,16 +58,26 @@ double NuclearQsTable::qs2(double T, double y) const {
     fracy = 0.;
     posy = static_cast<int>(floor(y / deltaY_ + 0.0000001));
 
-    if (y > nY_ * deltaY_) {
+    if (y < 0. || y > (nY_ - 1) * deltaY_) {
         // qs2() is called from inside an omp parallel for loop
         // (Init::setColorChargeDensity), so use a fresh, stack-local
         // instance rather than sharing messager_, which is not thread-safe.
         PrettyOstream localMessager;
         localMessager << "[NuclearQsTable::qs2]: y=" << y
-                      << " is above the tabulated range (max y="
-                      << nY_ * deltaY_ << "). Exiting.";
+                      << " is outside the tabulated range (0 <= y <= "
+                      << (nY_ - 1) * deltaY_ << "). Exiting.";
         localMessager.flush("error");
         exit(1);
+    }
+    // at the last tabulated y, interpolate from the bin below with fracy = 1
+    // so that posy + 1 stays inside the table
+    if (posy > nY_ - 2) posy = nY_ - 2;
+
+    // at the last tabulated T there is no bin above to interpolate in
+    if (T == T_[nT_ - 1]) {
+        fracy = (y - static_cast<double>(posy) * deltaY_) / deltaY_;
+        return fracy * Qs2_[nT_ - 1][posy + 1]
+               + (1. - fracy) * Qs2_[nT_ - 1][posy];
     }
 
     //  if ( T > Qs2_[nT_-1][nY_-1] )
@@ -91,7 +101,7 @@ double NuclearQsTable::qs2(double T, double y) const {
         return 0.;
     }
 
-    for (int iT = 0; iT < nT_; iT++) {
+    for (int iT = 0; iT < nT_ - 1; iT++) {
         if (T >= T_[iT] && T < T_[iT + 1]) {
             fracT = (T - T_[iT]) / (T_[iT + 1] - T_[iT]);
             fracy = (y - static_cast<double>(posy) * deltaY_) / deltaY_;

@@ -222,7 +222,7 @@ class FFT {
      * executed concurrently via FFTW's thread-safe new-array interface,
      * using the same checkerboard-sign trick as fftnArray(). Used with
      * `T = Matrix` for every SU(3)-matrix-field FFT in the classical
-     * Yang-Mills evolution (Evolution.cpp), JIMWLK (`VxsiVx_`/
+     * Yang-Mills gluon multiplicity (GluonMultiplicity.cpp), JIMWLK (`VxsiVx_`/
      * `VxsiVy_`), and Coulomb gauge fixing (GaugeFix.cpp).
      * \param[in] data Array of `nn[0]*nn[1]` pointers, one per lattice
      * site, each to an object of class \p T.

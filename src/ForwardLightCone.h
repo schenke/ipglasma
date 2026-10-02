@@ -231,7 +231,7 @@ class ForwardLightCone {
      * \param[in] U2 Target-side link.
      * \param[out] Usol The solved (or best-effort) matching matrix.
      * \param[in] retrySeed Seed for the deterministic restart stream
-     * (see \c forwardLightconeRetrySeed() in Init.cpp), unique per
+     * (see \c forwardLightconeRetrySeed() in ForwardLightCone.cpp), unique per
      * cell/direction/event/run so restarts are reproducible but
      * uncorrelated across cells.
      * \return `true` if the iteration converged (residual below

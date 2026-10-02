@@ -26,6 +26,7 @@ set(TEST_SOURCES
     test_fragmentation.cpp
     test_init.cpp
     test_nucleon_model.cpp
+    test_nuclear_qs_table.cpp
     test_forward_lightcone.cpp
     test_evolution.cpp
     test_jimwlk.cpp

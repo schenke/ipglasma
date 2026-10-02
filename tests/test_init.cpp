@@ -15,48 +15,9 @@
 #include "Parameters.h"
 #include "PhysConst.h"
 #include "doctest.h"
+#include "test_helpers.h"
 
 using PhysConst::hbarc;
-
-namespace {
-// Matches test_lattice.cpp's makeLatticeParam: Parameters holds a
-// PrettyOstream member, which holds a non-copyable/non-movable
-// std::ostringstream, so this takes an out-parameter rather than
-// returning by value.
-void makeInitTestParam(Parameters &param, int size) {
-    param.lattice.size = size;
-    param.lattice.L = static_cast<double>(size);  // a = 1 fm
-    param.run.MPIRank = 0;
-    param.event.eventId = 0;
-    param.random.seed = 0;
-    param.run.MPISize = 1;
-    param.colorCharge.rapidityA = 0.0;
-    param.colorCharge.rapidityB = 0.0;
-}
-
-// A deterministic, position-dependent (not merely diagonal) matrix, so
-// tests exercise genuine matrix multiplication/conjugation rather than
-// something a transposition or index-swap bug could accidentally pass.
-Matrix makeTestMatrix(int seed) {
-    Matrix m(Matrix::noInit);
-    for (int i = 0; i < 3; ++i) {
-        for (int j = 0; j < 3; ++j) {
-            m.set(
-                i, j,
-                std::complex<double>(
-                    0.1 * seed + 0.01 * (i + 1), 0.05 * seed - 0.02 * (j + 1)));
-        }
-    }
-    return m;
-}
-
-bool matricesClose(const Matrix &a, const Matrix &b, double tol) {
-    for (int k = 0; k < 9; ++k) {
-        if (std::abs(a.get(k) - b.get(k)) >= tol) return false;
-    }
-    return true;
-}
-}  // namespace
 
 TEST_CASE(
     "Init::computeEffectiveRapidities passes rapidity through unchanged "
@@ -376,117 +337,6 @@ TEST_CASE(
         CHECK(
             lat2.U2[pos].get(0).real()
             == doctest::Approx(0. + 10. * 0 + iy * 100.));
-    }
-}
-
-TEST_CASE("Init::sanitizeForwardLightconeU replaces a NaN U/U2 with identity") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    Lattice lat(&param, N);
-
-    const double nan = std::numeric_limits<double>::quiet_NaN();
-    lat.U[5].set(0, 0, std::complex<double>(nan, 0.0));
-    lat.U2[7].set(4, std::complex<double>(0.0, nan));
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    init.sanitizeForwardLightconeU(&lat, N * N);
-
-    const Matrix identity(1.0);
-    CHECK(matricesClose(lat.U[5], identity, 1e-14));
-    CHECK(matricesClose(lat.U2[7], identity, 1e-14));
-    // An untouched cell must remain the identity it started as.
-    CHECK(matricesClose(lat.U[0], identity, 1e-14));
-}
-
-TEST_CASE(
-    "Init::computeForwardLightconeLinksTeam computes Ux1/Uy1/Ux2/Uy2 as "
-    "U * conjg(U at the +x/+y neighbor)") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    Lattice lat(&param, N);
-    for (int pos = 0; pos < N * N; ++pos) {
-        lat.U[pos] = makeTestMatrix(pos + 1);
-        lat.U2[pos] = makeTestMatrix(pos + 101);
-    }
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    Init::ForwardLightconeLinkScratch scratch;
-    init.computeForwardLightconeLinksTeam(&lat, N * N, scratch);
-
-    for (int pos = 0; pos < N * N; ++pos) {
-        Matrix expectedUx1Dagger = lat.U[lat.pospX[pos]];
-        expectedUx1Dagger.conjg();
-        Matrix expectedUx1 = lat.U[pos] * expectedUx1Dagger;
-        CHECK(matricesClose(lat.Ux1[pos], expectedUx1, 1e-10));
-
-        Matrix expectedUy1Dagger = lat.U[lat.pospY[pos]];
-        expectedUy1Dagger.conjg();
-        Matrix expectedUy1 = lat.U[pos] * expectedUy1Dagger;
-        CHECK(matricesClose(lat.Uy1[pos], expectedUy1, 1e-10));
-
-        Matrix expectedUx2Dagger = lat.U2[lat.pospX[pos]];
-        expectedUx2Dagger.conjg();
-        Matrix expectedUx2 = lat.U2[pos] * expectedUx2Dagger;
-        CHECK(matricesClose(lat.Ux2[pos], expectedUx2, 1e-10));
-    }
-}
-
-TEST_CASE(
-    "Init::computeForwardLightconePlaquetteTeam wires the four links in the "
-    "documented order") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    Lattice lat(&param, N);
-    for (int pos = 0; pos < N * N; ++pos) {
-        lat.Ux[pos] = makeTestMatrix(pos + 1);
-        lat.Uy[pos] = makeTestMatrix(pos + 51);
-    }
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    Init::ForwardLightconePlaquetteScratch scratch;
-    init.computeForwardLightconePlaquetteTeam(&lat, N * N, scratch);
-
-    for (int pos = 0; pos < N * N; ++pos) {
-        Matrix UDx = lat.Ux[lat.pospY[pos]];
-        UDx.conjg();
-        Matrix UDy = lat.Uy[pos];
-        UDy.conjg();
-        Matrix expected = lat.Ux[pos] * (lat.Uy[lat.pospX[pos]] * (UDx * UDy));
-        CHECK(matricesClose(lat.Uy1[pos], expected, 1e-10));
-    }
-}
-
-TEST_CASE(
-    "Init::resetForwardLightconeFieldsTeam zeroes U/U2/Uy2 and resets Ux1 to "
-    "the identity") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    Lattice lat(&param, N);
-    for (int pos = 0; pos < N * N; ++pos) {
-        lat.U[pos] = makeTestMatrix(pos + 1);
-        lat.U2[pos] = makeTestMatrix(pos + 2);
-        lat.Uy2[pos] = makeTestMatrix(pos + 3);
-        lat.Ux1[pos] = makeTestMatrix(pos + 4);
-    }
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    init.resetForwardLightconeFieldsTeam(&lat, N * N);
-
-    const Matrix zero(0.0);
-    const Matrix identity(1.0);
-    for (int pos = 0; pos < N * N; ++pos) {
-        CHECK(matricesClose(lat.U[pos], zero, 1e-14));
-        CHECK(matricesClose(lat.U2[pos], zero, 1e-14));
-        CHECK(matricesClose(lat.Uy2[pos], zero, 1e-14));
-        CHECK(matricesClose(lat.Ux1[pos], identity, 1e-14));
     }
 }
 

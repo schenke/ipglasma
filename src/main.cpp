@@ -17,6 +17,7 @@
 
 #include "Evolution.h"
 #include "FFT.h"
+#include "ForwardLightCone.h"
 #include "Init.h"
 #include "InputFile.h"
 #include "Instrumentation.h"
@@ -227,7 +228,7 @@ int main(int argc, char *argv[]) {
                                   : InitializationMethod::ReadWlineBinary;
             }
             // First generate the V
-            init.init(&lat, &group, param, random, &glauber, init_method);
+            init.init(&lat, param, random, &glauber, init_method);
 
             if (param->jimwlk.enabled) {
                 messager.info("[main::main]: Start JIMWLK");
@@ -254,7 +255,7 @@ int main(int argc, char *argv[]) {
                     init.computeCollisionGeometryQuantities(&lat, param);
                 }
                 init.shiftFieldsWithImpactParameter(&lat, param);
-                init.initializeForwardLightCone(&lat, param);
+                ForwardLightCone(&group).initialize(&lat, param);
                 messager.info("[main::main]: Start CYM evolution");
                 // do the CYM evolution of the initialized fields using
                 // parmeters in param

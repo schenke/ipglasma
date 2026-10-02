@@ -9,6 +9,7 @@ set (IPGLASMA_LIB_SOURCES
     InputFile.cpp
     ParameterTable.cpp
     Init.cpp
+    ForwardLightCone.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp

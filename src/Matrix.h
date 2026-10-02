@@ -251,7 +251,7 @@ class Matrix {
      * coefficient that comes out NaN (a 0/0 case that can occur in the
      * very-low-density region) is replaced by `0`; what that
      * contributes to the final matrix depends on the caller's own
-     * combination of `out[0..8]` -- e.g. Init::getUfromExponent()
+     * combination of `out[0..8]` -- e.g. fromAlgebraExponent()
      * separately checks for a zeroed `out[0]` and substitutes the
      * identity matrix in that case, while \c expGaugeRotationSU3 has no
      * such special case and simply uses the zeroed coefficient(s) as-is.
@@ -261,6 +261,14 @@ class Matrix {
      * `out[1..8]` for \f$t^1,\ldots,t^8\f$.
      */
     void expmCoeff(const double *Q, complex<double> out[9]) const;
+    /**
+     * Assembles the SU(3) matrix \f$\exp(i\sum_a Q_a t_a)\f$ from its
+     * eight real generator coefficients, via expmCoeff().
+     * \param[in] Q The eight coefficients \f$Q_1,\ldots,Q_8\f$.
+     * \return The assembled matrix (the identity if the exponential's
+     * identity-coefficient comes out numerically zero).
+     */
+    static Matrix fromAlgebraExponent(std::vector<double> &Q);
 
     /**
      * Computes this matrix's determinant via the explicit

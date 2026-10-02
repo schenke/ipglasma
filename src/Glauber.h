@@ -547,10 +547,15 @@ class Glauber {
     double nuIntHulthen(double xi);
 
     /**
-     * Adaptive GSL CQUAD quadrature, using a workspace of
-     * \c QUADRATURE_INTERVALS intervals and relative tolerance
-     * \c QUADRATURE_TOLERANCE, for the density-profile integrand selected by
-     * \p id over `[down, up]`.
+     * Integrates the density-profile integrand selected by \p id over
+     * `[down, up]` with GSL's adaptive CQUAD quadrature
+     * (gsl_integration_cquad()), to a relative tolerance of
+     * \c QUADRATURE_TOLERANCE using at most \c QUADRATURE_INTERVALS
+     * subintervals. An adaptive rule is needed because the substituted
+     * Woods-Saxon integrands are strongly peaked near \f$\xi = 0\f$. If
+     * the integral does not converge, a warning is logged and the best
+     * estimate is returned; GSL's default error handler (which would abort
+     * the run) is disabled for the call.
      * \param[in] id Which integrand to sample (see evaluateIntegrand()).
      * \param[in] down Lower integration bound.
      * \param[in] up Upper integration bound.

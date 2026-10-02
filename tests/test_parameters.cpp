@@ -264,6 +264,28 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::ValidParameters: rejects a negative nFlavors for both "
+    "running couplings") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setNFlavors(-1);
+    CHECK(param.ValidParameters() == true);  // no running coupling at all
+
+    param.setRunningCoupling(1);
+    param.setMuZero(0.3);
+    param.setLambdaQCD(0.2);
+    CHECK(param.ValidParameters() == false);
+
+    param.setRunningCoupling(0);
+    param.setUseJIMWLK(1);
+    param.setc_jimwlk(0.2);
+    param.setJimwlk_alphas(0.);  // JIMWLK running coupling
+    CHECK(param.ValidParameters() == false);
+    param.setNFlavors(3);
+    CHECK(param.ValidParameters() == true);
+}
+
+TEST_CASE(
     "Parameters: int-to-bool coercing setters treat any nonzero as true") {
     // setSaveSnapshots/setForceDmin/setComputeGluonMultiplicity/... all
     // share the same "x == 0 -> false, else -> true" pattern; this checks

@@ -307,8 +307,7 @@ TEST_CASE(
 
 TEST_CASE(
     "NucleusSampler::readConfigurationFile picks the deuteron file matching "
-    "the "
-    "requested Jz") {
+    "the requested Jz, or a random one for an unpolarized deuteron") {
     Parameters param;
     makeInitTestParam(param, 4);
     const std::string dir = "test_deuteron_configs_tmp";
@@ -335,6 +334,23 @@ TEST_CASE(
         REQUIRE(configs.size() == 1);
         CHECK(configs[0][0] == expectedTag);
     }
+
+    // polarizationFlag 0: Jz = 0 with probability 1/3, else |Jz| = 1,
+    // whatever Jz is given
+    Random random;
+    random.init_genrand64(23ULL);
+    const int samples = 300;
+    int pol0Picks = 0;
+    for (int i = 0; i < samples; i++) {
+        NucleusSampler sampler;
+        std::vector<std::vector<float>> configs;
+        sampler.readConfigurationFile(2, 0, 0, 1., &random, configs, &param);
+        REQUIRE(configs.size() == 1);
+        if (configs[0][0] == 0.f) pol0Picks++;
+    }
+    CHECK(
+        static_cast<double>(pol0Picks) / samples
+        == doctest::Approx(1. / 3.).epsilon(0.25));
     std::remove(pol0.c_str());
     std::remove(polpm1.c_str());
     std::remove(dir.c_str());

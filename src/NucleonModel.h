@@ -101,6 +101,16 @@ class HotSpotProfile : public NucleonProfile {
      * \return The number of hot spots of this nucleon.
      */
     int numberOfHotSpots() const { return static_cast<int>(xq_.size()); }
+    /**
+     * Returns the hot spots' \f$x\f$ offsets from the nucleon center.
+     * \return The offsets [fm], one per hot spot.
+     */
+    const std::vector<double> &offsetsX() const { return xq_; }
+    /**
+     * Returns the hot spots' \f$y\f$ offsets from the nucleon center.
+     * \return The offsets [fm], one per hot spot.
+     */
+    const std::vector<double> &offsetsY() const { return yq_; }
 
   private:
     /// Nucleon center \f$x\f$ [fm].

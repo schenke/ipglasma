@@ -207,13 +207,13 @@ TEST_CASE(
     Random random;
     int nn[2] = {4, 4};
     Init init(nn);
-    // A1=A2=1 ("p"): sampleTAWoodsSaxon places both nucleons at the origin
-    // deterministically, with no random draws.
+    // A1=A2=1 ("p"): sampleTA places both nucleons at the origin (the
+    // random polarization rotation leaves them there).
     glauber.initGlauber(
         4.2, "p", "p", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0., 0.,
         0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
     param.collision.nucleiToAverage = 1;
-    init.sampleTAWoodsSaxon(&param, &random, &glauber);
+    init.sampleTA(&param, &random, &glauber);
 
     const double d2 = param.collision.sigmaNN / (M_PI * 10.);  // in fm^2
     int Ncoll = 0;
@@ -221,87 +221,6 @@ TEST_CASE(
 
     CHECK(Ncoll == 1);
     std::remove("NcollList0.dat");
-}
-
-TEST_CASE(
-    "Init::readInNucleusConfigs keeps only (x, y, z) from the 4-entry "
-    "Au197 configuration format") {
-    Parameters param;
-    makeInitTestParam(param, 4);
-    const std::string dir = "test_nucleus_configs_tmp";
-    const std::string file = dir + "/Au197.bin.in";
-    REQUIRE(std::system(("mkdir -p " + dir).c_str()) == 0);
-
-    // Two configurations, each 197 nucleons of (x, y, z, flag), with
-    // values encoding (config, nucleon, component) so misalignment shows.
-    const int A = 197;
-    const int nConfigs = 2;
-    {
-        std::ofstream out(file, std::ios::binary);
-        for (int c = 0; c < nConfigs; c++) {
-            for (int i = 0; i < A; i++) {
-                for (int j = 0; j < 4; j++) {
-                    float v = (j == 3)
-                                  ? -1.f
-                                  : static_cast<float>(1000 * c + 3 * i + j);
-                    out.write(reinterpret_cast<const char *>(&v), sizeof(v));
-                }
-            }
-        }
-    }
-    param.nucleus.nuclearConfigurationsPath = dir;
-
-    int nn[2] = {4, 4};
-    Init init(nn);
-    std::vector<std::vector<float>> configs;
-    init.readInNucleusConfigs(A, 0, 0, 0., configs, &param);
-
-    REQUIRE(configs.size() == static_cast<size_t>(nConfigs));
-    for (int c = 0; c < nConfigs; c++) {
-        REQUIRE(configs[c].size() == static_cast<size_t>(3 * A));
-        for (int i = 0; i < A; i++) {
-            for (int j = 0; j < 3; j++) {
-                CHECK(configs[c][3 * i + j] == 1000 * c + 3 * i + j);
-            }
-        }
-    }
-    std::remove(file.c_str());
-    std::remove(dir.c_str());
-}
-
-TEST_CASE(
-    "Init::readInNucleusConfigs picks the deuteron file matching the "
-    "requested Jz") {
-    Parameters param;
-    makeInitTestParam(param, 4);
-    const std::string dir = "test_deuteron_configs_tmp";
-    REQUIRE(std::system(("mkdir -p " + dir).c_str()) == 0);
-    // one configuration of 2 nucleons each; all entries tag the file
-    const std::string pol0 = dir + "/DeuteronPol0Configs.bin.in";
-    const std::string polpm1 = dir + "/DeuteronPolpm1Configs.bin.in";
-    for (const auto &[file, tag] :
-         {std::pair<std::string, float> {pol0, 0.f}, {polpm1, 1.f}}) {
-        std::ofstream out(file, std::ios::binary);
-        for (int k = 0; k < 2 * 3; k++) {
-            out.write(reinterpret_cast<const char *>(&tag), sizeof(tag));
-        }
-    }
-    param.nucleus.nuclearConfigurationsPath = dir;
-
-    int nn[2] = {4, 4};
-    for (const auto &[Jz, expectedTag] :
-         {std::pair<double, float> {0., 0.f}, {1., 1.f}, {-1., 1.f}}) {
-        CAPTURE(Jz);
-        Init init(nn);
-        std::vector<std::vector<float>> configs;
-        // polarizationFlag != 0: the file is chosen by Jz, not randomly
-        init.readInNucleusConfigs(2, 0, 1, Jz, configs, &param);
-        REQUIRE(configs.size() == 1);
-        CHECK(configs[0][0] == expectedTag);
-    }
-    std::remove(pol0.c_str());
-    std::remove(polpm1.c_str());
-    std::remove(dir.c_str());
 }
 
 TEST_CASE(

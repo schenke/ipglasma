@@ -95,11 +95,11 @@ struct NucleusParameters {
     /// nucleonPositionsFromFile is `1`).
     std::string nuclearConfigurationsPath;
     /// Which configuration file to use for light nuclei with
-    /// nucleonPositionsFromFile (see Init::readInNucleusConfigs()): `0`
-    /// the default (variational Monte Carlo; clustered PGCM for Ne20),
-    /// `1` alpha clusters (C, O) or triton (A = 3), `2`/`3`
-    /// clustered/uniform PGCM (O, Ne), `4`/`5` NLEFT with
-    /// positive/negative weights (O, Ne; `4` also for Ar).
+    /// nucleonPositionsFromFile (see NucleusSampler::readConfigurationFile()):
+    /// `0` the default (variational Monte Carlo; clustered PGCM for Ne20), `1`
+    /// alpha clusters (C, O) or triton (A = 3), `2`/`3` clustered/uniform PGCM
+    /// (O, Ne), `4`/`5` NLEFT with positive/negative weights (O, Ne; `4` also
+    /// for Ar).
     int lightNucleusOption = 0;
     /// Projectile polarization: `0` unpolarized, `1` longitudinally
     /// polarized, `2` transversely polarized.

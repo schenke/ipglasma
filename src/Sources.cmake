@@ -13,6 +13,7 @@ set (IPGLASMA_LIB_SOURCES
     WilsonLineIO.cpp
     NucleonModel.cpp
     NuclearQsTable.cpp
+    NucleusSampler.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp

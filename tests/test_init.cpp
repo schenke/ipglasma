@@ -143,7 +143,7 @@ TEST_CASE(
     // pos=0 -> (i=0,j=0): kx=ky=-pi, kt2 = 4*(sin(-pi/2)^2*2) = 8.
     CHECK(kernel[0] == doctest::Approx(1.0 / 8.0));
     // pos = (N/2)*N + N/2 -> (i=j=N/2): kx=ky=0, kt2=0 -> defined as 0.
-    CHECK(kernel[(N / 2) * N + (N / 2)] == doctest::Approx(0.0));
+    CHECK(kernel[latticeIndex(N / 2, N / 2, N)] == doctest::Approx(0.0));
 }
 
 TEST_CASE(
@@ -157,7 +157,9 @@ TEST_CASE(
     std::vector<double> kernel =
         init.computeWilsonLineMomentumKernel(N, N * N, m, /*UVdamp=*/0.0);
     // At kt2=0 (i=j=N/2), the kernel is exactly 1/m^2.
-    CHECK(kernel[(N / 2) * N + (N / 2)] == doctest::Approx(1.0 / (m * m)));
+    CHECK(
+        kernel[latticeIndex(N / 2, N / 2, N)]
+        == doctest::Approx(1.0 / (m * m)));
 }
 
 TEST_CASE(
@@ -226,7 +228,7 @@ TEST_CASE(
     // Center cell: x = ix*L/N - L/2 = 0 at ix = N/2 (same for y).
     const double sigmax = 0.35, sigmay = 0.5;
     const double envelope = 1.0 / (2.0 * M_PI * sigmax * sigmay);
-    const int centerPos = (N / 2) * N + (N / 2);
+    const int centerPos = latticeIndex(N / 2, N / 2, N);
     const double expected = envelope * 6.0 * 6.0 / 2.0 / 2.0;
     CHECK(lat.cells[centerPos]->getg2mu2A() == doctest::Approx(expected));
     CHECK(lat.cells[centerPos]->getg2mu2B() == doctest::Approx(expected));
@@ -325,9 +327,9 @@ TEST_CASE(
     // ix = floor(i - 1.5); i=0,1 -> negative -> skipped, i=2 -> ix=0,
     // i=3 -> ix=1.
     for (int j = 0; j < N; ++j) {
-        const int pos2 = 0 * N + j;  // from i=2
+        const int pos2 = latticeIndex(0, j, N);  // from i=2
         CHECK(lat.U[pos2].get(0).real() == doctest::Approx(2000. + j * 100.));
-        const int pos3 = 1 * N + j;  // from i=3
+        const int pos3 = latticeIndex(1, j, N);  // from i=3
         CHECK(lat.U[pos3].get(0).real() == doctest::Approx(3000. + j * 100.));
     }
 
@@ -370,7 +372,7 @@ TEST_CASE(
     // isProjectile=false: ix = round(ixRaw + 1.5). ixRaw=0 -> ix=round(1.5)=2
     // (round-half-to-even or away-from-zero both give 2 here).
     for (int iy = 0; iy < N; ++iy) {
-        const int pos = 2 * N + iy;
+        const int pos = latticeIndex(2, iy, N);
         CHECK(
             lat2.U2[pos].get(0).real()
             == doctest::Approx(0. + 10. * 0 + iy * 100.));

@@ -592,7 +592,8 @@ void tmunuDiagonalElectricTeam(
             posX = lat->pospX[pos];
             posY = lat->pospY[pos];
 
-            posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+            posXY = lat->positionFromXY(
+                std::min(N - 1, i + 1), std::min(N - 1, j + 1));
 
             scratch.E1 = lat->U[pos];
             scratch.E2 = lat->U2[pos];
@@ -707,7 +708,8 @@ void tmunuDiagonalMagneticTeam(
             posX = lat->pospX[pos];
             posY = lat->pospY[pos];
 
-            posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+            posXY = lat->positionFromXY(
+                std::min(N - 1, i + 1), std::min(N - 1, j + 1));
 
             scratch.Uplaq = lat->Uy1[pos];
 
@@ -999,7 +1001,8 @@ void tmunuOffDiagonalTeam(
             }
             posX = lat->pospX[pos];
             posY = lat->pospY[pos];
-            posXY = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 1);
+            posXY = lat->positionFromXY(
+                std::min(N - 1, i + 1), std::min(N - 1, j + 1));
 
             posmX = lat->posmX[pos];
             posmY = lat->posmY[pos];
@@ -1007,11 +1010,13 @@ void tmunuOffDiagonalTeam(
             posmXpY = lat->posmXpY[pos];
             pospXmY = lat->pospXmY[pos];
 
-            pos2X = std::min(N - 1, i + 2) * N + j;
+            pos2X = lat->positionFromXY(std::min(N - 1, i + 2), j);
             pos2Y = lat->positionFromXY(i, std::min(N - 1, j + 2));
 
-            pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
-            posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
+            pos2XY = lat->positionFromXY(
+                std::min(N - 1, i + 2), std::min(N - 1, j + 1));
+            posX2Y = lat->positionFromXY(
+                std::min(N - 1, i + 1), std::min(N - 1, j + 2));
 
             scratch.E1 = lat->U[pos];
             scratch.E2 = lat->U2[pos];
@@ -1489,7 +1494,7 @@ void accumulateGluonSpectrum(
         for (int j = 0; j < N; j++) {
             double nkt = 0.;
             int pos = latticeIndex(i, j, N);
-            int npos = (N - i) * N + (N - j);
+            int npos = latticeIndex(N - i, N - j, N);
 
             double kx =
                 2. * M_PI
@@ -2137,7 +2142,7 @@ AnisotropyResult computeRotatedAnisotropy(Lattice *lat, int N, double Psi) {
     double num = 0., den = 0., num2 = 0., den2 = 0.;
     for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
-            int pos = (ix)*N + (iy);
+            int pos = lat->positionFromXY(ix, iy);
 
             double TxxRot = cos(Psi)
                                 * (cos(Psi) * lat->cells[pos]->getTxx()
@@ -2435,7 +2440,7 @@ void Evolution::eccentricity(
 
         for (int ix = 0; ix < N; ix++) {
             for (int iy = 0; iy < N; iy++) {
-                pos = (ix)*N + (iy);
+                pos = lat->positionFromXY(ix, iy);
                 ux = lat->cells[pos]->getux();
                 uy = lat->cells[pos]->getuy();
                 unum += sqrt(ux * ux + uy * uy) * sin(2. * atan2(uy, ux));

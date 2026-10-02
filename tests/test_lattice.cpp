@@ -123,8 +123,8 @@ TEST_CASE(
             markerB.set(i, j, std::complex<double>(200 + 10 * i + j, 0.0));
         }
     }
-    lat.U[1 * length + 2] = markerA;  // (ix=1, iy=2)
-    lat.U[2 * length + 1] = markerB;  // (ix=2, iy=1)
+    lat.U[lat.positionFromXY(1, 2)] = markerA;
+    lat.U[lat.positionFromXY(2, 1)] = markerB;
 
     lat.writeWilsonLines(&param, NucleusRole::Projectile);
 

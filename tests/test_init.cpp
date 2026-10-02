@@ -196,63 +196,6 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Init::computeNucleonThicknessAtCell: single-Gaussian branch at zero "
-    "separation reduces to 1/(2*pi*BG)") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    param.subnucleon.Nq = 0;
-    param.subnucleon.BG = 1.0;
-
-    std::vector<ReturnValue> nucleus(1);
-    nucleus[0].x = 0.0;
-    nucleus[0].y = 0.0;
-    nucleus[0].phi = 0.0;
-    nucleus[0].collided = 0;
-    nucleus[0].proton = true;
-
-    std::vector<std::vector<double>> xq(1), yq(1), BGq(1);
-    std::vector<std::vector<double>> gauss(1, std::vector<double>(1, 1.0));
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    const double Tp = init.computeNucleonThicknessAtCell(
-        &param, nucleus, xq, yq, BGq, gauss, /*x=*/0.0, /*y=*/0.0, /*xi=*/0.0,
-        /*nucleiInAverage=*/1.0);
-
-    CHECK(Tp == doctest::Approx(1.0 / (2.0 * M_PI)));
-}
-
-TEST_CASE(
-    "Init::computeNucleonThicknessAtCell: constituent-quark branch with one "
-    "quark at zero separation matches the single-Gaussian formula") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    param.subnucleon.Nq = 1;
-
-    std::vector<ReturnValue> nucleus(1);
-    nucleus[0].x = 0.0;
-    nucleus[0].y = 0.0;
-    nucleus[0].phi = 0.0;
-    nucleus[0].collided = 0;
-    nucleus[0].proton = true;
-
-    std::vector<std::vector<double>> xq(1, std::vector<double>(1, 0.0));
-    std::vector<std::vector<double>> yq(1, std::vector<double>(1, 0.0));
-    std::vector<std::vector<double>> BGq(1, std::vector<double>(1, 1.0));
-    std::vector<std::vector<double>> gauss(1, std::vector<double>(1, 1.0));
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    const double Tp = init.computeNucleonThicknessAtCell(
-        &param, nucleus, xq, yq, BGq, gauss, /*x=*/0.0, /*y=*/0.0, /*xi=*/0.0,
-        /*nucleiInAverage=*/1.0);
-
-    CHECK(Tp == doctest::Approx(1.0 / (2.0 * M_PI)));
-}
-
-TEST_CASE(
     "Init::computeNcollList (hard-sphere mode) marks a p+p pair collided and "
     "counts it once") {
     Parameters param;

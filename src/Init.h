@@ -5,12 +5,14 @@
 #define SRC_INIT_H_
 
 #include <cstdint>
+#include <memory>
 
 #include "FFT.h"
 #include "Glauber.h"
 #include "Group.h"
 #include "Lattice.h"
 #include "Matrix.h"
+#include "NucleonModel.h"
 #include "Parameters.h"
 #include "PrettyOstream.h"
 #include "Random.h"
@@ -73,6 +75,11 @@ class Init {
     std::vector<ReturnValue> nucleusA_;
     /// This event's sampled target nucleon positions.
     std::vector<ReturnValue> nucleusB_;
+    /// Sampled transverse structure of each nucleon of nucleus A, in the
+    /// order of \c nucleusA_ (see sampleNucleonProfiles()).
+    std::vector<std::unique_ptr<NucleonProfile>> profilesA_;
+    /// Same as \c profilesA_, for nucleus B.
+    std::vector<std::unique_ptr<NucleonProfile>> profilesB_;
 
     /// Log sink for progress/warning/error messages.
     PrettyOstream messager_;
@@ -81,33 +88,6 @@ class Init {
 
     /// Reusable identity matrix.
     Matrix one_;
-    /// Sampled constituent-quark ("hot spot") transverse \f$x\f$
-    /// positions for the projectile, one inner vector per nucleon.
-    /// Populated by sampleConstituentQuarkGeometry(), consumed by
-    /// computeNucleonThicknessAtCell().
-    vector<vector<double>> xq1_;
-    /// \copydoc xq1_
-    /// (target instead of projectile).
-    vector<vector<double>> xq2_;
-    /// Sampled constituent-quark transverse \f$y\f$ positions for the
-    /// projectile; see \c xq1_.
-    vector<vector<double>> yq1_;
-    /// \copydoc yq1_
-    /// (target instead of projectile).
-    vector<vector<double>> yq2_;
-    /// Sampled constituent-quark widths for the projectile; see \c
-    /// xq1_.
-    vector<vector<double>> BGq1_;
-    /// \copydoc BGq1_
-    /// (target instead of projectile).
-    vector<vector<double>> BGq2_;
-    /// Each projectile nucleon's (or, if substructure is off, each
-    /// constituent quark's) \f$Q_s\f$-normalization factor from
-    /// sampleQsNormalization(); see \c xq1_.
-    vector<vector<double>> gauss1_;
-    /// \copydoc gauss1_
-    /// (target instead of projectile).
-    vector<vector<double>> gauss2_;
 
   public:
     /**
@@ -314,16 +294,27 @@ class Init {
      */
     void sampleNucleonAnisotropyAngles(Parameters *param, Random *random);
     /**
-     * Samples constituent-quark positions/widths (`xq1_`/`yq1_`/\c
-     * BGq1_ etc., via samplePartonPositions()) and each nucleon's
-     * \f$Q_s\f$-normalization factor (via sampleQsNormalization()), for
-     * both nuclei.
-     * \param[in] param Simulation parameters;
-     * `subnucleon.Nq` selects whether substructure is
-     * sampled at all.
+     * Samples the transverse structure of every nucleon of both nuclei
+     * (\c profilesA_/\c profilesB_) with the NucleonModel selected by
+     * `subnucleon.nucleonModel`.
+     * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.
      */
-    void sampleConstituentQuarkGeometry(Parameters *param, Random *random);
+    void sampleNucleonProfiles(Parameters *param, Random *random);
+    /**
+     * Sums the thickness of all nucleons of one nucleus at a lattice
+     * position.
+     * \param[in] profiles The nucleons' profiles (\c profilesA_ or
+     * \c profilesB_).
+     * \param[in] x Transverse \f$x\f$ position [fm].
+     * \param[in] y Transverse \f$y\f$ position [fm].
+     * \param[in] nucleiInAverage Number of nuclei averaged over
+     * (`collision.nucleiToAverage`); each \f$T_p\f$ is divided by it.
+     * \return \f$\sum T_p\f$ [GeV\f$^2\f$].
+     */
+    double computeNucleonThicknessAtCell(
+        const std::vector<std::unique_ptr<NucleonProfile>> &profiles, double x,
+        double y, double nucleiInAverage) const;
     /**
      * setColorChargeDensity()'s `useSmoothNucleus` branch: sets
      * \f$T_p^A\f$/\f$T_p^B\f$ from the smooth (undeformed) Woods-Saxon
@@ -349,34 +340,6 @@ class Init {
      */
     void computeThicknessFromNucleons(
         Lattice *lat, Parameters *param, double nucleiInAverage);
-    /**
-     * computeThicknessFromNucleons()'s per-cell, per-nucleus \f$T_p\f$
-     * sum (constituent-quark or single-Gaussian, depending on
-     * `param->subnucleon.Nq`); called once per
-     * nucleus.
-     * \param[in] param Simulation parameters.
-     * \param[in] nucleus Nucleon positions to sum over.
-     * \param[in] xq Per-nucleon constituent-quark \f$x\f$ offsets (\c
-     * xq1_/\c xq2_); ignored if substructure is off.
-     * \param[in] yq Per-nucleon constituent-quark \f$y\f$ offsets.
-     * \param[in] BGq Per-nucleon constituent-quark widths.
-     * \param[in] gauss Per-nucleon (or per-constituent-quark)
-     * \f$Q_s\f$-normalization factors.
-     * \param[in] x Cell's \f$x\f$ position [fm].
-     * \param[in] y Cell's \f$y\f$ position [fm].
-     * \param[in] xi Proton thickness-function anisotropy
-     * (`param->subnucleon.protonAnisotropy`); only used in the
-     * single-Gaussian branch.
-     * \param[in] nucleiInAverage Number of nuclei being averaged over,
-     * used to normalize the sum.
-     * \return This nucleus' contribution to \f$T_p\f$ at `(x, y)`
-     * [GeV\f$^2\f$].
-     */
-    double computeNucleonThicknessAtCell(
-        Parameters *param, const std::vector<ReturnValue> &nucleus,
-        const vector<vector<double>> &xq, const vector<vector<double>> &yq,
-        const vector<vector<double>> &BGq, const vector<vector<double>> &gauss,
-        double x, double y, double xi, double nucleiInAverage);
     /**
      * Determines \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$ from the
      * (already-sampled) nucleon positions, writes
@@ -805,68 +768,6 @@ class Init {
      * \param[in,out] nucleus Nucleon positions, rotated in place.
      */
     void rotateNucleus3D(Random *random, std::vector<ReturnValue> &nucleus);
-
-    /**
-     * Samples one nucleon's constituent-quark ("hot spot")
-     * substructure: the number of quarks (sampleNumberOfPartons()),
-     * their radial distances (3D Gaussian if `omega==1`, otherwise a
-     * gamma-distribution-based 2D radial profile via
-     * Random::sampleGammaInc()), and their angular placement subject to
-     * a minimum-distance (`param->subnucleon.dqMin`) rejection criterion, with
-     * an optional recentering of the constituent-quark center of mass.
-     * \param[in] param Simulation parameters.
-     * \param[in,out] random Random-number source.
-     * \param[out] x_array Filled with each constituent quark's \f$x\f$
-     * offset [fm].
-     * \param[out] y_array Filled with each constituent quark's \f$y\f$
-     * offset [fm].
-     * \param[out] z_array Filled with each constituent quark's \f$z\f$
-     * offset [fm] (`0` when `omega != 1`, since that branch assumes a
-     * 2D transverse profile).
-     * \param[out] BGq_array Filled with each constituent quark's width
-     * (the same log-normally sampled value for every quark in this
-     * nucleon).
-     */
-    void samplePartonPositions(
-        Parameters *param, Random *random, std::vector<double> &x_array,
-        std::vector<double> &y_array, std::vector<double> &z_array,
-        std::vector<double> &BGq_array);
-
-    /**
-     * Draws one sample from a log-normal distribution with the given
-     * mean and variance (not the underlying normal's \f$\mu\f$/\f$\sigma\f$).
-     * \param[in,out] random Random-number source.
-     * \param[in] mean Desired mean of the log-normal distribution.
-     * \param[in] variance Desired variance of the log-normal
-     * distribution.
-     * \return One log-normally distributed sample.
-     */
-    double sampleLogNormalDistribution(
-        Random *random, const double mean, const double variance);
-
-    /**
-     * Samples each of \p Nq constituent quarks' (or, if substructure is
-     * off, the single nucleon's) \f$Q_s\f$-normalization factor: `1`
-     * for every quark if `param->subnucleon.smearQs` is off, otherwise an
-     * independent log-normal draw (mean 1) per quark.
-     * \param[in,out] random Random-number source.
-     * \param[in] param Simulation parameters.
-     * \param[in] Nq Number of quarks (or `1` if substructure is off).
-     * \param[out] gauss_array Filled with \p Nq normalization factors.
-     */
-    void sampleQsNormalization(
-        Random *random, Parameters *param, const int Nq,
-        std::vector<double> &gauss_array);
-    /**
-     * Samples the number of constituent quarks for one nucleon: the
-     * integer part of `param->subnucleon.NqBase`, rounded up with probability
-     * equal to its fractional part, plus a Poisson-distributed
-     * fluctuation (`param->subnucleon.NqFluc`'s mean).
-     * \param[in,out] random Random-number source.
-     * \param[in] param Simulation parameters.
-     * \return The sampled quark count, at least `1`.
-     */
-    int sampleNumberOfPartons(Random *random, Parameters *param);
 };
 
 #endif  // SRC_INIT_H_

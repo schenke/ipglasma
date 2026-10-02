@@ -287,8 +287,9 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"maxTime", "-1", "must not be negative"},
              {"nucleiToAverage", "0", "must be positive"},
              {"polarizationTarget", "3", "must be one of 0, 1, 2"},
-             {"Nq", "-1", "must be 0 (no substructure) or at least 1"},
-             {"Nq", "0.5", "must be 0 (no substructure) or at least 1"},
+             {"Nq", "0", "must be at least 1"},
+             {"Nq", "0.5", "must be at least 1"},
+             {"nucleonModel", "stringy", "must be one of gaussian, hotspots"},
              {"size", "255", "must be even"},
              {"omega", "0", "must be positive"},
              {"subNucleonParamType", "3", "must be one of 0, 1, 2, 4"},
@@ -481,4 +482,34 @@ TEST_CASE("Parameters::readInput: rejects a maxTime needing too many steps") {
         readErrors(exampleInputWith("maxTime", "1e12"));
     REQUIRE(errors.size() == 1);
     CHECK(anyContains(errors, "more than 1e8 time steps"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: each nucleon model only reads its own "
+    "parameters") {
+    // hotspots (the shipped input): the hot-spot keys are required
+    CHECK(anyContains(
+        readErrors(exampleInputWith("BGq", "")), "BGq is required"));
+
+    // gaussian: the hot-spot keys are not needed (and are ignored)
+    std::string gaussian;
+    {
+        std::istringstream in(exampleInputWith("nucleonModel", "gaussian"));
+        std::string line;
+        while (std::getline(in, line)) {
+            bool hotSpotKey = false;
+            for (const char *key :
+                 {"BGq ", "BGqVar ", "dqMin ", "omega ", "Nq ", "NqFluc ",
+                  "shiftConstituentQuarkProtonOrigin "}) {
+                if (line.rfind(key, 0) == 0) hotSpotKey = true;
+            }
+            if (!hotSpotKey) gaussian += line + "\n";
+        }
+    }
+    Parameters param;
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(gaussian));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(param.subnucleon.nucleonModel == "gaussian");
 }

@@ -29,7 +29,7 @@ class NuclearQsTable {
      * Bilinearly interpolates the table.
      * \param[in] T Nuclear thickness \f$T_p\f$ to interpolate at.
      * \param[in] y Rapidity to interpolate at; exits with an error if
-     * above the tabulated range.
+     * outside the tabulated range \f$0 \le y \le 10.75\f$.
      * \return Interpolated \f$Q_s^2\f$; `0` if \p T is below the
      * tabulated range, clamped to the maximal tabulated \f$T_p\f$ (with
      * a warning) if above it.

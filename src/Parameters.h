@@ -316,7 +316,7 @@ struct WilsonLineParameters {
     int writeWilsonLines = 0;
     /// Path to the directory where generated Wilson lines are written
     /// to, or existing ones read from (see
-    /// Lattice::generateWilsonLineDataFileName()).
+    /// WilsonLineIO::fileName()).
     std::string wilsonLinePath;
     /// Whether to generate initial Wilson lines (`0`), or read them
     /// from plain text (`1`) or binary (`2`).

@@ -216,8 +216,8 @@ class Matrix {
      * space-separated string, row-major (`Re(0,0) Im(0,0) Re(0,1)
      * Im(0,1) Re(0,2) Im(0,2) Re(1,0) ...`, the same element order as
      * the binary Wilson-line format), at 15-digit precision --
-     * the format writeSU3Matrices()/writeWilsonLines()'s text output
-     * uses.
+     * the format Lattice::writeSU3Matrices()/WilsonLineIO::write()'s text
+     * output uses.
      * \return The serialized string.
      */
     std::string MatrixToString();

@@ -116,6 +116,7 @@ The main categories for changes in this file are:
 * `usedParameters<event>.dat` records the posterior parameter set an event used (and its `NqBase`) as a comment when `subNucleonParamType > 0`.
 
 * Move the forward-light-cone initial condition (the per-link matching solve and the electric field and pi setup, ~530 lines) from `Init` into its own `ForwardLightCone` class (`src/ForwardLightCone.{h,cpp}`), and `Init::getUfromExponent()` to `Matrix::fromAlgebraExponent()`, since it is also used for the Wilson lines.
+* Move writing and reading the Wilson lines into a new `WilsonLineIO` class (`src/WilsonLineIO.{h,cpp}`): `write()` (was `Lattice::writeWilsonLines()`), `read()`/`readText()`/`readBinary()` (were `Init::readVFromFile()`/`readWilsonLineText()`/`readWilsonLineBinary()`), `fileName()`, `isValidFormat()` and the `writeOutputs 5` snapshot `writeTrainingData()`. Writer and reader of each format now sit next to each other.
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.
 * Fix the random-number generator being re-initialized every event; it is now initialized once so a fixed seed reproduces a multi-event run.

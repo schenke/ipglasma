@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "WilsonLineIO.h"
 
 using PhysConst::invHbarc;
 using PhysConst::Nc;
@@ -236,7 +237,7 @@ void JIMWLK::runEvolutionLoop(
             if (iSnapshot < xSnapshotList.size()) {
                 if (xLoc > xSnapshotList[iSnapshot]
                     && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    lat_ptr_->writeWilsonLines(&param_, nucleus, xLoc);
+                    WilsonLineIO().write(lat_ptr_, &param_, nucleus, xLoc);
                     iSnapshot++;
                 }
             }

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "NuclearQsTable.h"
 #include "NucleonModel.h"
 #include "PhysConst.h"
 #include "RunningCoupling.h"
@@ -246,47 +247,6 @@ void Init::applyPolarizationRotation(
     }
 }
 
-void Init::readNuclearQs(Parameters *param) {
-    IPG_PROFILE_SCOPE("initialization.read_qs_table");
-    // steps in qs0 and Y in the file
-    string dummy;
-    string T, Qs;
-    // open file
-
-    messager_ << "[Init::readNuclearQs]: Reading Q_s(sum(T_p),y) from file ";
-    messager_ << param->colorCharge.nucleusQsTableFileName << " ... ";
-    messager_.flush("info");
-
-    ifstream fin;
-    fin.open((param->colorCharge.nucleusQsTableFileName).c_str());
-    if (fin) {
-        for (int iT = 0; iT < iTpmax_; iT++) {
-            for (int iy = 0; iy < iymaxNuc_; iy++) {
-                if (!fin.eof()) {
-                    fin >> dummy;
-                    fin >> T;
-                    Tlist_[iT] = atof(T.c_str());
-                    fin >> Qs;
-                    Qs2Nuclear_[iT][iy] = atof(Qs.c_str());
-                } else {
-                    messager_ << "[Init::readNuclearQs]: End of file reached "
-                                 "prematurely -- did the Q_s table file "
-                                 "change? Exiting.";
-                    messager_.flush("error");
-                    exit(1);
-                }
-            }
-        }
-        fin.close();
-    } else {
-        messager_ << "[Init::readNuclearQs]: File "
-                  << param->colorCharge.nucleusQsTableFileName
-                  << " does not exist. Exiting.";
-        messager_.flush("error");
-        exit(1);
-    }
-}
-
 void Init::readInNucleusConfigs(
     const int nucleusA, const int lightNucleusOption,
     const int polarizationFlag, const double polJz,
@@ -392,78 +352,6 @@ void Init::readInNucleusConfigs(
 
 // Q_s as a function of \sum T_p and y (new in this version of the code -
 // v1.2 and up)
-double Init::getNuclearQs2(double T, double y) {
-    double value, fracy, fracT, QsYdown, QsYup;
-    int posy, check = 0;
-    fracy = 0.;
-    posy = static_cast<int>(floor(y / deltaYNuc_ + 0.0000001));
-
-    if (y > iymaxNuc_ * deltaYNuc_) {
-        // getNuclearQs2() is called from inside an omp parallel for loop
-        // (setColorChargeDensity), so use a fresh, stack-local instance
-        // rather than sharing messager_, which is not thread-safe.
-        PrettyOstream localMessager;
-        localMessager << "[Init::getNuclearQs2]: y=" << y
-                      << " is above the tabulated range (max y="
-                      << iymaxNuc_ * deltaYNuc_ << "). Exiting.";
-        localMessager.flush("error");
-        exit(1);
-    }
-
-    //  if ( T > Qs2Nuclear_[iTpmax_-1][iymaxNuc_-1] )
-    if (T > Tlist_[iTpmax_ - 1]) {
-        // Local instance for the same omp thread-safety reason as above.
-        PrettyOstream localMessager;
-        localMessager << "[Init::getNuclearQs2]: T=" << T
-                      << " exceeds the tabulated range (max T="
-                      << Tlist_[iTpmax_ - 1]
-                      << "); clamping to the maximal tabulated T.";
-        localMessager.flush("warning");
-        check = 1;
-        fracy = (y - static_cast<double>(posy) * deltaYNuc_) / deltaYNuc_;
-        QsYdown = (Qs2Nuclear_[iTpmax_ - 1][posy]);
-        QsYup = (Qs2Nuclear_[iTpmax_ - 1][posy + 1]);
-        value = (fracy * QsYup + (1. - fracy) * QsYdown);  //*hbarc*hbarc;
-        return value;
-    }
-
-    if (T < Tlist_[0]) {
-        check = 1;
-        return 0.;
-    }
-
-    for (int iT = 0; iT < iTpmax_; iT++) {
-        if (T >= Tlist_[iT] && T < Tlist_[iT + 1]) {
-            fracT = (T - Tlist_[iT]) / (Tlist_[iT + 1] - Tlist_[iT]);
-            fracy = (y - static_cast<double>(posy) * deltaYNuc_) / deltaYNuc_;
-
-            QsYdown = (fracT) * (Qs2Nuclear_[iT + 1][posy])
-                      + (1. - fracT) * (Qs2Nuclear_[iT][posy]);
-            QsYup = (fracT) * (Qs2Nuclear_[iT + 1][posy + 1])
-                    + (1. - fracT) * (Qs2Nuclear_[iT][posy + 1]);
-            value = (fracy * QsYup + (1. - fracy) * QsYdown);  //*hbarc*hbarc;
-
-            check++;
-            continue;
-        }
-    }
-
-    if (check != 1) {
-        // Local instance: same omp thread-safety reason as above.
-        PrettyOstream localMessager;
-        localMessager << "[Init::getNuclearQs2]: could not uniquely "
-                         "determine Qs^2 (check="
-                      << check << ", T=" << T
-                      << "); falling back to the maximal tabulated T_p.";
-        localMessager.flush("warning");
-        value =
-            (fracy * Qs2Nuclear_[iTpmax_ - 1][posy + 1]
-             + (1. - fracy) * Qs2Nuclear_[iTpmax_ - 1][posy]);
-    }
-
-    return value;
-}
-
 double Init::computeFluctuatingXG2mu2(
     Parameters *param, double a, double rapidity, double Tp, double qsmuRatio,
     double ySign) {
@@ -477,14 +365,14 @@ double Init::computeFluctuatingXG2mu2(
     // iterative loops here to determine the fluctuating Y
     while (std::abs(Ydeviation) > 0.001) {
         if (localrapidity >= 0) {
-            Qs = sqrt(getNuclearQs2(Tp, localrapidity));
+            Qs = sqrt(qsTable_.qs2(Tp, localrapidity));
         } else {
             xVal = Qs * param->colorCharge.xQsFactor / param->collision.sqrtS
                    * exp(ySign * yIn);
             if (xVal == 0)
                 Qs = 0.;
             else
-                Qs = sqrt(getNuclearQs2(Tp, 0.))
+                Qs = sqrt(qsTable_.qs2(Tp, 0.))
                      * sqrt(
                          pow((1 - xVal) / (1 - 0.01), exponent)
                          * pow((0.01 / xVal), 0.2));
@@ -529,14 +417,14 @@ void Init::computeCellColorCharge(
     } else {  // Fixed x
         // nucleus A
         lat->cells[ipos]->setg2mu2A(
-            getNuclearQs2(lat->cells[ipos]->getTpA(), rapidityA)
+            qsTable_.qs2(lat->cells[ipos]->getTpA(), rapidityA)
             / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
             * a / hbarc / hbarc / param->coupling.g
             / param->coupling.g);  // lattice units? check
 
         // nucleus B
         lat->cells[ipos]->setg2mu2B(
-            getNuclearQs2(lat->cells[ipos]->getTpB(), rapidityB)
+            qsTable_.qs2(lat->cells[ipos]->getTpB(), rapidityB)
             / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
             * a / hbarc / hbarc / param->coupling.g / param->coupling.g);
     }
@@ -1584,7 +1472,7 @@ void Init::init(
         param->event.phiRP = 0.;
         param->event.success = 1;
     } else {
-        readNuclearQs(param);
+        qsTable_.read(param->colorCharge.nucleusQsTableFileName);
     }
 
     // The configuration files are only used by sampleTAFromConfigFiles();

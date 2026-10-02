@@ -12,6 +12,7 @@
 #include "Group.h"
 #include "Lattice.h"
 #include "Matrix.h"
+#include "NuclearQsTable.h"
 #include "NucleonModel.h"
 #include "Parameters.h"
 #include "PrettyOstream.h"
@@ -43,26 +44,10 @@ enum class InitializationMethod {
  */
 class Init {
   private:
-    /// Number of tabulated rapidity points in \c Qs2Nuclear_/readNuclearQs().
-    int const static iymaxNuc_ = 44;  // for the Tp-y table
-
-    /// Number of tabulated \f$T_p\f$ points in `Qs2Nuclear_`/`Tlist_`
-    /// (updated in Sep 2026 to a 10x extended \f$T_p\f$ range).
-    int const static iTpmax_ = 240;
-
-    /// Rapidity spacing [in the same units as \c Qs2Nuclear_'s tabulated
-    /// \f$y\f$] between consecutive entries of \c Qs2Nuclear_.
-    double const deltaYNuc_ = 0.25;  // for the new table
-    /// FFT instance used for the Wilson-line Poisson solve
-    /// (setV()) and the forward-lightcone momentum-space kernel.
+    /// FFT instance used for the Wilson-line Poisson solve (setV()).
     FFT fft_;
-    /// Tabulated \f$Q_s^2(T_p, y)\f$ values read by readNuclearQs(),
-    /// indexed `[iT][iy]`; used by getNuclearQs2()'s bilinear
-    /// interpolation.
-    double Qs2Nuclear_[iTpmax_][iymaxNuc_];
-    /// Tabulated \f$T_p\f$ abscissas corresponding to \c
-    /// Qs2Nuclear_'s first index.
-    double Tlist_[iTpmax_];
+    /// The nuclear \f$Q_s^2(T_p, y)\f$ table, read by init().
+    NuclearQsTable qsTable_;
 
     /// Pre-tabulated nucleon configurations for the projectile, loaded
     /// from file by readInNucleusConfigs() (empty if sampled fresh
@@ -192,27 +177,8 @@ class Init {
         Random *random, int polarizationFlag,
         std::vector<ReturnValue> &nucleus);
     /**
-     * Reads the \f$Q_s^2(T_p, y)\f$ lookup table (\c Qs2Nuclear_/\c
-     * Tlist_) from `param->colorCharge.nucleusQsTableFileName`.
-     * \param[in] param Simulation parameters; exits with an error if
-     * the file doesn't exist or ends prematurely.
-     */
-    void readNuclearQs(Parameters *param);
-
-    /**
-     * Bilinearly interpolates the tabulated \f$Q_s^2(T_p, y)\f$ table
-     * (`Qs2Nuclear_`/`Tlist_`).
-     * \param[in] T Nuclear thickness \f$T_p\f$ to interpolate at.
-     * \param[in] y Rapidity to interpolate at; exits with an error if
-     * above the tabulated range.
-     * \return Interpolated \f$Q_s^2\f$; `0` if \p T is below the
-     * tabulated range, clamped to the maximal tabulated \f$T_p\f$ (with
-     * a warning) if above it.
-     */
-    double getNuclearQs2(double T, double y);
-    /**
      * Sets \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$ at one cell from its
-     * already-accumulated \f$T_p^A\f$/\f$T_p^B\f$, via getNuclearQs2()
+     * already-accumulated \f$T_p^A\f$/\f$T_p^B\f$, via NuclearQsTable::qs2()
      * and (if enabled) the fluctuating-\f$x\f$ iterative solve. Called
      * from setColorChargeDensity()'s per-cell loop
      * \param[in,out] lat Lattice to read \f$T_p\f$ from and write

@@ -12,6 +12,7 @@ set (IPGLASMA_LIB_SOURCES
     ForwardLightCone.cpp
     WilsonLineIO.cpp
     NucleonModel.cpp
+    NuclearQsTable.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp

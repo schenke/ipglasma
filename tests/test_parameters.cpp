@@ -239,6 +239,30 @@ TEST_CASE(
     CHECK(param.ValidParameters() == true);
 }
 
+TEST_CASE("Parameters::ValidParameters: runWithkt must be 0 or 1") {
+    Parameters param;
+    makeValidBaseline(param);
+    for (int kt : {0, 1}) {
+        param.setRunWithkt(kt);
+        CHECK(param.ValidParameters() == true);
+    }
+    param.setRunWithkt(2);
+    CHECK(param.ValidParameters() == false);
+}
+
+TEST_CASE(
+    "Parameters::ValidParameters: rejects a negative alphas_jimwlk with "
+    "JIMWLK") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.setUseJIMWLK(1);
+    param.setc_jimwlk(0.2);
+    param.setJimwlk_alphas(-0.3);
+    CHECK(param.ValidParameters() == false);
+    param.setJimwlk_alphas(0.3);  // fixed coupling
+    CHECK(param.ValidParameters() == true);
+}
+
 TEST_CASE(
     "Parameters: int-to-bool coercing setters treat any nonzero as true") {
     // setSaveSnapshots/setForceDmin/setComputeGluonMultiplicity/... all

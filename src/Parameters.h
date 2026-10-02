@@ -167,10 +167,11 @@ struct SubnucleonParameters {
     /// radial-position sampling (see Random::setGammaIncCDF()); `1`
     /// reduces to plain 3D Gaussian sampling.
     double omega = 0.;
-    /// Mean number of constituent quarks ("hot spots") per nucleon; `0`
-    /// disables substructure. Sets NqBase: each nucleon gets
-    /// floor(NqBase) quarks, one more with probability equal to the
-    /// fractional part, plus a Poisson fluctuation of mean NqFluc.
+    /// Mean number of constituent quarks ("hot spots") per nucleon: `0`
+    /// disables substructure, otherwise it must be at least 1. Sets
+    /// NqBase: each nucleon gets floor(NqBase) quarks, one more with
+    /// probability equal to the fractional part, plus a Poisson
+    /// fluctuation of mean NqFluc.
     double Nq = 0.;
     /// Base number of constituent quarks (posterior-fit parameter; see
     /// setParamsWithPosteriorParameterSet()).

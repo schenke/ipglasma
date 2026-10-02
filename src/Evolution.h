@@ -22,8 +22,9 @@
  * electric fields `U`/`U2`, and \f$\pi\f$) live at half-integer steps
  * and are updated by evolvePi()/evolveE(). Also computes the
  * energy-momentum tensor (EnergyMomentumTensor::compute()), derived observables
- * (eccentricity(), u()), and an optional final-time gluon spectrum/multiplicity
- * estimate (GluonMultiplicity::compute()) via Coulomb-gauge fixing and FFT.
+ * (Eccentricity::compute(), u()), and an optional final-time gluon
+ * spectrum/multiplicity estimate (GluonMultiplicity::compute()) via
+ * Coulomb-gauge fixing and FFT.
  */
 class Evolution {
   private:
@@ -57,7 +58,7 @@ class Evolution {
      * `MyEigen::writeTmunu4D()` (depending on `output.writeEpsilonUHydro`),
      * then restores the unmodified momenta so the measurement cannot perturb
      * the trajectory. At the very end, runs checkGaussLaw(), and -- if
-     * `output.computeGluonMultiplicity` -- eccentricity() and
+     * `output.computeGluonMultiplicity` -- Eccentricity::compute() and
      * GluonMultiplicity::compute(), stopping early if it reports no
      * collision.
      * \param[in,out] lat Lattice to evolve in place.
@@ -131,32 +132,6 @@ class Evolution {
      */
     void checkGaussLaw(Lattice *lat, Parameters *param);
     /**
-     * Computes the spatial eccentricities \f$\varepsilon_1,\ldots,
-     * \varepsilon_6\f$ and their event-plane angles
-     * \f$\Psi_1,\ldots,\Psi_6\f$ from the energy-density-weighted
-     * (running-coupling-corrected, `getEpsilon()*getutau()`-weighted,
-     * cells below \p cutoff excluded) spatial moments, first recentering
-     * on the energy-weighted centroid. If \p doAniso is `0`, appends one
-     * row to `eccentricities<id>.dat`. If \p doAniso is `1`, instead
-     * appends to `anisotropy<id>.dat` the \f$T^{xx}-T^{yy}\f$ spatial
-     * anisotropy (via the anonymous-namespace `computeRotatedAnisotropy`
-     * helper) resampled at ten angles around the flow-velocity event
-     * plane \f$\Psi_U\f$ (computed from `getux()`/`getuy()`).
-     * \param[in] lat Lattice to read the energy density (and, for
-     * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.
-     * \param[in] param Simulation parameters.
-     * \param[in] it Current time step index, used for the output file's
-     * time column and (on `it==1`) to store \f$\Psi\f$ in
-     * `param->event.psi`.
-     * \param[in] cutoff Energy-density cutoff below which a cell is
-     * excluded from the weighted averages [\f$\Lambda_{QCD}^4\f$-like
-     * units, i.e. roughly 1/fm\f$^4\f$].
-     * \param[in] doAniso Selects which output file/quantity is written
-     * (`0`: eccentricities, `1`: rotated-tensor anisotropy).
-     */
-    void eccentricity(
-        Lattice *lat, Parameters *param, int it, double cutoff, int doAniso);
-    /**
      * Writes a binary snapshot (`evolvedFields<id>_it<it>.ipgf`) of the
      * six evolved fields (\f$\phi\f$, \f$\pi\f$, \c U (\f$E_1\f$), \c U2
      * (\f$E_2\f$), \c Ux, \c Uy) as full \f$3\times3\f$ complex
@@ -185,8 +160,8 @@ class Evolution {
      * EnergyMomentumTensor::compute(): with `output.writeEpsilonUHydro` the
      * full u() solve and hydro output; otherwise only the raw \f$T^{\mu\nu}\f$
      * output, preceded by the flow-velocity solve if
-     * `output.computeGluonMultiplicity` (so that eccentricity(), which weights
-     * by \f$\epsilon u^\tau\f$, sees the solved fields).
+     * `output.computeGluonMultiplicity` (so that Eccentricity::compute(), which
+     * weights by \f$\epsilon u^\tau\f$, sees the solved fields).
      * \param[in,out] lat Lattice holding \f$T^{\mu\nu}\f$; receives
      * \f$\epsilon\f$ and \f$u^\mu\f$ when the solve runs.
      * \param[in] param Simulation parameters.

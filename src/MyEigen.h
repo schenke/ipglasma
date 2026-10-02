@@ -58,7 +58,7 @@ class MyEigen {
      * every site (in parallel) and stores them in the lattice cells,
      * without writing any output. flowVelocity4D() calls this before
      * writing; call it directly when only the cell values are needed
-     * (e.g. by Evolution::eccentricity(), which weights by
+     * (e.g. by Eccentricity::compute(), which weights by
      * \f$\epsilon u^\tau\f$).
      * \param[in,out] lat Lattice to read \f$T^{\mu\nu}\f$ from and
      * store the solution into.

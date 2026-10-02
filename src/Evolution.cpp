@@ -515,7 +515,7 @@ void tmunuPlaquetteTeam(
 #pragma omp for
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            pos = i * N + j;
+            pos = lat->positionFromXY(i, j);
             if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
                 lat->Uy1[pos] = one;
                 continue;
@@ -581,7 +581,7 @@ void tmunuDiagonalElectricTeam(
 #pragma omp for
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            pos = i * N + j;
+            pos = lat->positionFromXY(i, j);
             if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
                 lat->cells[pos]->setTtautau(0.);
                 lat->cells[pos]->setTxx(0.);
@@ -699,7 +699,7 @@ void tmunuDiagonalMagneticTeam(
 #pragma omp for
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            pos = i * N + j;
+            pos = lat->positionFromXY(i, j);
             if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
                 continue;
             }
@@ -987,7 +987,7 @@ void tmunuOffDiagonalTeam(
 #pragma omp for
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            pos = i * N + j;
+            pos = lat->positionFromXY(i, j);
             if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
                 lat->cells[pos]->setTtaux(0.);
                 lat->cells[pos]->setTtauy(0.);
@@ -1008,7 +1008,7 @@ void tmunuOffDiagonalTeam(
             pospXmY = lat->pospXmY[pos];
 
             pos2X = std::min(N - 1, i + 2) * N + j;
-            pos2Y = i * N + std::min(N - 1, j + 2);
+            pos2Y = lat->positionFromXY(i, std::min(N - 1, j + 2));
 
             pos2XY = std::min(N - 1, i + 2) * N + std::min(N - 1, j + 1);
             posX2Y = std::min(N - 1, i + 1) * N + std::min(N - 1, j + 2);
@@ -1309,7 +1309,7 @@ void tmunuOffDiagonalTeam(
 void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
-        const int i = pos / N;
+        const int i = lat->xFromPosition(pos);
         const int j = pos - i * N;
         if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
             lat->cells[pos]->setEpsilon(0.);
@@ -1362,7 +1362,8 @@ double computeRunningCouplingGfactor(
     if (param->getRunWithLocalQs() == 1) {
         // run with the local (in transverse plane) coupling
         const bool inBounds =
-            pos / N > 0 && pos / N < N - 1 && pos % N > 0 && pos % N < N - 1;
+            lat->xFromPosition(pos) > 0 && lat->xFromPosition(pos) < N - 1
+            && lat->yFromPosition(pos) > 0 && lat->yFromPosition(pos) < N - 1;
         const double g2mu2A = inBounds ? lat->cells[pos]->getg2mu2A() : 0;
         const double g2mu2B = inBounds ? lat->cells[pos]->getg2mu2B() : 0;
 
@@ -1427,7 +1428,7 @@ void prepareSpectrumField(
     std::vector<Matrix *> &E1) {
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
-            int pos = i * N + j;
+            int pos = lat->positionFromXY(i, j);
             double gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
             if (param->getRunWithkt() == 0) {
@@ -1487,7 +1488,7 @@ void accumulateGluonSpectrum(
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             double nkt = 0.;
-            int pos = i * N + j;
+            int pos = latticeIndex(i, j, N);
             int npos = (N - i) * N + (N - j);
 
             double kx =
@@ -1752,7 +1753,7 @@ void Evolution::writeEvolvedFields(Lattice *lat, Parameters *param, int it) {
         const std::size_t imagOffset = realOffset + matrixElements;
         for (int x = 0; x < N; ++x) {
             for (int y = 0; y < N; ++y) {
-                const int pos = x * N + y;
+                const int pos = lat->positionFromXY(x, y);
                 const Matrix &matrix = matrixAt(field, pos);
                 const std::complex<double> *elements = matrix.data();
                 const std::size_t siteOffset =
@@ -2213,7 +2214,7 @@ void Evolution::eccentricity(
 
     for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
-            pos = ix * N + iy;
+            pos = lat->positionFromXY(ix, iy);
             maxEps = std::max(lat->cells[pos]->getEpsilon(), maxEps);
         }
     }
@@ -2223,7 +2224,7 @@ void Evolution::eccentricity(
         x = -L / 2. + a * ix;
         for (int iy = 0; iy < N; iy++) {
             y = -L / 2. + a * iy;
-            pos = ix * N + iy;
+            pos = lat->positionFromXY(ix, iy);
 
             gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
@@ -2287,7 +2288,7 @@ void Evolution::eccentricity(
     for (int ix = 2; ix < N - 2; ix++) {
         x = -L / 2. + a * ix - avx;
         for (int iy = 2; iy < N - 2; iy++) {
-            pos = ix * N + iy;
+            pos = lat->positionFromXY(ix, iy);
             y = -L / 2. + a * iy - avy;
             if (x >= 0) {
                 phiA = atan(y / x);
@@ -2376,7 +2377,7 @@ void Evolution::eccentricity(
     for (int ix = 0; ix < N; ix++) {
         x = -L / 2. + a * ix - avx2;
         for (int iy = 0; iy < N; iy++) {
-            pos = ix * N + iy;
+            pos = lat->positionFromXY(ix, iy);
 
             gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);

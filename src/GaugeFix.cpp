@@ -180,14 +180,15 @@ void GaugeFix::fftChi(
 #pragma omp for collapse(2)
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < N; j++) {
-                        const int localpos = i * N + j;
+                        const int localpos = lat->positionFromXY(i, j);
 
                         // use periodic boundary conditions to have fast
                         // convergence
                         const int localposmX =
                             (i == 0) ? (N - 1) * N + j : (i - 1) * N + j;
                         const int localposmY =
-                            (j == 0) ? i * N + N - 1 : i * N + j - 1;
+                            (j == 0) ? lat->positionFromXY(i, N - 1)
+                                     : lat->positionFromXY(i, j - 1);
 
                         residualSite[static_cast<std::size_t>(localpos)] =
                             projectGaugeDivergenceSU3(
@@ -237,7 +238,7 @@ void GaugeFix::fftChi(
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < N; j++) {
                     double kx, ky, kt2;
-                    int localpos = i * N + j;
+                    int localpos = lat->positionFromXY(i, j);
                     kx = sin(
                         M_PI
                         * (-0.5
@@ -268,7 +269,7 @@ void GaugeFix::fftChi(
 #pragma omp for
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < N; j++) {
-                        int localpos = i * N + j;
+                        int localpos = lat->positionFromXY(i, j);
                         // chi is Hermitian and traceless here, so evaluate
                         // exp(i chi) directly in SU(3).  This avoids the
                         // generic Pade exponential and the subsequent
@@ -309,11 +310,12 @@ void GaugeFix::fftChi(
 #pragma omp for collapse(2)
                 for (int i = 0; i < N; i++) {
                     for (int j = 0; j < N; j++) {
-                        const int localpos = i * N + j;
+                        const int localpos = lat->positionFromXY(i, j);
                         const int localpospX =
                             (i == N - 1) ? j : (i + 1) * N + j;
                         const int localpospY =
-                            (j == N - 1) ? i * N : i * N + j + 1;
+                            (j == N - 1) ? lat->positionFromXY(i, 0)
+                                         : lat->positionFromXY(i, j + 1);
 
                         g = lat->Ux1[localpos];
                         gdag = g;

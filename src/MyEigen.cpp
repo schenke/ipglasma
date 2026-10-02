@@ -616,10 +616,10 @@ double MyEigen::writeHydroText(
 
                     fracx = (x - xlow) / a;
 
-                    pos1 = xpos * N + ypos;
-                    pos2 = xposUp * N + ypos;
-                    pos3 = xpos * N + yposUp;
-                    pos4 = xposUp * N + yposUp;
+                    pos1 = lat->positionFromXY(xpos, ypos);
+                    pos2 = lat->positionFromXY(xposUp, ypos);
+                    pos3 = lat->positionFromXY(xpos, yposUp);
+                    pos4 = lat->positionFromXY(xposUp, yposUp);
 
                     fracy = (y - ylow) / a;
 
@@ -782,10 +782,10 @@ void MyEigen::writeRawTmunu(
                 xlow = -L / 2. + a * xpos;
                 ylow = -L / 2. + a * ypos;
 
-                pos1 = xpos * N + ypos;
-                pos2 = xposUp * N + ypos;
-                pos3 = xpos * N + yposUp;
-                pos4 = xposUp * N + yposUp;
+                pos1 = lat->positionFromXY(xpos, ypos);
+                pos2 = lat->positionFromXY(xposUp, ypos);
+                pos3 = lat->positionFromXY(xpos, yposUp);
+                pos4 = lat->positionFromXY(xposUp, yposUp);
 
                 fracx = (x - xlow) / a;
                 fracy = (y - ylow) / a;
@@ -930,10 +930,10 @@ void MyEigen::writeJazma(
                     fracx = (x - xlow) / a;
                     fracy = (y - ylow) / a;
 
-                    pos1 = xpos * N + ypos;
-                    pos2 = xposUp * N + ypos;
-                    pos3 = xpos * N + yposUp;
-                    pos4 = xposUp * N + yposUp;
+                    pos1 = lat->positionFromXY(xpos, ypos);
+                    pos2 = lat->positionFromXY(xposUp, ypos);
+                    pos3 = lat->positionFromXY(xpos, yposUp);
+                    pos4 = lat->positionFromXY(xposUp, yposUp);
 
                     g2mu2A = interpolateCellField(
                         lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
@@ -991,10 +991,10 @@ void MyEigen::writeJazma(
                     fracx = (x - xlow) / a;
                     fracy = (y - ylow) / a;
 
-                    pos1 = xpos * N + ypos;
-                    pos2 = xposUp * N + ypos;
-                    pos3 = xpos * N + yposUp;
-                    pos4 = xposUp * N + yposUp;
+                    pos1 = lat->positionFromXY(xpos, ypos);
+                    pos2 = lat->positionFromXY(xposUp, ypos);
+                    pos3 = lat->positionFromXY(xpos, yposUp);
+                    pos4 = lat->positionFromXY(xposUp, yposUp);
 
                     g2mu2A = interpolateCellField(
                         lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
@@ -1052,8 +1052,8 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
 
 #pragma omp for
         for (int posLoop = 0; posLoop < N * N; posLoop++) {
-            const int si = posLoop / N;
-            const int sj = posLoop % N;
+            const int si = lat->xFromPosition(posLoop);
+            const int sj = lat->yFromPosition(posLoop);
             const int pos = posLoop;
             solveFlowVelocityAtCell(
                 lat, pos, si, sj, N, it, dtau, a, eval_ws, evec_ws, w_ws,

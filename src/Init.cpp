@@ -826,7 +826,7 @@ void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
             double x = ix * L / double(N) - L / 2.;
             for (int iy = 0; iy < N; iy++) {
                 double y = iy * L / double(N) - L / 2.;
-                int localpos = ix * N + iy;
+                int localpos = lat->positionFromXY(ix, iy);
                 double envelope = exp(
                                       -(x * x / (2. * sigmax * sigmax)
                                         + y * y / (2. * sigmay * sigmay)))
@@ -843,7 +843,7 @@ void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
         for (int ix = 0; ix < N; ix++)  // loop over all positions
         {
             for (int iy = 0; iy < N; iy++) {
-                int localpos = ix * N + iy;
+                int localpos = lat->positionFromXY(ix, iy);
                 lat->cells[localpos]->setg2mu2A(
                     param->getg2mu() * param->getg2mu() / param->getg()
                     / param->getg());
@@ -947,7 +947,7 @@ void Init::computeSmoothNucleusThickness(
         const double x = -L / 2. + a * ix;
         for (int iy = 0; iy < N; iy++) {
             const double y = -L / 2. + a * iy;
-            const int localpos = ix * N + iy;
+            const int localpos = lat->positionFromXY(ix, iy);
             const double r = sqrt(x * x + y * y);
 
             double TA = glauber->interNuPInSP(r);
@@ -966,7 +966,7 @@ void Init::computeSmoothNucleusThickness(
 
     for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
-            const int localpos = ix * N + iy;
+            const int localpos = lat->positionFromXY(ix, iy);
             lat->cells[localpos]->setTpA(
                 lat->cells[localpos]->getTpA() / normA * glauber->nucleusA1()
                 * hbarc * hbarc);
@@ -1025,8 +1025,8 @@ void Init::computeThicknessFromNucleons(
 #pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
         // loop over all positions
-        int iy = ipos % N;
-        int ix = ipos / N;
+        int iy = lat->yFromPosition(ipos);
+        int ix = lat->xFromPosition(ipos);
         double x = -L / 2. + a * ix;
         double y = -L / 2. + a * iy;
 
@@ -1332,8 +1332,8 @@ void Init::scanCollisionGeometry(
     for (int ipos = 0; ipos < N * N; ipos++) {
         // loop over all positions
         int check = 0;
-        int ix = ipos / N;
-        int iy = ipos % N;
+        int ix = lat->xFromPosition(ipos);
+        int iy = lat->yFromPosition(ipos);
         double x = -L / 2. + a * ix;
         double y = -L / 2. + a * iy;
 
@@ -1347,8 +1347,8 @@ void Init::scanCollisionGeometry(
         int ixB = static_cast<int>((xB + L / 2.) / a);
         int iyB = static_cast<int>((yB + L / 2.) / a);
 
-        int posA = ixA * N + iyA;
-        int posB = ixB * N + iyB;
+        int posA = lat->positionFromXY(ixA, iyA);
+        int posB = lat->positionFromXY(ixB, iyB);
 
         double g2mu2A = 0;
         double TpA = 0;
@@ -1594,7 +1594,7 @@ void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
         const std::size_t imagOffset = realOffset + matrixElements;
         for (int x = 0; x < N; ++x) {
             for (int y = 0; y < N; ++y) {
-                const int pos = x * N + y;
+                const int pos = lat->positionFromXY(x, y);
                 const Matrix &matrix = (beam == 0) ? lat->U[pos] : lat->U2[pos];
                 const std::complex<double> *elements = matrix.data();
                 const std::size_t siteOffset =
@@ -1678,8 +1678,8 @@ std::vector<double> Init::computeWilsonLineMomentumKernel(
     std::vector<double> momentumKernel(static_cast<std::size_t>(sites));
 #pragma omp parallel for
     for (int pos = 0; pos < sites; ++pos) {
-        const int i = pos / N;
-        const int j = pos - i * N;
+        const int i = latticeX(pos, N);
+        const int j = latticeY(pos, N);
         const double kx =
             2. * M_PI
             * (-0.5 + static_cast<double>(i) / static_cast<double>(N));
@@ -1963,7 +1963,7 @@ void Init::readWilsonLineText(
                 if (ix >= N) continue;
             }
 
-            int pos = ix * N + j;
+            int pos = latticeIndex(ix, j, N);
             U[pos] = (temp);
         }
     }
@@ -2032,12 +2032,10 @@ void Init::readWilsonLineBinary(
             int TEMPINDX = ((INPUT_CTR - 1) / 2);
             int PositionIndx = TEMPINDX / 9;
 
-            // PositionIndx enumerates (ix, iy) pairs in the
-            // writer's ix-outer/iy-inner loop order (see
-            // Lattice::writeWilsonLines), so dividing by N
-            // recovers ix, and the remainder is iy.
-            int ixRaw = PositionIndx / N;
-            int iy = PositionIndx - N * ixRaw;
+            // PositionIndx enumerates the sites in the writer's order
+            // (see Lattice::writeWilsonLines), i.e. latticeIndex().
+            int ixRaw = latticeX(PositionIndx, N);
+            int iy = latticeY(PositionIndx, N);
 
             double bb = param->getb();
             a = L / static_cast<double>(N);
@@ -2052,7 +2050,7 @@ void Init::readWilsonLineBinary(
             int j = MatrixIndx / 3;
             int k = MatrixIndx - j * 3;
 
-            int indx = N * ix + iy;
+            int indx = latticeIndex(ix, iy, N);
             if (indx >= N * N || indx < 0) {
                 if (bb == 0) {
                     messager_ << "[Init::readVFromFile]: datafile " << fileName
@@ -2192,8 +2190,8 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
     const double L = param->getL();
     const double a = L / N;  // lattice spacing in fm
     for (int ipos = 0; ipos < N * N; ipos++) {
-        int ix = ipos / N;
-        int iy = ipos % N;
+        int ix = lat->xFromPosition(ipos);
+        int iy = lat->yFromPosition(ipos);
         double x = -L / 2. + a * ix;
         double y = -L / 2. + a * iy;
 
@@ -2210,13 +2208,13 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
         if (ixA < 0 || ixA >= N || iyA < 0 || iyA >= N) {
             lat->U[ipos] = one_;
         } else {
-            int posA = ixA * N + iyA;
+            int posA = lat->positionFromXY(ixA, iyA);
             lat->U[ipos] = lat_tmp.buffer1[posA];
         }
         if (ixB < 0 || ixB >= N || iyB < 0 || iyB >= N) {
             lat->U2[ipos] = one_;
         } else {
-            int posB = ixB * N + iyB;
+            int posB = lat->positionFromXY(ixB, iyB);
             lat->U2[ipos] = lat_tmp.buffer2[posB];
         }
     }

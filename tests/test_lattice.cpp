@@ -233,3 +233,31 @@ TEST_CASE(
         CHECK(std::abs(buf.buffer1[0].get(k) - identity.get(k)) < 1e-14);
     }
 }
+
+TEST_CASE(
+    "Lattice::positionFromXY/xFromPosition/yFromPosition are consistent "
+    "with each other, with latticeIndex() and with the neighbor tables") {
+    const int length = 5;
+    Parameters param;
+    makeLatticeParam(param, length);
+    Lattice lat(&param, length);
+    CHECK(lat.getLength() == length);
+
+    for (int ix = 0; ix < length; ++ix) {
+        for (int iy = 0; iy < length; ++iy) {
+            const int pos = lat.positionFromXY(ix, iy);
+            CHECK(pos == latticeIndex(ix, iy, length));
+            CHECK(lat.xFromPosition(pos) == ix);
+            CHECK(lat.yFromPosition(pos) == iy);
+            CHECK(latticeX(pos, length) == ix);
+            CHECK(latticeY(pos, length) == iy);
+            // interior sites: the neighbor tables step one site in x / y
+            if (ix > 0 && ix < length - 1 && iy > 0 && iy < length - 1) {
+                CHECK(lat.pospX[pos] == lat.positionFromXY(ix + 1, iy));
+                CHECK(lat.posmX[pos] == lat.positionFromXY(ix - 1, iy));
+                CHECK(lat.pospY[pos] == lat.positionFromXY(ix, iy + 1));
+                CHECK(lat.posmY[pos] == lat.positionFromXY(ix, iy - 1));
+            }
+        }
+    }
+}

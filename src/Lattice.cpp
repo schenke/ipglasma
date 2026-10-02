@@ -16,6 +16,7 @@ using PhysConst::Nc;
 Lattice::Lattice(Parameters *param, int length) {
     IPG_PROFILE_SCOPE("lattice.allocate");
     size_ = length * length;
+    length_ = length;
     const double a = param->getL() / static_cast<double>(length);
 
     messager_ << "[Lattice::Lattice]: Allocating square lattice of size "
@@ -52,12 +53,12 @@ Lattice::Lattice(Parameters *param, int length) {
             const int jm = std::max(0, j - 1);
             const int jp = std::min(length - 1, j + 1);
 
-            pospX.push_back(ip * length + j);
-            pospY.push_back(i * length + jp);
-            posmX.push_back(im * length + j);
-            posmY.push_back(i * length + jm);
-            posmXpY.push_back(im * length + jp);
-            pospXmY.push_back(ip * length + jm);
+            pospX.push_back(latticeIndex(ip, j, length));
+            pospY.push_back(latticeIndex(i, jp, length));
+            posmX.push_back(latticeIndex(im, j, length));
+            posmY.push_back(latticeIndex(i, jm, length));
+            posmXpY.push_back(latticeIndex(im, jp, length));
+            pospXmY.push_back(latticeIndex(ip, jm, length));
         }
     }
 
@@ -72,7 +73,7 @@ void Lattice::writeMatrixArrayText(
 
     for (int ix = 0; ix < N; ix++) {
         for (int iy = 0; iy < N; iy++) {
-            int pos = ix * N + iy;
+            int pos = positionFromXY(ix, iy);
             fout << ix << " " << iy << " " << field[pos].MatrixToString()
                  << std::endl;
         }
@@ -117,7 +118,7 @@ void Lattice::writeWilsonLines(
 
         for (int ix = 0; ix < N; ix++) {
             for (int iy = 0; iy < N; iy++) {
-                int pos = ix * N + iy;
+                int pos = positionFromXY(ix, iy);
                 if (nucleus == NucleusRole::Projectile) {
                     foutU << ix << " " << iy << " " << U[pos].MatrixToString()
                           << std::endl;
@@ -163,7 +164,7 @@ void Lattice::writeWilsonLines(
                         // symmetric/identity lattice, which is why no test
                         // caught it -- see Init::readVFromFile's matching
                         // fix on the read side).
-                        int indx = N * ix + iy;
+                        int indx = positionFromXY(ix, iy);
                         int SU3indx = a1 * Nc + b;
                         if (nucleus == NucleusRole::Projectile) {
                             val1[0] = U[indx].getRe(SU3indx);

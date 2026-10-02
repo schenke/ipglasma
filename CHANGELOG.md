@@ -172,7 +172,7 @@ The main categories for changes in this file are:
 
 * Fix the nuclear thickness of the 3-parameter Gauss profile (e.g. S) being off by up to 7.5e-4 relative, from the old integrator's convergence criterion.
 * Reject `runWithkt` values other than 0/1 and a negative `alphas_jimwlk`, which selected inconsistent code paths.
-* Fix `Nq` (formerly `useConstituentQuarkProton`) only accepting integers after the input rewrite; a fractional value again sets a fractional mean number of constituent quarks.
+* Fix `Nq` (formerly `useConstituentQuarkProton`) only accepting integers after the input rewrite; a fractional value again sets a fractional mean number of constituent quarks. Values between 0 and 1 are now rejected: they used to switch the substructure off, because the on/off flag was the truncated value.
 * Fix the eccentricity computation using an unset Qs/mu ratio for nucleus B when Wilson lines are read from file.
 * Reject inputs that previously failed silently or with undefined behaviour: `L <= 0`, a negative `maxTime` or one needing more than 1e8 time steps, `nucleiToAverage < 1` (division by zero), polarization values other than 0/1/2, a negative `Nq`, `subNucleonParamType` 2/4 with `Nq` other than 0 or 3 (those fits fix 3 quarks), posterior tables that are empty or have too few columns, and `inverseQsForMaxTime 1` or `runningCoupling 1` together with `useNucleus 0` or `readInitialWilsonLines 1/2` (the event-averaged Qs is never computed there).
 

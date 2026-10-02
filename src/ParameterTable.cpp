@@ -430,8 +430,15 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin),
         param("omega", &P::subnucleon, &SubnucleonParameters::omega)
             .check(positive()),
+        // 0 < Nq < 1 is rejected: it used to switch the substructure off
+        // (the on/off flag was the truncated value), but would now give
+        // every nucleon one quark
         param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
-            .check(nonNegative()),
+            .check([](const double &v) {
+                return (v == 0. || v >= 1.)
+                           ? ""
+                           : "must be 0 (no substructure) or at least 1";
+            }),
         param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc),
         param(
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,

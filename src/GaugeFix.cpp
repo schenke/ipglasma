@@ -185,7 +185,8 @@ void GaugeFix::fftChi(
                         // use periodic boundary conditions to have fast
                         // convergence
                         const int localposmX =
-                            (i == 0) ? (N - 1) * N + j : (i - 1) * N + j;
+                            (i == 0) ? lat->positionFromXY(N - 1, j)
+                                     : lat->positionFromXY(i - 1, j);
                         const int localposmY =
                             (j == 0) ? lat->positionFromXY(i, N - 1)
                                      : lat->positionFromXY(i, j - 1);
@@ -312,7 +313,8 @@ void GaugeFix::fftChi(
                     for (int j = 0; j < N; j++) {
                         const int localpos = lat->positionFromXY(i, j);
                         const int localpospX =
-                            (i == N - 1) ? j : (i + 1) * N + j;
+                            (i == N - 1) ? lat->positionFromXY(0, j)
+                                         : lat->positionFromXY(i + 1, j);
                         const int localpospY =
                             (j == N - 1) ? lat->positionFromXY(i, 0)
                                          : lat->positionFromXY(i, j + 1);

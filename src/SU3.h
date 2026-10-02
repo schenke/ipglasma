@@ -6,8 +6,8 @@
 #include "Matrix.h"
 
 /**
- * Fixed-size SU(3) hot-path helpers, used by Evolution.cpp's per-cell
- * energy-momentum tensor computation.
+ * Fixed-size SU(3) hot-path helpers, used by the per-cell
+ * energy-momentum tensor computation (EnergyMomentumTensor.cpp).
  *
  * These routines intentionally do not provide a generic-N fallback:
  * IP-Glasma is validated to run with \f$N_c = 3\f$ at input time.

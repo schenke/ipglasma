@@ -185,8 +185,10 @@ struct SubnucleonParameters {
     /// origin after sampling hot-spot positions (`1`).
     bool shiftConstituentQuarkProtonOrigin = false;
     /// Anisotropy \f$\xi\f$ of the `nucleonModel gaussian` thickness,
-    /// \f$T \propto \exp[-(x^2+\xi y^2)/2B]/(2\pi B\sqrt{\xi})\f$ (an
-    /// initial test parameter).
+    /// \f$T \propto \sqrt{1+\xi}\,\exp[-(b^2+\xi(\vec b\cdot\hat
+    /// n)^2)/2B]/(2\pi B)\f$ with \f$\hat n=(\cos\phi,\sin\phi)\f$ at a
+    /// random angle \f$\phi\f$ per nucleon, i.e. narrower along \f$\hat
+    /// n\f$ for \f$\xi>0\f$ (an initial test parameter).
     double protonAnisotropy = 0.;
     /// Selects which Bayesian-posterior-fit table
     /// setParamsWithPosteriorParameterSet() draws from: `1` (variable
@@ -194,7 +196,8 @@ struct SubnucleonParameters {
     /// \f$N_q=3\f$); see loadPosteriorParameterSets().
     int subNucleonParamType = 0;
     /// Index into the posterior parameter set selected by \c
-    /// subNucleonParamType, modulo the table's row count.
+    /// subNucleonParamType, modulo the table's row count; `-1` draws a
+    /// random set every event.
     int subNucleonParamSet = 0;
     /// Whether to smear \f$Q_s\f$ using a Poisson distribution around
     /// its mean at every transverse position (`1`) or not (`0`).

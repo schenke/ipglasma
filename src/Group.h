@@ -12,8 +12,8 @@
  *
  * Constructed once in main.cpp and passed by pointer everywhere a
  * projection onto (or rotation by) a color generator is needed: JIMWLK's
- * Langevin noise generation, Init.cpp's color-charge-density sampling,
- * and Evolution's evolution/multiplicity entry points (though not every
+ * Langevin noise generation, ForwardLightCone's matching solve, and
+ * Evolution's evolution/multiplicity entry points (though not every
  * holder of a Group* actually uses it -- see e.g. GaugeFix::fftChi()).
  */
 class Group {

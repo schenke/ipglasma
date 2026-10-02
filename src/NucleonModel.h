@@ -31,8 +31,10 @@ class NucleonProfile {
 };
 
 /**
- * A single Gaussian nucleon of width \f$B_G\f$, optionally stretched
- * along the angle \c phi by `protonAnisotropy`.
+ * A single Gaussian nucleon of width \f$B_G\f$, optionally made
+ * anisotropic by `protonAnisotropy` \f$\xi\f$: the width along the
+ * direction at the angle \c phi becomes \f$B_G/(1+\xi)\f$ (narrower for
+ * \f$\xi>0\f$), at the same normalization.
  */
 class GaussianProfile : public NucleonProfile {
   public:

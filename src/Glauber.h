@@ -547,10 +547,10 @@ class Glauber {
     double nuIntHulthen(double xi);
 
     /**
-     * Fixed-point Gauss-Legendre quadrature (GSL, \c QUADRATURE_POINTS
-     * points) of the density-profile integrand selected by \p id, over
-     * `[down, up]`. The integrands are smooth on the open interval, and
-     * the rule never evaluates them at the endpoints.
+     * Adaptive GSL CQUAD quadrature, using a workspace of
+     * \c QUADRATURE_INTERVALS intervals and relative tolerance
+     * \c QUADRATURE_TOLERANCE, for the density-profile integrand selected by
+     * \p id over `[down, up]`.
      * \param[in] id Which integrand to sample (see evaluateIntegrand()).
      * \param[in] down Lower integration bound.
      * \param[in] up Upper integration bound.

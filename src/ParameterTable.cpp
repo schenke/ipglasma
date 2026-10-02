@@ -307,6 +307,24 @@ bool wsDeformParamsSet(const Parameters &p) {
  */
 bool saveSnapshotsSet(const Parameters &p) { return p.jimwlk.saveSnapshots; }
 
+/**
+ * Condition for the parameters of the gaussian nucleon model.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `gaussian`.
+ */
+bool gaussianNucleons(const Parameters &p) {
+    return p.subnucleon.nucleonModel == "gaussian";
+}
+
+/**
+ * Condition for the parameters of the hot-spot nucleon model.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `hotspots`.
+ */
+bool hotSpotNucleons(const Parameters &p) {
+    return p.subnucleon.nucleonModel == "hotspots";
+}
+
 /// Short name for the table entries.
 using P = Parameters;
 
@@ -424,28 +442,36 @@ const std::vector<ParameterSpec> &parameterTable() {
 
         // nucleon substructure and color charges
         param("m", &P::subnucleon, &SubnucleonParameters::m),
-        param("BG", &P::subnucleon, &SubnucleonParameters::BG),
-        param("BGq", &P::subnucleon, &SubnucleonParameters::BGq),
-        param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar),
-        param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin),
-        param("omega", &P::subnucleon, &SubnucleonParameters::omega)
-            .check(positive()),
-        // 0 < Nq < 1 is rejected: it used to switch the substructure off
-        // (the on/off flag was the truncated value), but would now give
-        // every nucleon one quark
-        param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
-            .check([](const double &v) {
-                return (v == 0. || v >= 1.)
-                           ? ""
-                           : "must be 0 (no substructure) or at least 1";
-            }),
-        param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc),
         param(
-            "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
-            &SubnucleonParameters::shiftConstituentQuarkProtonOrigin),
+            "nucleonModel", &P::subnucleon, &SubnucleonParameters::nucleonModel)
+            .check(oneOf<std::string>({"gaussian", "hotspots"})),
+        param("BG", &P::subnucleon, &SubnucleonParameters::BG),
+        // gaussian nucleons
         param(
             "protonAnisotropy", &P::subnucleon,
-            &SubnucleonParameters::protonAnisotropy),
+            &SubnucleonParameters::protonAnisotropy)
+            .onlyIf(gaussianNucleons),
+        // hot-spot nucleons
+        param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
+            .onlyIf(hotSpotNucleons),
+        param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
+            .onlyIf(hotSpotNucleons),
+        param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
+            .onlyIf(hotSpotNucleons),
+        param("omega", &P::subnucleon, &SubnucleonParameters::omega)
+            .onlyIf(hotSpotNucleons)
+            .check(positive()),
+        param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
+            .onlyIf(hotSpotNucleons)
+            .check([](const double &v) {
+                return v >= 1. ? "" : "must be at least 1";
+            }),
+        param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc)
+            .onlyIf(hotSpotNucleons),
+        param(
+            "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
+            &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)
+            .onlyIf(hotSpotNucleons),
         param(
             "subNucleonParamType", &P::subnucleon,
             &SubnucleonParameters::subNucleonParamType)

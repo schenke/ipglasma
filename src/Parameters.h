@@ -152,6 +152,10 @@ struct SubnucleonParameters {
     /// Infrared mass regulator [GeV] cutting off the Coulomb tail;
     /// should be of order \f$\Lambda_{QCD}=0.2\f$ GeV.
     double m = 0.;
+    /// Transverse structure of a nucleon, see NucleonModel: `gaussian`
+    /// (a single Gaussian of width BG) or `hotspots` (Nq Gaussian hot
+    /// spots of width BGq, distributed with width BG).
+    std::string nucleonModel = "gaussian";
     /// Width [GeV\f$^{-2}\f$] of the Gaussian describing the proton's
     /// shape, \f$T \sim e^{-b^2/(2B)}\f$.
     double BG = 0.;
@@ -167,11 +171,10 @@ struct SubnucleonParameters {
     /// radial-position sampling (see Random::setGammaIncCDF()); `1`
     /// reduces to plain 3D Gaussian sampling.
     double omega = 0.;
-    /// Mean number of constituent quarks ("hot spots") per nucleon: `0`
-    /// disables substructure, otherwise it must be at least 1. Sets
-    /// NqBase: each nucleon gets floor(NqBase) quarks, one more with
-    /// probability equal to the fractional part, plus a Poisson
-    /// fluctuation of mean NqFluc.
+    /// Mean number of hot spots (constituent quarks) per nucleon for
+    /// `nucleonModel hotspots`, at least 1. Sets NqBase: each nucleon
+    /// gets floor(NqBase) hot spots, one more with probability equal to
+    /// the fractional part, plus a Poisson fluctuation of mean NqFluc.
     double Nq = 0.;
     /// Base number of constituent quarks (posterior-fit parameter; see
     /// setParamsWithPosteriorParameterSet()).
@@ -181,7 +184,7 @@ struct SubnucleonParameters {
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).
     bool shiftConstituentQuarkProtonOrigin = false;
-    /// Anisotropy \f$\xi\f$ of the proton thickness function,
+    /// Anisotropy \f$\xi\f$ of the `nucleonModel gaussian` thickness,
     /// \f$T \propto \exp[-(x^2+\xi y^2)/2B]/(2\pi B\sqrt{\xi})\f$ (an
     /// initial test parameter).
     double protonAnisotropy = 0.;

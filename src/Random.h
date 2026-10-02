@@ -14,7 +14,7 @@
  * secondary GSL generator for Poisson sampling, plus a tabulated
  * inverse-CDF sampler for a gamma-distribution-based radial profile
  * used in constituent-quark position sampling (see
- * Init::sampleConstituentQuarkGeometry()).
+ * HotSpotNucleon::sample()).
  */
 class Random {
   private:
@@ -185,7 +185,7 @@ class Random {
      * sampling it.
      * \param[in] omega Shape parameter; must match what
      * sampleGammaInc()'s caller subsequently scales its result by
-     * (see Init::sampleConstituentQuarkGeometry()).
+     * (see HotSpotNucleon::sample()).
      */
     void setGammaIncCDF(const double omega);
     /**

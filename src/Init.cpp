@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "NucleonModel.h"
 #include "PhysConst.h"
 #include "RunningCoupling.h"
 #include "WilsonLineIO.h"
@@ -389,94 +390,6 @@ void Init::readInNucleusConfigs(
     messager_.flush("info");
 }
 
-void Init::samplePartonPositions(
-    Parameters *param, Random *random, vector<double> &x_array,
-    vector<double> &y_array, vector<double> &z_array,
-    vector<double> &BGq_array) {
-    const double sqrtBG = sqrt(param->subnucleon.BG) * hbarc;  // fm
-    const double BGqMean = param->subnucleon.BGq;
-    const double BGqVar = param->subnucleon.BGqVar;
-    const double BGq =
-        (0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar));
-    const double QsSmearWidth = param->subnucleon.smearingWidth;
-    const int Nq = sampleNumberOfPartons(random, param);
-    const double dq_min = param->subnucleon.dqMin;  // fm
-    const double dq_min_sq = dq_min * dq_min;
-    const double omega = param->subnucleon.omega;
-
-    vector<double> r_array(Nq, 0.);
-    BGq_array.assign(Nq, BGq);
-    for (int iq = 0; iq < Nq; iq++) {
-        if (std::abs(omega - 1) < 1e-8) {
-            double xq = sqrtBG * random->gauss();
-            double yq = sqrtBG * random->gauss();
-            double zq = sqrtBG * random->gauss();
-            r_array[iq] = sqrt(xq * xq + yq * yq + zq * zq);
-        } else {
-            double bperp = sqrtBG * sqrt(omega * random->sampleGammaInc());
-            r_array[iq] = bperp;  // bperp in 2D (asuume z = 0)
-        }
-    }
-    std::sort(r_array.begin(), r_array.end());
-
-    x_array.resize(Nq, 0.);
-    y_array.resize(Nq, 0.);
-    z_array.resize(Nq, 0.);
-    for (unsigned int i = 0; i < r_array.size(); i++) {
-        double r_i = r_array[i];
-        int reject_flag = 0;
-        int iter = 0;
-        double x_i, y_i, z_i;
-        do {
-            iter++;
-            reject_flag = 0;
-            double phi = 2. * M_PI * random->genrand64_real2();
-            double theta = acos(1. - 2. * random->genrand64_real2());
-            if (std::abs(omega - 1) < 1e-8) {
-                x_i = r_i * sin(theta) * cos(phi);
-                y_i = r_i * sin(theta) * sin(phi);
-                z_i = r_i * cos(theta);
-            } else {
-                x_i = r_i * cos(phi);
-                y_i = r_i * sin(phi);
-                z_i = 0.;  // assume z=0
-            }
-            for (int j = i - 1; j >= 0; j--) {
-                if ((r_i - r_array[j]) * (r_i - r_array[j]) > dq_min_sq) break;
-                double dsq =
-                    ((x_i - x_array[j]) * (x_i - x_array[j])
-                     + (y_i - y_array[j]) * (y_i - y_array[j])
-                     + (z_i - z_array[j]) * (z_i - z_array[j]));
-                if (dsq < dq_min_sq) {
-                    reject_flag = 1;
-                    break;
-                }
-            }
-        } while (reject_flag == 1 && iter < 100);
-        x_array[i] = x_i;
-        y_array[i] = y_i;
-        z_array[i] = z_i;
-    }
-    double avgxq = 0.;
-    double avgyq = 0.;
-    double avgzq = 0.;
-    if (param->subnucleon.shiftConstituentQuarkProtonOrigin) {
-        for (int iq = 0; iq < Nq; iq++) {
-            avgxq += x_array[iq];
-            avgyq += y_array[iq];
-            avgzq += z_array[iq];
-        }
-        avgxq /= static_cast<double>(Nq);
-        avgyq /= static_cast<double>(Nq);
-        avgzq /= static_cast<double>(Nq);
-        for (int iq = 0; iq < Nq; iq++) {
-            x_array[iq] -= avgxq;
-            y_array[iq] -= avgyq;
-            z_array[iq] -= avgzq;
-        }
-    }
-}
-
 // Q_s as a function of \sum T_p and y (new in this version of the code -
 // v1.2 and up)
 double Init::getNuclearQs2(double T, double y) {
@@ -657,7 +570,7 @@ void Init::setColorChargeDensity(
     }
 
     sampleNucleonAnisotropyAngles(param, random);
-    sampleConstituentQuarkGeometry(param, random);
+    sampleNucleonProfiles(param, random);
 
     // test what a smooth Woods-Saxon would give
     if (param->nucleus.useSmoothNucleus) {
@@ -782,52 +695,6 @@ void Init::sampleNucleonAnisotropyAngles(Parameters *param, Random *random) {
     }
 }
 
-void Init::sampleConstituentQuarkGeometry(Parameters *param, Random *random) {
-    const int A1 = nucleusA_.size();
-    const int A2 = nucleusB_.size();
-    const double NqFlag = param->subnucleon.Nq;
-    vector<double> x_array, y_array, z_array, BGq_array, gauss_array;
-    xq1_.clear();
-    xq2_.clear();
-    yq1_.clear();
-    yq2_.clear();
-    BGq1_.clear();
-    BGq2_.clear();
-    gauss1_.clear();
-    gauss2_.clear();
-    for (int i = 0; i < A1; i++) {
-        int Npartons = 1;
-        if (NqFlag > 0) {
-            samplePartonPositions(
-                param, random, x_array, y_array, z_array, BGq_array);
-            // if (param->subnucleon.shiftConstituentQuarkProtonOrigin)
-            // Move center of mass to the origin
-            // Note that 1607.01711 this is not done, so parameters quoted
-            // in that paper can't be used if this is done
-            xq1_.push_back(x_array);
-            yq1_.push_back(y_array);
-            BGq1_.push_back(BGq_array);
-            Npartons = std::max(1, static_cast<int>(x_array.size()));
-        }
-        sampleQsNormalization(random, param, Npartons, gauss_array);
-        gauss1_.push_back(gauss_array);
-    }
-
-    for (int i = 0; i < A2; i++) {
-        int Npartons = 1;
-        if (NqFlag > 0) {
-            samplePartonPositions(
-                param, random, x_array, y_array, z_array, BGq_array);
-            xq2_.push_back(x_array);
-            yq2_.push_back(y_array);
-            BGq2_.push_back(BGq_array);
-            Npartons = std::max(1, static_cast<int>(x_array.size()));
-        }
-        sampleQsNormalization(random, param, Npartons, gauss_array);
-        gauss2_.push_back(gauss_array);
-    }
-}
-
 void Init::computeSmoothNucleusThickness(
     Lattice *lat, Parameters *param, Glauber *glauber) {
     messager_ << "[Init::setColorChargeDensity]: Using smooth nucleus for "
@@ -878,40 +745,24 @@ void Init::computeSmoothNucleusThickness(
     }
 }
 
+void Init::sampleNucleonProfiles(Parameters *param, Random *random) {
+    const std::unique_ptr<NucleonModel> model = NucleonModel::create(*param);
+    profilesA_.clear();
+    profilesB_.clear();
+    for (const ReturnValue &nucleon : nucleusA_) {
+        profilesA_.push_back(model->sample(*random, nucleon));
+    }
+    for (const ReturnValue &nucleon : nucleusB_) {
+        profilesB_.push_back(model->sample(*random, nucleon));
+    }
+}
+
 double Init::computeNucleonThicknessAtCell(
-    Parameters *param, const std::vector<ReturnValue> &nucleus,
-    const vector<vector<double>> &xq, const vector<vector<double>> &yq,
-    const vector<vector<double>> &BGq, const vector<vector<double>> &gauss,
-    double x, double y, double xi, double nucleiInAverage) {
-    const int A = nucleus.size();
+    const std::vector<std::unique_ptr<NucleonProfile>> &profiles, double x,
+    double y, double nucleiInAverage) const {
     double Tp = 0.;
-    for (int i = 0; i < A; i++) {
-        double xm = nucleus.at(i).x;
-        double ym = nucleus.at(i).y;
-
-        double T = 0.;
-        double bp2 = 0.;
-        if (param->subnucleon.Nq > 0) {
-            for (unsigned int iq = 0; iq < xq[i].size(); iq++) {
-                bp2 = (xm + xq[i][iq] - x) * (xm + xq[i][iq] - x)
-                      + (ym + yq[i][iq] - y) * (ym + yq[i][iq] - y);
-                bp2 /= hbarc * hbarc;
-
-                T += exp(-bp2 / (2. * BGq[i][iq])) / (2. * M_PI * BGq[i][iq])
-                     / (static_cast<double>(xq[i].size())) * gauss[i][iq];
-            }
-        } else {
-            const double BG = param->subnucleon.BG;
-            double phi = nucleus.at(i).phi;
-
-            bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                  + xi * pow((xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
-            bp2 /= hbarc * hbarc;
-            T = sqrt(1 + xi) * exp(-bp2 / (2. * BG)) / (2. * M_PI * BG)
-                * gauss[i][0];  // T_p in this cell for the
-                                // current nucleon
-        }
-        Tp += T / nucleiInAverage;  // add up all T_p
+    for (const auto &profile : profiles) {
+        Tp += profile->thickness(x, y) / nucleiInAverage;  // add up all T_p
     }
     return Tp;
 }
@@ -921,7 +772,6 @@ void Init::computeThicknessFromNucleons(
     const int N = param->lattice.size;
     const double L = param->lattice.L;
     const double a = L / N;
-    const double xi = param->subnucleon.protonAnisotropy;
 
 #pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
@@ -931,12 +781,10 @@ void Init::computeThicknessFromNucleons(
         double x = -L / 2. + a * ix;
         double y = -L / 2. + a * iy;
 
-        lat->cells[ipos]->setTpA(computeNucleonThicknessAtCell(
-            param, nucleusA_, xq1_, yq1_, BGq1_, gauss1_, x, y, xi,
-            nucleiInAverage));
-        lat->cells[ipos]->setTpB(computeNucleonThicknessAtCell(
-            param, nucleusB_, xq2_, yq2_, BGq2_, gauss2_, x, y, xi,
-            nucleiInAverage));
+        lat->cells[ipos]->setTpA(
+            computeNucleonThicknessAtCell(profilesA_, x, y, nucleiInAverage));
+        lat->cells[ipos]->setTpB(
+            computeNucleonThicknessAtCell(profilesB_, x, y, nucleiInAverage));
     }
 }
 
@@ -2287,43 +2135,4 @@ void Init::rotateNucleus3D(Random *random, std::vector<ReturnValue> &nucleus) {
         n_i.y = y_new;
         n_i.z = z_new;
     }
-}
-
-double Init::sampleLogNormalDistribution(
-    Random *random, const double mean, const double variance) {
-    const double meansq = mean * mean;
-    const double mu = log(meansq / sqrt(variance + meansq));
-    const double sigma = sqrt(log(variance / meansq + 1.));
-    double sampleX = exp(mu + sigma * random->gauss());
-    return (sampleX);
-}
-
-void Init::sampleQsNormalization(
-    Random *random, Parameters *param, const int Nq,
-    vector<double> &gauss_array) {
-    const double QsSmearWidth = param->subnucleon.smearingWidth;
-    gauss_array.assign(Nq, 1.);  // default norm = 1
-    if (param->subnucleon.smearQs) {
-        // introduce a log-normal distribution for Qs normalization
-        // dividing by exp(0.5 sigma^2) to ensure the mean is 1
-        // the varirance in this case is exp(sigma) - 1 for the log-normal
-        // distribution
-        for (int iq = 0; iq < Nq; iq++) {
-            gauss_array[iq] =
-                (exp(random->gauss(0, QsSmearWidth))
-                 / exp(QsSmearWidth * QsSmearWidth / 2.));
-        }
-    }
-}
-
-int Init::sampleNumberOfPartons(Random *random, Parameters *param) {
-    double NqBase = param->subnucleon.NqBase;
-    int NqBaseInt = static_cast<int>(NqBase);
-    double ran = random->genrand64_real2();
-    int Nq = NqBaseInt;
-    if (ran < NqBase - NqBaseInt) {
-        Nq += 1;
-    }
-    Nq += random->poisson(param->subnucleon.NqFluc);
-    return (std::max(1, Nq));
 }

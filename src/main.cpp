@@ -130,7 +130,10 @@ int main(int argc, char *argv[]) {
                  << seedList[rank] << " read from list.";
         messager.flush("info");
     }
-    random->setGammaIncCDF(param->subnucleon.omega);
+    // only the hot-spot positions are sampled from the gamma distribution
+    if (param->subnucleon.nucleonModel == "hotspots") {
+        random->setGammaIncCDF(param->subnucleon.omega);
+    }
 
     // event loop starts ...
     for (int iev = 0; iev < nev; iev++) {

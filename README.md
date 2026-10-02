@@ -58,11 +58,13 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - See `src/Glauber.cpp` for all supported nuclei and details
 - **m**: infrared regulator in GeV
 - **BG**: controls the nucleon width, density profile is $T \sim e^{-b^2/(2B)}$
-- **BGq**: controls the hot spot width (if nucleon substructure is enabled), hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
-- **Nq**: control nucleon substructure
-  - 0: no substructure
-  - At least 1: mean number of hot spots per nucleon; a fractional value such as 2.5 gives 2 or 3 hot spots with the corresponding probabilities (plus the fluctuation set by `NqFluc`). Values between 0 and 1 are rejected.
-- **shiftConstituentQuarkProtonOrigin**: whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
+- **nucleonModel**: transverse structure of a nucleon
+  - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)
+  - `hotspots`: `Nq` Gaussian hot spots of width `BGq`, whose positions are distributed with width `BG`
+  The parameters of the other model are not read.
+- **BGq** (`hotspots`): controls the hot spot width, hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
+- **Nq** (`hotspots`): mean number of hot spots per nucleon, at least 1; a fractional value such as 2.5 gives 2 or 3 hot spots with the corresponding probabilities (plus the fluctuation set by `NqFluc`)
+- **shiftConstituentQuarkProtonOrigin** (`hotspots`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations
 - **smearingWidth**: width of the saturation scale fluctuations, parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
 - **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition

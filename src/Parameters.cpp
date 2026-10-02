@@ -166,12 +166,10 @@ std::vector<std::string> Parameters::validationErrors() const {
     // posterior types 2 and 4 are fits with a fixed NqBase = 3
     if ((subnucleon.subNucleonParamType == 2
          || subnucleon.subNucleonParamType == 4)
-        && subnucleon.Nq != 0. && subnucleon.Nq != 3.) {
+        && subnucleon.nucleonModel == "hotspots" && subnucleon.Nq != 3.) {
         std::ostringstream message;
         message << "subNucleonParamType = " << subnucleon.subNucleonParamType
-                << " uses 3 constituent quarks; set Nq to 3 (or 0 for no "
-                   "substructure), not "
-                << subnucleon.Nq;
+                << " uses 3 hot spots; set Nq to 3, not " << subnucleon.Nq;
         fail(message);
     }
 

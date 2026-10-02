@@ -11,6 +11,7 @@ set (IPGLASMA_LIB_SOURCES
     Init.cpp
     ForwardLightCone.cpp
     WilsonLineIO.cpp
+    NucleonModel.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp

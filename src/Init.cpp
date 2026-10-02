@@ -17,6 +17,7 @@
 #include "Instrumentation.h"
 #include "PhysConst.h"
 #include "RunningCoupling.h"
+#include "WilsonLineIO.h"
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::hbarc;
@@ -1472,116 +1473,6 @@ void Init::writeNgluonEstimatorsFile(
     foutNEst.close();
 }
 
-namespace {
-/**
- * `Init::setV()`'s `writeOutputs==5` diagnostic: writes
- * `initialWilsonLines<id>.ipgw`, a binary snapshot of the two nuclei's
- * just-constructed initial Wilson lines (\c lat->U/\c lat->U2) as full
- * \f$3\times3\f$ complex matrices per cell, little-endian
- * single-precision, preceded by an 8-byte magic string, an 8-byte
- * metadata length, and a JSON metadata header describing the
- * layout/units -- the same format convention as
- * Evolution::writeEvolvedFields().
- * \param[in] lat Lattice to read `U`/`U2` from.
- * \param[in] param Simulation parameters.
- */
-void writeInitialWilsonTrainingData(Lattice *lat, Parameters *param) {
-    const int N = param->lattice.size;
-    const double L = param->lattice.L;
-    const double a = L / static_cast<double>(N);
-
-    // Payload: [beam, real_or_imag, x, y, row, col], C-order.
-    constexpr int nBeams = 2;
-    const std::size_t matrixElements =
-        static_cast<std::size_t>(N) * N * Nc * Nc;
-    std::vector<float> payload(
-        static_cast<std::size_t>(nBeams) * 2 * matrixElements);
-
-    for (int beam = 0; beam < nBeams; ++beam) {
-        const std::size_t realOffset =
-            static_cast<std::size_t>(2 * beam) * matrixElements;
-        const std::size_t imagOffset = realOffset + matrixElements;
-        for (int x = 0; x < N; ++x) {
-            for (int y = 0; y < N; ++y) {
-                const int pos = lat->positionFromXY(x, y);
-                const Matrix &matrix = (beam == 0) ? lat->U[pos] : lat->U2[pos];
-                const std::complex<double> *elements = matrix.data();
-                const std::size_t siteOffset =
-                    static_cast<std::size_t>(pos) * Nc * Nc;
-                for (int row = 0; row < Nc; ++row) {
-                    for (int col = 0; col < Nc; ++col) {
-                        const std::size_t element =
-                            static_cast<std::size_t>(row) * Nc + col;
-                        payload[realOffset + siteOffset + element] =
-                            static_cast<float>(elements[element].real());
-                        payload[imagOffset + siteOffset + element] =
-                            static_cast<float>(elements[element].imag());
-                    }
-                }
-            }
-        }
-    }
-
-    const std::uint16_t endianProbe = 1;
-    if (*reinterpret_cast<const unsigned char *>(&endianProbe) != 1) {
-        throw std::runtime_error(
-            "writeInitialWilsonTrainingData requires a little-endian host");
-    }
-
-    std::stringstream metadata;
-    metadata << std::setprecision(17)
-             << "{\"format\":\"ipglasma-initial-wilson-lines\","
-             << "\"version\":1,"
-             << "\"dtype\":\"<f4\","
-             << "\"shape\":[2,2," << N << "," << N << "," << Nc << "," << Nc
-             << "],"
-             << "\"axis_order\":[\"beam\",\"complex_part\",\"x\",\"y\","
-                "\"row\",\"col\"],"
-             << "\"fields\":[\"VA\",\"VB\"],"
-             << "\"complex_part\":[\"real\",\"imag\"],"
-             << "\"native_site_index\":\"pos=x*N+y\","
-             << "\"event_id\":" << param->event.eventId << ","
-             << "\"N\":" << N << ","
-             << "\"Nc\":" << Nc << ","
-             << "\"L_fm\":" << L << ","
-             << "\"a_fm\":" << a << ","
-             << "\"rapidity\":" << param->colorCharge.rapidity() << "}";
-    const std::string metadataString = metadata.str();
-
-    std::stringstream filename;
-    filename << "initialWilsonLines" << param->event.eventId << ".ipgw";
-    std::ofstream output(
-        filename.str().c_str(),
-        std::ios::out | std::ios::binary | std::ios::trunc);
-    if (!output) {
-        throw std::runtime_error(
-            "could not open initial-Wilson snapshot " + filename.str());
-    }
-    const char magic[8] = {'I', 'P', 'G', 'W', 'I', 'L', '1', '\0'};
-    const std::uint64_t metadataBytes =
-        static_cast<std::uint64_t>(metadataString.size());
-    output.write(magic, sizeof(magic));
-    output.write(
-        reinterpret_cast<const char *>(&metadataBytes), sizeof(metadataBytes));
-    output.write(metadataString.data(), metadataString.size());
-    output.write(
-        reinterpret_cast<const char *>(payload.data()),
-        static_cast<std::streamsize>(payload.size() * sizeof(float)));
-    output.close();
-    if (!output) {
-        throw std::runtime_error(
-            "failed while writing initial-Wilson snapshot " + filename.str());
-    }
-    // Free function, not an Init member, so it has no messager_ to use;
-    // construct a local PrettyOstream instance instead.
-    PrettyOstream messager;
-    messager
-        << "[writeInitialWilsonTrainingData]: Wrote incoming Wilson lines to "
-        << filename.str();
-    messager.flush("info");
-}
-}  // namespace
-
 std::vector<double> Init::computeWilsonLineMomentumKernel(
     int N, int sites, double m, double UVdamp) {
     std::vector<double> momentumKernel(static_cast<std::size_t>(sites));
@@ -1757,7 +1648,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     evolveNucleusWilsonLine(colorChargeScaleB, lat->U2);
 
     if (param->output.writeOutputs == 5) {
-        writeInitialWilsonTrainingData(lat, param);
+        WilsonLineIO().writeTrainingData(lat, param);
     }
 
     // output U
@@ -1775,209 +1666,14 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
                 x_target = 0.01 * std::exp(-param->colorCharge.rapidityB);
             }
         }
-        lat->writeWilsonLines(param, NucleusRole::Projectile, x_projectile);
-        lat->writeWilsonLines(param, NucleusRole::Target, x_target);
+        WilsonLineIO io;
+        io.write(lat, param, NucleusRole::Projectile, x_projectile);
+        io.write(lat, param, NucleusRole::Target, x_target);
     }
 
     messager_ << "[Init::setV]: Wilson lines V_A and V_B set on rank "
               << param->run.MPIRank << ". ";
     messager_.flush("info");
-}
-
-void Init::readVFromFile(
-    Lattice *lat, Parameters *param, int format, double x) {
-    IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
-    if (!Lattice::IsValidWilsonLineDataFormat(format)) {
-        messager_ << "[Init::readVFromFile]: Unknown format " << format
-                  << " when reading the initial Wilson lines, supported "
-                     "formats: 1,2";
-        messager_.flush("error");
-        exit(1);
-    }
-
-    string VOne_name = Lattice::generateWilsonLineDataFileName(
-        param, x, NucleusRole::Projectile, format);
-    string VTwo_name = Lattice::generateWilsonLineDataFileName(
-        param, x, NucleusRole::Target, format);
-
-    messager_ << "[Init::readVFromFile]: Reading Wilson lines from files "
-              << VOne_name << " and " << VTwo_name;
-    messager_.flush("info");
-
-    if (format == 1) {
-        readWilsonLineText(VOne_name, param, NucleusRole::Projectile, lat->U);
-        readWilsonLineText(VTwo_name, param, NucleusRole::Target, lat->U2);
-    } else if (format == 2) {
-        readWilsonLineBinary(VOne_name, param, NucleusRole::Projectile, lat->U);
-        readWilsonLineBinary(VTwo_name, param, NucleusRole::Target, lat->U2);
-    }
-
-    messager_ << "[Init::readVFromFile]: Wilson lines V_A and V_B set on rank "
-              << param->run.MPIRank << ". ";
-    messager_.flush("info");
-}
-
-void Init::readWilsonLineText(
-    const std::string &fileName, Parameters *param, NucleusRole role,
-    std::vector<Matrix> &U) {
-    const bool isProjectile = (role == NucleusRole::Projectile);
-    int N = param->lattice.size;
-
-    double L = param->lattice.L;
-    double a = L / static_cast<double>(N);
-
-    Matrix temp(1.);
-
-    double Re[9], Im[9];
-    double dummy;
-
-    ifstream fin(fileName.c_str(), std::ios::in);
-
-    if (!fin) {
-        messager_ << "[Init::readVFromFile]: File " << fileName
-                  << " not found. Exiting.";
-        messager_.flush("error");
-        exit(1);
-    }
-
-    messager_ << "[Init::readVFromFile]: Reading Wilson line from file "
-              << fileName << " ...";
-    messager_.flush("info");
-
-    for (int i = 0; i < N; i++) {
-        for (int j = 0; j < N; j++) {
-            fin >> dummy >> dummy >> Re[0] >> Im[0] >> Re[1] >> Im[1] >> Re[2]
-                >> Im[2] >> Re[3] >> Im[3] >> Re[4] >> Im[4] >> Re[5] >> Im[5]
-                >> Re[6] >> Im[6] >> Re[7] >> Im[7] >> Re[8] >> Im[8];
-
-            temp.set(0, 0, complex<double>(Re[0], Im[0]));
-            temp.set(0, 1, complex<double>(Re[1], Im[1]));
-            temp.set(0, 2, complex<double>(Re[2], Im[2]));
-            temp.set(1, 0, complex<double>(Re[3], Im[3]));
-            temp.set(1, 1, complex<double>(Re[4], Im[4]));
-            temp.set(1, 2, complex<double>(Re[5], Im[5]));
-            temp.set(2, 0, complex<double>(Re[6], Im[6]));
-            temp.set(2, 1, complex<double>(Re[7], Im[7]));
-            temp.set(2, 2, complex<double>(Re[8], Im[8]));
-
-            double bb = param->event.b;
-            a = L / static_cast<double>(N);
-
-            double xtemp = isProjectile ? (a * i - bb / 2.) : (a * i + bb / 2.);
-            int ix = xtemp / a;
-
-            if (isProjectile) {
-                if (ix < 0) continue;
-            } else {
-                if (ix >= N) continue;
-            }
-
-            int pos = latticeIndex(ix, j, N);
-            U[pos] = (temp);
-        }
-    }
-
-    fin.close();
-}
-
-void Init::readWilsonLineBinary(
-    const std::string &fileName, Parameters *param, NucleusRole role,
-    std::vector<Matrix> &U) {
-    const bool isProjectile = (role == NucleusRole::Projectile);
-    std::ifstream InStream;
-    InStream.precision(15);
-    InStream.open(fileName.c_str(), std::ios::in | std::ios::binary);
-    int N;
-    int NcInFile;
-    double L, a, temp;
-
-    if (!InStream.good()) {
-        messager_ << "[Init::readVFromFile]: File " << fileName.c_str()
-                  << " does not exist!";
-        messager_.flush("error");
-        exit(1);
-    }
-
-    if (!InStream.is_open()) return;
-
-    // READING IN PARAMETERS
-    InStream.read(reinterpret_cast<char *>(&N), sizeof(int));
-    InStream.read(reinterpret_cast<char *>(&NcInFile), sizeof(int));
-    InStream.read(reinterpret_cast<char *>(&L), sizeof(double));
-    InStream.read(reinterpret_cast<char *>(&a), sizeof(double));
-    InStream.read(reinterpret_cast<char *>(&temp), sizeof(double));
-
-    if (N != param->lattice.size) {
-        messager_ << "[Init::readVFromFile]: wrong lattice "
-                     "size, data is "
-                  << N << " but you have specified " << param->lattice.size;
-        messager_.flush("error");
-        exit(1);
-    }
-    if (std::abs(L - param->lattice.L) > 1e-5) {
-        messager_ << "[Init::readVFromFile]: wrong grid length, "
-                     "data has "
-                  << L << " but you have specified " << param->lattice.L;
-        messager_.flush("error");
-        exit(1);
-    }
-
-    // READING ACTUAL DATA
-    double ValueBuffer;
-    int INPUT_CTR = 0;
-    double re, im;
-    re = 0.;
-    im = 0.;
-
-    while (
-        InStream.read(reinterpret_cast<char *>(&ValueBuffer), sizeof(double))) {
-        if (INPUT_CTR % 2 == 0)  // this is the real part
-        {
-            re = ValueBuffer;
-        } else  // this is the imaginary part, write then to
-                // variable //
-        {
-            im = ValueBuffer;
-            int TEMPINDX = ((INPUT_CTR - 1) / 2);
-            int PositionIndx = TEMPINDX / 9;
-
-            // PositionIndx enumerates the sites in the writer's order
-            // (see Lattice::writeWilsonLines), i.e. latticeIndex().
-            int ixRaw = latticeX(PositionIndx, N);
-            int iy = latticeY(PositionIndx, N);
-
-            double bb = param->event.b;
-            a = L / static_cast<double>(N);
-
-            // shift here by half an impact parameter
-            double xtemp =
-                isProjectile ? (a * ixRaw - bb / 2.) : (a * ixRaw + bb / 2.);
-
-            int ix = round(xtemp / a);
-
-            int MatrixIndx = TEMPINDX - PositionIndx * 9;
-            int j = MatrixIndx / 3;
-            int k = MatrixIndx - j * 3;
-
-            int indx = latticeIndex(ix, iy, N);
-            if (indx >= N * N || indx < 0) {
-                if (bb == 0) {
-                    messager_ << "[Init::readVFromFile]: datafile " << fileName
-                              << " has an element " << indx << " (iy=" << iy
-                              << ", ix=" << ix << "), but the grid is N=" << N
-                              << ". Element is (" << re << " + " << im
-                              << "i), skipping it.";
-                    messager_.flush("warning");
-                }
-                INPUT_CTR++;
-                continue;
-            }
-            U[indx].set(j, k, complex<double>(re, im));
-        }
-        INPUT_CTR++;
-    }
-
-    InStream.close();
 }
 
 void Init::sampleImpactParameter(Parameters *param) {
@@ -2062,7 +1758,7 @@ void Init::init(
     if (init_method == InitializationMethod::ReadWlineBinary
         or init_method == InitializationMethod::ReadWlineText) {
         // to read Wilson lines from file
-        readVFromFile(
+        WilsonLineIO().read(
             lat, param,
             (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
         param->event.success = 1;

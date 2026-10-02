@@ -24,10 +24,10 @@ enum class InitializationMethod {
     /// setV()).
     SampleColorCharges,
     /// Read previously written Wilson lines from a plain-text file
-    /// (Init::readVFromFile() with format `1`).
+    /// (WilsonLineIO::read() with format `1`).
     ReadWlineText,
     /// Read previously written Wilson lines from a binary file
-    /// (Init::readVFromFile() with format `2`).
+    /// (WilsonLineIO::read() with format `2`).
     ReadWlineBinary
 };
 
@@ -549,56 +549,6 @@ class Init {
         Lattice *lat, int sites, double g, double invNy,
         std::vector<double> &colorChargeScaleA,
         std::vector<double> &colorChargeScaleB);
-    /**
-     * Reads both nuclei's Wilson lines from disk, using
-     * Lattice::generateWilsonLineDataFileName() to build each file
-     * name, in text or binary format depending on \p format.
-     * \param[in,out] lat Lattice whose `U`/`U2` are set.
-     * \param[in] param Simulation parameters.
-     * \param[in] format `1` for plain text, `2` for binary; exits with
-     * an error for any other value
-     * (`Lattice::IsValidWilsonLineDataFormat()`).
-     * \param[in] x If non-negative, embedded in the generated file
-     * names (see Lattice::generateWilsonLineDataFileName()); the
-     * default `-1` omits it, matching a file written without an
-     * explicit \f$x\f$ (e.g. by Init::setV() outside JIMWLK/fluctuating-
-     * \f$x\f$ runs).
-     */
-    void readVFromFile(
-        Lattice *lat, Parameters *param, int format, double x = -1);
-    /**
-     * readVFromFile()'s `format==1` branch: reads one nucleus' Wilson
-     * line from a plain-text file, shifting it by \f$\mp b/2\f$ along
-     * the impact-parameter direction and dropping any resulting
-     * out-of-bounds column (on the low side for the projectile, the
-     * high side for the target).
-     * \param[in] fileName Path to read from; exits with an error if it
-     * doesn't exist.
-     * \param[in] param Simulation parameters.
-     * \param[in] role Which nucleus this file belongs to (selects the
-     * sign of the \f$b/2\f$ shift and which side out-of-bounds columns
-     * are dropped on).
-     * \param[out] U Wilson-line field to fill (`lat->U` or `lat->U2`).
-     */
-    void readWilsonLineText(
-        const std::string &fileName, Parameters *param, NucleusRole role,
-        std::vector<Matrix> &U);
-    /**
-     * readVFromFile()'s `format==2` branch: reads one nucleus' Wilson
-     * line from a binary file (the format Lattice::writeWilsonLines()'s
-     * binary mode writes), shifting it by \f$\mp b/2\f$ along the
-     * impact-parameter direction.
-     * \param[in] fileName Path to read from; exits with an error if it
-     * doesn't exist, or if the file's lattice size/physical length
-     * don't match \p param.
-     * \param[in] param Simulation parameters.
-     * \param[in] role Which nucleus this file belongs to (selects the
-     * sign of the \f$b/2\f$ shift).
-     * \param[out] U Wilson-line field to fill (`lat->U` or `lat->U2`).
-     */
-    void readWilsonLineBinary(
-        const std::string &fileName, Parameters *param, NucleusRole role,
-        std::vector<Matrix> &U);
 
     /**
      * Loads pre-tabulated binary nucleon configurations for light

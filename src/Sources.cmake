@@ -10,6 +10,7 @@ set (IPGLASMA_LIB_SOURCES
     ParameterTable.cpp
     Init.cpp
     ForwardLightCone.cpp
+    WilsonLineIO.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp

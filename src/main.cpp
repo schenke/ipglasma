@@ -27,6 +27,7 @@
 #include "Parameters.h"
 #include "PrettyOstream.h"
 #include "Random.h"
+#include "WilsonLineIO.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
@@ -238,11 +239,13 @@ int main(int argc, char *argv[]) {
 
                 // Store final Wilson lines after JIMWLK evolution
                 if (param->wilsonLines.writeWilsonLines > 0) {
-                    lat.writeWilsonLines(
-                        param, NucleusRole::Projectile,
+                    WilsonLineIO io;
+                    io.write(
+                        &lat, param, NucleusRole::Projectile,
                         param->jimwlk.xProjectile);
-                    lat.writeWilsonLines(
-                        param, NucleusRole::Target, param->jimwlk.xTarget);
+                    io.write(
+                        &lat, param, NucleusRole::Target,
+                        param->jimwlk.xTarget);
                 }
             }
 

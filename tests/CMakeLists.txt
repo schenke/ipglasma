@@ -19,6 +19,7 @@ set(TEST_SOURCES
     test_parameters.cpp
     test_fft.cpp
     test_lattice.cpp
+    test_wilson_line_io.cpp
     test_cell.cpp
     test_prettyostream.cpp
     test_instrumentation.cpp

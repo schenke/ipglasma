@@ -46,4 +46,19 @@ inline bool matricesClose(const Matrix &a, const Matrix &b, double tol) {
     return true;
 }
 
+// Takes an out-parameter rather than returning by value: Parameters holds
+// a PrettyOstream member, which holds a non-copyable/non-movable
+// std::ostringstream -- see the identical note in test_parameters.cpp.
+inline void makeLatticeParam(Parameters &param, int size) {
+    param.lattice.L = 10.0;
+    param.run.MPIRank = 0;
+    param.lattice.size = size;
+    param.event.eventId = 0;
+    param.random.seed = 0;
+    param.run.MPISize = 1;
+    param.colorCharge.rapidityA = 0.0;
+    param.colorCharge.rapidityB = 0.0;
+    param.wilsonLines.wilsonLinePath = ".";
+}
+
 #endif  // TESTS_TEST_HELPERS_H_

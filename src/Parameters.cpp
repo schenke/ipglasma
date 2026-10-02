@@ -142,6 +142,14 @@ bool Parameters::ValidParameters() {
         }
     }
 
+    // read by the gluon spectrum even without running coupling
+    if (getRunWithkt() != 0 && getRunWithkt() != 1) {
+        messager_ << "[Parameters::ValidParameters]: runWithkt ("
+                  << getRunWithkt() << ") must be 0 or 1.";
+        messager_.flush("error");
+        return false;
+    }
+
     if (getRunningCoupling()) {
         if (getLambdaQCD() <= 0. || getc() <= 0.) {
             messager_ << "[Parameters::ValidParameters]: LambdaQCD ("
@@ -178,6 +186,15 @@ bool Parameters::ValidParameters() {
             messager_.flush("error");
             return false;
         }
+    }
+
+    if (getUseJIMWLK() && getJimwlk_alphas() < 0.) {
+        messager_ << "[Parameters::ValidParameters]: alphas_jimwlk ("
+                  << getJimwlk_alphas()
+                  << ") must not be negative: 0 selects the running coupling, "
+                     "a positive value a fixed coupling.";
+        messager_.flush("error");
+        return false;
     }
 
     if (getUseJIMWLK() && getc_jimwlk() <= 0.) {

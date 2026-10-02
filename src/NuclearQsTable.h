@@ -3,6 +3,7 @@
 #ifndef SRC_NUCLEARQSTABLE_H_
 #define SRC_NUCLEARQSTABLE_H_
 
+#include <atomic>
 #include <string>
 
 #include "PrettyOstream.h"
@@ -29,7 +30,8 @@ class NuclearQsTable {
      * Bilinearly interpolates the table.
      * \param[in] T Nuclear thickness \f$T_p\f$ to interpolate at.
      * \param[in] y Rapidity to interpolate at; exits with an error if
-     * outside the tabulated range \f$0 \le y \le 10.75\f$.
+     * negative, and is clamped to the maximal tabulated rapidity 10.75 if
+     * above it (with a warning the first time).
      * \return Interpolated \f$Q_s^2\f$; `0` if \p T is below the
      * tabulated range, clamped to the maximal tabulated \f$T_p\f$ (with
      * a warning) if above it.
@@ -50,6 +52,9 @@ class NuclearQsTable {
     double T_[nT_];
     /// Log sink for progress/error messages.
     PrettyOstream messager_;
+    /// Whether qs2() has already warned about a rapidity above the table
+    /// (it is called for every cell, from several threads).
+    mutable std::atomic<bool> warnedAboveYMax_ {false};
 };
 
 #endif  // SRC_NUCLEARQSTABLE_H_

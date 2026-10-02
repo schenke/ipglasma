@@ -15,8 +15,9 @@
  * `#` starts a comment that runs to the end of the line (so values,
  * e.g. file paths, cannot contain `#`). A line holding
  * only `EndOfFile` ends the input; everything after it is ignored.
- * A key without a value, a line with more than one value, and a key
- * given twice are errors, collected in errors().
+ * A key without a value, a line with more than one value, a key given
+ * twice and text after `EndOfFile` on its line are errors, collected in
+ * errors().
  *
  * Values are stored as text; parseValue() converts them strictly (the
  * whole value must be a valid number of the requested type).

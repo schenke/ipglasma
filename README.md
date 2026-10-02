@@ -69,7 +69,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - 1: Dynamically determined $b_\perp$ dependent $x$
   - 0: Fixed $x$
 - **rapidityA** and **rapidityB**:
-  - If `useFluctuatingX 0`, then $x = 0.01 e^{-\mathrm{RapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{RapidityB}}$ for the target
+  - If `useFluctuatingX 0`, then $x = 0.01 e^{-\mathrm{rapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{rapidityB}}$ for the target
   - If `useFluctuatingX 1`, consider particle production at rapidity $y$
 
 

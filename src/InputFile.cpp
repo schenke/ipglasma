@@ -38,10 +38,17 @@ void InputFile::read(std::istream &in) {
         std::istringstream tokens(line);
         std::string key, value, extra;
         if (!(tokens >> key)) continue;  // blank or comment-only line
-        if (key == "EndOfFile") break;
 
         const std::string where =
             sourceName_ + ":" + std::to_string(lineNumber) + ": ";
+        if (key == "EndOfFile") {
+            if (tokens >> extra) {
+                errors_.push_back(
+                    where + "unexpected text after EndOfFile ('" + extra
+                    + "' ...)");
+            }
+            break;
+        }
         if (!(tokens >> value)) {
             errors_.push_back(where + "no value given for " + key);
             continue;

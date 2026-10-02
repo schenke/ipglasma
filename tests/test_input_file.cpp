@@ -84,6 +84,15 @@ TEST_CASE("InputFile: reads key/value pairs, comments and EndOfFile") {
     CHECK(input.find("missing") == nullptr);
 }
 
+TEST_CASE("InputFile: EndOfFile must be alone on its line") {
+    const InputFile input = inputFromText("size 256\nEndOfFile typo\nL 30\n");
+    REQUIRE(input.errors().size() == 1);
+    CHECK(
+        input.errors()[0]
+        == "test:2: unexpected text after EndOfFile ('typo' ...)");
+    CHECK(input.find("L") == nullptr);  // still the end of the input
+}
+
 TEST_CASE("InputFile: EndOfFile is optional") {
     const InputFile input = inputFromText("size 256\nL 30");
     CHECK(input.errors().empty());
@@ -272,6 +281,7 @@ TEST_CASE("Parameters::readInput: per-value checks") {
     for (const Case &c : std::vector<Case> {
              {"size", "0", "must be positive"},
              {"jimwlkAlphaS", "-0.3", "must not be negative"},
+             {"jimwlkDs", "0", "must be positive"},
              {"nFlavors", "-1", "must be between 0 and 16"},
              {"L", "0", "must be positive"},
              {"maxTime", "-1", "must not be negative"},

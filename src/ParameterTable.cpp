@@ -490,7 +490,11 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "protonAnisotropy", &P::subnucleon,
             &SubnucleonParameters::protonAnisotropy)
-            .onlyIf(gaussianNucleons),
+            .onlyIf(gaussianNucleons)
+            // the thickness is normalized with sqrt(1 + protonAnisotropy)
+            .check([](const double &v) {
+                return v > -1. ? "" : "must be larger than -1";
+            }),
         // hot-spot nucleons
         param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
             .onlyIf(hotSpotsFromInput),
@@ -659,7 +663,6 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"da_np", "deltaAnp"},
         {"force_dmin_flag", "forceDMin"},
         {"d_min", "dMin"},
-        {"useConstituentQuarkProton", "Nq"},
         {"SubNucleonParamType", "subNucleonParamType"},
         {"SubNucleonParamSet", "subNucleonParamSet"},
         {"UVdamp", "UVDamp"},
@@ -688,6 +691,19 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"xSnapshotList", "jimwlkXSnapshotList"},
     };
     return renamed;
+}
+
+/**
+ * Input keys of IP-Glasma before 2.0 that have no single new name, with
+ * a hint at what replaced them.
+ * \return Map from each old key to the hint.
+ */
+const std::map<std::string, std::string> &replacedKeys() {
+    static const std::map<std::string, std::string> replaced = {
+        {"useConstituentQuarkProton",
+         "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
+    };
+    return replaced;
 }
 
 /**
@@ -799,8 +815,11 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
         std::string message = source + ":" + std::to_string(entry.line)
                               + ": unknown parameter " + key;
         const auto renamed = renamedKeys().find(key);
+        const auto replaced = replacedKeys().find(key);
         if (renamed != renamedKeys().end()) {
             message += " (renamed to " + renamed->second + ")";
+        } else if (replaced != replacedKeys().end()) {
+            message += " (" + replaced->second + ")";
         } else {
             const std::string suggestion = closestName(key);
             if (!suggestion.empty())
@@ -832,7 +851,10 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
         nucleus.nucleonPositionsFromFile = true;
     }
     subnucleon.NqBase = subnucleon.Nq;
-    if (subnucleon.subNucleonParamType > 0) {
+    // the posterior sets are fits of hot-spot nucleons; validationErrors()
+    // reports any other model, so don't require the table for it
+    if (subnucleon.subNucleonParamType > 0
+        && subnucleon.nucleonModel == "hotspots") {
         const std::string problem =
             loadPosteriorParameterSets(subnucleon.subNucleonParamType);
         if (!problem.empty()) errors.push_back(problem);

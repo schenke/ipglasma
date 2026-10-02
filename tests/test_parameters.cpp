@@ -165,7 +165,7 @@ TEST_CASE(
     Parameters param;
 
     std::vector<std::vector<float>> parsed;
-    param.loadPosteriorParameterSetsFromFile(file.path(), parsed);
+    CHECK(param.loadPosteriorParameterSetsFromFile(file.path(), parsed) == "");
 
     REQUIRE(parsed.size() == 2);
     REQUIRE(parsed[0].size() == 7);
@@ -199,4 +199,21 @@ TEST_CASE(
     param.wilsonLines.readInitialWilsonLines = 0;
     param.collision.useNucleus = false;
     CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
+    "Parameters::loadPosteriorParameterSetsFromFile reports a missing file "
+    "and a value that is not a number") {
+    Parameters param;
+    std::vector<std::vector<float>> parsed;
+    CHECK(
+        param.loadPosteriorParameterSetsFromFile(
+            "no_such_posterior_file.csv", parsed)
+        == "cannot open the posterior parameter file "
+           "no_such_posterior_file.csv");
+
+    TempCsvFile file("m,BG\n0.4,3.3\n0.5,x\n");
+    const std::string problem =
+        param.loadPosteriorParameterSetsFromFile(file.path(), parsed);
+    CHECK(problem == file.path() + ":3: x is not a number");
 }

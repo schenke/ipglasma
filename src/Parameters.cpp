@@ -2,6 +2,7 @@
 
 #include "Parameters.h"
 
+#include <exception>
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -9,28 +10,32 @@
 #include <string>
 #include <vector>
 
-void Parameters::loadPosteriorParameterSetsFromFile(
+std::string Parameters::loadPosteriorParameterSetsFromFile(
     std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
     std::ifstream posteriorFile(posteriorFileName.c_str());
     if (!posteriorFile.is_open()) {
-        messager_ << "[Parameters::loadPosteriorParameterSetsFromFile]: "
-                     "Cannot open posterior file: "
-                  << posteriorFileName;
-        messager_.flush("error");
-        exit(1);
+        return "cannot open the posterior parameter file " + posteriorFileName;
     }
     std::string tempLine;
     std::getline(posteriorFile, tempLine);
+    int lineNumber = 1;
     while (std::getline(posteriorFile, tempLine)) {
+        lineNumber++;
         std::stringstream lineStream(tempLine);
         std::string cell;
         std::vector<float> parsedRow;
         while (std::getline(lineStream, cell, ',')) {
-            parsedRow.push_back(std::stof(cell));
+            try {
+                parsedRow.push_back(std::stof(cell));
+            } catch (const std::exception &) {
+                return posteriorFileName + ":" + std::to_string(lineNumber)
+                       + ": " + cell + " is not a number";
+            }
         }
         ParamSet.push_back(parsedRow);
     }
     posteriorFile.close();
+    return "";
 }
 
 std::string Parameters::loadPosteriorParameterSets(const int itype) {
@@ -49,7 +54,9 @@ std::string Parameters::loadPosteriorParameterSets(const int itype) {
     } else {
         return "";
     }
-    loadPosteriorParameterSetsFromFile(fileName, *table);
+    const std::string problem =
+        loadPosteriorParameterSetsFromFile(fileName, *table);
+    if (!problem.empty()) return problem;
     if (table->empty()) {
         return fileName + " contains no parameter sets";
     }

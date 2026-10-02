@@ -551,7 +551,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         // 0 selects the running coupling, > 0 a fixed coupling
         param("jimwlkAlphaS", &P::jimwlk, &JimwlkParameters::alphaS)
             .check(nonNegative()),
-        param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds),
+        // divisor of the step count and under a square root in the step
+        param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds).check(positive()),
         param("jimwlkInitialX", &P::jimwlk, &JimwlkParameters::initialX),
         param("jimwlkXProjectile", &P::jimwlk, &JimwlkParameters::xProjectile),
         param("jimwlkXTarget", &P::jimwlk, &JimwlkParameters::xTarget),

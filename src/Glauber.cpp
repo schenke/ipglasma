@@ -1,5 +1,7 @@
 #include "Glauber.h"
 
+#include <gsl/gsl_errno.h>
+#include <gsl/gsl_integration.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -464,7 +466,6 @@ void Glauber::calcRho(Nucleus *nucleus) {
 
 double Glauber::nuInS(double s) {
     double y;
-    int count;
 
     /* to pass to the densityFunc's */
     NuInS_S_ = s;
@@ -473,14 +474,12 @@ double Glauber::nuInS(double s) {
     // 8 (Hulthen) -- the same values IntegrandId uses for these cases.
     const IntegrandId id = static_cast<IntegrandId>(Nuc_WS_->densityFunc);
 
-    count = 0;
-    y = integral(id, 0.0, 1.0, TOL, &count);
+    y = integral(id, 0.0, 1.0);
 
     return y;
 }
 
 double Glauber::anum3Fermi(double R_WS) {
-    int count = 0;
     double up, down, a_WS, rho, f;
 
     a_WS = Nuc_WS_->a_WS;
@@ -492,7 +491,7 @@ double Glauber::anum3Fermi(double R_WS) {
     down = 0.0;
     up = 1.0;
 
-    f = integral(IntegrandId::Anum3FermiInt, down, up, TOL, &count);
+    f = integral(IntegrandId::Anum3FermiInt, down, up);
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
@@ -554,7 +553,6 @@ double Glauber::nuInt3Fermi(double xi) {
 /* %%%%%%% 3 Parameter Gauss %%%%%%%%%%%% */
 
 double Glauber::anum3Gauss(double R_WS) {
-    int count = 0;
     double up, down, a_WS, rho, f;
 
     a_WS = Nuc_WS_->a_WS;
@@ -566,7 +564,7 @@ double Glauber::anum3Gauss(double R_WS) {
     down = 0.0;
     up = 1.0;
 
-    f = integral(IntegrandId::Anum3GaussInt, down, up, TOL, &count);
+    f = integral(IntegrandId::Anum3GaussInt, down, up);
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
@@ -633,7 +631,6 @@ double Glauber::nuInt3Gauss(double xi) {
 
 /* %%%%%%% 2 Parameter HO %%%%%%%%%%%% */
 double Glauber::anum2HO() {
-    int count = 0;
     double up, down, a_WS, rho, f;
 
     a_WS = Nuc_WS_->a_WS;
@@ -642,7 +639,7 @@ double Glauber::anum2HO() {
     down = 0.0;
     up = 1.0;
 
-    f = integral(IntegrandId::Anum2HOInt, down, up, TOL, &count);
+    f = integral(IntegrandId::Anum2HOInt, down, up);
     f *= 4.0 * M_PI * rho * pow(a_WS, 3.);
 
     return f;
@@ -776,115 +773,48 @@ double Glauber::evaluateIntegrand(IntegrandId id, double xi) {
     return 0.0;
 }
 
-double Glauber::integral(
-    IntegrandId id, double down, double up, double tol, int *count) {
-    double dx, y, g1[7];
-    int i;
+namespace {
+/// The integrand integral() passes to GSL through Glauber::integrandCallback().
+struct IntegrandCall {
+    /// Glauber instance whose integrand (and its current state, e.g. the
+    /// transverse offset of nuInS()) is evaluated.
+    Glauber *glauber;
+    /// Which integrand to evaluate.
+    IntegrandId id;
+};
+}  // namespace
 
-    if (down == up)
-        y = 0.0;
-    else {
-        dx = (up - down) / 6.0;
-        for (i = 0; i < 7; i++) {
-            g1[i] = evaluateIntegrand(id, down + i * dx);
-        }
-        *count = 7;
-        y = qnc7(id, tol, down, dx, g1, 0.0, 0.0, count);
+double Glauber::integrandCallback(double x, void *params) {
+    const IntegrandCall *call = static_cast<const IntegrandCall *>(params);
+    return call->glauber->evaluateIntegrand(call->id, x);
+}
+
+double Glauber::integral(IntegrandId id, double down, double up) {
+    if (down == up) return 0.0;
+    gsl_integration_cquad_workspace *workspace =
+        gsl_integration_cquad_workspace_alloc(QUADRATURE_INTERVALS);
+    IntegrandCall call {this, id};
+    gsl_function function;
+    function.function = &Glauber::integrandCallback;
+    function.params = &call;
+    double result = 0.;
+    double error = 0.;
+    // report a failed integral here instead of GSL's default handler,
+    // which would abort the whole run
+    gsl_error_handler_t *previousHandler = gsl_set_error_handler_off();
+    const int status = gsl_integration_cquad(
+        &function, down, up, 0., QUADRATURE_TOLERANCE, workspace, &result,
+        &error, nullptr);
+    gsl_set_error_handler(previousHandler);
+    gsl_integration_cquad_workspace_free(workspace);
+    if (status != GSL_SUCCESS) {
+        messager_ << "[Glauber::integral]: integral over [" << down << ", "
+                  << up << "] did not converge (" << gsl_strerror(status)
+                  << "); using " << result << " +- " << error << ".";
+        messager_.flush("warning");
     }
-    return y;
-} /* end of integral */
-
-double Glauber::qnc7(
-    IntegrandId id, double tol, double down, double dx, double *f_of,
-    double pre_sum, double area, int *count) {
-    int i;
-    double left_sum, right_sum, ans;
-    static double w[] = {41.0 / 140.0, 54.0 / 35.0, 27.0 / 140.0, 68.0 / 35.0,
-                         27.0 / 140,   54.0 / 35.0, 41.0 / 140.0};
-    double fl[7];
-    double fr[7];
-    /*
-      qnc7 calculates integral over left and right half of the given interval
-      and branches
-      to do so, first halve dx
-      */
-
-    dx /= 2.0;
-
-    /*
-      first calculate the left estimate
-      f_of[] contains the evaluated values at down+i, 0< i <7
-      store half distanced values for the left sum in fl[]
-      */
-
-    fl[1] = evaluateIntegrand(id, down + dx);
-    fl[3] = evaluateIntegrand(id, down + 3.0 * dx);
-    fl[5] = evaluateIntegrand(id, down + 5.0 * dx);
-
-    fl[0] = f_of[0];
-    fl[2] = f_of[1];
-    fl[4] = f_of[2];
-    fl[6] = f_of[3];
-
-    *count += 3;
-
-    left_sum = 0.0;
-    for (i = 0; i < 7; i++) left_sum += w[i] * fl[i];
-    left_sum *= dx;
-
-    /*
-      like wise, the right sum is in fr[]
-      */
-
-    fr[1] = evaluateIntegrand(id, down + 7.0 * dx);
-    fr[3] = evaluateIntegrand(id, down + 9.0 * dx);
-    fr[5] = evaluateIntegrand(id, down + 11.0 * dx);
-
-    fr[0] = f_of[3];
-    fr[2] = f_of[4];
-    fr[4] = f_of[5];
-    fr[6] = f_of[6];
-
-    *count += 3;
-
-    right_sum = 0.0;
-
-    for (i = 0; i < 7; i++) {
-        right_sum += w[i] * fr[i];
-    }
-    right_sum *= dx;
-
-    ans = left_sum + right_sum;
-
-    area += -fabs(pre_sum) + fabs(left_sum) + fabs(right_sum);
-
-    if (fabs(ans - pre_sum) > tol * fabs(area) && (*count < LIMIT)) {
-        /*
-          branch by calling the function itself
-          by calling the qnc7 twice, we are branching
-          since left hand side is being calculated first, until the condition
-          is satisfied, the left branch keeps branching
-          when finally the condition is met by one left-most interval,
-          qnc7 returns the right hand side of one up level,
-          and the same process resumes
-          until the criterion is met by all the branched
-          intervals,
-          then qnc7 returns to the original right branch and resumes halving
-          until the condition is met by all intervals
-          (funk, down, dx, f_of[7], pre_ans, ans)
-          */
-
-        tol /= 1.414213562;
-        left_sum = qnc7(id, tol, down, dx, fl, left_sum, area, count);
-        right_sum =
-            qnc7(id, tol, down + dx * 6., dx, fr, right_sum, area, count);
-
-        ans = left_sum + right_sum;
-
-    } /* belongs to if*/
-
-    return ans;
-} /* end of qnc */
+    return result;
+}
 
 double Glauber::oLSIntegrand(double s) {
     double sum, arg, x, r;
@@ -904,10 +834,9 @@ double Glauber::oLSIntegrand(double s) {
 
 double Glauber::tAB() {
     double f;
-    int count = 0;
     f = integral(
-        IntegrandId::OLSIntegrand, 0.0, glauberData_.sCutoff, TOL,
-        &count);                        // integrate oLSIntegrand(s)
+        IntegrandId::OLSIntegrand, 0.0,
+        glauberData_.sCutoff);          // integrate oLSIntegrand(s)
     f *= 2.0 / (glauberData_.sigmaNN);  // here tAB is the number of binary
                                         // collisions, dimensionless (1/fm^4
                                         // integrated over dr_T^2 (gets rid

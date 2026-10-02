@@ -105,6 +105,8 @@ The main categories for changes in this file are:
 * Deduplicate `Lattice::writeSU3Matrices`'s near-identical Phi/Pi write blocks into one `writeMatrixArrayText()` helper, matching the parameterized style already used by `writeWilsonLines`.
 * Rename the GitHub repository's default branch from `master` to `main`.
 * Deduplicate the classical-evolution/hydro-output running-coupling formula, previously copy-pasted 8 times across `Evolution.cpp` (`computeRunningCouplingGfactor` and its callers) and `MyEigen::flowVelocity4DImpl`, into a shared `computeAlphaS()`/`computeRunningCouplingGfactorFromScale()` pair in the new header-only `RunningCoupling.h`.
+* Replace Glauber's hand-written recursive Newton-Cotes integrator (`Glauber::qnc7`) by GSL's adaptive CQUAD quadrature (relative tolerance 1e-6) for all nuclear thickness and normalization integrals. A failed integral now gives a warning instead of being able to abort the run. A fixed-point rule was not used because the substituted Woods-Saxon integrands are strongly peaked near the endpoint.
+* Define the lattice site layout (`ix * N + iy`) in one place, `latticeIndex()`/`latticeX()`/`latticeY()` in `LatticeIndex.h` and `Lattice::positionFromXY()`/`xFromPosition()`/`yFromPosition()`, and use it everywhere instead of writing the index by hand (including the FFT arrays, whose layout has to match).
 
 ### Fixed
 * Fix a NaN in the matrix exponential in the very-low-density region.
@@ -159,6 +161,9 @@ The main categories for changes in this file are:
 * Fix the input parser hanging forever instead of reporting a missing required key when the input file has no `EndOfFile` line.
 * Fix `Glauber`'s destructor deleting any `tmp.dat` file in the working directory.
 * Add `Parameters::ValidParameters()` checks rejecting an odd lattice `size` (the FFTs assume even sizes), `omega <= 0`, an unknown `SubNucleonParamType`, `LambdaQCD <= 0` or `c <= 0` and a `runWith0Min1Avg2MaxQs` outside 0-2 with running coupling, and, for the JIMWLK running coupling (`alphas_jimwlk 0`), a too-large `nFlavors` and a `Lambda_QCD_jimwlk` that is not positive or not below `mu0_jimwlk`.
+
+* Fix the nuclear thickness of the 3-parameter Gauss profile (e.g. S) being off by up to 7.5e-4 relative, from the old integrator's convergence criterion.
+* Reject `runWithkt` values other than 0/1 and a negative `alphas_jimwlk`, which selected inconsistent code paths.
 
 ### Removed
 * Remove functions that were declared or defined but never called, including `Evolution::evolveUfast`/`multiplicitynkxky`/`correlations`/`anisotropy`, `GaugeFix::gaugeTransform`, the `Spinor` class and `Matrix::reu`/`reu2`/`imag`, `Init::solveAxbComplex`/`multiplicity`/the 2-argument `rotate_nucleus` overload/`findUInForwardLightconeBjoern`, `MyEigen::test`, `FFT::fftnMany`, `Glauber::FindXorg`/`PAB`/`AnumHulthenInt`, and about a dozen unused `Parameters` getter/setter pairs.

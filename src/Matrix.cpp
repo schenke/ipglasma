@@ -654,3 +654,32 @@ Matrix &Matrix::logm() {
 
     return *this;
 }
+
+Matrix Matrix::fromAlgebraExponent(std::vector<double> &Q) {
+    Matrix tempM(Matrix::noInit);
+    complex<double> U[9];
+
+    // expmCoeff calculates the coefficients of exp(i Q[a] t[a]).  Build
+    // the 3x3 matrix directly from the fixed SU(3) generators instead of
+    // allocating a coefficient vector and materializing eight scaled Matrix
+    // temporaries plus the chained sums.
+    tempM.expmCoeff(Q.data(), U);
+    if (std::abs(U[0].real()) < 1e-15) {
+        tempM = Matrix(1.);
+    } else {
+        const complex<double> I(0., 1.);
+        const double invSqrt3 = 1. / std::sqrt(3.);
+
+        tempM.set(0, 0, U[0] + 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
+        tempM.set(1, 1, U[0] - 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
+        tempM.set(2, 2, U[0] - invSqrt3 * U[8]);
+
+        tempM.set(0, 1, 0.5 * (U[1] - I * U[2]));
+        tempM.set(1, 0, 0.5 * (U[1] + I * U[2]));
+        tempM.set(0, 2, 0.5 * (U[4] - I * U[5]));
+        tempM.set(2, 0, 0.5 * (U[4] + I * U[5]));
+        tempM.set(1, 2, 0.5 * (U[6] - I * U[7]));
+        tempM.set(2, 1, 0.5 * (U[6] + I * U[7]));
+    }
+    return tempM;
+}

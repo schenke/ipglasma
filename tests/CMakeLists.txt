@@ -24,6 +24,7 @@ set(TEST_SOURCES
     test_instrumentation.cpp
     test_fragmentation.cpp
     test_init.cpp
+    test_forward_lightcone.cpp
     test_evolution.cpp
     test_jimwlk.cpp
     test_running_coupling.cpp

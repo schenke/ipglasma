@@ -624,7 +624,7 @@ void GluonMultiplicity::writeTarget(
            << "  \"impact_parameter_fm\": " << param->event.b << ",\n"
            << "  \"random_seed\": " << param->run.randomSeed << ",\n"
            << "  \"spectrum_definition\": \"azimuthally averaged Coulomb-gauge "
-              "gluon spectrum used by Evolution::multiplicity\",\n"
+              "gluon spectrum used by GluonMultiplicity::compute\",\n"
            << "  \"kt_GeV\": [";
 
     for (int ik = 0; ik < bins; ++ik) {

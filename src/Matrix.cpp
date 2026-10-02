@@ -655,7 +655,7 @@ Matrix &Matrix::logm() {
     return *this;
 }
 
-Matrix Matrix::fromAlgebraExponent(std::vector<double> &Q) {
+Matrix Matrix::fromAlgebraExponent(const std::vector<double> &Q) {
     Matrix tempM(Matrix::noInit);
     complex<double> U[9];
 

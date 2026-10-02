@@ -170,9 +170,12 @@ TEST_CASE(
     std::vector<ReturnValue> nucleusB {nucleonAt(3., 0.)};
     CollisionGeometry geometry(nucleusA, nucleusB);
     Lattice lat(&param, N);
+    std::remove("NgluonEstimators0.dat");
     geometry.computeQuantities(&lat, &param, nullptr);
     CHECK(param.event.success == 0);
     CHECK(param.event.averageQs == 0.);
+    // the no-overlap branch returns before the estimators are written
+    CHECK_FALSE(std::ifstream("NgluonEstimators0.dat").good());
     removeGeometryFiles();
 }
 

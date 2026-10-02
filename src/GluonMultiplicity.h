@@ -49,6 +49,19 @@ class GluonMultiplicity {
      */
     int compute(Lattice *lat, Group *group, Parameters *param, int it);
     /**
+     * Standalone post-processing utility: reads a previous run's
+     * `multiplicity<id>.dat` and `NpartdNdy<id>.dat`,
+     * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
+     * (`param->colorCharge.jacobianMass`/`collision.sqrtS`), and writes
+     * `NpartdNdy-mod.dat`. Not part of the normal Evolution::run() flow;
+     * terminates the process (`exit(1)`) unconditionally when done, and also
+     * exits early if either input file is missing.
+     * \param[in] param Simulation parameters.
+     */
+    static void readNkt(Parameters *param);
+
+  private:
+    /**
      * compute()'s `writeOutputs==3` hadronization step: convolves
      * the binned gluon spectrum \p n with the KKP fragmentation function
      * (`Fragmentation::kkp`), integrated over the fragmentation variable
@@ -106,19 +119,6 @@ class GluonMultiplicity {
         double dECut3, double dNCut6, double dECut6, const double *spectrumN,
         const double *spectrumE, const int *spectrumCounts, int bins,
         double dkt);
-    /**
-     * Standalone post-processing utility: reads a previous run's
-     * `multiplicity<id>.dat` and `NpartdNdy<id>.dat`,
-     * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
-     * (`param->colorCharge.jacobianMass`/`collision.sqrtS`), and writes
-     * `NpartdNdy-mod.dat`. Not part of the normal Evolution::run() flow;
-     * terminates the process (`exit(1)`) unconditionally when done, and also
-     * exits early if either input file is missing.
-     * \param[in] param Simulation parameters.
-     */
-    static void readNkt(Parameters *param);
-
-  private:
     /// FFT used to Fourier-transform the gauge-fixed fields (and by the
     /// Coulomb gauge fixing).
     FFT fft_;

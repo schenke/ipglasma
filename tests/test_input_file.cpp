@@ -4,6 +4,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include "InputFile.h"
@@ -494,7 +495,15 @@ TEST_CASE(
     CHECK(anyContains(
         readErrors(exampleInputWith("BGq", "")), "BGq is required"));
 
-    // gaussian: the hot-spot keys are not needed (and are ignored)
+    // gaussian: the hot-spot keys are accepted and ignored...
+    {
+        Parameters param;
+        const std::vector<std::string> errors = param.readInput(
+            inputFromText(exampleInputWith("nucleonModel", "gaussian")));
+        for (const std::string &error : errors) CAPTURE(error);
+        CHECK(errors.empty());
+    }
+    // ...and not needed
     std::string gaussian;
     {
         std::istringstream in(exampleInputWith("nucleonModel", "gaussian"));
@@ -524,6 +533,7 @@ TEST_CASE(
     // one-row table if none exists in the working directory
     const std::string table = "tables/posterior_Nq3.csv";
     const bool ownTable = !std::filesystem::exists(table);
+    const bool ownDirectory = !std::filesystem::exists("tables");
     if (ownTable) {
         std::filesystem::create_directories("tables");
         std::ofstream out(table);
@@ -552,8 +562,16 @@ TEST_CASE(
     CHECK(errors.empty());
     CHECK(param.validationErrors().empty());
 
-    if (ownTable) {
-        std::remove(table.c_str());
-        std::filesystem::remove("tables");  // only if now empty
+    // the replaced keys are accepted and ignored when present
+    Parameters withReplacedKeys;
+    const std::vector<std::string> replacedErrors = withReplacedKeys.readInput(
+        inputFromText(exampleInputWith("subNucleonParamType", "2")));
+    for (const std::string &error : replacedErrors) CAPTURE(error);
+    CHECK(replacedErrors.empty());
+
+    if (ownTable) std::remove(table.c_str());
+    if (ownDirectory) {
+        std::error_code ignored;  // keep a directory that is not empty
+        std::filesystem::remove("tables", ignored);
     }
 }

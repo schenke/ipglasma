@@ -268,7 +268,7 @@ class Matrix {
      * \return The assembled matrix (the identity if the exponential's
      * identity-coefficient comes out numerically zero).
      */
-    static Matrix fromAlgebraExponent(std::vector<double> &Q);
+    static Matrix fromAlgebraExponent(const std::vector<double> &Q);
 
     /**
      * Computes this matrix's determinant via the explicit

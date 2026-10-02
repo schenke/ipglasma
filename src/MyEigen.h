@@ -12,8 +12,9 @@
  * Extracts the local fluid four-velocity \f$u^\mu\f$, energy density
  * \f$\epsilon\f$, and shear-stress tensor \f$\pi^{\mu\nu}\f$ from the
  * classical energy-momentum tensor \f$T^{\mu\nu}\f$ (already computed
- * by Evolution::tmunu()) via Landau matching, and writes the resulting
- * hydrodynamic initial condition (and/or raw \f$T^{\mu\nu}\f$) to disk.
+ * by EnergyMomentumTensor::compute()) via Landau matching, and writes the
+ * resulting hydrodynamic initial condition (and/or raw \f$T^{\mu\nu}\f$) to
+ * disk.
  */
 class MyEigen {
   private:

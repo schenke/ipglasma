@@ -116,7 +116,7 @@ class Lattice {
     /// GaugeFix::fftChi()), reusing the \c Ux1 storage.
     std::vector<Matrix> Ux1;
     /// Scratch plaquette field \f$U_{\text{plaq}}\f$ (see
-    /// Evolution.cpp's `tmunuPlaquetteTeam`), reusing the \c Uy1
+    /// EnergyMomentumTensor.cpp's `tmunuPlaquetteTeam`), reusing the \c Uy1
     /// storage.
     std::vector<Matrix> Uy1;
     /// Momentum conjugate to the classical field, \f$\pi\f$ (also

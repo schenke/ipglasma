@@ -21,9 +21,9 @@
  * updated by evolvePhi()/evolveU(), while the momentum fields (the
  * electric fields `U`/`U2`, and \f$\pi\f$) live at half-integer steps
  * and are updated by evolvePi()/evolveE(). Also computes the
- * energy-momentum tensor (tmunu()), derived observables (eccentricity(),
- * u()), and an optional final-time gluon spectrum/multiplicity estimate
- * (multiplicity()) via Coulomb-gauge fixing and FFT.
+ * energy-momentum tensor (EnergyMomentumTensor::compute()), derived observables
+ * (eccentricity(), u()), and an optional final-time gluon spectrum/multiplicity
+ * estimate (multiplicity()) via Coulomb-gauge fixing and FFT.
  */
 class Evolution {
   private:
@@ -70,10 +70,10 @@ class Evolution {
      * \f$1/Q_s\f$). At the final time step (and, if `output.writeOutputs
      * == 5`, at four additional fixed intermediate times), temporarily
      * recenters the momenta from \f$\tau_{n-1/2}\f$ to \f$\tau_n\f$ to
-     * measure tmunu() and either u() or `MyEigen::writeTmunu4D()`
-     * (depending on `output.writeEpsilonUHydro`), then restores the
-     * unmodified momenta so the measurement cannot perturb the
-     * trajectory. At the very end, runs checkGaussLaw(), and -- if
+     * measure EnergyMomentumTensor::compute() and either u() or
+     * `MyEigen::writeTmunu4D()` (depending on `output.writeEpsilonUHydro`),
+     * then restores the unmodified momenta so the measurement cannot perturb
+     * the trajectory. At the very end, runs checkGaussLaw(), and -- if
      * `output.computeGluonMultiplicity` -- eccentricity() and
      * multiplicity(), stopping early if multiplicity() reports no
      * collision.
@@ -173,24 +173,6 @@ class Evolution {
     void eccentricity(
         Lattice *lat, Parameters *param, int it, double cutoff, int doAniso);
     /**
-     * Computes every component of the energy-momentum tensor
-     * \f$T^{\mu\nu}\f$ at every cell (the spatial plaquette, the
-     * diagonal electric and magnetic/gradient contributions, and the
-     * six off-diagonal components), storing the results into
-     * `lat->cells`. Runs its constituent anonymous-namespace team
-     * helpers (`tmunuPlaquetteTeam`, `tmunuDiagonalElectricTeam`,
-     * `tmunuDiagonalMagneticTeam`, `tmunuNormalizeDiagonalTeam`,
-     * `tmunuOffDiagonalTeam`) in sequence inside one shared
-     * `#pragma omp parallel` region.
-     * \param[in,out] lat Lattice to read the fields from and write
-     * \f$T^{\mu\nu}\f$ into (via `lat->cells`).
-     * \param[in] param Simulation parameters.
-     * \param[in] it Current time step index (\f$\tau=it\cdot d\tau\f$),
-     * used to convert the momentum fields' lattice normalization to
-     * physical units.
-     */
-    void tmunu(Lattice *lat, Parameters *param, int it);
-    /**
      * Writes a binary snapshot (`evolvedFields<id>_it<it>.ipgf`) of the
      * six evolved fields (\f$\phi\f$, \f$\pi\f$, \c U (\f$E_1\f$), \c U2
      * (\f$E_2\f$), \c Ux, \c Uy) as full \f$3\times3\f$ complex
@@ -215,12 +197,12 @@ class Evolution {
      */
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     /**
-     * The final-time flow measurement of run(), after tmunu(): with
-     * `output.writeEpsilonUHydro` the full u() solve and hydro output;
-     * otherwise only the raw \f$T^{\mu\nu}\f$ output, preceded by the
-     * flow-velocity solve if `output.computeGluonMultiplicity` (so that
-     * eccentricity(), which weights by \f$\epsilon u^\tau\f$, sees the
-     * solved fields).
+     * The final-time flow measurement of run(), after
+     * EnergyMomentumTensor::compute(): with `output.writeEpsilonUHydro` the
+     * full u() solve and hydro output; otherwise only the raw \f$T^{\mu\nu}\f$
+     * output, preceded by the flow-velocity solve if
+     * `output.computeGluonMultiplicity` (so that eccentricity(), which weights
+     * by \f$\epsilon u^\tau\f$, sees the solved fields).
      * \param[in,out] lat Lattice holding \f$T^{\mu\nu}\f$; receives
      * \f$\epsilon\f$ and \f$u^\mu\f$ when the solve runs.
      * \param[in] param Simulation parameters.

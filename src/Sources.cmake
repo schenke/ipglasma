@@ -22,6 +22,7 @@ set (IPGLASMA_LIB_SOURCES
     Cell.cpp
     Glauber.cpp
     Evolution.cpp
+    EnergyMomentumTensor.cpp
     GaugeFix.cpp
     MyEigen.cpp
     PrettyOstream.cpp

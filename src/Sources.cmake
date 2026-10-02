@@ -14,6 +14,7 @@ set (IPGLASMA_LIB_SOURCES
     NucleonModel.cpp
     NuclearQsTable.cpp
     NucleusSampler.cpp
+    CollisionGeometry.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp

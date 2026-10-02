@@ -180,7 +180,7 @@ TEST_CASE(
     "CollisionGeometry::computeAndSetRunningAlphaS respects nFlavors/LambdaQCD "
     "instead "
     "of assuming 3 flavors and LambdaQCD=0.2, and uses the same muZero/c "
-    "as Evolution::computeRunningCouplingGfactor()") {
+    "as computeRunningCouplingGfactor()") {
     Parameters param;
     makeInitTestParam(param, 4);
     param.coupling.runningCoupling = true;

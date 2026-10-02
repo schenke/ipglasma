@@ -19,6 +19,7 @@
 #include "Evolution.h"
 #include "FFT.h"
 #include "ForwardLightCone.h"
+#include "GluonMultiplicity.h"
 #include "Init.h"
 #include "InputFile.h"
 #include "Instrumentation.h"
@@ -211,7 +212,7 @@ int main(int argc, char *argv[]) {
 
         // either read k_T spectrum from file or do a fresh start
         if (param->output.readMultFromFile) {
-            evolution.readNkt(param);
+            GluonMultiplicity::readNkt(param);
         }
 
         // Keep the lattice lifetime inside this block so destruction is timed

@@ -23,6 +23,8 @@ set (IPGLASMA_LIB_SOURCES
     Glauber.cpp
     Evolution.cpp
     EnergyMomentumTensor.cpp
+    GluonMultiplicity.cpp
+    RunningCoupling.cpp
     GaugeFix.cpp
     MyEigen.cpp
     PrettyOstream.cpp

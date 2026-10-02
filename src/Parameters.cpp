@@ -177,6 +177,12 @@ bool Parameters::ValidParameters() {
             messager_.flush("error");
             return false;
         }
+        if (getNFlavors() < 0) {
+            messager_ << "[Parameters::ValidParameters]: nFlavors ("
+                      << getNFlavors() << ") must not be negative.";
+            messager_.flush("error");
+            return false;
+        }
         if (11. * PhysConst::Nc - 2. * getNFlavors() <= 0.) {
             messager_ << "[Parameters::ValidParameters]: nFlavors ("
                       << getNFlavors()
@@ -207,6 +213,14 @@ bool Parameters::ValidParameters() {
     // JIMWLK running coupling (alphas_jimwlk 0), independent of
     // runningCoupling.
     if (getUseJIMWLK() && getJimwlk_alphas() <= 1e-10) {
+        if (getNFlavors() < 0) {
+            messager_ << "[Parameters::ValidParameters]: nFlavors ("
+                      << getNFlavors()
+                      << ") must not be negative for the JIMWLK running "
+                         "coupling.";
+            messager_.flush("error");
+            return false;
+        }
         if (11. * PhysConst::Nc - 2. * getNFlavors() <= 0.) {
             messager_ << "[Parameters::ValidParameters]: nFlavors ("
                       << getNFlavors()

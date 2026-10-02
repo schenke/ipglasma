@@ -174,3 +174,29 @@ TEST_CASE(
     CHECK(parsed[1][4] == doctest::Approx(4.0));
     CHECK(parsed[1][6] == doctest::Approx(0.3));
 }
+
+TEST_CASE(
+    "Parameters::validationErrors: rejects negative rapidities only with a "
+    "fixed x, where they index the Q_s table directly") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.rapidityA = 0.;
+    param.colorCharge.rapidityB = -0.5;
+    CHECK(param.validationErrors().size() == 1);
+    param.colorCharge.rapidityA = -0.5;
+    param.colorCharge.rapidityB = 0.;
+    CHECK(param.validationErrors().size() == 1);
+
+    // a fluctuating x looks up the table at y >= 0 only
+    param.colorCharge.useFluctuatingX = true;
+    CHECK(param.validationErrors().empty());
+    // no color charges are sampled
+    param.colorCharge.useFluctuatingX = false;
+    param.wilsonLines.readInitialWilsonLines = 2;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.collision.useNucleus = false;
+    CHECK(param.validationErrors().empty());
+}

@@ -67,3 +67,21 @@ TEST_CASE("NuclearQsTable stays inside the table at its upper edges") {
         }
     }
 }
+
+TEST_CASE(
+    "NuclearQsTable clamps a rapidity above the table to the largest "
+    "tabulated one") {
+    const std::string fileName = writeLinearTable();
+    NuclearQsTable table;
+    table.read(fileName);
+    std::remove(fileName.c_str());
+
+    for (double T : {0.73, 24.4, 100.}) {
+        for (double y : {10.8, 11.0, 13.5}) {
+            CAPTURE(T);
+            CAPTURE(y);
+            CHECK(table.qs2(T, y) == table.qs2(T, 10.75));
+        }
+    }
+    CHECK(table.qs2(0.73, 12.) == doctest::Approx(2. * 0.73 + 3. * 10.75));
+}

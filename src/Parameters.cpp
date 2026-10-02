@@ -163,6 +163,20 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
+    // with a fixed x, Q_s^2 is looked up at the input rapidities, and the
+    // nuclear Q_s table starts at y = 0 (a pseudorapidity keeps its sign)
+    const bool samplesColorCharges =
+        collision.useNucleus && wilsonLines.readInitialWilsonLines == 0;
+    if (samplesColorCharges && !colorCharge.useFluctuatingX
+        && (colorCharge.rapidityA < 0. || colorCharge.rapidityB < 0.)) {
+        std::ostringstream message;
+        message << "rapidityA (" << colorCharge.rapidityA << ") and rapidityB ("
+                << colorCharge.rapidityB
+                << ") must not be negative with useFluctuatingX = 0; the "
+                   "nuclear Q_s table starts at y = 0";
+        fail(message);
+    }
+
     // the posterior parameter sets are fits of hot-spot nucleons
     if (subnucleon.subNucleonParamType != 0
         && subnucleon.nucleonModel != "hotspots") {

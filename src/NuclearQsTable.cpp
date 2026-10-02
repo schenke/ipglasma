@@ -56,19 +56,36 @@ double NuclearQsTable::qs2(double T, double y) const {
     double value, fracy, fracT, QsYdown, QsYup;
     int posy, check = 0;
     fracy = 0.;
-    posy = static_cast<int>(floor(y / deltaY_ + 0.0000001));
 
-    if (y < 0. || y > (nY_ - 1) * deltaY_) {
+    // Negative y only occurs with a fixed x, which the input validation
+    // rejects (Parameters::validationErrors()); also catches NaN.
+    if (!(y >= 0.)) {
         // qs2() is called from inside an omp parallel for loop
         // (Init::setColorChargeDensity), so use a fresh, stack-local
         // instance rather than sharing messager_, which is not thread-safe.
         PrettyOstream localMessager;
         localMessager << "[NuclearQsTable::qs2]: y=" << y
-                      << " is outside the tabulated range (0 <= y <= "
+                      << " is below the tabulated range (0 <= y <= "
                       << (nY_ - 1) * deltaY_ << "). Exiting.";
         localMessager.flush("error");
         exit(1);
     }
+    // Above the largest tabulated rapidity (dilute cells with a fluctuating
+    // x), use the last tabulated rapidity, as for T above the table.
+    const double yMax = (nY_ - 1) * deltaY_;
+    if (y > yMax) {
+        if (!warnedAboveYMax_.exchange(true)) {
+            // Local instance for the same omp thread-safety reason as above.
+            PrettyOstream localMessager;
+            localMessager << "[NuclearQsTable::qs2]: y=" << y
+                          << " exceeds the tabulated range (max y=" << yMax
+                          << "); clamping to the maximal tabulated y (further "
+                             "occurrences are not reported).";
+            localMessager.flush("warning");
+        }
+        y = yMax;
+    }
+    posy = static_cast<int>(floor(y / deltaY_ + 0.0000001));
     // at the last tabulated y, interpolate from the bin below with fracy = 1
     // so that posy + 1 stays inside the table
     if (posy > nY_ - 2) posy = nY_ - 2;

@@ -4,13 +4,11 @@
 #ifndef SRC_INIT_H_
 #define SRC_INIT_H_
 
-#include <cstdint>
 #include <memory>
 
 #include "CollisionGeometry.h"
 #include "FFT.h"
 #include "Glauber.h"
-#include "Group.h"
 #include "Lattice.h"
 #include "Matrix.h"
 #include "NuclearQsTable.h"
@@ -69,7 +67,7 @@ class Init {
     /// Log sink for progress/warning/error messages.
     PrettyOstream messager_;
     /// Non-owning pointer to the shared Random instance, set by init().
-    Random *random_ptr_;
+    Random *random_ptr_ = nullptr;
 
     /// Reusable identity matrix.
     Matrix one_;
@@ -86,6 +84,12 @@ class Init {
      * Destroys this Init (nothing to release).
      */
     ~Init() {};
+
+    /// collisionGeometry_ refers to nucleusA_/nucleusB_ of this instance,
+    /// so a copy would refer to the original's; nothing needs copying.
+    Init(const Init &) = delete;
+    /// \copydoc Init(const Init &)
+    Init &operator=(const Init &) = delete;
 
     /**
      * Top-level initialization entry point: reads the \f$Q_s^2\f$ table

@@ -17,7 +17,6 @@
 #endif
 
 #include "Evolution.h"
-#include "FFT.h"
 #include "ForwardLightCone.h"
 #include "GluonMultiplicity.h"
 #include "Init.h"

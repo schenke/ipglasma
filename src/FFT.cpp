@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "LatticeIndex.h"
 #include "Matrix.h"
 
 //**************************************************************************
@@ -36,8 +37,8 @@ void FFT::fftnVector(
         //      ox       oo
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i - nn[0] / 2, j - nn[1] / 2, nn[1]);
                 input[newpos][0] = real(data[pos]->at(k));
                 input[newpos][1] = imag(data[pos]->at(k));
             }
@@ -46,8 +47,8 @@ void FFT::fftnVector(
         //      oo       ox
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i + nn[0] / 2, j + nn[1] / 2, nn[1]);
                 input[newpos][0] = real(data[pos]->at(k));
                 input[newpos][1] = imag(data[pos]->at(k));
             }
@@ -56,8 +57,8 @@ void FFT::fftnVector(
         //      oo       xo
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i - nn[0] / 2, j + nn[1] / 2, nn[1]);
                 input[newpos][0] = real(data[pos]->at(k));
                 input[newpos][1] = imag(data[pos]->at(k));
             }
@@ -66,8 +67,8 @@ void FFT::fftnVector(
         //      xo       oo
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i + nn[0] / 2, j - nn[1] / 2, nn[1]);
                 input[newpos][0] = real(data[pos]->at(k));
                 input[newpos][1] = imag(data[pos]->at(k));
             }
@@ -90,8 +91,8 @@ void FFT::fftnVector(
         //      oo       ox
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j - nn[1] / 2;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i - nn[0] / 2, j - nn[1] / 2, nn[1]);
                 position = outdata[pos]->begin() + k;
                 *position =
                     complex<double>(output[newpos][0], output[newpos][1]);
@@ -101,8 +102,8 @@ void FFT::fftnVector(
         //      ox       oo
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + nn[1] / 2 + j;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i + nn[0] / 2, j + nn[1] / 2, nn[1]);
                 position = outdata[pos]->begin() + k;
                 *position =
                     complex<double>(output[newpos][0], output[newpos][1]);
@@ -112,8 +113,8 @@ void FFT::fftnVector(
         //      xo       oo
         for (int i = nn[0] / 2; i < nn[0]; i++) {
             for (int j = 0; j < nn[1] / 2; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i - nn[0] / 2) * nn[1] + j + nn[1] / 2;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i - nn[0] / 2, j + nn[1] / 2, nn[1]);
                 position = outdata[pos]->begin() + k;
                 *position =
                     complex<double>(output[newpos][0], output[newpos][1]);
@@ -124,8 +125,8 @@ void FFT::fftnVector(
 
         for (int i = 0; i < nn[0] / 2; i++) {
             for (int j = nn[1] / 2; j < nn[1]; j++) {
-                pos = i * nn[1] + j;
-                newpos = (i + nn[0] / 2) * nn[1] + j - nn[1] / 2;
+                pos = latticeIndex(i, j, nn[1]);
+                newpos = latticeIndex(i + nn[0] / 2, j - nn[1] / 2, nn[1]);
                 position = outdata[pos]->begin() + k;
                 *position =
                     complex<double>(output[newpos][0], output[newpos][1]);
@@ -168,7 +169,7 @@ void FFT::fftnArray(
                 inputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
                 for (int j = 0; j < nn[1]; ++j) {
-                    const int pos = i * nn[1] + j;
+                    const int pos = latticeIndex(i, j, nn[1]);
                     const double sign = ((i + j) & 1) ? -1.0 : 1.0;
                     const complex<double> value = data[pos][k];
                     localInput[pos][0] = sign * value.real();
@@ -195,7 +196,7 @@ void FFT::fftnArray(
                 outputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
                 for (int j = 0; j < nn[1]; ++j) {
-                    const int pos = i * nn[1] + j;
+                    const int pos = latticeIndex(i, j, nn[1]);
                     const double sign =
                         ((i + j) & 1) ? -outputGlobalSign : outputGlobalSign;
                     outdata[pos][k] = complex<double>(
@@ -238,7 +239,7 @@ void FFT::fftnComplexArray(
             const complex<double> *plane = data[k];
             for (int i = 0; i < nn[0]; ++i) {
                 for (int j = 0; j < nn[1]; ++j) {
-                    const int pos = i * nn[1] + j;
+                    const int pos = latticeIndex(i, j, nn[1]);
                     const double sign = ((i + j) & 1) ? -1.0 : 1.0;
                     const complex<double> value = plane[pos];
                     localInput[pos][0] = sign * value.real();
@@ -266,7 +267,7 @@ void FFT::fftnComplexArray(
             complex<double> *plane = outdata[k];
             for (int i = 0; i < nn[0]; ++i) {
                 for (int j = 0; j < nn[1]; ++j) {
-                    const int pos = i * nn[1] + j;
+                    const int pos = latticeIndex(i, j, nn[1]);
                     const double sign =
                         ((i + j) & 1) ? -outputGlobalSign : outputGlobalSign;
                     plane[pos] = complex<double>(
@@ -328,7 +329,7 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
                 inputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
                 for (int j = 0; j < nn[1]; ++j) {
-                    const int pos = i * nn[1] + j;
+                    const int pos = latticeIndex(i, j, nn[1]);
                     const double sign = ((i + j) & 1) ? -1.0 : 1.0;
                     const complex<double> value = data[pos]->data()[k];
                     localInput[pos][0] = sign * value.real();
@@ -371,7 +372,7 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
                 outputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
                 for (int j = 0; j < nn[1]; ++j) {
-                    const int pos = i * nn[1] + j;
+                    const int pos = latticeIndex(i, j, nn[1]);
                     const double sign =
                         ((i + j) & 1) ? -outputGlobalSign : outputGlobalSign;
                     outdata[pos]->data()[k] = complex<double>(

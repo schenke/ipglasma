@@ -68,8 +68,8 @@ void JIMWLK::initializeK() {
 
 #pragma omp parallel for
     for (int pos = 0; pos < Ncells_; pos++) {
-        double x = pos / Ngrid_ - static_cast<double>(Ngrid_) / 2.;
-        double y = pos % Ngrid_ - static_cast<double>(Ngrid_) / 2.;
+        double x = latticeX(pos, Ngrid_) - static_cast<double>(Ngrid_) / 2.;
+        double y = latticeY(pos, Ngrid_) - static_cast<double>(Ngrid_) / 2.;
         x /= Ngrid_;
         y /= Ngrid_;
         double r2 = x * x + y * y;

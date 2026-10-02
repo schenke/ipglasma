@@ -680,7 +680,7 @@ TEST_CASE(
     double sumA = 0., sumB = 0., xA = 0., xB = 0.;
     for (int ix = 0; ix < N; ++ix) {
         for (int iy = 0; iy < N; ++iy) {
-            const int pos = ix * N + iy;
+            const int pos = lat.positionFromXY(ix, iy);
             const double x = -L / 2. + a * ix;
             const double TA = lat.cells[pos]->getTpA() * a * a / hbarc / hbarc;
             const double TB = lat.cells[pos]->getTpB() * a * a / hbarc / hbarc;

@@ -43,7 +43,7 @@ TEST_CASE(
 
     for (int ix = 0; ix < N; ++ix) {
         for (int iy = 0; iy < N; ++iy) {
-            const int pos = ix * N + iy;
+            const int pos = lat.positionFromXY(ix, iy);
             const double x = ix - N / 2.0 + 0.3;
             const double y = iy - N / 2.0 - 0.2;
             const double r2 = x * x + y * y + 1.0;

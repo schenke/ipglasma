@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "Cell.h"
+#include "LatticeIndex.h"
 #include "Matrix.h"
 #include "Parameters.h"
 #include "PrettyOstream.h"
@@ -28,6 +29,8 @@ class Lattice {
     /// Total number of sites, `length*length` (despite the name, *not*
     /// the lattice side length -- see getSize()).
     int size_;
+    /// Lattice side length (sites per dimension).
+    int length_;
     /// Log sink for progress/error messages.
     PrettyOstream messager_;
 
@@ -69,6 +72,33 @@ class Lattice {
      * \return Total number of sites.
      */
     int getSize() const { return size_; }
+    /**
+     * Returns the lattice side length.
+     * \return Number of sites per dimension.
+     */
+    int getLength() const { return length_; }
+    /**
+     * Site index of the transverse position (\p ix, \p iy); see
+     * latticeIndex().
+     * \param[in] ix Site index in \f$x\f$.
+     * \param[in] iy Site index in \f$y\f$.
+     * \return The index into the per-site vectors.
+     */
+    int positionFromXY(int ix, int iy) const {
+        return latticeIndex(ix, iy, length_);
+    }
+    /**
+     * The \f$x\f$ index of a site; inverse of positionFromXY().
+     * \param[in] pos Index into the per-site vectors.
+     * \return The site's \f$x\f$ index.
+     */
+    int xFromPosition(int pos) const { return latticeX(pos, length_); }
+    /**
+     * The \f$y\f$ index of a site; inverse of positionFromXY().
+     * \param[in] pos Index into the per-site vectors.
+     * \return The site's \f$y\f$ index.
+     */
+    int yFromPosition(int pos) const { return latticeY(pos, length_); }
 
     // Fundamental matrix lattice fields. Logical aliases are:
     // U/E1, U2/E2, Ux1/g, Uy1/Uplaq, Ux2/pi, Uy2/phi.

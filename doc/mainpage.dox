@@ -10,6 +10,8 @@ grouped by physics topic.
 \par Where to start
 - \ref md_README -- what IP-Glasma computes, how to build it, and every
   input-file parameter.
+- \ref md_OUTPUT -- every output file: when it is written, in which order,
+  and its format.
 - \ref md_CONTRIBUTING -- coding/documentation conventions for anyone
   changing this codebase.
 - \ref md_CHANGELOG -- what changed between versions.

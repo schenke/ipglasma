@@ -63,6 +63,7 @@ class CollisionGeometry {
      * Determines \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$ from the
      * nucleon positions, writes `NcollList*.dat`/`NpartList*.dat`, and
      * sets `param->event.Npart`.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in,out] param Simulation parameters.
      * \param[in,out] random Random-number source (Gaussian wounding).
      * \param[out] Npart Number of participants.
@@ -80,6 +81,7 @@ class CollisionGeometry {
      * `.collided`, using either a hard-sphere (\f$d_{ij}^2 <\f$ \p d2)
      * or Gaussian-profile wounding criterion depending on
      * `param->collision.gaussianWounding`.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source (Gaussian wounding only).
      * \param[in] d2 Squared wounding distance
@@ -157,6 +159,7 @@ class CollisionGeometry {
      * Appends this event's collision geometry to `usedParameters<id>.dat`
      * as comment lines (called only when computeQuantities() marks the
      * event a success).
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in] phiRP Reaction-plane angle [rad].
      * \param[in] Npart Number of participants.
@@ -168,6 +171,7 @@ class CollisionGeometry {
      * Writes this event's `NgluonEstimators<id>.dat` file (rough
      * gluon-multiplicity estimator inputs: \f$Q_s^2 S_T\f$ combinations
      * for the min/average/max \f$Q_s\f$ choices).
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in] a Lattice spacing [fm].
      * \param[in] averageQs2 Average \f$Q_s^2\f$ (max).

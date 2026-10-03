@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -27,6 +28,19 @@ void removeGeometryFiles() {
     std::remove("NpartList0.dat");
     std::remove("NgluonEstimators0.dat");
     std::remove("usedParameters0.dat");
+}
+
+// Number of whitespace-separated columns of every line (0 for a blank one).
+std::vector<int> columnCounts(const std::string &fileName) {
+    std::ifstream in(fileName);
+    std::vector<int> counts;
+    for (std::string line; std::getline(in, line);) {
+        std::istringstream columns(line);
+        int count = 0;
+        for (std::string token; columns >> token;) count++;
+        counts.push_back(count);
+    }
+    return counts;
 }
 
 int countLines(const std::string &fileName) {
@@ -89,6 +103,11 @@ TEST_CASE(
     CHECK(nucleusB[2].collided == 0);
     CHECK(countLines("NcollList0.dat") == 2);
     CHECK(countLines("NpartList0.dat") == 5);
+    // OUTPUT.md: x y proton collided per nucleon, a blank line between the
+    // nuclei; x y per binary collision
+    CHECK(
+        columnCounts("NpartList0.dat") == std::vector<int> {4, 4, 0, 4, 4, 4});
+    CHECK(columnCounts("NcollList0.dat") == std::vector<int> {2, 2});
 
     // a fixed Npart that doesn't match rejects the event
     param.collision.useFixedNpart = 4;
@@ -244,4 +263,36 @@ TEST_CASE(
     // leaves N - 2 rows (a flattened index used to let (ix, -1) alias
     // (ix - 1, N - 1))
     CHECK(fullLatticeSum(2., M_PI / 2.) == doctest::Approx(N * (N - 2)));
+}
+
+TEST_CASE(
+    "CollisionGeometry::writeNgluonEstimatorsFile writes a header and the "
+    "four estimators documented in OUTPUT.md") {
+    Parameters param;
+    makeInitTestParam(param, 4);
+    std::vector<ReturnValue> nucleusA, nucleusB;
+    CollisionGeometry geometry(nucleusA, nucleusB);
+    const double a = 0.5;
+    geometry.writeNgluonEstimatorsFile(&param, a, 2., 1.5, 3., 10);
+
+    std::ifstream in("NgluonEstimators0.dat");
+    REQUIRE(in.good());
+    std::string header, values;
+    std::getline(in, header);
+    std::getline(in, values);
+    in.close();
+    removeGeometryFiles();
+    CHECK(header.rfind("#", 0) == 0);
+    std::istringstream columns(values);
+    double minimum, average, maximum, logTerm;
+    columns >> minimum >> average >> maximum >> logTerm;
+    REQUIRE(!columns.fail());
+    const double toDimensionless = a * a / PhysConst::hbarc / PhysConst::hbarc;
+    CHECK(minimum == doctest::Approx(3. * toDimensionless));
+    CHECK(average == doctest::Approx(1.5 * 10 * toDimensionless));
+    CHECK(maximum == doctest::Approx(2. * 10 * toDimensionless));
+    CHECK(
+        logTerm
+        == doctest::Approx(
+            3. * toDimensionless * std::pow(std::log(2. * 10 / 3.), 2.)));
 }

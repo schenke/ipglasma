@@ -138,6 +138,7 @@ class Evolution {
      * matrices per cell, little-endian single-precision, preceded by an
      * 8-byte magic string, an 8-byte metadata length, and a JSON
      * metadata header describing the layout/units/staggering.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read the fields from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current time step index, used for the file name and

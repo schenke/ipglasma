@@ -437,7 +437,7 @@ bool readInput(Parameters *param, int argc, char *argv[], int rank) {
 
 void writeparams(Parameters *param) {
     // write the values of all input parameters this event used to
-    // "usedParameters<id>.dat", in input-file syntax
+    // "usedParameters<id>.dat", in input-file syntax (see OUTPUT.md)
     stringstream strup_name;
     strup_name << "usedParameters" << param->event.eventId << ".dat";
     ofstream fout1(strup_name.str());

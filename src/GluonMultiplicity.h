@@ -37,6 +37,7 @@ class GluonMultiplicity {
      * `output.writeOutputs==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
      * the `gluonMultiplicity<id>.json` target
      * (writeTarget()).
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in,out] lat Lattice to read the fields from (gauge-fixed in
      * place by `GaugeFix::fftChi`).
      * \param[in] group Group instance, forwarded to `GaugeFix::fftChi`.
@@ -56,6 +57,7 @@ class GluonMultiplicity {
      * `NpartdNdy-mod.dat`. Not part of the normal Evolution::run() flow;
      * terminates the process (`exit(1)`) unconditionally when done, and also
      * exits early if either input file is missing.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      */
     static void readNkt(Parameters *param);
@@ -68,6 +70,7 @@ class GluonMultiplicity {
      * \f$z\f$ via a GSL cubic spline, to get a hadron \f$p_T\f$ spectrum,
      * writing `multiplicityHadrons<id>.dat`. \p Nhgsl (length
      * `hbins+1`) is scratch/output space owned by the caller.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in] a Lattice spacing [fm].
      * \param[in] dkt Momentum-bin width [lattice units].
@@ -87,6 +90,7 @@ class GluonMultiplicity {
      * event's gluon spectrum and integrated multiplicity/energy
      * (including the cut sums above 3 and 6 GeV and the binned spectrum
      * itself), intended as a downstream analysis/ML training target.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in] it Current time step index.
      * \param[in] a Lattice spacing [fm].

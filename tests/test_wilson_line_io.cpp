@@ -169,13 +169,16 @@ TEST_CASE(
     io.readText(textPath, &param, NucleusRole::Projectile, lat.U);
     std::remove(textPath.c_str());
 
-    // a=1 (L=N), b=3: isProjectile shifts x by -b/2=-1.5, so
-    // ix = floor(i - 1.5); i=0,1 -> negative -> skipped, i=2 -> ix=0,
-    // i=3 -> ix=1.
+    // a=1 (L=N), b=3: isProjectile shifts x by -b/2=-1.5 and rounds to the
+    // nearest column, as the binary reader does: ix = round(i - 1.5), so
+    // i=0,1 -> -2,-1 (skipped), i=2 -> ix=1, i=3 -> ix=2; column 0 keeps
+    // its initial identity.
     for (int j = 0; j < N; ++j) {
-        const int pos2 = latticeIndex(0, j, N);  // from i=2
+        CHECK(
+            lat.U[latticeIndex(0, j, N)].get(0).real() == doctest::Approx(1.));
+        const int pos2 = latticeIndex(1, j, N);  // from i=2
         CHECK(lat.U[pos2].get(0).real() == doctest::Approx(2000. + j * 100.));
-        const int pos3 = latticeIndex(1, j, N);  // from i=3
+        const int pos3 = latticeIndex(2, j, N);  // from i=3
         CHECK(lat.U[pos3].get(0).real() == doctest::Approx(3000. + j * 100.));
     }
 
@@ -264,6 +267,45 @@ TEST_CASE(
                     lat2.U[pos].get(k).imag()
                     == doctest::Approx(lat.U[pos].get(k).imag()));
             }
+        }
+    }
+}
+
+TEST_CASE(
+    "WilsonLineIO: both formats put every column back in place when the "
+    "lattice spacing is not a binary fraction") {
+    // N = 10, L = 7: a = 0.7, where (a * i) / a truncates to i - 1 for
+    // i = 3 and 6; the text reader used to truncate instead of rounding
+    const int N = 10;
+    for (int format : {1, 2}) {
+        CAPTURE(format);
+        Parameters param;
+        makeInitTestParam(param, N);
+        param.lattice.L = 7.;
+        param.event.b = 0.;
+        param.wilsonLines.wilsonLinePath = ".";
+        param.wilsonLines.writeWilsonLines = format;
+
+        Lattice lat(&param, N);
+        for (int pos = 0; pos < N * N; ++pos) {
+            lat.U2[pos] = makeTestMatrix(pos);  // the target's Wilson line
+        }
+        WilsonLineIO().write(&lat, &param, NucleusRole::Target);
+        const std::string path =
+            WilsonLineIO::fileName(&param, -1., NucleusRole::Target, format);
+
+        WilsonLineIO io;
+        Lattice lat2(&param, N);
+        if (format == 1) {
+            io.readText(path, &param, NucleusRole::Target, lat2.U2);
+        } else {
+            io.readBinary(path, &param, NucleusRole::Target, lat2.U2);
+        }
+        std::remove(path.c_str());
+
+        for (int pos = 0; pos < N * N; ++pos) {
+            CAPTURE(pos);
+            CHECK(matricesClose(lat2.U2[pos], lat.U2[pos], 1e-12));
         }
     }
 }

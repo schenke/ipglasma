@@ -18,6 +18,7 @@
  */
 class NucleonProfile {
   public:
+    /// Destroys the profile.
     virtual ~NucleonProfile() = default;
     /**
      * The nucleon's thickness at a transverse position.
@@ -135,6 +136,7 @@ class HotSpotProfile : public NucleonProfile {
  */
 class NucleonModel {
   public:
+    /// Destroys the model.
     virtual ~NucleonModel() = default;
     /**
      * Samples the structure of one nucleon.

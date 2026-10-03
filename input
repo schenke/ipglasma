@@ -16,6 +16,7 @@ dqMin 0.
 omega 1.
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
+nucleonModel hotspots
 Nq 3
 NqFluc 0.0
 runningCoupling 0

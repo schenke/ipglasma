@@ -125,21 +125,18 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: posterior types 2 and 4 need Nq 0 or 3") {
+    "Parameters::validationErrors: posterior parameter sets require hot-spot "
+    "nucleons") {
     Parameters param;
     makeValidBaseline(param);
-    for (int type : {2, 4}) {
+    for (int type : {1, 2, 4}) {
         CAPTURE(type);
         param.subnucleon.subNucleonParamType = type;
-        for (double nq : {0., 3.}) {
-            param.subnucleon.Nq = nq;
-            CHECK(param.validationErrors().empty());
-        }
-        param.subnucleon.Nq = 5.;
+        param.subnucleon.nucleonModel = "hotspots";
+        CHECK(param.validationErrors().empty());
+        param.subnucleon.nucleonModel = "gaussian";
         CHECK(param.validationErrors().size() == 1);
     }
-    param.subnucleon.subNucleonParamType = 1;  // variable Nq
-    CHECK(param.validationErrors().empty());
 }
 
 namespace {
@@ -168,7 +165,7 @@ TEST_CASE(
     Parameters param;
 
     std::vector<std::vector<float>> parsed;
-    param.loadPosteriorParameterSetsFromFile(file.path(), parsed);
+    CHECK(param.loadPosteriorParameterSetsFromFile(file.path(), parsed) == "");
 
     REQUIRE(parsed.size() == 2);
     REQUIRE(parsed[0].size() == 7);
@@ -176,4 +173,47 @@ TEST_CASE(
     CHECK(parsed[0][1] == doctest::Approx(3.3));
     CHECK(parsed[1][4] == doctest::Approx(4.0));
     CHECK(parsed[1][6] == doctest::Approx(0.3));
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: rejects negative rapidities only with a "
+    "fixed x, where they index the Q_s table directly") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.rapidityA = 0.;
+    param.colorCharge.rapidityB = -0.5;
+    CHECK(param.validationErrors().size() == 1);
+    param.colorCharge.rapidityA = -0.5;
+    param.colorCharge.rapidityB = 0.;
+    CHECK(param.validationErrors().size() == 1);
+
+    // a fluctuating x looks up the table at y >= 0 only
+    param.colorCharge.useFluctuatingX = true;
+    CHECK(param.validationErrors().empty());
+    // no color charges are sampled
+    param.colorCharge.useFluctuatingX = false;
+    param.wilsonLines.readInitialWilsonLines = 2;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.collision.useNucleus = false;
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
+    "Parameters::loadPosteriorParameterSetsFromFile reports a missing file "
+    "and a value that is not a number") {
+    Parameters param;
+    std::vector<std::vector<float>> parsed;
+    CHECK(
+        param.loadPosteriorParameterSetsFromFile(
+            "no_such_posterior_file.csv", parsed)
+        == "cannot open the posterior parameter file "
+           "no_such_posterior_file.csv");
+
+    TempCsvFile file("m,BG\n0.4,3.3\n0.5,x\n");
+    const std::string problem =
+        param.loadPosteriorParameterSetsFromFile(file.path(), parsed);
+    CHECK(problem == file.path() + ":3: x is not a number");
 }

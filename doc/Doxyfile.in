@@ -53,6 +53,7 @@ WARN_NO_PARAMDOC       = YES
 #---------------------------------------------------------------------------
 INPUT                  = doc/mainpage.dox \
                           README.md \
+                          OUTPUT.md \
                           CONTRIBUTING.md \
                           CHANGELOG.md \
                           src

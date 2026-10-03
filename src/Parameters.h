@@ -95,11 +95,11 @@ struct NucleusParameters {
     /// nucleonPositionsFromFile is `1`).
     std::string nuclearConfigurationsPath;
     /// Which configuration file to use for light nuclei with
-    /// nucleonPositionsFromFile (see Init::readInNucleusConfigs()): `0`
-    /// the default (variational Monte Carlo; clustered PGCM for Ne20),
-    /// `1` alpha clusters (C, O) or triton (A = 3), `2`/`3`
-    /// clustered/uniform PGCM (O, Ne), `4`/`5` NLEFT with
-    /// positive/negative weights (O, Ne; `4` also for Ar).
+    /// nucleonPositionsFromFile (see NucleusSampler::readConfigurationFile()):
+    /// `0` the default (variational Monte Carlo; clustered PGCM for Ne20), `1`
+    /// alpha clusters (C, O) or triton (A = 3), `2`/`3` clustered/uniform PGCM
+    /// (O, Ne), `4`/`5` NLEFT with positive/negative weights (O, Ne; `4` also
+    /// for Ar).
     int lightNucleusOption = 0;
     /// Projectile polarization: `0` unpolarized, `1` longitudinally
     /// polarized, `2` transversely polarized.
@@ -152,6 +152,10 @@ struct SubnucleonParameters {
     /// Infrared mass regulator [GeV] cutting off the Coulomb tail;
     /// should be of order \f$\Lambda_{QCD}=0.2\f$ GeV.
     double m = 0.;
+    /// Transverse structure of a nucleon, see NucleonModel: `gaussian`
+    /// (a single Gaussian of width BG) or `hotspots` (Nq Gaussian hot
+    /// spots of width BGq, distributed with width BG).
+    std::string nucleonModel = "gaussian";
     /// Width [GeV\f$^{-2}\f$] of the Gaussian describing the proton's
     /// shape, \f$T \sim e^{-b^2/(2B)}\f$.
     double BG = 0.;
@@ -167,11 +171,10 @@ struct SubnucleonParameters {
     /// radial-position sampling (see Random::setGammaIncCDF()); `1`
     /// reduces to plain 3D Gaussian sampling.
     double omega = 0.;
-    /// Mean number of constituent quarks ("hot spots") per nucleon: `0`
-    /// disables substructure, otherwise it must be at least 1. Sets
-    /// NqBase: each nucleon gets floor(NqBase) quarks, one more with
-    /// probability equal to the fractional part, plus a Poisson
-    /// fluctuation of mean NqFluc.
+    /// Mean number of hot spots (constituent quarks) per nucleon for
+    /// `nucleonModel hotspots`, at least 1. Sets NqBase: each nucleon
+    /// gets floor(NqBase) hot spots, one more with probability equal to
+    /// the fractional part, plus a Poisson fluctuation of mean NqFluc.
     double Nq = 0.;
     /// Base number of constituent quarks (posterior-fit parameter; see
     /// setParamsWithPosteriorParameterSet()).
@@ -181,9 +184,11 @@ struct SubnucleonParameters {
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).
     bool shiftConstituentQuarkProtonOrigin = false;
-    /// Anisotropy \f$\xi\f$ of the proton thickness function,
-    /// \f$T \propto \exp[-(x^2+\xi y^2)/2B]/(2\pi B\sqrt{\xi})\f$ (an
-    /// initial test parameter).
+    /// Anisotropy \f$\xi\f$ of the `nucleonModel gaussian` thickness,
+    /// \f$T \propto \sqrt{1+\xi}\,\exp[-(b^2+\xi(\vec b\cdot\hat
+    /// n)^2)/2B]/(2\pi B)\f$ with \f$\hat n=(\cos\phi,\sin\phi)\f$ at a
+    /// random angle \f$\phi\f$ per nucleon, i.e. narrower along \f$\hat
+    /// n\f$ for \f$\xi>0\f$ (an initial test parameter).
     double protonAnisotropy = 0.;
     /// Selects which Bayesian-posterior-fit table
     /// setParamsWithPosteriorParameterSet() draws from: `1` (variable
@@ -191,7 +196,8 @@ struct SubnucleonParameters {
     /// \f$N_q=3\f$); see loadPosteriorParameterSets().
     int subNucleonParamType = 0;
     /// Index into the posterior parameter set selected by \c
-    /// subNucleonParamType, modulo the table's row count.
+    /// subNucleonParamType, modulo the table's row count; `-1` draws a
+    /// random set every event.
     int subNucleonParamSet = 0;
     /// Whether to smear \f$Q_s\f$ using a Poisson distribution around
     /// its mean at every transverse position (`1`) or not (`0`).
@@ -316,7 +322,7 @@ struct WilsonLineParameters {
     int writeWilsonLines = 0;
     /// Path to the directory where generated Wilson lines are written
     /// to, or existing ones read from (see
-    /// Lattice::generateWilsonLineDataFileName()).
+    /// WilsonLineIO::fileName()).
     std::string wilsonLinePath;
     /// Whether to generate initial Wilson lines (`0`), or read them
     /// from plain text (`1`) or binary (`2`).
@@ -475,12 +481,13 @@ class Parameters {
     /**
      * Loads a posterior-fit parameter table from a CSV file (skipping
      * its header row) into \p ParamSet.
-     * \param[in] posteriorFileName Path to the CSV file; exits with an
-     * error if it can't be opened.
+     * \param[in] posteriorFileName Path to the CSV file.
      * \param[out] ParamSet Appended with one row per CSV data line,
      * each a vector of the comma-separated values parsed as `float`.
+     * \return An error message if the file can't be opened or a value is
+     * not a number, otherwise an empty string.
      */
-    void loadPosteriorParameterSetsFromFile(
+    std::string loadPosteriorParameterSetsFromFile(
         std::string posteriorFileName,
         std::vector<std::vector<float>> &ParamSet);
     /**
@@ -490,8 +497,8 @@ class Parameters {
      * \f$N_q\f$); `2` loads `tables/posterior_Nq3.csv`; `4` loads
      * `tables/posterior5020_Nq3.csv` (both fixed \f$N_q=3\f$); any
      * other value is a no-op.
-     * \return An error message if the table is empty or a row has too
-     * few values, otherwise an empty string.
+     * \return An error message if the file can't be read, the table is
+     * empty or a row has too few values, otherwise an empty string.
      */
     std::string loadPosteriorParameterSets(const int itype);
     /**

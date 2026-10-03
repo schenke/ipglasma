@@ -12,8 +12,9 @@
  * Extracts the local fluid four-velocity \f$u^\mu\f$, energy density
  * \f$\epsilon\f$, and shear-stress tensor \f$\pi^{\mu\nu}\f$ from the
  * classical energy-momentum tensor \f$T^{\mu\nu}\f$ (already computed
- * by Evolution::tmunu()) via Landau matching, and writes the resulting
- * hydrodynamic initial condition (and/or raw \f$T^{\mu\nu}\f$) to disk.
+ * by EnergyMomentumTensor::compute()) via Landau matching, and writes the
+ * resulting hydrodynamic initial condition (and/or raw \f$T^{\mu\nu}\f$) to
+ * disk.
  */
 class MyEigen {
   private:
@@ -57,7 +58,7 @@ class MyEigen {
      * every site (in parallel) and stores them in the lattice cells,
      * without writing any output. flowVelocity4D() calls this before
      * writing; call it directly when only the cell values are needed
-     * (e.g. by Evolution::eccentricity(), which weights by
+     * (e.g. by Eccentricity::compute(), which weights by
      * \f$\epsilon u^\tau\f$).
      * \param[in,out] lat Lattice to read \f$T^{\mu\nu}\f$ from and
      * store the solution into.
@@ -90,6 +91,7 @@ class MyEigen {
      * Writes the hydro-flow text output (`epsilon-u-Hydro*.dat`):
      * per-cell interpolated energy density, \f$u^\mu\f$, and
      * \f$\pi^{\mu\nu}\f$ on the output grid.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.
@@ -129,6 +131,7 @@ class MyEigen {
      * grid, in text or a little-endian binary format depending on
      * `param->output.writeTmunuBinary`/`IPGLASMA_BINARY_TMUNU`. A no-op
      * unless `param->output.writeOutputs`'s bit 2 (value `4`) is set.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.
@@ -155,6 +158,7 @@ class MyEigen {
      * \f$g^2\mu_A^2 g^2\mu_B^2\f$, normalized so its grid integral
      * matches \p Etot. A no-op unless `param->output.writeOutputs`'s bit
      * 1 (value `2`) is set.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.

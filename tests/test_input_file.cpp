@@ -1,6 +1,10 @@
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <system_error>
 #include <vector>
 
 #include "InputFile.h"
@@ -287,8 +291,9 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"maxTime", "-1", "must not be negative"},
              {"nucleiToAverage", "0", "must be positive"},
              {"polarizationTarget", "3", "must be one of 0, 1, 2"},
-             {"Nq", "-1", "must be 0 (no substructure) or at least 1"},
-             {"Nq", "0.5", "must be 0 (no substructure) or at least 1"},
+             {"Nq", "0", "must be at least 1"},
+             {"Nq", "0.5", "must be at least 1"},
+             {"nucleonModel", "stringy", "must be one of gaussian, hotspots"},
              {"size", "255", "must be even"},
              {"omega", "0", "must be positive"},
              {"subNucleonParamType", "3", "must be one of 0, 1, 2, 4"},
@@ -481,4 +486,175 @@ TEST_CASE("Parameters::readInput: rejects a maxTime needing too many steps") {
         readErrors(exampleInputWith("maxTime", "1e12"));
     REQUIRE(errors.size() == 1);
     CHECK(anyContains(errors, "more than 1e8 time steps"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: each nucleon model only reads its own "
+    "parameters") {
+    // hotspots (the shipped input): the hot-spot keys are required
+    CHECK(anyContains(
+        readErrors(exampleInputWith("BGq", "")), "BGq is required"));
+
+    // gaussian: the hot-spot keys are accepted and ignored...
+    {
+        Parameters param;
+        const std::vector<std::string> errors = param.readInput(
+            inputFromText(exampleInputWith("nucleonModel", "gaussian")));
+        for (const std::string &error : errors) CAPTURE(error);
+        CHECK(errors.empty());
+    }
+    // ...and not needed
+    std::string gaussian;
+    {
+        std::istringstream in(exampleInputWith("nucleonModel", "gaussian"));
+        std::string line;
+        while (std::getline(in, line)) {
+            bool hotSpotKey = false;
+            for (const char *key :
+                 {"BGq ", "BGqVar ", "dqMin ", "omega ", "Nq ", "NqFluc ",
+                  "shiftConstituentQuarkProtonOrigin "}) {
+                if (line.rfind(key, 0) == 0) hotSpotKey = true;
+            }
+            if (!hotSpotKey) gaussian += line + "\n";
+        }
+    }
+    Parameters param;
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(gaussian));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(param.subnucleon.nucleonModel == "gaussian");
+}
+
+TEST_CASE(
+    "Parameters::readInput: a posterior parameter set replaces m, BG, BGq, "
+    "smearingWidth, QsMuRatio, dqMin and Nq, which are then not read") {
+    // readInput() loads tables/posterior_Nq3.csv for type 2; provide a
+    // one-row table if none exists in the working directory
+    const std::string table = "tables/posterior_Nq3.csv";
+    const bool ownTable = !std::filesystem::exists(table);
+    const bool ownDirectory = !std::filesystem::exists("tables");
+    if (ownTable) {
+        std::filesystem::create_directories("tables");
+        std::ofstream out(table);
+        out << "m,BG,BGq,smearingWidth,QsmuRatio,dqmin\n"
+            << "0.3,4.0,0.3,0.5,0.6,0.2\n";
+    }
+
+    std::string text;
+    {
+        std::istringstream in(exampleInputWith("subNucleonParamType", "2"));
+        std::string line;
+        while (std::getline(in, line)) {
+            bool replaced = false;
+            for (const char *key :
+                 {"m ", "BG ", "BGq ", "smearingWidth ", "QsMuRatio ", "dqMin ",
+                  "Nq "}) {
+                if (line.rfind(key, 0) == 0) replaced = true;
+            }
+            if (!replaced) text += line + "\n";
+        }
+    }
+    Parameters param;
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(text));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(param.validationErrors().empty());
+
+    // the replaced keys are accepted and ignored when present
+    Parameters withReplacedKeys;
+    const std::vector<std::string> replacedErrors = withReplacedKeys.readInput(
+        inputFromText(exampleInputWith("subNucleonParamType", "2")));
+    for (const std::string &error : replacedErrors) CAPTURE(error);
+    CHECK(replacedErrors.empty());
+
+    if (ownTable) std::remove(table.c_str());
+    if (ownDirectory) {
+        std::error_code ignored;  // keep a directory that is not empty
+        std::filesystem::remove("tables", ignored);
+    }
+}
+
+TEST_CASE(
+    "Parameters::readInput: subNucleonParamSet must be -1 (random) or a set "
+    "index") {
+    std::string text;
+    {
+        std::istringstream in(exampleInputWith("subNucleonParamType", "2"));
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("subNucleonParamSet ", 0) == 0) {
+                line = "subNucleonParamSet -2";
+            }
+            text += line + "\n";
+        }
+    }
+    CHECK(anyContains(
+        readErrors(text),
+        "subNucleonParamSet -2: must be -1 (random) or a set index >= 0"));
+}
+
+TEST_CASE("Parameters::readInput: protonAnisotropy must be larger than -1") {
+    const std::string gaussian = exampleInputWith("nucleonModel", "gaussian");
+    auto withAnisotropy = [&gaussian](const std::string &value) {
+        std::istringstream in(gaussian);
+        std::string line, text;
+        while (std::getline(in, line)) {
+            if (line.rfind("protonAnisotropy ", 0) == 0) {
+                line = "protonAnisotropy " + value;
+            }
+            text += line + "\n";
+        }
+        return text;
+    };
+    CHECK(anyContains(
+        readErrors(withAnisotropy("-1")),
+        "protonAnisotropy -1: must be larger than -1"));
+    CHECK(readErrors(withAnisotropy("-0.5")).empty());
+}
+
+TEST_CASE(
+    "Parameters::readInput: useConstituentQuarkProton points to "
+    "nucleonModel") {
+    std::istringstream in(readSourceFile("input"));
+    std::string line, oldInput;
+    while (std::getline(in, line)) {
+        if (line.rfind("nucleonModel ", 0) == 0) continue;
+        if (line.rfind("Nq ", 0) == 0) line = "useConstituentQuarkProton 3";
+        oldInput += line + "\n";
+    }
+    const std::vector<std::string> errors = readErrors(oldInput);
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(anyContains(
+        errors,
+        "unknown parameter useConstituentQuarkProton (replaced by "
+        "nucleonModel"));
+    CHECK(anyContains(errors, "nucleonModel is required"));
+    CHECK_FALSE(anyContains(errors, "renamed to Nq"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: a posterior set with gaussian nucleons is "
+    "reported as such, without needing the posterior table") {
+    Parameters param;
+    std::string text;
+    {
+        std::istringstream in(exampleInputWith("nucleonModel", "gaussian"));
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("subNucleonParamType ", 0) == 0) {
+                line = "subNucleonParamType 4";
+            }
+            text += line + "\n";
+        }
+    }
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(text));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(anyContains(
+        param.validationErrors(),
+        "subNucleonParamType = 4 (a posterior parameter set) requires "
+        "nucleonModel hotspots"));
 }

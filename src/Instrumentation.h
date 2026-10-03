@@ -85,6 +85,7 @@ class Profiler {
      * (default: the current directory), writing a header line first if
      * the file is new/empty. A no-op if profiling is disabled or no
      * event is active.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      */
     void endEvent();
 
@@ -195,6 +196,7 @@ bool fingerprintEnabled();
  * is strong evidence their full lattice state matches bit-for-bit
  * (used to verify a refactor changed no numeric output). A no-op if
  * fingerprinting is disabled or \p lat is `NULL`.
+ * The file is described in \ref md_OUTPUT "OUTPUT.md".
  * \param[in] lat Lattice to digest.
  * \param[in] rank This process' MPI rank, used in the output filename.
  * \param[in] event_id Identifier recorded alongside every row.

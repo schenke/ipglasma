@@ -15,6 +15,14 @@
 Reading, the unknown-key check and the `usedParameters` output all follow
 from the table; nothing else needs to change.
 
+## Changing an output file
+
+Every file IP-Glasma writes is described in [OUTPUT.md](OUTPUT.md): when it is
+written, its name, layout, column order and units. When you add an output
+file or change the content or layout of one, update its section there in the
+same change, and point to it from the Doxygen comment of the function that
+writes it.
+
 ## Code documentation
 
 IP-Glasma uses [Doxygen](https://www.doxygen.nl/)-style documentation,

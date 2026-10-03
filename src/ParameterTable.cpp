@@ -307,6 +307,51 @@ bool wsDeformParamsSet(const Parameters &p) {
  */
 bool saveSnapshotsSet(const Parameters &p) { return p.jimwlk.saveSnapshots; }
 
+/**
+ * Condition for the parameters of the gaussian nucleon model.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `gaussian`.
+ */
+bool gaussianNucleons(const Parameters &p) {
+    return p.subnucleon.nucleonModel == "gaussian";
+}
+
+/**
+ * Condition for the parameters of the hot-spot nucleon model.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `hotspots`.
+ */
+bool hotSpotNucleons(const Parameters &p) {
+    return p.subnucleon.nucleonModel == "hotspots";
+}
+
+/**
+ * Condition for the parameters a posterior parameter set replaces.
+ * \param[in] p The parameters read so far.
+ * \return Whether `subNucleonParamType` is 0 (no posterior set).
+ */
+bool inputParameters(const Parameters &p) {
+    return p.subnucleon.subNucleonParamType == 0;
+}
+
+/**
+ * Condition for the parameters of a posterior parameter set.
+ * \param[in] p The parameters read so far.
+ * \return Whether `subNucleonParamType` selects a posterior set.
+ */
+bool posteriorParameters(const Parameters &p) {
+    return p.subnucleon.subNucleonParamType != 0;
+}
+
+/**
+ * Condition for the hot-spot parameters a posterior set replaces.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `hotspots` without a posterior set.
+ */
+bool hotSpotsFromInput(const Parameters &p) {
+    return hotSpotNucleons(p) && inputParameters(p);
+}
+
 /// Short name for the table entries.
 using P = Parameters;
 
@@ -423,41 +468,64 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("dMin", &P::nucleus, &NucleusParameters::dMin),
 
         // nucleon substructure and color charges
-        param("m", &P::subnucleon, &SubnucleonParameters::m),
-        param("BG", &P::subnucleon, &SubnucleonParameters::BG),
-        param("BGq", &P::subnucleon, &SubnucleonParameters::BGq),
-        param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar),
-        param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin),
-        param("omega", &P::subnucleon, &SubnucleonParameters::omega)
-            .check(positive()),
-        // 0 < Nq < 1 is rejected: it used to switch the substructure off
-        // (the on/off flag was the truncated value), but would now give
-        // every nucleon one quark
-        param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
-            .check([](const double &v) {
-                return (v == 0. || v >= 1.)
-                           ? ""
-                           : "must be 0 (no substructure) or at least 1";
-            }),
-        param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc),
         param(
-            "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
-            &SubnucleonParameters::shiftConstituentQuarkProtonOrigin),
-        param(
-            "protonAnisotropy", &P::subnucleon,
-            &SubnucleonParameters::protonAnisotropy),
+            "nucleonModel", &P::subnucleon, &SubnucleonParameters::nucleonModel)
+            .check(oneOf<std::string>({"gaussian", "hotspots"})),
+        // a posterior parameter set replaces m, BG, BGq, smearingWidth,
+        // NqBase, QsMuRatio and dqMin every event, so those are only read
+        // without one
         param(
             "subNucleonParamType", &P::subnucleon,
             &SubnucleonParameters::subNucleonParamType)
             .check(oneOf({0, 1, 2, 4}, " (0: use the input values)")),
         param(
             "subNucleonParamSet", &P::subnucleon,
-            &SubnucleonParameters::subNucleonParamSet),
-        param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio),
+            &SubnucleonParameters::subNucleonParamSet)
+            .onlyIf(posteriorParameters)
+            .check([](const int &v) {
+                return v >= -1 ? "" : "must be -1 (random) or a set index >= 0";
+            }),
+        param("m", &P::subnucleon, &SubnucleonParameters::m)
+            .onlyIf(inputParameters),
+        param("BG", &P::subnucleon, &SubnucleonParameters::BG)
+            .onlyIf(inputParameters),
+        // gaussian nucleons
+        param(
+            "protonAnisotropy", &P::subnucleon,
+            &SubnucleonParameters::protonAnisotropy)
+            .onlyIf(gaussianNucleons)
+            // the thickness is normalized with sqrt(1 + protonAnisotropy)
+            .check([](const double &v) {
+                return v > -1. ? "" : "must be larger than -1";
+            }),
+        // hot-spot nucleons
+        param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
+            .onlyIf(hotSpotsFromInput),
+        param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
+            .onlyIf(hotSpotNucleons),
+        param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
+            .onlyIf(hotSpotsFromInput),
+        param("omega", &P::subnucleon, &SubnucleonParameters::omega)
+            .onlyIf(hotSpotNucleons)
+            .check(positive()),
+        param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
+            .onlyIf(hotSpotsFromInput)
+            .check([](const double &v) {
+                return v >= 1. ? "" : "must be at least 1";
+            }),
+        param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc)
+            .onlyIf(hotSpotNucleons),
+        param(
+            "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
+            &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)
+            .onlyIf(hotSpotNucleons),
+        param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio)
+            .onlyIf(inputParameters),
         param("smearQs", &P::subnucleon, &SubnucleonParameters::smearQs),
         param(
             "smearingWidth", &P::subnucleon,
-            &SubnucleonParameters::smearingWidth),
+            &SubnucleonParameters::smearingWidth)
+            .onlyIf(inputParameters),
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp),
         param(
             "minimumQs2ST", &P::colorCharge,
@@ -598,7 +666,6 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"da_np", "deltaAnp"},
         {"force_dmin_flag", "forceDMin"},
         {"d_min", "dMin"},
-        {"useConstituentQuarkProton", "Nq"},
         {"SubNucleonParamType", "subNucleonParamType"},
         {"SubNucleonParamSet", "subNucleonParamSet"},
         {"UVdamp", "UVDamp"},
@@ -627,6 +694,19 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"xSnapshotList", "jimwlkXSnapshotList"},
     };
     return renamed;
+}
+
+/**
+ * Input keys of IP-Glasma before 2.0 that have no single new name, with
+ * a hint at what replaced them.
+ * \return Map from each old key to the hint.
+ */
+const std::map<std::string, std::string> &replacedKeys() {
+    static const std::map<std::string, std::string> replaced = {
+        {"useConstituentQuarkProton",
+         "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
+    };
+    return replaced;
 }
 
 /**
@@ -738,8 +818,11 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
         std::string message = source + ":" + std::to_string(entry.line)
                               + ": unknown parameter " + key;
         const auto renamed = renamedKeys().find(key);
+        const auto replaced = replacedKeys().find(key);
         if (renamed != renamedKeys().end()) {
             message += " (renamed to " + renamed->second + ")";
+        } else if (replaced != replacedKeys().end()) {
+            message += " (" + replaced->second + ")";
         } else {
             const std::string suggestion = closestName(key);
             if (!suggestion.empty())
@@ -771,7 +854,10 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
         nucleus.nucleonPositionsFromFile = true;
     }
     subnucleon.NqBase = subnucleon.Nq;
-    if (subnucleon.subNucleonParamType > 0) {
+    // the posterior sets are fits of hot-spot nucleons; validationErrors()
+    // reports any other model, so don't require the table for it
+    if (subnucleon.subNucleonParamType > 0
+        && subnucleon.nucleonModel == "hotspots") {
         const std::string problem =
             loadPosteriorParameterSets(subnucleon.subNucleonParamType);
         if (!problem.empty()) errors.push_back(problem);

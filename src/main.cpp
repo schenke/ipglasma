@@ -5,6 +5,7 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
+#include <iomanip>
 #include <iostream>
 #include <random>
 #include <sstream>
@@ -16,7 +17,8 @@
 #endif
 
 #include "Evolution.h"
-#include "FFT.h"
+#include "ForwardLightCone.h"
+#include "GluonMultiplicity.h"
 #include "Init.h"
 #include "InputFile.h"
 #include "Instrumentation.h"
@@ -26,6 +28,7 @@
 #include "Parameters.h"
 #include "PrettyOstream.h"
 #include "Random.h"
+#include "WilsonLineIO.h"
 
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
@@ -128,7 +131,10 @@ int main(int argc, char *argv[]) {
                  << seedList[rank] << " read from list.";
         messager.flush("info");
     }
-    random->setGammaIncCDF(param->subnucleon.omega);
+    // only the hot-spot positions are sampled from the gamma distribution
+    if (param->subnucleon.nucleonModel == "hotspots") {
+        random->setGammaIncCDF(param->subnucleon.omega);
+    }
 
     // event loop starts ...
     for (int iev = 0; iev < nev; iev++) {
@@ -205,7 +211,7 @@ int main(int argc, char *argv[]) {
 
         // either read k_T spectrum from file or do a fresh start
         if (param->output.readMultFromFile) {
-            evolution.readNkt(param);
+            GluonMultiplicity::readNkt(param);
         }
 
         // Keep the lattice lifetime inside this block so destruction is timed
@@ -227,7 +233,7 @@ int main(int argc, char *argv[]) {
                                   : InitializationMethod::ReadWlineBinary;
             }
             // First generate the V
-            init.init(&lat, &group, param, random, &glauber, init_method);
+            init.init(&lat, param, random, &glauber, init_method);
 
             if (param->jimwlk.enabled) {
                 messager.info("[main::main]: Start JIMWLK");
@@ -237,11 +243,13 @@ int main(int argc, char *argv[]) {
 
                 // Store final Wilson lines after JIMWLK evolution
                 if (param->wilsonLines.writeWilsonLines > 0) {
-                    lat.writeWilsonLines(
-                        param, NucleusRole::Projectile,
+                    WilsonLineIO io;
+                    io.write(
+                        &lat, param, NucleusRole::Projectile,
                         param->jimwlk.xProjectile);
-                    lat.writeWilsonLines(
-                        param, NucleusRole::Target, param->jimwlk.xTarget);
+                    io.write(
+                        &lat, param, NucleusRole::Target,
+                        param->jimwlk.xTarget);
                 }
             }
 
@@ -254,7 +262,7 @@ int main(int argc, char *argv[]) {
                     init.computeCollisionGeometryQuantities(&lat, param);
                 }
                 init.shiftFieldsWithImpactParameter(&lat, param);
-                init.initializeForwardLightCone(&lat, param);
+                ForwardLightCone(&group).initialize(&lat, param);
                 messager.info("[main::main]: Start CYM evolution");
                 // do the CYM evolution of the initialized fields using
                 // parmeters in param
@@ -429,7 +437,7 @@ bool readInput(Parameters *param, int argc, char *argv[], int rank) {
 
 void writeparams(Parameters *param) {
     // write the values of all input parameters this event used to
-    // "usedParameters<id>.dat", in input-file syntax
+    // "usedParameters<id>.dat", in input-file syntax (see OUTPUT.md)
     stringstream strup_name;
     strup_name << "usedParameters" << param->event.eventId << ".dat";
     ofstream fout1(strup_name.str());
@@ -445,10 +453,15 @@ void writeparams(Parameters *param) {
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);
     if (param->subnucleon.subNucleonParamType > 0) {
-        fout1 << "# Posterior parameter set used: "
-              << param->event.subNucleonParamSet
-              << " (m, BG, BGq, smearingWidth, QsMuRatio and dqMin above are "
-                 "its values; NqBase = "
-              << param->subnucleon.NqBase << ")\n";
+        // these values are not input parameters in this case, so they are
+        // not in the list above
+        fout1 << std::setprecision(9) << "# Posterior parameter set used: "
+              << param->event.subNucleonParamSet << "\n#   m "
+              << param->subnucleon.m << ", BG " << param->subnucleon.BG
+              << ", BGq " << param->subnucleon.BGq << ", smearingWidth "
+              << param->subnucleon.smearingWidth << ", NqBase "
+              << param->subnucleon.NqBase << ", QsMuRatio "
+              << param->colorCharge.QsMuRatio << ", dqMin "
+              << param->subnucleon.dqMin << "\n";
     }
 }

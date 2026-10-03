@@ -19,12 +19,22 @@ set(TEST_SOURCES
     test_parameters.cpp
     test_fft.cpp
     test_lattice.cpp
+    test_wilson_line_io.cpp
     test_cell.cpp
     test_prettyostream.cpp
     test_instrumentation.cpp
     test_fragmentation.cpp
     test_init.cpp
+    test_nucleon_model.cpp
+    test_nuclear_qs_table.cpp
+    test_nucleus_sampler.cpp
+    test_collision_geometry.cpp
+    test_forward_lightcone.cpp
     test_evolution.cpp
+    test_eccentricity.cpp
+    test_output_formats.cpp
+    test_energy_momentum_tensor.cpp
+    test_gluon_multiplicity.cpp
     test_jimwlk.cpp
     test_running_coupling.cpp
     )

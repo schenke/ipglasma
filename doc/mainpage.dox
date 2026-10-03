@@ -10,6 +10,8 @@ grouped by physics topic.
 \par Where to start
 - \ref md_README -- what IP-Glasma computes, how to build it, and every
   input-file parameter.
+- \ref md_OUTPUT -- every output file: when it is written, in which order,
+  and its format.
 - \ref md_CONTRIBUTING -- coding/documentation conventions for anyone
   changing this codebase.
 - \ref md_CHANGELOG -- what changed between versions.
@@ -17,16 +19,25 @@ grouped by physics topic.
 \par The simulation pipeline, in the order a run actually executes it
 -# \ref InputFile / \ref Parameters -- read and validate the input file
    (every input parameter is listed once, in ParameterTable.cpp).
--# \ref Glauber -- resolve nuclear geometry and sample the collision
-   impact parameter.
--# \ref Init -- sample nucleon positions and color charges, and build the
-   initial classical Yang-Mills fields (the two nuclei's Wilson lines,
-   matched across the forward light cone).
+-# \ref Glauber -- resolve the nuclear species and their density
+   profiles.
+-# \ref Init -- build the two nuclei's Wilson lines: \ref NucleusSampler
+   samples the nucleon positions, \ref NucleonModel the transverse
+   structure of each nucleon (Gaussian or hot spots), \ref NuclearQsTable
+   turns the summed thickness into color-charge densities, and the Wilson
+   lines are built from the sampled color charges (or read with
+   \ref WilsonLineIO, which also writes them).
 -# \ref JIMWLK -- (optional) small-\f$x\f$ JIMWLK evolution of the Wilson
    lines before the classical evolution proper.
--# \ref Evolution -- leapfrog time evolution of the classical fields, and
-   the energy-momentum tensor/multiplicity/eccentricity observables
-   computed from them.
+-# \ref CollisionGeometry -- sample the impact parameter, find the
+   wounded nucleons and the overlap-region \f$Q_s\f$, and accept or
+   resample the event.
+-# \ref ForwardLightCone -- match the two nuclei's fields across the
+   forward light cone into the initial gauge links, electric field and
+   \f$\pi\f$.
+-# \ref Evolution -- leapfrog time evolution of the classical fields, with
+   the observables computed from them: \ref EnergyMomentumTensor,
+   \ref GluonMultiplicity and \ref Eccentricity.
 -# \ref MyEigen -- Landau matching (flow velocity from
    \f$T^{\mu\nu}\f$) and the various binary/text output writers.
 
@@ -37,13 +48,16 @@ grouped by physics topic.
   storage and Fourier transforms.
 - \ref Random -- the pseudorandom-number streams used throughout
   initialization and JIMWLK.
+- \ref RunningCoupling.h "RunningCoupling" -- the running \f$\alpha_s\f$
+  shared by the collision geometry, the evolution observables and the
+  hydro output.
 - \ref PhysConst.h "PhysConst" -- physical/mathematical constants shared
   across the codebase.
 - \ref PrettyOstream, \ref Instrumentation.h "Instrumentation" --
   logging and profiling.
 - \ref GaugeFix, \ref Fragmentation.h "Fragmentation" -- Coulomb gauge
   fixing and KKP hadron fragmentation, both used by
-  Evolution::multiplicity().
+  GluonMultiplicity::compute().
 
 \note CI automatically checks that every class/function/member stays
 documented (`.github/workflows/doxygen.yml`), but there is no automated

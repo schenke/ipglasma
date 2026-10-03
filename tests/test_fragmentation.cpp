@@ -11,7 +11,7 @@
 // that is a known characteristic of this class of NLO fit near the edges
 // of its range, not a bug), so this only checks finiteness and a loose
 // magnitude bound for physically sensible inputs (momentum fraction x in
-// (0, 1), scale in the GeV range actually used by Evolution.cpp).
+// (0, 1), scale in the GeV range actually used by GluonMultiplicity.cpp).
 TEST_CASE(
     "Fragmentation::kkp returns finite, bounded values for typical inputs") {
     const double xs[] = {0.1, 0.3, 0.5, 0.7, 0.9};

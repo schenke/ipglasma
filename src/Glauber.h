@@ -82,10 +82,10 @@ struct ReturnValue {
     double phi;
     /// `1` if this nucleon has undergone at least one binary collision,
     /// `0` otherwise. Initialized to `0` by every producer (both
-    /// Glauber::sampleTARejection() and Init.cpp's other position
-    /// samplers); later set to `1` by Init::computeNcollList() for
+    /// Glauber::sampleTARejection() and NucleusSampler's other position
+    /// samplers); later set to `1` by CollisionGeometry::computeNcollList() for
     /// nucleons found to collide, and reset to `0` again at the start
-    /// of each new event by Init::sampleImpactParameter().
+    /// of each new event by CollisionGeometry::sampleImpactParameter().
     int collided;
     /// `true` if this nucleon is a proton, `false` if a neutron.
     bool proton;

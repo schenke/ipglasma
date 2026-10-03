@@ -15,7 +15,7 @@
  *   coupling/saturation scale.
  * - The \f$T^{\mu\nu}\f$ components: the local energy-momentum tensor
  *   in Milne (\f$\tau, x, y, \eta\f$) coordinates, computed from the
- *   classical Yang-Mills fields by Evolution::tmunu().
+ *   classical Yang-Mills fields by EnergyMomentumTensor::compute().
  * - \f$\epsilon\f$ and the \f$u^\mu\f$ components: the local rest-frame
  *   energy density and fluid four-velocity, obtained by diagonalizing
  *   \f$T^{\mu\nu}\f$ (Landau matching) in
@@ -206,8 +206,8 @@ class Cell {
     void setTtautau(double x) { Ttautau_ = x; }
     /**
      * Returns the \f$T^{\tau\tau}\f$ component of the energy-momentum
-     * tensor, set by Evolution::tmunu() from the classical Yang-Mills
-     * fields.
+     * tensor, set by EnergyMomentumTensor::compute() from the classical
+     * Yang-Mills fields.
      * \return The stored \f$T^{\tau\tau}\f$ value [1/fm^4].
      */
     double getTtautau() const { return Ttautau_; }
@@ -218,7 +218,8 @@ class Cell {
     void setTxx(double x) { Txx_ = x; }
     /**
      * Returns the \f$T^{xx}\f$ component of the energy-momentum tensor,
-     * set by Evolution::tmunu() from the classical Yang-Mills fields.
+     * set by EnergyMomentumTensor::compute() from the classical Yang-Mills
+     * fields.
      * \return The stored \f$T^{xx}\f$ value [1/fm^4].
      */
     double getTxx() const { return Txx_; }
@@ -229,7 +230,8 @@ class Cell {
     void setTyy(double x) { Tyy_ = x; }
     /**
      * Returns the \f$T^{yy}\f$ component of the energy-momentum tensor,
-     * set by Evolution::tmunu() from the classical Yang-Mills fields.
+     * set by EnergyMomentumTensor::compute() from the classical Yang-Mills
+     * fields.
      * \return The stored \f$T^{yy}\f$ value [1/fm^4].
      */
     double getTyy() const { return Tyy_; }
@@ -241,7 +243,7 @@ class Cell {
     void setTxy(double x) { Txy_ = x; }
     /**
      * Returns the \f$T^{xy}\f$ (transverse shear) component of the
-     * energy-momentum tensor, set by Evolution::tmunu() from the
+     * energy-momentum tensor, set by EnergyMomentumTensor::compute() from the
      * classical Yang-Mills fields.
      * \return The stored \f$T^{xy}\f$ value [1/fm^4].
      */
@@ -254,7 +256,7 @@ class Cell {
     void setTetaeta(double x) { Tetaeta_ = x; }
     /**
      * Returns the \f$T^{\eta\eta}\f$ (longitudinal) component of the
-     * energy-momentum tensor, set by Evolution::tmunu() from the
+     * energy-momentum tensor, set by EnergyMomentumTensor::compute() from the
      * classical Yang-Mills fields.
      * \return The stored \f$T^{\eta\eta}\f$ value [1/fm^6].
      */
@@ -267,7 +269,7 @@ class Cell {
     void setTtaux(double x) { Ttaux_ = x; }
     /**
      * Returns the \f$T^{\tau x}\f$ (energy flux in x) component of the
-     * energy-momentum tensor, set by Evolution::tmunu() from the
+     * energy-momentum tensor, set by EnergyMomentumTensor::compute() from the
      * classical Yang-Mills fields.
      * \return The stored \f$T^{\tau x}\f$ value [1/fm^4].
      */
@@ -280,7 +282,7 @@ class Cell {
     void setTtauy(double x) { Ttauy_ = x; }
     /**
      * Returns the \f$T^{\tau y}\f$ (energy flux in y) component of the
-     * energy-momentum tensor, set by Evolution::tmunu() from the
+     * energy-momentum tensor, set by EnergyMomentumTensor::compute() from the
      * classical Yang-Mills fields.
      * \return The stored \f$T^{\tau y}\f$ value [1/fm^4].
      */
@@ -294,7 +296,7 @@ class Cell {
     /**
      * Returns the \f$T^{\tau\eta}\f$ (longitudinal energy flux)
      * component of the energy-momentum tensor, set by
-     * Evolution::tmunu() from the classical Yang-Mills fields.
+     * EnergyMomentumTensor::compute() from the classical Yang-Mills fields.
      * \return The stored \f$T^{\tau\eta}\f$ value [1/fm^5].
      */
     double getTtaueta() const { return Ttaueta_; }
@@ -307,7 +309,7 @@ class Cell {
     /**
      * Returns the \f$T^{x\eta}\f$ (transverse-longitudinal shear)
      * component of the energy-momentum tensor, set by
-     * Evolution::tmunu() from the classical Yang-Mills fields.
+     * EnergyMomentumTensor::compute() from the classical Yang-Mills fields.
      * \return The stored \f$T^{x\eta}\f$ value [1/fm^5].
      */
     double getTxeta() const { return Txeta_; }
@@ -320,7 +322,7 @@ class Cell {
     /**
      * Returns the \f$T^{y\eta}\f$ (transverse-longitudinal shear)
      * component of the energy-momentum tensor, set by
-     * Evolution::tmunu() from the classical Yang-Mills fields.
+     * EnergyMomentumTensor::compute() from the classical Yang-Mills fields.
      * \return The stored \f$T^{y\eta}\f$ value [1/fm^5].
      */
     double getTyeta() const { return Tyeta_; }

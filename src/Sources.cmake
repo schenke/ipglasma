@@ -9,6 +9,12 @@ set (IPGLASMA_LIB_SOURCES
     InputFile.cpp
     ParameterTable.cpp
     Init.cpp
+    ForwardLightCone.cpp
+    WilsonLineIO.cpp
+    NucleonModel.cpp
+    NuclearQsTable.cpp
+    NucleusSampler.cpp
+    CollisionGeometry.cpp
     JIMWLK.cpp
     Random.cpp
     Group.cpp
@@ -16,6 +22,10 @@ set (IPGLASMA_LIB_SOURCES
     Cell.cpp
     Glauber.cpp
     Evolution.cpp
+    EnergyMomentumTensor.cpp
+    Eccentricity.cpp
+    GluonMultiplicity.cpp
+    RunningCoupling.cpp
     GaugeFix.cpp
     MyEigen.cpp
     PrettyOstream.cpp

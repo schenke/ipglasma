@@ -1,6 +1,8 @@
+#include <algorithm>
 #include <cstdio>
 #include <fstream>
 #include <random>
+#include <sstream>
 #include <string>
 
 #include "GluonMultiplicity.h"
@@ -90,6 +92,37 @@ TEST_CASE(
     in >> Npart >> dNdy >> Tpp >> b >> dEdy;
     CHECK(dNdy > 0.);
     CHECK(dEdy > 0.);
-    CHECK(fileExists("gluonMultiplicity0.json"));
+    // the 14 columns documented in OUTPUT.md, with placeholders in 7-9
+    std::string seed, na1, na2, na3;
+    in >> seed >> na1 >> na2 >> na3;
+    CHECK(na1 == "N/A");
+    CHECK(na2 == "N/A");
+    CHECK(na3 == "N/A");
+    int rest = 0;
+    for (std::string token; in >> token;) rest++;
+    CHECK(rest == 5);
+
+    // the JSON file has the documented keys and four arrays of 100 bins
+    std::ifstream json("gluonMultiplicity0.json");
+    REQUIRE(json.good());
+    std::stringstream text;
+    text << json.rdbuf();
+    const std::string content = text.str();
+    for (const char *key :
+         {"\"format\": \"ipglasma-gluon-target\"", "\"dN\":", "\"dE_GeV\":",
+          "\"tau_fm\":", "\"rapidity_variable\": \"y\""}) {
+        CAPTURE(key);
+        CHECK(content.find(key) != std::string::npos);
+    }
+    for (const char *array :
+         {"\"kt_GeV\": [", "\"dN_d2k_GeV_minus2\": [",
+          "\"dE_d2k_GeV_minus1\": [", "\"lattice_bin_counts\": ["}) {
+        CAPTURE(array);
+        const std::size_t start = content.find(array);
+        REQUIRE(start != std::string::npos);
+        const std::size_t end = content.find(']', start);
+        const std::string values = content.substr(start, end - start);
+        CHECK(std::count(values.begin(), values.end(), ',') == 99);
+    }
     removeOutput();
 }

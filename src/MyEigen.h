@@ -91,6 +91,7 @@ class MyEigen {
      * Writes the hydro-flow text output (`epsilon-u-Hydro*.dat`):
      * per-cell interpolated energy density, \f$u^\mu\f$, and
      * \f$\pi^{\mu\nu}\f$ on the output grid.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.
@@ -130,6 +131,7 @@ class MyEigen {
      * grid, in text or a little-endian binary format depending on
      * `param->output.writeTmunuBinary`/`IPGLASMA_BINARY_TMUNU`. A no-op
      * unless `param->output.writeOutputs`'s bit 2 (value `4`) is set.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.
@@ -156,6 +158,7 @@ class MyEigen {
      * \f$g^2\mu_A^2 g^2\mu_B^2\f$, normalized so its grid integral
      * matches \p Etot. A no-op unless `param->output.writeOutputs`'s bit
      * 1 (value `2`) is set.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
      * \param[in] it Current evolution time step.

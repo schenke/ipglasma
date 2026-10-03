@@ -1,6 +1,7 @@
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <sstream>
 #include <string>
 
 #include "Cell.h"
@@ -71,6 +72,15 @@ TEST_CASE(
     CHECK(eps[1] < 1e-6);
     CHECK(eps[3] < 1e-6);
     CHECK(eps[5] < 1e-6);
+    // the 23 columns documented in OUTPUT.md
+    std::ifstream again("eccentricities0.dat");
+    std::string line;
+    std::getline(again, line);
+    std::istringstream columns(line);
+    int count = 0;
+    for (std::string token; columns >> token;) count++;
+    CHECK(count == 23);
+    again.close();
     std::remove("eccentricities0.dat");
 }
 

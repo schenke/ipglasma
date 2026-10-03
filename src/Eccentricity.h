@@ -25,6 +25,7 @@ namespace Eccentricity {
  * anisotropy (via the anonymous-namespace `computeRotatedAnisotropy`
  * helper) resampled at ten angles around the flow-velocity event
  * plane \f$\Psi_U\f$ (computed from `getux()`/`getuy()`).
+ * The file is described in \ref md_OUTPUT "OUTPUT.md".
  * \param[in] lat Lattice to read the energy density (and, for
  * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.
  * \param[in] param Simulation parameters.

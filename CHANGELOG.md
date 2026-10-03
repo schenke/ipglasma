@@ -47,6 +47,7 @@ The main categories for changes in this file are:
 * The `spectrum_definition` text in `gluonMultiplicity<id>.json` now names `GluonMultiplicity::compute` instead of the former `Evolution::multiplicity`.
 
 ### Added
+* Add `OUTPUT.md`, which describes every output file (when it is written, in which order, its name, layout, columns and units); it is also part of the Doxygen documentation, and the functions writing the files point to it. Document the output parameters that were missing from the README (`writeEpsilonUHydro`, `writeTmunuBinary`, `computeGluonMultiplicity`, `readMultFromFile`, the output grid) and the extra outputs of `writeOutputs 3` and `5`. New tests check the documented layouts.
 * Add a JIMWLK small-x evolution stage, run on the projectile and target Wilson lines before the classical Yang-Mills evolution.
 * Add a new, more robust forward-lightcone Wilson-line solver (`Init::findUInForwardLightconeChun`).
 * Add support for light nuclei with realistic nucleon configurations sampled from file, plus a helper script to convert the configuration tables to a compact binary format.

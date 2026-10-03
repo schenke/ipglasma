@@ -32,6 +32,7 @@ set(TEST_SOURCES
     test_forward_lightcone.cpp
     test_evolution.cpp
     test_eccentricity.cpp
+    test_output_formats.cpp
     test_energy_momentum_tensor.cpp
     test_gluon_multiplicity.cpp
     test_jimwlk.cpp

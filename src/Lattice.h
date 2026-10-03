@@ -146,6 +146,7 @@ class Lattice {
     /**
      * Writes this instance's \c Uy2 (`Phi`) and \c Ux2 (`Pi`) fields to
      * two separate text files via writeMatrixArrayText().
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] fileprefix Prefix prepended to both output file names.
      * \param[in] param Simulation parameters; `lattice.size`,
      * `event.eventId`, `random.seed` and `run.MPISize` are used.

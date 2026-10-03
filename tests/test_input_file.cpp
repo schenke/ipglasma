@@ -576,6 +576,25 @@ TEST_CASE(
     }
 }
 
+TEST_CASE(
+    "Parameters::readInput: subNucleonParamSet must be -1 (random) or a set "
+    "index") {
+    std::string text;
+    {
+        std::istringstream in(exampleInputWith("subNucleonParamType", "2"));
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("subNucleonParamSet ", 0) == 0) {
+                line = "subNucleonParamSet -2";
+            }
+            text += line + "\n";
+        }
+    }
+    CHECK(anyContains(
+        readErrors(text),
+        "subNucleonParamSet -2: must be -1 (random) or a set index >= 0"));
+}
+
 TEST_CASE("Parameters::readInput: protonAnisotropy must be larger than -1") {
     const std::string gaussian = exampleInputWith("nucleonModel", "gaussian");
     auto withAnisotropy = [&gaussian](const std::string &value) {

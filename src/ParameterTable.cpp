@@ -481,7 +481,10 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "subNucleonParamSet", &P::subnucleon,
             &SubnucleonParameters::subNucleonParamSet)
-            .onlyIf(posteriorParameters),
+            .onlyIf(posteriorParameters)
+            .check([](const int &v) {
+                return v >= -1 ? "" : "must be -1 (random) or a set index >= 0";
+            }),
         param("m", &P::subnucleon, &SubnucleonParameters::m)
             .onlyIf(inputParameters),
         param("BG", &P::subnucleon, &SubnucleonParameters::BG)

@@ -1,3 +1,7 @@
+#include <cmath>
+#include <complex>
+#include <vector>
+
 #include "Group.h"
 #include "Matrix.h"
 #include "doctest.h"
@@ -302,4 +306,28 @@ TEST_CASE("Matrix: free +/- operators match the in-place versions") {
     Matrix diff = a - b;
     CHECK(matricesClose(sum, Matrix(3.), 1e-14));
     CHECK(matricesClose(diff, Matrix(1.), 1e-14));
+}
+
+TEST_CASE(
+    "Matrix::fromAlgebraExponent: exp(i Q^a t^a) is unitary, and the NaN "
+    "fallback gives the identity") {
+    // a generic exponent: unitary with determinant 1
+    std::vector<double> Q = {0.3, -1.2, 0.7, 2.1, -0.4, 0.9, 1.5, -2.2};
+    const Matrix U = Matrix::fromAlgebraExponent(Q);
+    Matrix Udag = U;
+    Udag.conjg();
+    const Matrix product = U * Udag;
+    const Matrix identity(1.);
+    for (int k = 0; k < 9; k++) {
+        CHECK(std::abs(product.get(k) - identity.get(k)) < 1e-12);
+    }
+    CHECK(std::abs(U.det() - std::complex<double>(1., 0.)) < 1e-12);
+
+    // expmCoeff() zeroes the coefficients that come out NaN (0/0 in the
+    // very-low-density region); that becomes the vacuum, the identity
+    std::vector<double> nanQ(8, std::nan(""));
+    const Matrix vacuum = Matrix::fromAlgebraExponent(nanQ);
+    for (int k = 0; k < 9; k++) {
+        CHECK(std::abs(vacuum.get(k) - identity.get(k)) < 1e-15);
+    }
 }

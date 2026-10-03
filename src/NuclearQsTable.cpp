@@ -28,16 +28,17 @@ void NuclearQsTable::read(const std::string &fileName) {
     if (fin) {
         for (int iT = 0; iT < nT_; iT++) {
             for (int iy = 0; iy < nY_; iy++) {
-                if (!fin.eof()) {
-                    fin >> dummy;
-                    fin >> T;
+                // checking the extraction (not eof() beforehand) also catches
+                // a truncated last line
+                if (fin >> dummy >> T >> Qs) {
                     T_[iT] = atof(T.c_str());
-                    fin >> Qs;
                     Qs2_[iT][iy] = atof(Qs.c_str());
                 } else {
-                    messager_ << "[NuclearQsTable::read]: End of file reached "
-                                 "prematurely -- did the Q_s table file "
-                                 "change? Exiting.";
+                    messager_ << "[NuclearQsTable::read]: Could not read "
+                                 "entry "
+                              << iT * nY_ + iy + 1
+                              << " (the file ends early or is malformed) -- "
+                                 "did the Q_s table file change? Exiting.";
                     messager_.flush("error");
                     exit(1);
                 }

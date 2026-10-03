@@ -4,6 +4,7 @@ constexpr Matrix::NoInitTag Matrix::noInit;
 
 #include <gsl/gsl_integration.h>  // include gsl for Gauss-Legendre nodes and weights for log Pade
 
+#include <algorithm>
 #include <sstream>
 #include <vector>
 
@@ -664,7 +665,12 @@ Matrix Matrix::fromAlgebraExponent(const std::vector<double> &Q) {
     // allocating a coefficient vector and materializing eight scaled Matrix
     // temporaries plus the chained sums.
     tempM.expmCoeff(Q.data(), U);
-    if (std::abs(U[0].real()) < 1e-15) {
+    // expmCoeff() sets the coefficients to 0 where they come out NaN
+    // (0/0 in the very-low-density region); a valid exponential always has
+    // a nonzero coefficient (its trace or its traceless part)
+    const bool allZero =
+        std::all_of(U, U + 9, [](const complex<double> &c) { return c == 0.; });
+    if (allZero) {
         tempM = Matrix(1.);
     } else {
         const complex<double> I(0., 1.);

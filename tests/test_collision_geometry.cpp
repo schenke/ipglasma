@@ -207,3 +207,41 @@ TEST_CASE(
     geometry.computeAndSetRunningAlphaS(&param);
     CHECK(param.event.alphas == doctest::Approx(0.789051392062008));
 }
+
+TEST_CASE(
+    "CollisionGeometry::scanOverlap reads the shifted nuclei only on the "
+    "lattice, including the corner cell (0, 0)") {
+    const int N = 6;
+    Parameters param;
+    makeInitTestParam(param, N);  // a = 1 fm
+    param.coupling.g = 1.;
+    param.colorCharge.QsMuRatio = 1.;
+    param.nucleus.useSmoothNucleus = false;
+    Lattice lat(&param, N);
+    for (int pos = 0; pos < N * N; pos++) {
+        lat.cells[pos]->setg2mu2A(1.);
+        lat.cells[pos]->setg2mu2B(1.);
+    }
+    std::vector<ReturnValue> nucleusA, nucleusB;
+    CollisionGeometry geometry(nucleusA, nucleusB);
+    const double a = 1.;
+    // Q_s^2 of one cell with g^2 mu^2 = 1, as summed into averageQs2min2
+    const double cellQs2 = PhysConst::hbarc * PhysConst::hbarc;
+
+    auto fullLatticeSum = [&](double b, double phiRP) {
+        double averageQs = 0., averageQs2 = 0., averageQs2Avg = 0.,
+               averageQs2min = 0., averageQs2min2 = 0., Tpp = 0.;
+        int count = 0;
+        geometry.scanOverlap(
+            &lat, &param, N, a, b, phiRP, averageQs, averageQs2, averageQs2Avg,
+            averageQs2min, averageQs2min2, Tpp, count);
+        return averageQs2min2 / cellQs2;
+    };
+    // without a shift every cell, including (0, 0), has both nuclei
+    CHECK(fullLatticeSum(0., 0.) == doctest::Approx(N * N));
+    // shifting by b = 2 fm along y moves A by -1 and B by +1 cell in y; a
+    // cell only counts if both shifted cells lie on the lattice, which
+    // leaves N - 2 rows (a flattened index used to let (ix, -1) alias
+    // (ix - 1, N - 1))
+    CHECK(fullLatticeSum(2., M_PI / 2.) == doctest::Approx(N * (N - 2)));
+}

@@ -311,19 +311,24 @@ void CollisionGeometry::scanOverlap(
         int ixB = static_cast<int>((xB + L / 2.) / a);
         int iyB = static_cast<int>((yB + L / 2.) / a);
 
-        int posA = lat->positionFromXY(ixA, iyA);
-        int posB = lat->positionFromXY(ixB, iyB);
+        // check each coordinate: a flattened index would let an
+        // out-of-range coordinate alias a valid site
+        auto onLattice = [N](int column, int row) {
+            return column >= 0 && column < N && row >= 0 && row < N;
+        };
 
         double g2mu2A = 0;
         double TpA = 0;
-        if (posA > 0 && posA < N * N) {
+        if (onLattice(ixA, iyA)) {
+            const int posA = lat->positionFromXY(ixA, iyA);
             g2mu2A = lat->cells[posA]->getg2mu2A();
             TpA = lat->cells[posA]->getTpA();
         }
 
         double g2mu2B = 0;
         double TpB = 0;
-        if (posB > 0 && posB < N * N) {
+        if (onLattice(ixB, iyB)) {
+            const int posB = lat->positionFromXY(ixB, iyB);
             g2mu2B = lat->cells[posB]->getg2mu2B();
             TpB = lat->cells[posB]->getTpB();
         }

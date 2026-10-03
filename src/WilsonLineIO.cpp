@@ -23,6 +23,24 @@ using std::ofstream;
 using std::string;
 using std::stringstream;
 
+namespace {
+/**
+ * Lattice column a Wilson-line column read from file goes to: shifted by
+ * \f$-b/2\f$ for the projectile and \f$+b/2\f$ for the target, and
+ * rounded to the nearest column, the same way for both file formats.
+ * \param[in] column Column \f$i_x\f$ in the file.
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] b Impact parameter [fm].
+ * \param[in] isProjectile Whether the file holds the projectile.
+ * \return The shifted column; may lie outside the lattice.
+ */
+int shiftedColumn(int column, double a, double b, bool isProjectile) {
+    const double x =
+        isProjectile ? (a * column - b / 2.) : (a * column + b / 2.);
+    return static_cast<int>(std::lround(x / a));
+}
+}  // namespace
+
 std::string WilsonLineIO::fileName(
     Parameters *param, const double x, NucleusRole nucleus, int format) {
     const bool isProjectile = (nucleus == NucleusRole::Projectile);
@@ -211,14 +229,8 @@ void WilsonLineIO::readText(
             double bb = param->event.b;
             a = L / static_cast<double>(N);
 
-            double xtemp = isProjectile ? (a * i - bb / 2.) : (a * i + bb / 2.);
-            int ix = xtemp / a;
-
-            if (isProjectile) {
-                if (ix < 0) continue;
-            } else {
-                if (ix >= N) continue;
-            }
+            const int ix = shiftedColumn(i, a, bb, isProjectile);
+            if (ix < 0 || ix >= N) continue;
 
             int pos = latticeIndex(ix, j, N);
             U[pos] = (temp);
@@ -298,17 +310,14 @@ void WilsonLineIO::readBinary(
             a = L / static_cast<double>(N);
 
             // shift here by half an impact parameter
-            double xtemp =
-                isProjectile ? (a * ixRaw - bb / 2.) : (a * ixRaw + bb / 2.);
-
-            int ix = round(xtemp / a);
+            const int ix = shiftedColumn(ixRaw, a, bb, isProjectile);
 
             int MatrixIndx = TEMPINDX - PositionIndx * 9;
             int j = MatrixIndx / 3;
             int k = MatrixIndx - j * 3;
 
             int indx = latticeIndex(ix, iy, N);
-            if (indx >= N * N || indx < 0) {
+            if (ix < 0 || ix >= N) {
                 if (bb == 0) {
                     messager_ << "[WilsonLineIO::read]: datafile " << fileName
                               << " has an element " << indx << " (iy=" << iy

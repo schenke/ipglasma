@@ -70,6 +70,9 @@ CASE_SENSE_NAMES       = YES
 # resolve the latter through a real bibliography.
 #---------------------------------------------------------------------------
 USE_MATHJAX            = YES
+# AMSmath and AMSsymbols provide e.g. \tfrac, which MathJax 2's base TeX
+# input does not know
+MATHJAX_EXTENSIONS     = TeX/AMSmath TeX/AMSsymbols
 MATHJAX_CODEFILE       = doc/mathjax-config.js
 CITE_BIB_FILES         = doc/ipglasma.bib
 

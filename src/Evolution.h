@@ -152,7 +152,9 @@ class Evolution {
      * (\f$E_2\f$), \c Ux, \c Uy) as full \f$3\times3\f$ complex
      * matrices per cell, little-endian single-precision, preceded by an
      * 8-byte magic string, an 8-byte metadata length, and a JSON
-     * metadata header describing the layout/units/staggering.
+     * metadata header describing the layout/units/staggering. A debugging
+     * helper: the program never calls it (no input parameter switches it
+     * on).
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read the fields from.
      * \param[in] param Simulation parameters.

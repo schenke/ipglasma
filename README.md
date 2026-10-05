@@ -35,7 +35,7 @@ It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions
 
 
 ## Input parameters
-The input file is given as the first command line argument (default: `input`). The optional second argument is the number of events each MPI rank generates (default: 1). Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
+The input file is given as the first command line argument (default: `input`). The optional second argument is the number of events each MPI rank generates (default: 1); it also enters the names of the Wilson-line files. Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
 
 The input file has one `key value` pair per line:
 - `#` starts a comment that runs to the end of the line, and blank lines are ignored.
@@ -174,16 +174,15 @@ The files themselves (names, order, layout, columns and units) are described in 
  - **eccentricityCutoff** (optional, default `0`, read with `computeEccentricities 1`): energy density in GeV/fm$^3$ below which a cell is left out of the eccentricities
  - **writeNpartList**, **writeNcollList** and **writeNgluonEstimators** (optional, default `1`): write the positions of the nucleons and whether they collided (`NpartList<id>.dat`), the binary collisions (`NcollList<id>.dat`) and the gluon-number estimators (`NgluonEstimators<id>.dat`)
  - **writeWilsonLineSnapshot** (optional, default `0`): `1` writes the initial Wilson lines of both nuclei as one binary file with a JSON header (`initialWilsonLines<id>.ipgw`) when they are built, in any `mode` (not with `readInitialWilsonLines` 1 or 2)
- - **readMultFromFile**: post-processing mode that rescales the multiplicity of an earlier run (see OUTPUT.md) and then stops; `0` for normal runs
  - **writeOutputsToHDF5**: this parameter decides whether to collect output files into an HDF5 file
    - 0: no
-   - 1: yes; after each event, its `usedParameters`, `NpartList`, `NcollList` and `NpartdNdy-t*` files, the hydro files at `outputTimes` and the text $T^{\mu\nu}$ files are moved into `RESULTS_rank<rank>.h5` (the originals are deleted), and at the end of the run these are merged into `RESULTS.h5`. The other files stay on disk. Needs `python3` with `h5py` and `numpy` and the tool `h5copy`, and the run must be started in the repository root (it calls `utilities/combine_events_into_hdf5.py`)
- - **writeWilsonLines**: controls whether the generated Wilson lines are saved to disk. File names depend on random seed (parameter `seed`), see `WilsonLineIO::fileName()`. The initial Wilson lines are saved (with `useJIMWLK 1` only with `jimwlkSaveSnapshots 1`), and those after the JIMWLK evolution.
+   - 1: yes; after each event, its `usedParameters`, `NpartList`, `NcollList` and `NpartdNdy-t*` files, the hydro files at `outputTimes` and the text $T^{\mu\nu}$ files are moved into `RESULTS_rank<rank>.h5` (the originals are deleted), and at the end of the run these are merged into `RESULTS.h5`. The other files stay on disk, and so does a per-rank file that cannot be merged. Needs `python3` with `h5py` and `numpy` (it calls `utilities/combine_events_into_hdf5.py` of the source tree, so the run can start in any directory)
+ - **writeWilsonLines**: controls whether the generated Wilson lines are saved to disk. The file names (see OUTPUT.md) depend on the seed, the event, the number of events of the run and the nucleus. The initial Wilson lines are saved (with `useJIMWLK 1` only with `jimwlkSaveSnapshots 1`), and those after the JIMWLK evolution.
    - 0: do not save Wilson lines
    - 1: save in text format
    - 2: save in binary format (faster I/O, smaller file size)
  - **wilsonLinePath** (optional): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
- - **readInitialWilsonLines**: `0` samples the color charges and builds the Wilson lines; `1` (text) or `2` (binary) instead reads the initial Wilson lines of both nuclei from `wilsonLinePath`, e.g. written by an earlier run with the same `seed` and number of MPI ranks. The reader expects the file names without the `_x_<x>` part, as written with `useFluctuatingX 1` and `useJIMWLK 0`; other files have to be renamed. No collision geometry is sampled: the nuclei collide at $b = 0$, and `runningCoupling 1` and `inverseQsForMaxTime 1` are not possible
+ - **readInitialWilsonLines**: `0` samples the color charges and builds the Wilson lines; `1` (text) or `2` (binary) instead reads the initial Wilson lines of both nuclei from `wilsonLinePath`: the files that a run with the same `seed`, number of events and MPI ranks writes as its initial Wilson lines, with x = `jimwlkInitialX` with `useJIMWLK 1`, no x with `useFluctuatingX 1`, and x = 0.01 e$^{-y}$ with $y$ = `rapidityA`/`rapidityB` otherwise. No collision geometry is sampled: the nuclei collide at $b = 0$, and `runningCoupling 1` and `inverseQsForMaxTime 1` are not possible
 
 ### JIMWLK evolution
 Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` which corresponds to having a fixed $x$ at the initial state of the evolution.
@@ -192,8 +191,8 @@ Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` wh
 - **jimwlkInitialX**: Bjorken-x at the initial condition
 - **jimwlkXProjectile**: Bjorken-$x$ to which the projectile is evolved
 - **jimwlkXTarget**: Bjorken-$x$ to which the target is evolved
-- **jimwlkSaveSnapshots**: `1` also writes the Wilson lines during the evolution, at the $x$ values in `jimwlkXSnapshotList`, in the format of `writeWilsonLines` (which must be 1 or 2) and with the $x$ in the file name; the initial Wilson lines are then written too
-- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces) to save snapshots at, read with `jimwlkSaveSnapshots 1`. They must be in decreasing order between `jimwlkInitialX` and the final $x$: a snapshot is saved in the evolution step that passes the value, and the first value that is never passed ends the snapshots
+- **jimwlkSaveSnapshots**: `1` also writes the Wilson lines during the evolution, at the $x$ values in `jimwlkXSnapshotList`, in the format of `writeWilsonLines` (which must be 1 or 2); the initial Wilson lines are then written too
+- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces), in any order, to save snapshots at, read with `jimwlkSaveSnapshots 1`. Each is saved at the evolution step whose $x$ is closest to it in $\ln x$ (at most half a step away), in a file named with the requested value. A value more than half a step outside a nucleus' evolution (above `jimwlkInitialX` or below its final $x$) is skipped with a warning
 - **jimwlkMass**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkAlphaS**: Coupling constant in the JIMWLK evolution
   - 0 (any value within $10^{-8}$ of 0): Use running coupling

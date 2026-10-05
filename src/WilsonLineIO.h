@@ -34,15 +34,20 @@ class WilsonLineIO {
     /**
      * Generates the deterministic file name write() writes to
      * (and WilsonLineIO::read() reads from): `<wilsonLines.wilsonLinePath>/
-     * WilsonLine[_x_<x>]_<event/nucleus/seed/rank-derived index>[.txt]`.
+     * WilsonLine[_x_<x>]_<n>[.txt]` with \f$n = 2(sN + i) + j\f$, where
+     * \f$s\f$ is the seed, \f$N\f$ the number of events of the run (events
+     * per rank times ranks), \f$i\f$ the event id and \f$j\f$ `1` for the
+     * projectile and `2` for the target. So every nucleus and event of a run,
+     * and runs with different seeds and the same \f$N\f$, get different
+     * names.
      * \param[in] param Simulation parameters;
      * `param->wilsonLines.wilsonLinePath`, `param->event.eventId`,
-     * `param->random.seed`, `param->run.MPISize` and (when \p format is
-     * negative) `param->wilsonLines.writeWilsonLines` are used.
+     * `param->random.seed`, `param->run.MPISize`,
+     * `param->run.eventsPerRank` and (when \p format is negative)
+     * `param->wilsonLines.writeWilsonLines` are used.
      * \param[in] x If non-negative, embedded in the file name
      * (`_x_<x>`, in scientific notation); a negative value omits it.
-     * \param[in] nucleus Which nucleus this file belongs to (offsets
-     * the numeric index so the projectile and target never collide).
+     * \param[in] nucleus Which nucleus this file belongs to.
      * \param[in] format Overrides `param->wilsonLines.writeWilsonLines` for
      * deciding whether to append the `.txt` extension (`1`: text,
      * anything else: binary, no extension); a negative value (the
@@ -81,21 +86,26 @@ class WilsonLineIO {
     void write(
         Lattice *lat, Parameters *param, NucleusRole nucleus, double x = -1);
     /**
-     * Reads both nuclei's Wilson lines from disk, using
-     * fileName() to build each file
-     * name, in text or binary format depending on \p format.
+     * The \f$x\f$ in the names of a nucleus' initial Wilson-line files,
+     * which Init::setV() writes and read() reads: `jimwlkInitialX` with
+     * JIMWLK, none (`-1`) with `useFluctuatingX 1`, and otherwise
+     * \f$0.01\,e^{-y}\f$ with \f$y\f$ = `rapidityA` or `rapidityB`.
+     * \param[in] param Simulation parameters.
+     * \param[in] nucleus Which nucleus.
+     * \return The \f$x\f$, or `-1` for none.
+     */
+    static double initialX(Parameters *param, NucleusRole nucleus);
+    /**
+     * Reads both nuclei's initial Wilson lines from disk, from the files
+     * a run with the same parameters writes (fileName() with
+     * initialX()), in text or binary format depending on \p format.
      * \param[in,out] lat Lattice whose `U`/`U2` are set.
      * \param[in] param Simulation parameters.
      * \param[in] format `1` for plain text, `2` for binary; exits with
      * an error for any other value
      * (`isValidFormat()`).
-     * \param[in] x If non-negative, embedded in the generated file
-     * names (see fileName()); the
-     * default `-1` omits it, matching a file written without an
-     * explicit \f$x\f$ (e.g. by Init::setV() outside JIMWLK/fluctuating-
-     * \f$x\f$ runs).
      */
-    void read(Lattice *lat, Parameters *param, int format, double x = -1);
+    void read(Lattice *lat, Parameters *param, int format);
     /**
      * read()'s `format==1` branch: reads one nucleus' Wilson
      * line from a plain-text file, shifting it by \f$\mp b/2\f$ along

@@ -334,9 +334,6 @@ struct OutputParameters {
     /// Energy density [GeV/fm\f$^3\f$] below which a cell is left out of
     /// the eccentricities (see Eccentricity::compute()).
     double eccentricityCutoff = 0.;
-    /// Whether to read the gluon spectrum \f$dN/d^2k_T\f$ from file and
-    /// compute the integrated rate from it (`1`).
-    bool readMultFromFile = false;
     /// Whether to write the hydro initial condition (\f$\epsilon\f$,
     /// \f$u^\mu\f$, \f$\pi^{\mu\nu}\f$), `epsilon-u-Hydro-*.dat`.
     bool writeHydro = false;
@@ -452,6 +449,9 @@ struct RunState {
     int MPIRank = 0;
     /// Total number of MPI ranks.
     int MPISize = 0;
+    /// Number of events each rank generates (the second command-line
+    /// argument).
+    int eventsPerRank = 1;
     /// Evolution time step [lattice units].
     double dtau = 0.;
     /// The random seed actually used this run (so the event can be

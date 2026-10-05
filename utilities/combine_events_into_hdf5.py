@@ -5,7 +5,7 @@
 
 import sys
 import h5py
-from os import path, remove, system
+from os import path, remove
 from glob import glob
 from multiprocessing import Pool
 import argparse
@@ -28,7 +28,7 @@ def collect_one_IPGlasma_event(results_path, event_id, hf, deleteFlag=False):
     parafile  = open(parafilename)
     for iline, rawline in enumerate(parafile.readlines()):
         paraline = rawline.strip('\n')
-        gtemp.attrs.create("{0}".format(iline), np.string_(paraline))
+        gtemp.attrs.create("{0}".format(iline), np.bytes_(paraline))
     if deleteFlag: remove(parafilename)
 
 
@@ -81,7 +81,7 @@ def collect_one_IPGlasma_event(results_path, event_id, hf, deleteFlag=False):
                                         compression="gzip", compression_opts=9)
         f = open(filepath)
         header = f.readline().strip('\n')
-        dset.attrs.create("header", np.string_(header))
+        dset.attrs.create("header", np.bytes_(header))
         tmp = header.split()
         dx = float(tmp[12])
         dy = float(tmp[14])
@@ -110,7 +110,7 @@ def collect_one_IPGlasma_event(results_path, event_id, hf, deleteFlag=False):
                                         compression="gzip", compression_opts=9)
         f = open(filepath)
         header = f.readline().strip('\n')
-        dset.attrs.create("header", np.string_(header))
+        dset.attrs.create("header", np.bytes_(header))
         tmp = header.split()
         dx = float(tmp[12])
         dy = float(tmp[14])
@@ -184,18 +184,34 @@ def collect_IPGlasma_events_MPI(results_folder):
 
 
 def combine_hdf5_files_into_one(results_path, results_name):
+    """Copies the groups of every <results_name>_rank*.h5 in results_path
+    into <results_name>.h5 and deletes each per-rank file whose groups were
+    all copied. A file that cannot be read, or one with a group that
+    <results_name>.h5 already holds, is kept. Returns whether every file
+    was copied."""
     print("combining to one hdf5 file {}.h5 ...".format(results_name))
-    h5_filelist = (
+    h5_filelist = sorted(
             glob(path.join(results_path, "{}_rank*.h5".format(results_name))))
-    for filename in h5_filelist:
-        print("processing {0} ... ".format(filename))
-        hftemp = h5py.File(filename, "r")
-        glist = list(hftemp.keys())
-        hftemp.close()
-        for gtemp in glist:
-            system('h5copy -i {0} -o {1}.h5 -s {2} -d {2}'.format(
-                   filename, results_name, gtemp))
-        remove(filename)
+    all_copied = True
+    with h5py.File("{}.h5".format(results_name), "a") as hfout:
+        for filename in h5_filelist:
+            print("processing {0} ... ".format(filename))
+            try:
+                with h5py.File(filename, "r") as hftemp:
+                    existing = [g for g in hftemp.keys() if g in hfout]
+                    if existing:
+                        raise RuntimeError(
+                            "{0}.h5 already holds {1}".format(
+                                results_name, ", ".join(existing)))
+                    for gtemp in hftemp.keys():
+                        hftemp.copy(hftemp[gtemp], hfout, name=gtemp)
+            except (OSError, RuntimeError) as error:
+                print("could not combine {0} ({1}); it is kept".format(
+                    filename, error))
+                all_copied = False
+                continue
+            remove(filename)
+    return all_copied
 
 
 def collect_one_event_to_h5database(results_folder, event_id, database_name,
@@ -235,8 +251,9 @@ def main():
     args = parser.parse_args()
 
     if args.combine_hdf5_files_only:
-        combine_hdf5_files_into_one(args.results_folder_name,
-                                    args.output_filename)
+        if not combine_hdf5_files_into_one(args.results_folder_name,
+                                           args.output_filename):
+            sys.exit(1)
         return
 
     if args.event_id >= 0:

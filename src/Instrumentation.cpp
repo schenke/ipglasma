@@ -1,5 +1,7 @@
 #include "Instrumentation.h"
 
+#include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <complex>
 #include <cstdlib>
@@ -26,9 +28,11 @@ namespace {
 bool envEnabled(const char *name) {
     const char *value = std::getenv(name);
     if (value == NULL || value[0] == '\0') return false;
-    const std::string text(value);
-    return text != "0" && text != "false" && text != "FALSE" && text != "off"
-           && text != "OFF" && text != "no" && text != "NO";
+    std::string text(value);
+    std::transform(text.begin(), text.end(), text.begin(), [](unsigned char c) {
+        return static_cast<char>(std::tolower(c));
+    });
+    return text != "0" && text != "false" && text != "off" && text != "no";
 }
 
 /**

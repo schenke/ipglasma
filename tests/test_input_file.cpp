@@ -648,6 +648,30 @@ TEST_CASE(
         "subNucleonParamSet -2: must be -1 (random) or a set index >= 0"));
 }
 
+TEST_CASE(
+    "Parameters::readInput: checks the ranges of the nucleon parameters") {
+    struct Case {
+        const char *key;
+        const char *value;
+        const char *error;
+    };
+    for (const Case &c :
+         {Case {"BG", "0", "BG 0: must be positive"},
+          Case {"BGq", "0.09", "BGq 0.09: must be larger than 0.09"},
+          Case {"BGq", "0.05", "BGq 0.05: must be larger than 0.09"},
+          Case {"BGqVar", "-0.1", "BGqVar -0.1: must not be negative"},
+          Case {"dqMin", "-0.2", "dqMin -0.2: must not be negative"},
+          Case {
+              "smearingWidth", "-0.5",
+              "smearingWidth -0.5: must not be negative"}}) {
+        CAPTURE(c.key);
+        CAPTURE(c.value);
+        CHECK(
+            anyContains(readErrors(exampleInputWith(c.key, c.value)), c.error));
+    }
+    CHECK(readErrors(exampleInputWith("BGq", "0.091")).empty());
+}
+
 TEST_CASE("Parameters::readInput: protonAnisotropy must be larger than -1") {
     const std::string gaussian = exampleInputWith("nucleonModel", "gaussian");
     auto withAnisotropy = [&gaussian](const std::string &value) {

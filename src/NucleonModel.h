@@ -18,6 +18,11 @@
  */
 class NucleonProfile {
   public:
+    /**
+     * \param[in] xm Nucleon center \f$x\f$ [fm].
+     * \param[in] ym Nucleon center \f$y\f$ [fm].
+     */
+    NucleonProfile(double xm, double ym) : xm_(xm), ym_(ym) {}
     /// Destroys the profile.
     virtual ~NucleonProfile() = default;
     /**
@@ -29,6 +34,12 @@ class NucleonProfile {
      * `smearQs`).
      */
     virtual double thickness(double x, double y) const = 0;
+
+  protected:
+    /// Nucleon center \f$x\f$ [fm].
+    double xm_;
+    /// Nucleon center \f$y\f$ [fm].
+    double ym_;
 };
 
 /**
@@ -50,8 +61,7 @@ class GaussianProfile : public NucleonProfile {
     GaussianProfile(
         double xm, double ym, double BG, double anisotropy, double phi,
         double normalization)
-        : xm_(xm),
-          ym_(ym),
+        : NucleonProfile(xm, ym),
           BG_(BG),
           xi_(anisotropy),
           phi_(phi),
@@ -59,10 +69,6 @@ class GaussianProfile : public NucleonProfile {
     double thickness(double x, double y) const override;
 
   private:
-    /// Nucleon center \f$x\f$ [fm].
-    double xm_;
-    /// Nucleon center \f$y\f$ [fm].
-    double ym_;
     /// Gaussian width \f$B_G\f$ [GeV\f$^{-2}\f$].
     double BG_;
     /// Elongation \f$\xi\f$.
@@ -90,8 +96,7 @@ class HotSpotProfile : public NucleonProfile {
     HotSpotProfile(
         double xm, double ym, std::vector<double> xq, std::vector<double> yq,
         std::vector<double> BGq, std::vector<double> normalization)
-        : xm_(xm),
-          ym_(ym),
+        : NucleonProfile(xm, ym),
           xq_(std::move(xq)),
           yq_(std::move(yq)),
           BGq_(std::move(BGq)),
@@ -114,10 +119,6 @@ class HotSpotProfile : public NucleonProfile {
     const std::vector<double> &offsetsY() const { return yq_; }
 
   private:
-    /// Nucleon center \f$x\f$ [fm].
-    double xm_;
-    /// Nucleon center \f$y\f$ [fm].
-    double ym_;
     /// Hot-spot \f$x\f$ offsets from the center [fm].
     std::vector<double> xq_;
     /// Hot-spot \f$y\f$ offsets from the center [fm].
@@ -148,7 +149,7 @@ class NucleonModel {
     virtual std::unique_ptr<NucleonProfile> sample(
         Random &random, const ReturnValue &nucleon) const = 0;
     /**
-     * Creates the model selected by `subnucleon.nucleonModel`.
+     * Creates the model selected by `param.subnucleon.nucleonModel`.
      * \param[in] param Simulation parameters; their current values
      * (including an event's posterior parameter set) are copied.
      * \return The model.

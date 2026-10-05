@@ -97,8 +97,8 @@ class ForwardLightCone {
      * \param[in,out] lat Lattice to read `Ux1`/`Uy1`/`Ux2`/`Uy2`
      * from and write `Ux`/`Uy` into.
      * \param[in] param Simulation parameters; only used for the
-     * warning message's cell coordinates and `run.randomSeed`/
-     * `event.eventId` (to seed findU()'s deterministic
+     * warning message's cell coordinates and `param->run.randomSeed`/
+     * `param->event.eventId` (to seed findU()'s deterministic
      * retry stream).
      * \param[in] N2 Total number of lattice sites.
      * \param[in,out] scratch Thread-local scratch storage.
@@ -192,7 +192,7 @@ class ForwardLightCone {
      * computed by computeElectricFieldTeam()).
      * \param[in,out] lat Lattice to read \c U from and write \c Ux2
      * into.
-     * \param[in] param Simulation parameters; `coupling.g` is used.
+     * \param[in] param Simulation parameters; `param->coupling.g` is used.
      * \param[in] N2 Total number of lattice sites.
      */
     void computePiTeam(Lattice *lat, Parameters *param, int N2);

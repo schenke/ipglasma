@@ -31,8 +31,9 @@ TEST_CASE(
 
     int nn[2] = {4, 4};
     Init init(nn);
-    double rapidityA = 0., rapidityB = 0.;
-    init.computeEffectiveRapidities(&param, rapidityA, rapidityB);
+    const Rapidities rapidities = init.computeEffectiveRapidities(&param);
+    const double rapidityA = rapidities.projectile;
+    const double rapidityB = rapidities.target;
 
     CHECK(rapidityA == doctest::Approx(1.5));
     CHECK(rapidityB == doctest::Approx(-0.8));
@@ -51,8 +52,9 @@ TEST_CASE(
 
     int nn[2] = {4, 4};
     Init init(nn);
-    double rapidityA = 0., rapidityB = 0.;
-    init.computeEffectiveRapidities(&param, rapidityA, rapidityB);
+    const Rapidities rapidities = init.computeEffectiveRapidities(&param);
+    const double rapidityA = rapidities.projectile;
+    const double rapidityB = rapidities.target;
 
     // Same pseudorapidity input on both sides must give the same rapidity
     // output (the conversion formula is symmetric in A vs B), and the
@@ -110,9 +112,10 @@ TEST_CASE(
 
     int nn[2] = {N, N};
     Init init(nn);
-    std::vector<double> scaleA, scaleB;
-    init.computeWilsonLineColorChargeScales(
-        &lat, N * N, /*g=*/2.0, /*invNy=*/0.25, scaleA, scaleB);
+    const ColorChargeScales scales = init.computeWilsonLineColorChargeScales(
+        &lat, N * N, /*g=*/2.0, /*invNy=*/0.25);
+    const std::vector<double> &scaleA = scales.projectile;
+    const std::vector<double> &scaleB = scales.target;
 
     REQUIRE(scaleA.size() == static_cast<std::size_t>(N * N));
     REQUIRE(scaleB.size() == static_cast<std::size_t>(N * N));
@@ -227,13 +230,7 @@ TEST_CASE(
     std::vector<ReturnValue> noNucleonsA, noNucleonsB;
     CollisionGeometry geometry(noNucleonsA, noNucleonsB);
     auto overlapCells = [&](double b) {
-        double averageQs = 0., averageQs2 = 0., averageQs2Avg = 0.,
-               averageQs2min = 0., averageQs2min2 = 0., Tpp = 0.;
-        int count = 0;
-        geometry.scanOverlap(
-            &lat, &param, N, a, b, /*phiRP=*/0., averageQs, averageQs2,
-            averageQs2Avg, averageQs2min, averageQs2min2, Tpp, count);
-        return count;
+        return geometry.scanOverlap(&lat, &param, N, a, b, /*phiRP=*/0.).count;
     };
     const int central = overlapCells(0.);
     const int shifted = overlapCells(4.);

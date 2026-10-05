@@ -50,8 +50,8 @@ class Lattice {
     /**
      * Allocates every field at identity/zero and builds the
      * nearest-neighbor index tables for a square lattice.
-     * \param[in] param Simulation parameters; only `lattice.L` and
-     * `run.MPIRank` are used (the side length comes from \p length).
+     * \param[in] param Simulation parameters; only `param->lattice.L` and
+     * `param->run.MPIRank` are used (the side length comes from \p length).
      * \param[in] length Lattice side length; total site count is
      * \p length squared.
      */
@@ -148,8 +148,9 @@ class Lattice {
      * two separate text files via writeMatrixArrayText().
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] fileprefix Prefix prepended to both output file names.
-     * \param[in] param Simulation parameters; `lattice.size`,
-     * `event.eventId`, `random.seed` and `run.MPISize` are used.
+     * \param[in] param Simulation parameters; `param->lattice.size`,
+     * `param->event.eventId`, `param->random.seed` and `param->run.MPISize` are
+     * used.
      */
     void writeSU3Matrices(std::string fileprefix, Parameters *param);
     /// Site index one step in \f$-x\f$ and one step in \f$+y\f$,

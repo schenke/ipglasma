@@ -11,7 +11,7 @@
 /**
  * The tabulated saturation scale \f$Q_s^2(T_p, y)\f$ of a nucleus as a
  * function of the summed nucleon thickness \f$T_p\f$ and the rapidity
- * \f$y\f$ (the file `colorCharge.nucleusQsTableFileName`, from IP-Sat).
+ * \f$y\f$ (the file `nucleusQsTableFileName`, from IP-Sat).
  * read() loads it, qs2() interpolates it.
  *
  * File format: one line per point, `y T_p Qs^2`, for nT_ values of

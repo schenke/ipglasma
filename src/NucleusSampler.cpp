@@ -14,32 +14,38 @@
 
 void NucleusSampler::readConfigurations(
     Parameters *param, Glauber *glauber, Random *random) {
-    readConfigurationFile(
-        static_cast<int>(glauber->nucleusA1()),
-        param->nucleus.lightNucleusOption,
-        param->nucleus.polarizationProjectile,
-        param->nucleus.polarizationProjectileJz, random, configsA_, param);
-    readConfigurationFile(
-        static_cast<int>(glauber->nucleusA2()),
-        param->nucleus.lightNucleusOption, param->nucleus.polarizationTarget,
-        param->nucleus.polarizationTargetJz, random, configsB_, param);
+    // configurations that are already loaded are kept
+    if (configsA_.empty()) {
+        configsA_ = readConfigurationFile(
+            static_cast<int>(glauber->nucleusA1()),
+            param->nucleus.lightNucleusOption,
+            param->nucleus.polarizationProjectile,
+            param->nucleus.polarizationProjectileJz, random, param);
+    }
+    if (configsB_.empty()) {
+        configsB_ = readConfigurationFile(
+            static_cast<int>(glauber->nucleusA2()),
+            param->nucleus.lightNucleusOption,
+            param->nucleus.polarizationTarget,
+            param->nucleus.polarizationTargetJz, random, param);
+    }
 }
 
 // This function samples the nucleon positions inside the projectile and
 // target nuclei. Both nuclei are centered at the origin.
-void NucleusSampler::sample(
-    Parameters *param, Random *random, Glauber *glauber,
-    std::vector<ReturnValue> &nucleusA, std::vector<ReturnValue> &nucleusB) {
+Nuclei NucleusSampler::sample(
+    Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     messager_.info("[NucleusSampler::sample]: Sampling nucleon positions ... ");
-    nucleusA.clear();
-    nucleusB.clear();
+    Nuclei nuclei;
+    std::vector<ReturnValue> &nucleusA = nuclei.projectile;
+    std::vector<ReturnValue> &nucleusB = nuclei.target;
 
     if (param->nucleus.nucleonPositionsFromFile) {
-        sampleFromConfigurations(
-            random, glauber->getGlauberData().projectile, configsA_, nucleusA);
-        sampleFromConfigurations(
-            random, glauber->getGlauberData().target, configsB_, nucleusB);
+        nucleusA = sampleFromConfigurations(
+            random, glauber->getGlauberData().projectile, configsA_);
+        nucleusB = sampleFromConfigurations(
+            random, glauber->getGlauberData().target, configsB_);
     } else {
         if (param->collision.nucleiToAverage > 1
             && (glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
@@ -49,8 +55,8 @@ void NucleusSampler::sample(
             messager_.flush("error");
             exit(1);
         }
-        sampleWoodsSaxon(random, glauber, NucleusRole::Projectile, nucleusA);
-        sampleWoodsSaxon(random, glauber, NucleusRole::Target, nucleusB);
+        nucleusA = sampleWoodsSaxon(random, glauber, NucleusRole::Projectile);
+        nucleusB = sampleWoodsSaxon(random, glauber, NucleusRole::Target);
     }
 
     // global rotation of the nucleus
@@ -58,11 +64,12 @@ void NucleusSampler::sample(
         random, param->nucleus.polarizationProjectile, nucleusA);
     applyPolarizationRotation(
         random, param->nucleus.polarizationTarget, nucleusB);
+    return nuclei;
 }
 
-void NucleusSampler::sampleWoodsSaxon(
-    Random *random, Glauber *glauber, NucleusRole role,
-    std::vector<ReturnValue> &nucleus) {
+std::vector<ReturnValue> NucleusSampler::sampleWoodsSaxon(
+    Random *random, Glauber *glauber, NucleusRole role) {
+    std::vector<ReturnValue> nucleus;
     const Nucleus &data = role == NucleusRole::Projectile
                               ? glauber->getGlauberData().projectile
                               : glauber->getGlauberData().target;
@@ -93,14 +100,15 @@ void NucleusSampler::sampleWoodsSaxon(
         rv.collided = 0;
         nucleus.push_back(rv);
     } else {
-        generate(random, data, nucleus);
+        nucleus = generate(random, data);
     }
+    return nucleus;
 }
 
-void NucleusSampler::sampleFromConfigurations(
+std::vector<ReturnValue> NucleusSampler::sampleFromConfigurations(
     Random *random, const Nucleus &data,
-    const std::vector<std::vector<float>> &configs,
-    std::vector<ReturnValue> &nucleus) {
+    const std::vector<std::vector<float>> &configs) {
+    std::vector<ReturnValue> nucleus;
     ReturnValue rv;
     if (configs.size() > 0) {
         double ran2 = random->genrand64_real3();
@@ -127,15 +135,16 @@ void NucleusSampler::sampleFromConfigurations(
                   << "using Woods-Saxon distribution instead.";
         messager_.flush("info");
 
-        generate(random, data, nucleus);
+        nucleus = generate(random, data);
     }
+    return nucleus;
 }
 
-void NucleusSampler::readConfigurationFile(
+std::vector<std::vector<float>> NucleusSampler::readConfigurationFile(
     const int nucleusA, const int lightNucleusOption,
     const int polarizationFlag, const double polJz, Random *random,
-    std::vector<std::vector<float>> &nucleonPosArr, Parameters *param) {
-    if (nucleonPosArr.size() > 0) return;
+    Parameters *param) {
+    std::vector<std::vector<float>> nucleonPosArr;
     std::string path = param->nucleus.nuclearConfigurationsPath + "/";
     std::string fileName;
     bool readFlag = true;
@@ -194,7 +203,7 @@ void NucleusSampler::readConfigurationFile(
         readFlag = false;
     }
 
-    if (!readFlag) return;
+    if (!readFlag) return nucleonPosArr;
 
     int Nentry = 3;
     if (nucleusA == 197 || nucleusA == 208) {
@@ -232,32 +241,34 @@ void NucleusSampler::readConfigurationFile(
     messager_ << "[NucleusSampler::readConfigurationFile]: read in "
               << nucleonPosArr.size() << " configurations.";
     messager_.flush("info");
+    return nucleonPosArr;
 }
 
-void NucleusSampler::generate(
-    Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus) {
+std::vector<ReturnValue> NucleusSampler::generate(
+    Random *random, const Nucleus &data) {
     const double beta2 = data.beta2;
     const double beta3 = data.beta3;
     const double beta4 = data.beta4;
     const double gamma = data.gamma;
     if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
         && std::abs(beta3) < 1e-15 && std::abs(gamma) < 1e-15) {
-        generateWoodsSaxon(random, data, nucleus);
+        return generateWoodsSaxon(random, data);
     } else {
         if (data.forceDminFlag) {
-            generateDeformedWoodsSaxonForceDmin(random, data, nucleus);
+            return generateDeformedWoodsSaxonForceDmin(random, data);
         } else {
             if (std::abs(gamma) > 1e-15) {
-                generateTriaxialWoodsSaxon(random, data, nucleus);
+                return generateTriaxialWoodsSaxon(random, data);
             } else {
-                generateDeformedWoodsSaxon(random, data, nucleus);
+                return generateDeformedWoodsSaxon(random, data);
             }
         }
     }
 }
 
-void NucleusSampler::generateWoodsSaxon(
-    Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus) {
+std::vector<ReturnValue> NucleusSampler::generateWoodsSaxon(
+    Random *random, const Nucleus &data) {
+    std::vector<ReturnValue> nucleus;
     const int A = data.A;
     const int Z = data.Z;
     const double a_WS = data.a_WS;
@@ -328,10 +339,12 @@ void NucleusSampler::generateWoodsSaxon(
         }
         nucleus.push_back(rv);
     }
+    return nucleus;
 }
 
-void NucleusSampler::generateDeformedWoodsSaxon(
-    Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus) {
+std::vector<ReturnValue> NucleusSampler::generateDeformedWoodsSaxon(
+    Random *random, const Nucleus &data) {
+    std::vector<ReturnValue> nucleus;
     const int A = data.A;
     const int Z = data.Z;
     const double a_WS = data.a_WS;
@@ -346,15 +359,19 @@ void NucleusSampler::generateDeformedWoodsSaxon(
     std::vector<double> costheta_array(A, 0.);
     std::vector<int> idx_array(A, 0);
     for (int i = 0; i < Z; i++) {
-        sampleRAndCosthetaFromDeformedWoodsSaxon(
-            random, a_WS, R_WS, beta2, beta3, beta4, r_array[i],
-            costheta_array[i]);
+        const RadiusAndCosTheta position =
+            sampleRAndCosthetaFromDeformedWoodsSaxon(
+                random, a_WS, R_WS, beta2, beta3, beta4);
+        r_array[i] = position.r;
+        costheta_array[i] = position.cosTheta;
         idx_array[i] = i;
     }
     for (int i = Z; i < A; i++) {
-        sampleRAndCosthetaFromDeformedWoodsSaxon(
-            random, a_WS + da_np, R_WS + dR_np, beta2, beta3, beta4, r_array[i],
-            costheta_array[i]);
+        const RadiusAndCosTheta position =
+            sampleRAndCosthetaFromDeformedWoodsSaxon(
+                random, a_WS + da_np, R_WS + dR_np, beta2, beta3, beta4);
+        r_array[i] = position.r;
+        costheta_array[i] = position.cosTheta;
         idx_array[i] = i;
     }
     std::stable_sort(
@@ -409,10 +426,12 @@ void NucleusSampler::generateDeformedWoodsSaxon(
         }
         nucleus.push_back(rv);
     }
+    return nucleus;
 }
 
-void NucleusSampler::generateDeformedWoodsSaxonForceDmin(
-    Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus) {
+std::vector<ReturnValue> NucleusSampler::generateDeformedWoodsSaxonForceDmin(
+    Random *random, const Nucleus &data) {
+    std::vector<ReturnValue> nucleus;
     const int A = data.A;
     const int Z = data.Z;
     const double a_WS = data.a_WS;
@@ -498,10 +517,12 @@ void NucleusSampler::generateDeformedWoodsSaxonForceDmin(
         }
         nucleus.push_back(rv);
     }
+    return nucleus;
 }
 
-void NucleusSampler::generateTriaxialWoodsSaxon(
-    Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus) {
+std::vector<ReturnValue> NucleusSampler::generateTriaxialWoodsSaxon(
+    Random *random, const Nucleus &data) {
+    std::vector<ReturnValue> nucleus;
     const int A = data.A;
     const int Z = data.Z;
     const double a_WS = data.a_WS;
@@ -561,6 +582,7 @@ void NucleusSampler::generateTriaxialWoodsSaxon(
         }
         nucleus.push_back(rv);
     }
+    return nucleus;
 }
 
 double NucleusSampler::sampleRFromWoodsSaxon(
@@ -573,9 +595,11 @@ double NucleusSampler::sampleRFromWoodsSaxon(
     return (r);
 }
 
-void NucleusSampler::sampleRAndCosthetaFromDeformedWoodsSaxon(
+RadiusAndCosTheta NucleusSampler::sampleRAndCosthetaFromDeformedWoodsSaxon(
     Random *random, double a_WS, double R_WS, double beta2, double beta3,
-    double beta4, double &r, double &costheta) {
+    double beta4) {
+    double r = 0.;
+    double costheta = 0.;
     double rmaxCut = R_WS + 10. * a_WS;
     double R_WS_theta = R_WS;
     do {
@@ -587,6 +611,7 @@ void NucleusSampler::sampleRAndCosthetaFromDeformedWoodsSaxon(
         R_WS_theta = R_WS * (1.0 + beta2 * y20 + beta3 * y30 + beta4 * y40);
     } while (random->genrand64_real3()
              > fermiDistribution(r, R_WS_theta, a_WS));
+    return {r, costheta};
 }
 
 double NucleusSampler::fermiDistribution(double r, double R_WS, double a_WS) {

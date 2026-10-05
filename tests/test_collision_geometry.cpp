@@ -65,9 +65,8 @@ TEST_CASE(
     CollisionGeometry geometry(nucleusA, nucleusB);
 
     const double d2 = param.collision.sigmaNN / (M_PI * 10.);  // in fm^2
-    int Ncoll = 0;
-    geometry.computeNcollList(
-        &param, nullptr, d2, /*b=*/0.0, /*phiRP=*/0.0, Ncoll);
+    const int Ncoll = geometry.computeNcollList(
+        &param, nullptr, d2, /*b=*/0.0, /*phiRP=*/0.0);
 
     CHECK(Ncoll == 1);
     CHECK(nucleusA[0].collided == 1);
@@ -91,10 +90,11 @@ TEST_CASE(
         nucleonAt(1., 0.), nucleonAt(1.5, 0.3, false), nucleonAt(-6., 0.)};
     CollisionGeometry geometry(nucleusA, nucleusB);
 
-    int Npart = 0, Ncoll = 0;
-    REQUIRE(geometry.determineNpartAndNcoll(&param, nullptr, Npart, Ncoll));
-    CHECK(Ncoll == 2);
-    CHECK(Npart == 3);
+    const WoundedNucleons wounded =
+        geometry.determineNpartAndNcoll(&param, nullptr);
+    REQUIRE(wounded.accepted);
+    CHECK(wounded.Ncoll == 2);
+    CHECK(wounded.Npart == 3);
     CHECK(param.event.Npart == 3);
     CHECK(nucleusA[0].collided == 1);
     CHECK(nucleusA[1].collided == 0);
@@ -112,7 +112,7 @@ TEST_CASE(
     // a fixed Npart that doesn't match rejects the event
     param.collision.useFixedNpart = 4;
     param.event.success = 1;
-    CHECK_FALSE(geometry.determineNpartAndNcoll(&param, nullptr, Npart, Ncoll));
+    CHECK_FALSE(geometry.determineNpartAndNcoll(&param, nullptr).accepted);
     CHECK(param.event.success == 0);
     removeGeometryFiles();
 }
@@ -127,10 +127,11 @@ TEST_CASE(
     std::vector<ReturnValue> nucleusA {nucleonAt(0., 0.)};
     std::vector<ReturnValue> nucleusB {nucleonAt(0., 0.)};
     CollisionGeometry geometry(nucleusA, nucleusB);
-    int Npart = 0, Ncoll = 0;
-    REQUIRE(geometry.determineNpartAndNcoll(&param, nullptr, Npart, Ncoll));
-    CHECK(Ncoll == 0);
-    CHECK(Npart == 2);
+    const WoundedNucleons wounded =
+        geometry.determineNpartAndNcoll(&param, nullptr);
+    REQUIRE(wounded.accepted);
+    CHECK(wounded.Ncoll == 0);
+    CHECK(wounded.Npart == 2);
     removeGeometryFiles();
 }
 
@@ -248,13 +249,9 @@ TEST_CASE(
     const double cellQs2 = PhysConst::hbarc * PhysConst::hbarc;
 
     auto fullLatticeSum = [&](double b, double phiRP) {
-        double averageQs = 0., averageQs2 = 0., averageQs2Avg = 0.,
-               averageQs2min = 0., averageQs2min2 = 0., Tpp = 0.;
-        int count = 0;
-        geometry.scanOverlap(
-            &lat, &param, N, a, b, phiRP, averageQs, averageQs2, averageQs2Avg,
-            averageQs2min, averageQs2min2, Tpp, count);
-        return averageQs2min2 / cellQs2;
+        return geometry.scanOverlap(&lat, &param, N, a, b, phiRP)
+                   .Qs2minFullLattice
+               / cellQs2;
     };
     // without a shift every cell, including (0, 0), has both nuclei
     CHECK(fullLatticeSum(0., 0.) == doctest::Approx(N * N));

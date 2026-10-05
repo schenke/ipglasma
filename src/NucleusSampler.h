@@ -10,11 +10,28 @@
 #include "PrettyOstream.h"
 #include "Random.h"
 
+/// The sampled nucleons of both nuclei, see NucleusSampler::sample().
+struct Nuclei {
+    /// Nucleons of the projectile (nucleus A).
+    std::vector<ReturnValue> projectile;
+    /// Nucleons of the target (nucleus B).
+    std::vector<ReturnValue> target;
+};
+
+/// A radius and polar angle sampled together, see
+/// NucleusSampler::sampleRAndCosthetaFromDeformedWoodsSaxon().
+struct RadiusAndCosTheta {
+    /// Radius [fm].
+    double r;
+    /// \f$\cos\theta\f$.
+    double cosTheta;
+};
+
 /**
  * Samples the nucleon positions of the projectile and the target: from
  * (possibly deformed) Woods-Saxon distributions, or by drawing one of the
  * pre-tabulated configurations of light nuclei and Au/Pb
- * (`nucleus.nucleonPositionsFromFile`), followed by the global rotation
+ * (`nucleonPositionsFromFile`), followed by the global rotation
  * selected by the nucleus' polarization. Both nuclei are centered at the
  * origin; the impact parameter is applied later.
  */
@@ -23,7 +40,7 @@ class NucleusSampler {
     /**
      * Loads the pre-tabulated configurations of both nuclei
      * (readConfigurationFile()); call once before sample() when
-     * `nucleus.nucleonPositionsFromFile` is set.
+     * `param->nucleus.nucleonPositionsFromFile` is set.
      * \param[in] param Simulation parameters.
      * \param[in] glauber Configured Glauber instance (mass numbers).
      * \param[in,out] random Random-number source (picks the deuteron
@@ -37,19 +54,14 @@ class NucleusSampler {
      * on `param->nucleus.nucleonPositionsFromFile`) and applies each
      * nucleus' global polarization rotation (applyPolarizationRotation()).
      * \param[in] param Simulation parameters; exits with an error if
-     * `collision.nucleiToAverage > 1` and either nucleus is a proton
+     * `param->collision.nucleiToAverage > 1` and either nucleus is a proton
      * (Woods-Saxon sampling only).
      * \param[in,out] random Random-number source.
      * \param[in] glauber Configured Glauber instance providing the
      * nuclear geometry.
-     * \param[out] nucleusA Cleared, then filled with the projectile's
-     * nucleons.
-     * \param[out] nucleusB Cleared, then filled with the target's
-     * nucleons.
+     * \return The nucleons of both nuclei.
      */
-    void sample(
-        Parameters *param, Random *random, Glauber *glauber,
-        std::vector<ReturnValue> &nucleusA, std::vector<ReturnValue> &nucleusB);
+    Nuclei sample(Parameters *param, Random *random, Glauber *glauber);
     /**
      * Samples one nucleus' nucleon positions without configuration
      * files: a single proton (\f$A=1\f$) is placed at the origin, the
@@ -60,11 +72,10 @@ class NucleusSampler {
      * \param[in] glauber Configured Glauber instance providing the
      * nuclear geometry.
      * \param[in] role Which nucleus to sample.
-     * \param[out] nucleus Appended with the sampled nucleons.
+     * \return The sampled nucleons.
      */
-    void sampleWoodsSaxon(
-        Random *random, Glauber *glauber, NucleusRole role,
-        std::vector<ReturnValue> &nucleus);
+    std::vector<ReturnValue> sampleWoodsSaxon(
+        Random *random, Glauber *glauber, NucleusRole role);
     /**
      * Draws one nucleus' nucleon positions from a random pre-tabulated
      * configuration, assigns protons and recenters it; falls back to
@@ -73,20 +84,18 @@ class NucleusSampler {
      * \param[in] data The nucleus' species and Woods-Saxon parameters.
      * \param[in] configs The loaded configurations, three coordinates per
      * nucleon (see readConfigurationFile()).
-     * \param[out] nucleus Appended with the sampled nucleons.
+     * \return The sampled nucleons.
      */
-    void sampleFromConfigurations(
+    std::vector<ReturnValue> sampleFromConfigurations(
         Random *random, const Nucleus &data,
-        const std::vector<std::vector<float>> &configs,
-        std::vector<ReturnValue> &nucleus);
+        const std::vector<std::vector<float>> &configs);
     /**
      * Loads pre-tabulated binary nucleon configurations for light
-     * nuclei (deuteron through Pb-208) into \p nucleonPosArr, selecting
-     * the file by \p nucleusA/\p lightNucleusOption (and, for the
-     * deuteron, \p polarizationFlag/\p polJz). A no-op if \p
-     * nucleonPosArr is already populated, or if \p nucleusA isn't one
-     * of the supported species (in which case nucleon positions are
-     * generated instead, see sampleFromConfigurations()).
+     * nuclei (deuteron through Pb-208), selecting the file by \p
+     * nucleusA/\p lightNucleusOption (and, for the deuteron, \p
+     * polarizationFlag/\p polJz). Returns no configurations if \p
+     * nucleusA isn't one of the supported species (in which case nucleon
+     * positions are generated instead, see sampleFromConfigurations()).
      * \param[in] nucleusA Mass number of the nucleus to load
      * configurations for.
      * \param[in] lightNucleusOption Selects which configuration variant
@@ -98,16 +107,16 @@ class NucleusSampler {
      * configuration file if `|polJz| == 1`.
      * \param[in,out] random Random-number source, used only for the
      * deuteron with \p polarizationFlag `0`.
-     * \param[out] nucleonPosArr Filled with one row per configuration
-     * read from the file.
      * \param[in] param Simulation parameters;
-     * `nucleus.nuclearConfigurationsPath` gives the directory to read
+     * `param->nucleus.nuclearConfigurationsPath` gives the directory to read
      * from.
+     * \return One row per configuration read from the file, three
+     * coordinates per nucleon.
      */
-    void readConfigurationFile(
+    std::vector<std::vector<float>> readConfigurationFile(
         const int nucleusA, const int lightNucleusOption,
         const int polarizationFlag, const double polJz, Random *random,
-        std::vector<std::vector<float>> &nucleonPosArr, Parameters *param);
+        Parameters *param);
     /**
      * Dispatches to the appropriate nucleus-configuration generator
      * based on which deformation parameters of \p data are nonzero:
@@ -118,10 +127,9 @@ class NucleusSampler {
      * \param[in,out] random Random-number source.
      * \param[in] data The nucleus' species and (deformed) Woods-Saxon
      * parameters.
-     * \param[out] nucleus Appended with the generated positions.
+     * \return The generated nucleons.
      */
-    void generate(
-        Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus);
+    std::vector<ReturnValue> generate(Random *random, const Nucleus &data);
     /**
      * Generates an undeformed (spherically symmetric) Woods-Saxon
      * nucleon configuration: samples each nucleon's radius via
@@ -131,10 +139,10 @@ class NucleusSampler {
      * `d_min` rejection, and recenters the result.
      * \param[in,out] random Random-number source.
      * \param[in] data The nucleus' species and Woods-Saxon parameters.
-     * \param[out] nucleus Appended with the generated positions.
+     * \return The generated nucleons.
      */
-    void generateWoodsSaxon(
-        Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus);
+    std::vector<ReturnValue> generateWoodsSaxon(
+        Random *random, const Nucleus &data);
     /**
      * Generates an axially symmetric (\f$\gamma=0\f$) deformed
      * Woods-Saxon nucleon configuration: samples each nucleon's
@@ -145,10 +153,10 @@ class NucleusSampler {
      * \param[in,out] random Random-number source.
      * \param[in] data The nucleus' species and deformed Woods-Saxon
      * parameters.
-     * \param[out] nucleus Appended with the generated positions.
+     * \return The generated nucleons.
      */
-    void generateDeformedWoodsSaxon(
-        Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus);
+    std::vector<ReturnValue> generateDeformedWoodsSaxon(
+        Random *random, const Nucleus &data);
     /**
      * generate()'s `forceDminFlag` variant: samples each nucleon's full
      * `(r, \theta, \phi)` jointly against the (possibly triaxial,
@@ -158,10 +166,10 @@ class NucleusSampler {
      * \param[in,out] random Random-number source.
      * \param[in] data The nucleus' species and deformed Woods-Saxon
      * parameters.
-     * \param[out] nucleus Appended with the generated positions.
+     * \return The generated nucleons.
      */
-    void generateDeformedWoodsSaxonForceDmin(
-        Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus);
+    std::vector<ReturnValue> generateDeformedWoodsSaxonForceDmin(
+        Random *random, const Nucleus &data);
     /**
      * generate()'s triaxial (\f$\gamma\neq0\f$), non-forced-\f$d_{\min}\f$
      * variant: like generateDeformedWoodsSaxonForceDmin()'s per-nucleon
@@ -170,10 +178,10 @@ class NucleusSampler {
      * \param[in,out] random Random-number source.
      * \param[in] data The nucleus' species and deformed Woods-Saxon
      * parameters.
-     * \param[out] nucleus Appended with the generated positions.
+     * \return The generated nucleons.
      */
-    void generateTriaxialWoodsSaxon(
-        Random *random, const Nucleus &data, std::vector<ReturnValue> &nucleus);
+    std::vector<ReturnValue> generateTriaxialWoodsSaxon(
+        Random *random, const Nucleus &data);
     /**
      * Samples one nucleon's radius from an undeformed Woods-Saxon
      * distribution via rejection sampling: draws \f$r\f$ with density
@@ -202,12 +210,11 @@ class NucleusSampler {
      * \param[in] beta2 Quadrupole deformation.
      * \param[in] beta3 Octupole deformation.
      * \param[in] beta4 Hexadecapole deformation.
-     * \param[out] r Sampled radius [fm].
-     * \param[out] costheta Sampled \f$\cos\theta\f$.
+     * \return The sampled radius and \f$\cos\theta\f$.
      */
-    static void sampleRAndCosthetaFromDeformedWoodsSaxon(
+    static RadiusAndCosTheta sampleRAndCosthetaFromDeformedWoodsSaxon(
         Random *random, double a_WS, double R_WS, double beta2, double beta3,
-        double beta4, double &r, double &costheta);
+        double beta4);
     /**
      * Evaluates the Woods-Saxon (Fermi) density profile.
      * \param[in] r Radius [fm].

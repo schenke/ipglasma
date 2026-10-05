@@ -69,9 +69,6 @@ void CollisionGeometry::sampleImpactParameter(
 
 void CollisionGeometry::computeQuantities(
     Lattice *lat, Parameters *param, Random *random) {
-    int Npart = 0;
-    int Ncoll = 0;
-
     const double L = param->lattice.L;
     const int N = param->lattice.size;
     const double a = L / N;  // lattice spacing in fm
@@ -80,20 +77,15 @@ void CollisionGeometry::computeQuantities(
 
     // Determine Npart, Ncoll only during the first stage, as in the 2nd
     // stage nuclei are shifted to b=0.
-    if (!determineNpartAndNcoll(param, random, Npart, Ncoll)) {
-        return;
-    }
+    const WoundedNucleons wounded = determineNpartAndNcoll(param, random);
+    if (!wounded.accepted) return;
+    const int Npart = wounded.Npart;
+    const int Ncoll = wounded.Ncoll;
 
-    double averageQs = 0.;
-    double averageQs2 = 0.;
-    double averageQs2Avg = 0.;
-    double averageQs2min = 0.;
-    double averageQs2min2 = 0.;
-    double Tpp = 0.;
-    int count = 0;
-    scanOverlap(
-        lat, param, N, a, b, phiRP, averageQs, averageQs2, averageQs2Avg,
-        averageQs2min, averageQs2min2, Tpp, count);
+    const OverlapSums sums = scanOverlap(lat, param, N, a, b, phiRP);
+    const int count = sums.count;
+    const double Tpp = sums.Tpp;
+    const double averageQs2min2 = sums.Qs2minFullLattice;
 
     if (count == 0) {
         param->event.averageQs = 0.;
@@ -107,10 +99,12 @@ void CollisionGeometry::computeQuantities(
         return;
     }
 
-    averageQs /= static_cast<double>(count) + smallEps;
-    averageQs2 /= static_cast<double>(count) + smallEps;
-    averageQs2Avg /= static_cast<double>(count) + smallEps;
-    averageQs2min /= static_cast<double>(count) + smallEps;
+    const double averageQs2 =
+        sums.Qs2 / (static_cast<double>(count) + smallEps);
+    const double averageQs2Avg =
+        sums.Qs2Avg / (static_cast<double>(count) + smallEps);
+    const double averageQs2min =
+        sums.Qs2min / (static_cast<double>(count) + smallEps);
 
     param->event.averageQs = sqrt(averageQs2);
     param->event.averageQsAvg = sqrt(averageQs2Avg);
@@ -158,11 +152,12 @@ void CollisionGeometry::computeQuantities(
 // Npart, Ncoll, averageQs, etc.
 // Determines Npart/Ncoll from the (already-sampled) nucleon positions in
 // nucleusA_/nucleusB_, writes NcollList*.dat/NpartList*.dat, and sets
-// param->event.Npart. Returns false (having called param->event.success = 0) if
+// param->event.Npart. Not accepted (having set param->event.success = 0) if
 // useFixedNpart is set and this event's Npart doesn't match, signaling the
 // caller to abort and resample.
-bool CollisionGeometry::determineNpartAndNcoll(
-    Parameters *param, Random *random, int &Npart, int &Ncoll) {
+WoundedNucleons CollisionGeometry::determineNpartAndNcoll(
+    Parameters *param, Random *random) {
+    WoundedNucleons wounded;
     const double d2 = param->collision.sigmaNN * mbToFm2 / M_PI;  // in fm^2
     const double b = param->event.b;
     const double phiRP = param->event.phiRP;
@@ -172,7 +167,7 @@ bool CollisionGeometry::determineNpartAndNcoll(
     // Determine Npart, Ncoll. Do this only during the first stage, as in
     // the 2nd stage nuclei are shifted to b=0
     if (!param->nucleus.useSmoothNucleus) {
-        computeNcollList(param, random, d2, b, phiRP, Ncoll);
+        wounded.Ncoll = computeNcollList(param, random, d2, b, phiRP);
 
         stringstream strNpart_name;
         strNpart_name << "NpartList" << param->event.eventId << ".dat";
@@ -202,45 +197,46 @@ bool CollisionGeometry::determineNpartAndNcoll(
             nucleusA_.at(0).collided = 1;
         }
 
-        Npart = 0;
+        wounded.Npart = 0;
         for (int i = 0; i < A1; i++) {
             if (nucleusA_.at(i).collided == 1) {
-                Npart++;
+                wounded.Npart++;
             }
         }
 
         for (int i = 0; i < A2; i++) {
             if (nucleusB_.at(i).collided == 1) {
-                Npart++;
+                wounded.Npart++;
             }
         }
 
-        param->event.Npart = Npart;
+        param->event.Npart = wounded.Npart;
 
         if (param->collision.useFixedNpart != 0
-            && Npart != param->collision.useFixedNpart) {
+            && wounded.Npart != param->collision.useFixedNpart) {
             messager_ << "[CollisionGeometry::computeQuantities]: "
                          "Npart = "
-                      << Npart
+                      << wounded.Npart
                       << " does not match the requested fixed "
                          "Npart = "
                       << param->collision.useFixedNpart << "; resampling.";
             messager_.flush("info");
             param->event.success = 0;
-            return false;
+            wounded.accepted = false;
+            return wounded;
         }
     } else {
         // Smooth nucleus
-        Npart = 2;
-        Ncoll = 2;
-        param->event.Npart = Npart;
+        wounded.Npart = 2;
+        wounded.Ncoll = 2;
+        param->event.Npart = wounded.Npart;
     }
-    return true;
+    return wounded;
 }
 
-void CollisionGeometry::computeNcollList(
-    Parameters *param, Random *random, double d2, double b, double phiRP,
-    int &Ncoll) {
+int CollisionGeometry::computeNcollList(
+    Parameters *param, Random *random, double d2, double b, double phiRP) {
+    int Ncoll = 0;
     stringstream strNcoll_name;
     strNcoll_name << "NcollList" << param->event.eventId << ".dat";
     string Ncoll_name;
@@ -281,18 +277,16 @@ void CollisionGeometry::computeNcollList(
     }
 
     foutNcoll.close();
+    return Ncoll;
 }
 
-void CollisionGeometry::scanOverlap(
-    Lattice *lat, Parameters *param, int N, double a, double b, double phiRP,
-    double &averageQs, double &averageQs2, double &averageQs2Avg,
-    double &averageQs2min, double &averageQs2min2, double &Tpp, int &count) {
+OverlapSums CollisionGeometry::scanOverlap(
+    Lattice *lat, Parameters *param, int N, double a, double b, double phiRP) {
+    OverlapSums sums;
     const double L = param->lattice.L;
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
 
-    count = 0;
-    Tpp = 0.;
     for (int ipos = 0; ipos < N * N; ipos++) {
         // loop over all positions
         int check = 0;
@@ -334,13 +328,15 @@ void CollisionGeometry::scanOverlap(
         }
 
         if (g2mu2B >= g2mu2A) {
-            averageQs2min2 += g2mu2A * param->colorCharge.QsMuRatio
-                              * param->colorCharge.QsMuRatio / a / a * hbarc
-                              * hbarc * param->coupling.g * param->coupling.g;
+            sums.Qs2minFullLattice += g2mu2A * param->colorCharge.QsMuRatio
+                                      * param->colorCharge.QsMuRatio / a / a
+                                      * hbarc * hbarc * param->coupling.g
+                                      * param->coupling.g;
         } else {
-            averageQs2min2 += g2mu2B * param->colorCharge.QsMuRatio
-                              * param->colorCharge.QsMuRatio / a / a * hbarc
-                              * hbarc * param->coupling.g * param->coupling.g;
+            sums.Qs2minFullLattice += g2mu2B * param->colorCharge.QsMuRatio
+                                      * param->colorCharge.QsMuRatio / a / a
+                                      * hbarc * hbarc * param->coupling.g
+                                      * param->coupling.g;
         }
 
         for (int i = 0; i < A1; i++) {
@@ -373,43 +369,42 @@ void CollisionGeometry::scanOverlap(
 
         if (check == 2) {
             if (g2mu2B > g2mu2A) {
-                averageQs += sqrt(
+                sums.Qs += sqrt(
                     g2mu2B * param->colorCharge.QsMuRatio
                     * param->colorCharge.QsMuRatio / a / a * hbarc * hbarc
                     * param->coupling.g * param->coupling.g);
-                averageQs2 += g2mu2B * param->colorCharge.QsMuRatio
-                              * param->colorCharge.QsMuRatio / a / a * hbarc
-                              * hbarc * param->coupling.g * param->coupling.g;
-                averageQs2min += g2mu2A * param->colorCharge.QsMuRatio
-                                 * param->colorCharge.QsMuRatio / a / a * hbarc
-                                 * hbarc * param->coupling.g
-                                 * param->coupling.g;
+                sums.Qs2 += g2mu2B * param->colorCharge.QsMuRatio
+                            * param->colorCharge.QsMuRatio / a / a * hbarc
+                            * hbarc * param->coupling.g * param->coupling.g;
+                sums.Qs2min += g2mu2A * param->colorCharge.QsMuRatio
+                               * param->colorCharge.QsMuRatio / a / a * hbarc
+                               * hbarc * param->coupling.g * param->coupling.g;
             } else {
-                averageQs += sqrt(
+                sums.Qs += sqrt(
                     g2mu2A * param->colorCharge.QsMuRatio
                     * param->colorCharge.QsMuRatio / a / a * hbarc * hbarc
                     * param->coupling.g * param->coupling.g);
-                averageQs2 += g2mu2A * param->colorCharge.QsMuRatio
-                              * param->colorCharge.QsMuRatio / a / a * hbarc
-                              * hbarc * param->coupling.g * param->coupling.g;
-                averageQs2min += g2mu2B * param->colorCharge.QsMuRatio
-                                 * param->colorCharge.QsMuRatio / a / a * hbarc
-                                 * hbarc * param->coupling.g
-                                 * param->coupling.g;
+                sums.Qs2 += g2mu2A * param->colorCharge.QsMuRatio
+                            * param->colorCharge.QsMuRatio / a / a * hbarc
+                            * hbarc * param->coupling.g * param->coupling.g;
+                sums.Qs2min += g2mu2B * param->colorCharge.QsMuRatio
+                               * param->colorCharge.QsMuRatio / a / a * hbarc
+                               * hbarc * param->coupling.g * param->coupling.g;
             }
-            averageQs2Avg += (g2mu2B * param->colorCharge.QsMuRatio
-                                  * param->colorCharge.QsMuRatio
-                              + g2mu2A * param->colorCharge.QsMuRatio
-                                    * param->colorCharge.QsMuRatio)
-                             / 2. / a / a * hbarc * hbarc * param->coupling.g
-                             * param->coupling.g;
-            count++;
+            sums.Qs2Avg += (g2mu2B * param->colorCharge.QsMuRatio
+                                * param->colorCharge.QsMuRatio
+                            + g2mu2A * param->colorCharge.QsMuRatio
+                                  * param->colorCharge.QsMuRatio)
+                           / 2. / a / a * hbarc * hbarc * param->coupling.g
+                           * param->coupling.g;
+            sums.count++;
         }
         // compute T_pp
-        Tpp += TpA * TpB * a * a / hbarc / hbarc / hbarc
-               / hbarc;  // now this quantity is in fm^-2
-                         // remember: Tp is in GeV^2
+        sums.Tpp += TpA * TpB * a * a / hbarc / hbarc / hbarc
+                    / hbarc;  // now this quantity is in fm^-2
+                              // remember: Tp is in GeV^2
     }
+    return sums;
 }
 
 // Sets param's running-coupling alpha_s from whichever Qs choice

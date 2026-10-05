@@ -80,9 +80,9 @@ TEST_CASE("NucleusSampler::sample places a proton at the origin") {
     random.init_genrand64(1);
 
     NucleusSampler sampler;
-    // stale entries from a previous event are dropped
-    std::vector<ReturnValue> nucleusA(3), nucleusB;
-    sampler.sample(&param, &random, &glauber, nucleusA, nucleusB);
+    const Nuclei nuclei = sampler.sample(&param, &random, &glauber);
+    const std::vector<ReturnValue> &nucleusA = nuclei.projectile;
+    const std::vector<ReturnValue> &nucleusB = nuclei.target;
     for (const auto *nucleus : {&nucleusA, &nucleusB}) {
         REQUIRE(nucleus->size() == 1);
         CHECK(nucleus->front().x == 0.);
@@ -116,8 +116,8 @@ TEST_CASE(
         Random random;
         random.init_genrand64(7);
         NucleusSampler sampler;
-        std::vector<ReturnValue> nucleus;
-        sampler.generate(&random, data, nucleus);
+        const std::vector<ReturnValue> nucleus =
+            sampler.generate(&random, data);
 
         REQUIRE(nucleus.size() == 40);
         CHECK(countProtons(nucleus) == 18);
@@ -130,8 +130,8 @@ TEST_CASE(
 TEST_CASE(
     "NucleusSampler::generate dispatches on the deformation and the "
     "forced-d_min flag") {
-    using Generator = void (NucleusSampler::*)(
-        Random *, const Nucleus &, std::vector<ReturnValue> &);
+    using Generator =
+        std::vector<ReturnValue> (NucleusSampler::*)(Random *, const Nucleus &);
     struct Case {
         double beta2, beta3, beta4, gamma;
         bool forceDmin;
@@ -168,9 +168,10 @@ TEST_CASE(
         Random random1, random2;
         random1.init_genrand64(11);
         random2.init_genrand64(11);
-        std::vector<ReturnValue> dispatched, direct;
-        sampler.generate(&random1, data, dispatched);
-        (sampler.*c.expected)(&random2, data, direct);
+        const std::vector<ReturnValue> dispatched =
+            sampler.generate(&random1, data);
+        const std::vector<ReturnValue> direct =
+            (sampler.*c.expected)(&random2, data);
         checkSamePositions(dispatched, direct);
     }
 }
@@ -191,8 +192,8 @@ TEST_CASE(
     NucleusSampler sampler;
     Random random;
     random.init_genrand64(3);
-    std::vector<ReturnValue> nucleus;
-    sampler.sampleFromConfigurations(&random, data, configs, nucleus);
+    const std::vector<ReturnValue> nucleus =
+        sampler.sampleFromConfigurations(&random, data, configs);
 
     REQUIRE(nucleus.size() == 4);
     CHECK(countProtons(nucleus) == 2);
@@ -207,8 +208,8 @@ TEST_CASE(
     std::sort(xs.begin(), xs.end());
     for (int i = 0; i < 4; i++) CHECK(xs[i] == doctest::Approx(i - 1.5));
 
-    std::vector<ReturnValue> generated;
-    sampler.sampleFromConfigurations(&random, data, {}, generated);
+    const std::vector<ReturnValue> generated =
+        sampler.sampleFromConfigurations(&random, data, {});
     CHECK(generated.size() == 4);
     CHECK(countProtons(generated) == 2);
 }
@@ -289,8 +290,8 @@ TEST_CASE(
     param.nucleus.nuclearConfigurationsPath = dir;
 
     NucleusSampler sampler;
-    std::vector<std::vector<float>> configs;
-    sampler.readConfigurationFile(A, 0, 0, 0., nullptr, configs, &param);
+    const std::vector<std::vector<float>> configs =
+        sampler.readConfigurationFile(A, 0, 0, 0., nullptr, &param);
 
     REQUIRE(configs.size() == static_cast<size_t>(nConfigs));
     for (int c = 0; c < nConfigs; c++) {
@@ -328,9 +329,9 @@ TEST_CASE(
          {std::pair<double, float> {0., 0.f}, {1., 1.f}, {-1., 1.f}}) {
         CAPTURE(Jz);
         NucleusSampler sampler;
-        std::vector<std::vector<float>> configs;
         // polarizationFlag != 0: the file is chosen by Jz, not randomly
-        sampler.readConfigurationFile(2, 0, 1, Jz, nullptr, configs, &param);
+        const std::vector<std::vector<float>> configs =
+            sampler.readConfigurationFile(2, 0, 1, Jz, nullptr, &param);
         REQUIRE(configs.size() == 1);
         CHECK(configs[0][0] == expectedTag);
     }
@@ -343,8 +344,8 @@ TEST_CASE(
     int pol0Picks = 0;
     for (int i = 0; i < samples; i++) {
         NucleusSampler sampler;
-        std::vector<std::vector<float>> configs;
-        sampler.readConfigurationFile(2, 0, 0, 1., &random, configs, &param);
+        const std::vector<std::vector<float>> configs =
+            sampler.readConfigurationFile(2, 0, 0, 1., &random, &param);
         REQUIRE(configs.size() == 1);
         if (configs[0][0] == 0.f) pol0Picks++;
     }

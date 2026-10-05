@@ -91,6 +91,24 @@ TEST_CASE(
     CHECK(param.validationErrors().size() == 1);
 }
 
+TEST_CASE(
+    "Parameters::validationErrors: rejects averaging over nuclei with a "
+    "proton") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.collision.projectile = "p";
+    param.collision.target = "Pb";
+    param.collision.nucleiToAverage = 2;
+    CHECK(param.validationErrors().size() == 1);
+
+    param.collision.projectile = "Pb";
+    CHECK(param.validationErrors().empty());
+    param.collision.target = "p";
+    CHECK(param.validationErrors().size() == 1);
+    param.collision.nucleiToAverage = 1;
+    CHECK(param.validationErrors().empty());
+}
+
 TEST_CASE("Parameters::validationErrors: reports every failed check") {
     Parameters param;
     makeValidBaseline(param);

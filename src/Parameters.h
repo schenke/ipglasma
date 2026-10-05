@@ -153,8 +153,10 @@ struct SubnucleonParameters {
     /// should be of order \f$\Lambda_{QCD}=0.2\f$ GeV.
     double m = 0.;
     /// Transverse structure of a nucleon, see NucleonModel: `gaussian`
-    /// (a single Gaussian of width BG) or `hotspots` (Nq Gaussian hot
-    /// spots of width BGq, distributed with width BG).
+    /// (a single Gaussian of width BG), `hotspots` (Nq Gaussian hot spots
+    /// of width BGq, distributed with width BG) or `strings` (three such
+    /// hot spots, each moved to a random point on its string to the
+    /// junction, see StringyNucleon).
     std::string nucleonModel = "gaussian";
     /// Width [GeV\f$^{-2}\f$] of the Gaussian describing the proton's
     /// shape, \f$T \sim e^{-b^2/(2B)}\f$.
@@ -172,9 +174,10 @@ struct SubnucleonParameters {
     /// reduces to plain 3D Gaussian sampling.
     double omega = 0.;
     /// Mean number of hot spots (constituent quarks) per nucleon for
-    /// `nucleonModel hotspots`, at least 1. Sets NqBase: each nucleon
-    /// gets floor(NqBase) hot spots, one more with probability equal to
-    /// the fractional part, plus a Poisson fluctuation of mean NqFluc.
+    /// `nucleonModel hotspots`, at least 1 (`strings` always has 3). Sets
+    /// NqBase: each nucleon gets floor(NqBase) hot spots, one more with
+    /// probability equal to the fractional part, plus a Poisson fluctuation of
+    /// mean NqFluc.
     double Nq = 0.;
     /// Base number of constituent quarks (posterior-fit parameter; see
     /// setParamsWithPosteriorParameterSet()).

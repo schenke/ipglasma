@@ -327,12 +327,23 @@ bool gaussianNucleons(const Parameters &p) {
 }
 
 /**
- * Condition for the parameters of the hot-spot nucleon model.
+ * Condition for the number of hot spots, which only the hot-spot nucleon
+ * model samples (`strings` always has three).
  * \param[in] p The parameters read so far.
  * \return Whether `nucleonModel` is `hotspots`.
  */
 bool hotSpotNucleons(const Parameters &p) {
     return p.subnucleon.nucleonModel == "hotspots";
+}
+
+/**
+ * Condition for the hot-spot parameters, which the hot-spot and the
+ * string nucleon models share.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `hotspots` or `strings`.
+ */
+bool hotSpotSubstructure(const Parameters &p) {
+    return hotSpotNucleons(p) || p.subnucleon.nucleonModel == "strings";
 }
 
 /**
@@ -356,9 +367,19 @@ bool posteriorParameters(const Parameters &p) {
 /**
  * Condition for the hot-spot parameters a posterior set replaces.
  * \param[in] p The parameters read so far.
- * \return Whether `nucleonModel` is `hotspots` without a posterior set.
+ * \return Whether `nucleonModel` is `hotspots` or `strings` without a
+ * posterior set.
  */
 bool hotSpotsFromInput(const Parameters &p) {
+    return hotSpotSubstructure(p) && inputParameters(p);
+}
+
+/**
+ * Condition for the number of hot spots, which a posterior set replaces.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `hotspots` without a posterior set.
+ */
+bool numberOfHotSpotsFromInput(const Parameters &p) {
     return hotSpotNucleons(p) && inputParameters(p);
 }
 
@@ -480,7 +501,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         // nucleon substructure and color charges
         param(
             "nucleonModel", &P::subnucleon, &SubnucleonParameters::nucleonModel)
-            .check(oneOf<std::string>({"gaussian", "hotspots"})),
+            .check(oneOf<std::string>({"gaussian", "hotspots", "strings"})),
         // a posterior parameter set replaces m, BG, BGq, smearingWidth,
         // NqBase, QsMuRatio and dqMin every event, so those are only read
         // without one
@@ -508,18 +529,19 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check([](const double &v) {
                 return v > -1. ? "" : "must be larger than -1";
             }),
-        // hot-spot nucleons
+        // hot spots (also the ends of the strings of `strings`)
         param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
             .onlyIf(hotSpotsFromInput),
         param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
-            .onlyIf(hotSpotNucleons),
+            .onlyIf(hotSpotSubstructure),
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
             .onlyIf(hotSpotsFromInput),
         param("omega", &P::subnucleon, &SubnucleonParameters::omega)
-            .onlyIf(hotSpotNucleons)
+            .onlyIf(hotSpotSubstructure)
             .check(positive()),
+        // the number of hot spots (`strings` always has three)
         param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
-            .onlyIf(hotSpotsFromInput)
+            .onlyIf(numberOfHotSpotsFromInput)
             .check([](const double &v) {
                 return v >= 1. ? "" : "must be at least 1";
             }),
@@ -528,7 +550,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
             &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)
-            .onlyIf(hotSpotNucleons),
+            .onlyIf(hotSpotSubstructure),
         param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio)
             .onlyIf(inputParameters),
         param("smearQs", &P::subnucleon, &SubnucleonParameters::smearQs),

@@ -3,6 +3,7 @@
 #ifndef SRC_NUCLEONMODEL_H_
 #define SRC_NUCLEONMODEL_H_
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
@@ -131,9 +132,9 @@ class HotSpotProfile : public NucleonProfile {
 
 /**
  * How a nucleon's transverse structure is sampled, selected by the
- * input parameter `nucleonModel`. A new model (e.g. a stringy proton)
- * only needs a NucleonModel and a NucleonProfile subclass and an entry
- * in create().
+ * input parameter `nucleonModel`. A new model only needs a NucleonModel
+ * (and, unless an existing one fits, a NucleonProfile) subclass and an
+ * entry in create().
  */
 class NucleonModel {
   public:
@@ -253,6 +254,78 @@ class HotSpotNucleon : public NucleonModel {
     bool smearQs_;
     /// Width of the log-normal Qs fluctuations (`smearingWidth`).
     double smearingWidth_;
+};
+
+/// A point in 3D [fm].
+using Point3 = std::array<double, 3>;
+
+/**
+ * The strings of one sampled `nucleonModel strings` nucleon (see
+ * StringyNucleon::sampleStrings()).
+ */
+struct StringConfiguration {
+    /// The three hot spots the strings end on, relative to the nucleon
+    /// center.
+    HotSpotConfiguration hotSpots;
+    /// Junction where the three strings meet: the Fermat point of the
+    /// hot spots [fm].
+    Point3 junction;
+    /// Position of each moved hot spot along its string, from 0 at the
+    /// junction to 1 at the original hot spot.
+    std::vector<double> t;
+    /// Transverse \f$x\f$ offsets of the moved hot spots from the
+    /// nucleon center [fm].
+    std::vector<double> x;
+    /// Transverse \f$y\f$ offsets of the moved hot spots [fm].
+    std::vector<double> y;
+};
+
+/**
+ * `nucleonModel strings`: a nucleon of three hot spots connected by
+ * strings that meet at a junction. The three hot spots are sampled as
+ * for `nucleonModel hotspots` (in 3D for `omega 1`), and the junction is
+ * their Fermat point, which minimizes the total string length. Each hot
+ * spot is then moved to a uniformly random point on its string, from
+ * the junction to its sampled position, and the nucleon's thickness is
+ * that of hot spots at the projections of these points onto the
+ * transverse plane (a HotSpotProfile).
+ */
+class StringyNucleon : public NucleonModel {
+  public:
+    /// Number of hot spots, and so of strings, of every nucleon.
+    static constexpr int numberOfHotSpots = 3;
+    /**
+     * \param[in] param Simulation parameters (`BG`, `BGq`, `BGqVar`,
+     * `dqMin`, `omega`, `shiftConstituentQuarkProtonOrigin`, `smearQs`,
+     * `smearingWidth`).
+     */
+    explicit StringyNucleon(const Parameters &param);
+    std::unique_ptr<NucleonProfile> sample(
+        Random &random, const ReturnValue &nucleon) const override;
+    /**
+     * Samples the strings of one nucleon: the three hot spots (see
+     * HotSpotNucleon::sampleHotSpots()), their junction, and the
+     * position of each moved hot spot along its string.
+     * \param[in,out] random Random-number source.
+     * \return The strings, relative to the nucleon center.
+     */
+    StringConfiguration sampleStrings(Random &random) const;
+    /**
+     * The Fermat point of three points: the point with the smallest
+     * sum of distances to them. If one angle of their triangle is at
+     * least 120 degrees, it is that vertex; otherwise it lies in the
+     * triangle's plane, where each pair of points is seen at 120
+     * degrees, with barycentric weights \f$a/\sin(A+\pi/3)\f$ (\f$a\f$ the
+     * side opposite to the vertex with angle \f$A\f$). If two points
+     * coincide, it is that point.
+     * \param[in] points The three points.
+     * \return The Fermat point.
+     */
+    static Point3 fermatPoint(const std::array<Point3, 3> &points);
+
+  private:
+    /// Samples the hot spots the strings end on.
+    HotSpotNucleon hotSpots_;
 };
 
 #endif  // SRC_NUCLEONMODEL_H_

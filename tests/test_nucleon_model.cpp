@@ -1,4 +1,5 @@
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <memory>
 #include <stdexcept>
@@ -268,6 +269,10 @@ TEST_CASE("NucleonModel::create returns the selected model") {
     CHECK(
         dynamic_cast<GaussianNucleon *>(NucleonModel::create(param).get())
         != nullptr);
+    param.subnucleon.nucleonModel = "strings";
+    CHECK(
+        dynamic_cast<StringyNucleon *>(NucleonModel::create(param).get())
+        != nullptr);
     param.subnucleon.nucleonModel = "unknown";
     CHECK_THROWS_AS(NucleonModel::create(param), std::invalid_argument);
 }
@@ -285,4 +290,220 @@ TEST_CASE(
     CHECK(
         init.computeNucleonThicknessAtCell(profiles, 0., 0., 2.)
         == doctest::Approx(3. / (2.0 * M_PI) / 2.));
+}
+
+namespace {
+double distance(const Point3 &a, const Point3 &b) {
+    return std::sqrt(
+        (a[0] - b[0]) * (a[0] - b[0]) + (a[1] - b[1]) * (a[1] - b[1])
+        + (a[2] - b[2]) * (a[2] - b[2]));
+}
+
+double totalLength(const Point3 &p, const std::array<Point3, 3> &points) {
+    return distance(p, points[0]) + distance(p, points[1])
+           + distance(p, points[2]);
+}
+
+// Whether p is (to rounding) where the total length to the points is
+// smallest: no step of size h in any of the 26 directions shortens it.
+bool isMinimum(const Point3 &p, const std::array<Point3, 3> &points) {
+    const double h = 1e-6;
+    const double length = totalLength(p, points);
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dz = -1; dz <= 1; dz++) {
+                const Point3 q {p[0] + h * dx, p[1] + h * dy, p[2] + h * dz};
+                if (totalLength(q, points) < length - 1e-12) return false;
+            }
+        }
+    }
+    return true;
+}
+}  // namespace
+
+TEST_CASE(
+    "StringyNucleon::fermatPoint: the centroid of an equilateral triangle, "
+    "the vertex of an angle of at least 120 degrees, a coincident point") {
+    const double s3 = std::sqrt(3.);
+    const std::array<Point3, 3> equilateral {
+        Point3 {1., 0., 0.5}, Point3 {-0.5, s3 / 2., 0.5},
+        Point3 {-0.5, -s3 / 2., 0.5}};
+    const Point3 centroid = StringyNucleon::fermatPoint(equilateral);
+    CHECK(distance(centroid, Point3 {0., 0., 0.5}) < 1e-12);
+
+    // an angle of 150 degrees at the first point
+    const double c = std::cos(150. * M_PI / 180.);
+    const double s = std::sin(150. * M_PI / 180.);
+    const std::array<Point3, 3> obtuse {
+        Point3 {0.1, 0.2, 0.3}, Point3 {1.1, 0.2, 0.3},
+        Point3 {0.1 + 0.7 * c, 0.2 + 0.7 * s, 0.3}};
+    CHECK(StringyNucleon::fermatPoint(obtuse) == obtuse[0]);
+    // exactly 120 degrees: the vertex is also where the sum is smallest
+    const std::array<Point3, 3> limit {
+        Point3 {0., 0., 0.}, Point3 {1., 0., 0.}, Point3 {-0.5, s3 / 2., 0.}};
+    CHECK(distance(StringyNucleon::fermatPoint(limit), limit[0]) < 1e-12);
+
+    const std::array<Point3, 3> coincident {
+        Point3 {0.3, 0.1, 0.}, Point3 {-0.2, 0.4, 0.1}, Point3 {0.3, 0.1, 0.}};
+    CHECK(StringyNucleon::fermatPoint(coincident) == coincident[0]);
+}
+
+TEST_CASE(
+    "StringyNucleon::fermatPoint minimizes the total distance for random "
+    "triangles in 3D, independently of the order of the points") {
+    Random random;
+    random.init_genrand64(29ULL);
+    int vertexCases = 0, interiorCases = 0;
+    for (int i = 0; i < 500; ++i) {
+        std::array<Point3, 3> points;
+        for (Point3 &p : points) {
+            for (double &coordinate : p) coordinate = random.gauss(0., 0.5);
+        }
+        CAPTURE(i);
+        const Point3 fermat = StringyNucleon::fermatPoint(points);
+        CHECK(isMinimum(fermat, points));
+        bool atVertex = false;
+        for (const Point3 &p : points) {
+            if (distance(fermat, p) < 1e-12) atVertex = true;
+        }
+        if (atVertex) {
+            vertexCases++;
+        } else {
+            interiorCases++;
+            // each pair of points is seen at 120 degrees
+            for (int a = 0; a < 3; a++) {
+                const int b = (a + 1) % 3;
+                double dotProduct = 0.;
+                for (int k = 0; k < 3; k++) {
+                    dotProduct +=
+                        (points[a][k] - fermat[k]) * (points[b][k] - fermat[k]);
+                }
+                CHECK(
+                    dotProduct
+                        / (distance(points[a], fermat)
+                           * distance(points[b], fermat))
+                    == doctest::Approx(-0.5).epsilon(1e-9));
+            }
+        }
+        const std::array<Point3, 3> permuted {points[2], points[0], points[1]};
+        CHECK(distance(StringyNucleon::fermatPoint(permuted), fermat) < 1e-12);
+    }
+    // both cases occur for random triangles
+    CHECK(vertexCases > 10);
+    CHECK(interiorCases > 10);
+}
+
+TEST_CASE(
+    "StringyNucleon::sampleStrings moves each of the three hot spots to a "
+    "point on its string from the junction") {
+    for (double omega : {1., 2.}) {
+        CAPTURE(omega);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.nucleonModel = "strings";
+        param.subnucleon.omega = omega;
+        param.subnucleon.NqBase = 5.;  // not used: always three hot spots
+        const StringyNucleon model(param);
+        Random random;
+        random.init_genrand64(31ULL);
+        random.setGammaIncCDF(omega);
+
+        bool someZ = false;
+        for (int n = 0; n < 50; ++n) {
+            const StringConfiguration strings = model.sampleStrings(random);
+            const HotSpotConfiguration &hotSpots = strings.hotSpots;
+            REQUIRE(hotSpots.x.size() == 3);
+            REQUIRE(strings.t.size() == 3);
+            REQUIRE(strings.x.size() == 3);
+            std::array<Point3, 3> ends;
+            for (int i = 0; i < 3; i++) {
+                ends[i] = {hotSpots.x[i], hotSpots.y[i], hotSpots.z[i]};
+                if (std::abs(hotSpots.z[i]) > 1e-3) someZ = true;
+            }
+            const Point3 &J = strings.junction;
+            CHECK(distance(J, StringyNucleon::fermatPoint(ends)) < 1e-15);
+            for (int i = 0; i < 3; i++) {
+                const double t = strings.t[i];
+                CHECK(t > 0.);
+                CHECK(t < 1.);
+                CHECK(
+                    strings.x[i]
+                    == doctest::Approx(J[0] + t * (ends[i][0] - J[0])));
+                CHECK(
+                    strings.y[i]
+                    == doctest::Approx(J[1] + t * (ends[i][1] - J[1])));
+            }
+        }
+        // omega 1 samples the hot spots in 3D, omega != 1 in the plane
+        CHECK(someZ == (omega == 1.));
+    }
+}
+
+TEST_CASE(
+    "StringyNucleon: three moved hot spots whose profile integrates to the "
+    "Qs normalization") {
+    Parameters param;
+    makeHotSpotParam(param);
+    param.subnucleon.nucleonModel = "strings";
+    const StringyNucleon model(param);
+    Random random;
+    random.init_genrand64(37ULL);
+    for (int i = 0; i < 5; ++i) {
+        const std::unique_ptr<NucleonProfile> profile =
+            model.sample(random, nucleonAt(-0.4, 0.7));
+        const auto *hotSpots =
+            dynamic_cast<const HotSpotProfile *>(profile.get());
+        REQUIRE(hotSpots != nullptr);
+        CHECK(hotSpots->numberOfHotSpots() == 3);
+        CHECK(
+            integrate(*profile, -0.4, 0.7)
+            == doctest::Approx(1.).epsilon(1e-3));
+    }
+}
+
+TEST_CASE(
+    "StringyNucleon: reference thicknesses with every option on (omega, "
+    "dqMin, BGqVar, smearQs)") {
+    // Values of the current code (its geometry is checked by the tests
+    // above); they change if the sampling, including the order of the
+    // random draws, changes.
+    const double expected[2][3][3] = {
+        // omega = 1 (hot spots and junction in 3D)
+        {{0.07117971749068952, 0.0097705399534210192, 0.00073540124885799021},
+         {0.067710670547497645, 0.0018023507228984231, 8.3750080501346203e-06},
+         {0.04893515017337597, 0.006223252893511509, 0.0072116750964462545}},
+        // omega = 2 (in the transverse plane)
+        {{0.16727568843466295, 0.016035469215763525, 0.0010477318473265445},
+         {0.023444465761166905, 0.0042044758566608734, 0.0016717585390443976},
+         {0.014312410429116873, 5.5722266360508553e-06,
+          2.7781712707968981e-13}}};
+    const double points[3][2] = {{0.3, -0.2}, {0.6, 0.1}, {-0.1, -0.5}};
+
+    for (int io = 0; io < 2; ++io) {
+        const double omega = io == 0 ? 1. : 2.;
+        CAPTURE(omega);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.nucleonModel = "strings";
+        param.subnucleon.BGqVar = 0.1;
+        param.subnucleon.dqMin = 0.2;
+        param.subnucleon.omega = omega;
+        param.subnucleon.smearQs = true;
+        param.subnucleon.smearingWidth = 0.5;
+        Random random;
+        random.init_genrand64(2024ULL);
+        random.gslRandomInit(2024ULL);
+        random.setGammaIncCDF(omega);
+        const StringyNucleon model(param);
+        for (int i = 0; i < 3; ++i) {
+            CAPTURE(i);
+            const std::unique_ptr<NucleonProfile> profile =
+                model.sample(random, nucleonAt(0.3, -0.2));
+            for (int ip = 0; ip < 3; ++ip) {
+                CHECK(
+                    profile->thickness(points[ip][0], points[ip][1])
+                    == doctest::Approx(expected[io][i][ip]).epsilon(1e-12));
+            }
+        }
+    }
 }

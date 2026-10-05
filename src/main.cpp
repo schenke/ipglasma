@@ -132,7 +132,8 @@ int main(int argc, char *argv[]) {
         messager.flush("info");
     }
     // only the hot-spot positions are sampled from the gamma distribution
-    if (param->subnucleon.nucleonModel == "hotspots") {
+    if (param->subnucleon.nucleonModel == "hotspots"
+        || param->subnucleon.nucleonModel == "strings") {
         random->setGammaIncCDF(param->subnucleon.omega);
     }
 

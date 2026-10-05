@@ -1,6 +1,8 @@
 #ifndef SRC_PHYSCONST_H_
 #define SRC_PHYSCONST_H_
 
+#include <cmath>
+
 /**
  * Physical constants shared across the codebase.
  */
@@ -8,6 +10,20 @@ namespace PhysConst {
 /// Generic small-number regularizer used to guard against division by
 /// zero or a singular denominator [dimensionless].
 const double smallEps = 1e-16;
+/// Tolerance within which an input value counts as one of the special
+/// values that select a code path, e.g. `omega 1` or `jimwlkAlphaS 0`
+/// (see isClose()) [dimensionless].
+const double inputTolerance = 1e-8;
+/**
+ * Whether an input value equals a special value that selects a code
+ * path, within inputTolerance.
+ * \param[in] value The input value.
+ * \param[in] target The special value.
+ * \return Whether \f$|\text{value} - \text{target}| <\f$ inputTolerance.
+ */
+inline bool isClose(double value, double target) {
+    return std::abs(value - target) < inputTolerance;
+}
 /// Number of colors; fixed at 3 (see SU3.h/GaugeFix.cpp's comments on
 /// why this codebase doesn't generalize to other \f$N_c\f$).
 const int Nc = 3;

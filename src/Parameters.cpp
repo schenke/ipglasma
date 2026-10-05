@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "PhysConst.h"
+
 std::string Parameters::loadPosteriorParameterSetsFromFile(
     std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
     std::ifstream posteriorFile(posteriorFileName.c_str());
@@ -140,7 +142,7 @@ std::vector<std::string> Parameters::validationErrors() const {
 
     // JIMWLK running coupling (jimwlkAlphaS 0), independent of
     // runningCoupling
-    if (jimwlk.enabled && jimwlk.alphaS <= 1e-10
+    if (jimwlk.enabled && PhysConst::isClose(jimwlk.alphaS, 0.)
         && jimwlk.LambdaQCD >= jimwlk.mu0) {
         std::ostringstream message;
         message << "jimwlkLambdaQCD (" << jimwlk.LambdaQCD

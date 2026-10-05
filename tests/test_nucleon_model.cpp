@@ -507,3 +507,29 @@ TEST_CASE(
         }
     }
 }
+
+TEST_CASE(
+    "HotSpotNucleon: omega within PhysConst::inputTolerance of 1 samples in "
+    "3D, other values in the transverse plane") {
+    CHECK(PhysConst::isClose(1. + 0.5 * PhysConst::inputTolerance, 1.));
+    CHECK_FALSE(PhysConst::isClose(1. + 2. * PhysConst::inputTolerance, 1.));
+    for (const double omega :
+         {1., 1. + 0.5 * PhysConst::inputTolerance,
+          1. + 2. * PhysConst::inputTolerance}) {
+        CAPTURE(omega);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.omega = omega;
+        const HotSpotNucleon model(param);
+        Random random;
+        random.init_genrand64(41ULL);
+        random.setGammaIncCDF(omega);
+        bool someZ = false;
+        for (int i = 0; i < 20; ++i) {
+            for (double z : model.sampleHotSpots(random).z) {
+                if (z != 0.) someZ = true;
+            }
+        }
+        CHECK(someZ == PhysConst::isClose(omega, 1.));
+    }
+}

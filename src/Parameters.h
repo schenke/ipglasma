@@ -106,7 +106,9 @@ struct NucleusParameters {
     int polarizationProjectile = 0;
     /// Same as \c polarizationProjectile, for the target.
     int polarizationTarget = 0;
-    /// Projectile's \f$J_z\f$ polarization.
+    /// Projectile's \f$J_z\f$ polarization; for a deuteron read from
+    /// configuration files, \f$|J_z| = 1\f$ (within
+    /// PhysConst::inputTolerance) selects the \f$J_z = \pm 1\f$ file.
     double polarizationProjectileJz = 0.;
     /// Target's \f$J_z\f$ polarization.
     double polarizationTargetJz = 0.;
@@ -115,7 +117,8 @@ struct NucleusParameters {
     bool useSmoothNucleus = false;
     /// Whether `radiusWS`/`diffusenessWS`/`beta2`/`beta3`/`beta4`/\c
     /// gamma override a nucleus species' built-in deformation
-    /// parameters.
+    /// parameters. A nucleus whose deformation parameters are all within
+    /// PhysConst::inputTolerance of 0 is sampled as spherical.
     bool useInputWSParams = false;
     /// Woods-Saxon half-density radius [fm] override.
     double radiusWS = 0.;
@@ -176,7 +179,8 @@ struct SubnucleonParameters {
     /// (a hot spot keeps its radius and only its direction is redrawn,
     /// up to 100 times). For `strings` it applies to the string ends.
     double dqMin = 0.;
-    /// Radial distribution of the hot spots: for `1`, 3D positions with
+    /// Radial distribution of the hot spots: for `1` (within
+    /// PhysConst::inputTolerance), 3D positions with
     /// each coordinate Gaussian of variance BG (transverse
     /// \f$\langle b^2\rangle = 2B_G\f$); otherwise transverse positions
     /// at radius \f$b=\sqrt{\omega x B_G}\f$, \f$x\f$ drawn with density
@@ -372,8 +376,8 @@ struct JimwlkParameters {
     /// Infrared regulator [GeV] in the JIMWLK kernel (see Eq. (21) of
     /// \cite Mantysaari:2022sux).
     double mass = 0.;
-    /// JIMWLK coupling: `0` running coupling, a positive value fixed
-    /// coupling.
+    /// JIMWLK coupling: `0` (within PhysConst::inputTolerance) running
+    /// coupling, a positive value fixed coupling.
     double alphaS = 0.;
     /// JIMWLK evolution step size (recommended `0.005` with running
     /// coupling, `0.0005` with fixed coupling).

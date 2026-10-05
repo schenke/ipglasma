@@ -70,7 +70,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **BGqVar** (`hotspots`, `strings`): variance of the hot-spot width in GeV$^{-4}$ (see `BGq`); `0` gives every nucleon the width `BGq`
 - **dqMin** (`hotspots`, `strings`): minimum distance in fm between the hot spots of a nucleon, in 3D for `omega 1` and in the transverse plane otherwise. It is kept on a best-effort basis: a hot spot keeps its sampled radius and only its direction is redrawn, up to 100 times. With `strings` it applies to the ends of the strings
 - **omega** (`hotspots`, `strings`): radial distribution of the hot spots
-  - `1`: positions in 3D, each coordinate Gaussian with variance `BG` (transverse $\langle b^2 \rangle = 2 B_G$)
+  - `1` (any value within $10^{-8}$ of 1): positions in 3D, each coordinate Gaussian with variance `BG` (transverse $\langle b^2 \rangle = 2 B_G$)
   - otherwise: positions in the transverse plane, at a uniformly random angle and radius $b = \sqrt{\omega x B_G}$, where $x$ follows the density $\propto Q(1/\omega, x)$ (regularized upper incomplete gamma function), so $\langle b^2 \rangle \approx (1+\omega) B_G/2$. Note that this does not approach the `omega 1` case for $\omega \to 1$
 - **Nq** (`hotspots`): mean number of hot spots per nucleon, at least 1; a fractional value such as 2.5 gives 2 or 3 hot spots with the corresponding probabilities (plus the fluctuation set by `NqFluc`)
 - **NqFluc** (`hotspots`): mean of a Poisson-distributed number of additional hot spots per nucleon; `0` for no fluctuation. Every nucleon has at least one hot spot
@@ -122,7 +122,7 @@ Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` wh
 - **jimwlkXTarget**: Bjorken-$x$ to which the target is evolved
 - **jimwlkMass**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkAlphaS**: Coupling constant in the JIMWLK evolution
-  - 0: Use running coupling
+  - 0 (any value within $10^{-8}$ of 0): Use running coupling
 - **jimwlkLambdaQCD** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkMu0**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkDs**: step size in JIMWLK evolution. Recommended values

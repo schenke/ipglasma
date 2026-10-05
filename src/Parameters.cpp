@@ -186,6 +186,16 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
+    // averaging over nuclei is not supported for protons
+    if (collision.nucleiToAverage > 1
+        && (collision.projectile == "p" || collision.target == "p")) {
+        std::ostringstream message;
+        message << "nucleiToAverage = " << collision.nucleiToAverage
+                << " (averaging over nuclei) is not supported for collisions "
+                   "with a proton";
+        fail(message);
+    }
+
     // the posterior parameter sets are fits of hot-spot nucleons
     if (subnucleon.subNucleonParamType != 0
         && subnucleon.nucleonModel != "hotspots") {

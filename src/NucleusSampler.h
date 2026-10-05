@@ -53,15 +53,31 @@ class NucleusSampler {
      * loaded configurations or from Woods-Saxon distributions, depending
      * on `param->nucleus.nucleonPositionsFromFile`) and applies each
      * nucleus' global polarization rotation (applyPolarizationRotation()).
-     * \param[in] param Simulation parameters; exits with an error if
-     * `param->collision.nucleiToAverage > 1` and either nucleus is a proton
-     * (Woods-Saxon sampling only).
+     * With `param->collision.nucleiToAverage` \f$n > 1\f$, \f$n\f$
+     * nuclei of each kind are sampled and rotated independently, and
+     * each list holds all their nucleons (Init divides every nucleon's
+     * thickness by \f$n\f$).
+     * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.
      * \param[in] glauber Configured Glauber instance providing the
      * nuclear geometry.
      * \return The nucleons of both nuclei.
      */
     Nuclei sample(Parameters *param, Random *random, Glauber *glauber);
+    /**
+     * Samples the nucleon positions of one nucleus, from the loaded
+     * configurations (sampleFromConfigurations()) or from its Woods-Saxon
+     * distribution (sampleWoodsSaxon()), depending on
+     * `param->nucleus.nucleonPositionsFromFile`.
+     * \param[in] param Simulation parameters.
+     * \param[in,out] random Random-number source.
+     * \param[in] glauber Configured Glauber instance providing the
+     * nuclear geometry.
+     * \param[in] role Which nucleus to sample.
+     * \return The sampled nucleons, centered at the origin.
+     */
+    std::vector<ReturnValue> samplePositions(
+        Parameters *param, Random *random, Glauber *glauber, NucleusRole role);
     /**
      * Samples one nucleus' nucleon positions without configuration
      * files: a single proton (\f$A=1\f$) is placed at the origin, the

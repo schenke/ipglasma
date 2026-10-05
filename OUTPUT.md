@@ -173,7 +173,9 @@ are not written with `useSmoothNucleus 1`. Positions are in fm, in the frame
 of the collision: the projectile is centred at +b/2 and the target at −b/2
 along the reaction plane. Two nucleons collide if their transverse distance
 is below √(σ_NN/π) (`gaussianWounding 0`) or with the Gaussian probability
-of GLISSANDO (`gaussianWounding 1`, see the README).
+of GLISSANDO (`gaussianWounding 1`, see the README). With `nucleiToAverage`
+n > 1 the lists hold the nucleons of all n nuclei of each kind, first those
+of the first nucleus.
 
 **`NpartList<id>.dat`:** one line per nucleon, first all projectile nucleons,
 then a blank line, then all target nucleons:

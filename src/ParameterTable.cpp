@@ -308,6 +308,16 @@ bool wsDeformParamsSet(const Parameters &p) {
 bool saveSnapshotsSet(const Parameters &p) { return p.jimwlk.saveSnapshots; }
 
 /**
+ * Condition for the eccentricity cutoff: the eccentricities are only
+ * computed together with the gluon multiplicity.
+ * \param[in] p The parameters read so far.
+ * \return Whether `computeGluonMultiplicity` is set.
+ */
+bool gluonMultiplicityComputed(const Parameters &p) {
+    return p.output.computeGluonMultiplicity;
+}
+
+/**
  * Condition for the parameters of the gaussian nucleon model.
  * \param[in] p The parameters read so far.
  * \return Whether `nucleonModel` is `gaussian`.
@@ -577,6 +587,12 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "computeGluonMultiplicity", &P::output,
             &OutputParameters::computeGluonMultiplicity),
+        param(
+            "eccentricityCutoff", &P::output,
+            &OutputParameters::eccentricityCutoff)
+            .onlyIf(gluonMultiplicityComputed)
+            .optional("0")
+            .check(nonNegative()),
         param(
             "readMultFromFile", &P::output,
             &OutputParameters::readMultFromFile),

@@ -288,14 +288,14 @@ output, with u = (1, 0, 0, 0) and π = 0.
 `eccentricities<id>.dat` (`Eccentricity::compute()`), at the final time with
 `computeGluonMultiplicity 1`. The line is *appended*, so rerunning an event
 id in the same directory adds lines. The weights are ε u^τ (times the
-running-coupling factor), over cells with ε above the cutoff (0 in a normal
-run), about the energy-weighted centroid.
+running-coupling factor), over cells with ε at least `eccentricityCutoff`
+(default 0), about the energy-weighted centroid.
 
 | Column | Content |
 |---|---|
 | 1 | τ [fm/c] |
 | 2–13 | ε_n, Ψ_n for n = 1…6 (ε_1, Ψ_1, ε_2, Ψ_2, …); ε_n = \|⟨r^m e^{inφ}⟩\| / ⟨r^m⟩ with m = 3 for n = 1 and m = n otherwise |
-| 14 | energy-density cutoff |
+| 14 | energy-density cutoff `eccentricityCutoff` [GeV/fm³] |
 | 15 | √⟨r²⟩ [fm] |
 | 16, 17 | largest x and y offset from the centroid, along the row and column through it, where the weight exceeds the cutoff [fm] |
 | 18 | impact parameter b [fm] |

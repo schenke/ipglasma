@@ -825,10 +825,8 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         int success = 1;
         if (param->output.computeGluonMultiplicity) {
             if (it == itmax) {
-                Eccentricity::compute(lat, param, it, 0.0, 0);
-                // Eccentricity::compute(lat, param, it, 0.1, 0);
-                // Eccentricity::compute(lat, param, it, 1., 0);
-                // Eccentricity::compute(lat, param, it, 10., 0);
+                Eccentricity::compute(
+                    lat, param, it, param->output.eccentricityCutoff, 0);
 
                 success = gluonMultiplicity_.compute(lat, group, param, it);
             }

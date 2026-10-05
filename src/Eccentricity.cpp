@@ -85,7 +85,10 @@ void Eccentricity::compute(
     string ecc_name;
     ecc_name = strecc_name.str();
 
-    // cutoff on energy density is 'cutoff' times Lambda_QCD^4
+    // cells whose energy density (times the running-coupling factor) is
+    // below the cutoff are left out; the cells hold it in fm^-4, the cutoff
+    // is in GeV/fm^3
+    const double cutoffInverseFm4 = cutoff / hbarc;
     int N = param->lattice.size;
     int pos;
     double rA, phiA, x, y;
@@ -143,10 +146,7 @@ void Eccentricity::compute(
             gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
 
-            if (lat->cells[pos]->getEpsilon() * gfactor
-                < cutoff)  // this is 1/fm^4, so Lambda_QCD^{-4} (because
-                           // \Lambda_QCD is roughly 1/fm)
-            {
+            if (lat->cells[pos]->getEpsilon() * gfactor < cutoffInverseFm4) {
                 weight = 0.;
             } else {
                 weight =
@@ -219,9 +219,7 @@ void Eccentricity::compute(
             gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
 
-            if (lat->cells[pos]->getEpsilon() * gfactor
-                < cutoff)  // this is 1/fm^4, so Lambda_QCD^{-4}
-            {
+            if (lat->cells[pos]->getEpsilon() * gfactor < cutoffInverseFm4) {
                 weight = 0.;
             } else {
                 weight =
@@ -250,19 +248,19 @@ void Eccentricity::compute(
             avcos6 += rA * rA * rA * rA * rA * rA * cos(6. * phiA) * (weight);
             avsin6 += rA * rA * rA * rA * rA * rA * sin(6. * phiA) * (weight);
 
-            if (weight > cutoff && iy == N / 2 + yshift) {
+            if (weight > cutoffInverseFm4 && iy == N / 2 + yshift) {
                 maxX = x;
             }
-            if (weight > cutoff && ix == N / 2 + xshift) {
+            if (weight > cutoffInverseFm4 && ix == N / 2 + xshift) {
                 maxY = y;
             }
 
-            if (weight < cutoff && iy == N / 2 + yshift && ix > N / 2 + xshift
-                && smallestX == 0) {
+            if (weight < cutoffInverseFm4 && iy == N / 2 + yshift
+                && ix > N / 2 + xshift && smallestX == 0) {
                 smallestX = x;
             }
-            if (weight < cutoff && ix == N / 2 + xshift && iy > N / 2 + yshift
-                && smallestY == 0) {
+            if (weight < cutoffInverseFm4 && ix == N / 2 + xshift
+                && iy > N / 2 + yshift && smallestY == 0) {
                 smallestY = y;
             }
         }
@@ -296,9 +294,7 @@ void Eccentricity::compute(
             gfactor = computeRunningCouplingGfactor(
                 lat, param, pos, N, a, g, c, muZero);
 
-            if (lat->cells[pos]->getEpsilon() * gfactor
-                < cutoff)  // this is 1/fm^4, so Lambda_QCD^{-4}
-            {
+            if (lat->cells[pos]->getEpsilon() * gfactor < cutoffInverseFm4) {
                 weight = 0.;
             } else {
                 weight =

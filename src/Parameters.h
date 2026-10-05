@@ -290,6 +290,9 @@ struct OutputParameters {
     /// Whether to compute the gluon multiplicity spectrum (requires
     /// GaugeFix::fftChi()'s Coulomb-gauge fixing).
     bool computeGluonMultiplicity = false;
+    /// Energy density [GeV/fm\f$^3\f$] below which a cell is left out of
+    /// the eccentricities (see Eccentricity::compute()).
+    double eccentricityCutoff = 0.;
     /// Whether to read the gluon spectrum \f$dN/d^2k_T\f$ from file and
     /// compute the integrated rate from it (`1`).
     bool readMultFromFile = false;

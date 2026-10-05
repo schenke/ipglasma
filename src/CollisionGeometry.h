@@ -12,6 +12,45 @@
 #include "Random.h"
 
 /**
+ * Wounded nucleons of an event, see
+ * CollisionGeometry::determineNpartAndNcoll().
+ */
+struct WoundedNucleons {
+    /// Number of participants \f$N_{\text{part}}\f$.
+    int Npart = 0;
+    /// Number of binary collisions \f$N_{\text{coll}}\f$.
+    int Ncoll = 0;
+    /// `false` if `useFixedNpart` is set and \f$N_{\text{part}}\f$ does not
+    /// match it, so the event must be resampled.
+    bool accepted = true;
+};
+
+/**
+ * Sums over the lattice that CollisionGeometry::computeQuantities()
+ * averages, see CollisionGeometry::scanOverlap(). Except for
+ * `Qs2minFullLattice` and `Tpp` they run over the overlap region only;
+ * max, min and avg refer to the two nuclei's \f$Q_s\f$ in a cell.
+ */
+struct OverlapSums {
+    /// Sum of \f$Q_s\f$ (max) [GeV].
+    double Qs = 0.;
+    /// Sum of \f$Q_s^2\f$ (max) [GeV\f$^2\f$].
+    double Qs2 = 0.;
+    /// Sum of \f$Q_s^2\f$ (avg) [GeV\f$^2\f$].
+    double Qs2Avg = 0.;
+    /// Sum of \f$Q_s^2\f$ (min) [GeV\f$^2\f$].
+    double Qs2min = 0.;
+    /// Sum of \f$Q_s^2\f$ (min) over every lattice cell
+    /// [GeV\f$^2\f$].
+    double Qs2minFullLattice = 0.;
+    /// \f$T_{pp} = \sum T_p^A T_p^B a^2\f$ over every lattice cell
+    /// [fm\f$^{-2}\f$].
+    double Tpp = 0.;
+    /// Number of cells in the overlap region.
+    int count = 0;
+};
+
+/**
  * The collision geometry of one event: samples the impact parameter and
  * reaction-plane angle, determines the wounded nucleons
  * (\f$N_{\text{part}}\f$, \f$N_{\text{coll}}\f$) from the sampled nucleon
@@ -38,11 +77,12 @@ class CollisionGeometry {
 
     /**
      * Samples this event's impact parameter \f$b\f$ (linearly or
-     * uniformly distributed between `collision.bMin`/`collision.bMax`, or
-     * `0` for the constant-color-charge-density case) and reaction-plane
-     * angle, and resets every nucleon's `.collided` flag to `0`.
-     * \param[in,out] param Simulation parameters; `event.b`/`event.phiRP`
-     * store the sampled values.
+     * uniformly distributed between
+     * `param->collision.bMin`/`param->collision.bMax`, or `0` for the
+     * constant-color-charge-density case) and reaction-plane angle, and resets
+     * every nucleon's `.collided` flag to `0`.
+     * \param[in,out] param Simulation parameters;
+     * `param->event.b`/`param->event.phiRP` store the sampled values.
      * \param[in,out] random Random-number source.
      */
     void sampleImpactParameter(Parameters *param, Random *random);
@@ -66,15 +106,12 @@ class CollisionGeometry {
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in,out] param Simulation parameters.
      * \param[in,out] random Random-number source (Gaussian wounding).
-     * \param[out] Npart Number of participants.
-     * \param[out] Ncoll Number of binary collisions.
-     * \return `false` (having set `param->event.success = 0`) if
-     * `useFixedNpart` is set and this event's \f$N_{\text{part}}\f$
-     * doesn't match, signaling the caller to abort and resample;
-     * `true` otherwise.
+     * \return \f$N_{\text{part}}\f$ and \f$N_{\text{coll}}\f$; not
+     * accepted (and `param->event.success` set to 0) if `useFixedNpart`
+     * is set and \f$N_{\text{part}}\f$ doesn't match, signaling the
+     * caller to abort and resample.
      */
-    bool determineNpartAndNcoll(
-        Parameters *param, Random *random, int &Npart, int &Ncoll);
+    WoundedNucleons determineNpartAndNcoll(Parameters *param, Random *random);
     /**
      * determineNpartAndNcoll()'s binary-collision pair loop: writes
      * `NcollList<id>.dat` and marks each colliding nucleon pair's
@@ -88,11 +125,10 @@ class CollisionGeometry {
      * (\f$\sigma_{NN}/(10\pi)\f$) [fm\f$^2\f$].
      * \param[in] b Impact parameter [fm].
      * \param[in] phiRP Reaction-plane angle [rad].
-     * \param[in,out] Ncoll Incremented for each colliding pair found.
+     * \return The number of binary collisions.
      */
-    void computeNcollList(
-        Parameters *param, Random *random, double d2, double b, double phiRP,
-        int &Ncoll);
+    int computeNcollList(
+        Parameters *param, Random *random, double d2, double b, double phiRP);
     /**
      * Scans the full lattice, accumulating the \f$Q_s\f$/\f$T_{pp}\f$
      * averages computeQuantities() reports and stores (only over cells
@@ -105,24 +141,11 @@ class CollisionGeometry {
      * \param[in] a Lattice spacing [fm].
      * \param[in] b Impact parameter [fm].
      * \param[in] phiRP Reaction-plane angle [rad].
-     * \param[out] averageQs Running sum of \f$Q_s\f$ (max of the two
-     * nuclei at each cell).
-     * \param[out] averageQs2 Running sum of \f$Q_s^2\f$ (max).
-     * \param[out] averageQs2Avg Running sum of \f$Q_s^2\f$ (average of
-     * the two nuclei).
-     * \param[out] averageQs2min Running sum of \f$Q_s^2\f$ (min).
-     * \param[out] averageQs2min2 Running sum of \f$Q_s^2\f$ (min),
-     * accumulated over every lattice cell rather than just the
-     * overlap region.
-     * \param[out] Tpp Running sum of \f$T_p^A T_p^B\f$ [fm\f$^{-2}\f$].
-     * \param[out] count Number of cells included in the overlap-region
-     * averages.
+     * \return The sums.
      */
-    void scanOverlap(
+    OverlapSums scanOverlap(
         Lattice *lat, Parameters *param, int N, double a, double b,
-        double phiRP, double &averageQs, double &averageQs2,
-        double &averageQs2Avg, double &averageQs2min, double &averageQs2min2,
-        double &Tpp, int &count);
+        double phiRP);
     /**
      * Sets \p param's running-coupling \f$\alpha_s\f$ from whichever
      * \f$Q_s\f$ choice `param->coupling.runWithQs` selects, or a
@@ -131,7 +154,7 @@ class CollisionGeometry {
      * `computeRunningCouplingGfactor`, which shares computeAlphaS()
      * with this function).
      * \param[in,out] param Simulation parameters;
-     * `event.alphas` stores the result.
+     * `param->event.alphas` stores the result.
      */
     void computeAndSetRunningAlphaS(Parameters *param);
     /**

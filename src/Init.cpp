@@ -4,6 +4,7 @@
 #include "Init.h"
 
 #include <algorithm>
+#include <utility>
 #include <vector>
 
 #include "Instrumentation.h"
@@ -19,7 +20,10 @@ using PhysConst::Nc2m1;
 // Init class.
 
 void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
-    nucleusSampler_.sample(param, random, glauber, nucleusA_, nucleusB_);
+    Nuclei nuclei = nucleusSampler_.sample(param, random, glauber);
+    // move-assign: collisionGeometry_ keeps referring to these vectors
+    nucleusA_ = std::move(nuclei.projectile);
+    nucleusB_ = std::move(nuclei.target);
 }
 
 // Q_s as a function of \sum T_p and y (new in this version of the code -
@@ -111,9 +115,9 @@ void Init::setColorChargeDensity(
     const int N = param->lattice.size;
     const double a = param->lattice.L / N;  // lattice spacing in fm
 
-    double rapidityA = 0.;
-    double rapidityB = 0.;
-    computeEffectiveRapidities(param, rapidityA, rapidityB);
+    const Rapidities rapidities = computeEffectiveRapidities(param);
+    const double rapidityA = rapidities.projectile;
+    const double rapidityB = rapidities.target;
 
     double nucleiInAverage =
         static_cast<double>(param->collision.nucleiToAverage);
@@ -150,12 +154,9 @@ void Init::setColorChargeDensity(
         "and B set. ");
 }
 
-void Init::computeEffectiveRapidities(
-    Parameters *param, double &rapidityA, double &rapidityB) {
+Rapidities Init::computeEffectiveRapidities(Parameters *param) {
     if (!param->colorCharge.usePseudoRapidity) {
-        rapidityA = param->colorCharge.rapidityA;
-        rapidityB = param->colorCharge.rapidityB;
-        return;
+        return {param->colorCharge.rapidityA, param->colorCharge.rapidityB};
     }
     // when using pseudorapidity as input convert to rapidity here.
     // later include Jacobian in multiplicity and energy
@@ -166,7 +167,7 @@ void Init::computeEffectiveRapidities(
     double m = param->colorCharge.jacobianMass;  // in GeV
     double P =
         0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
-    rapidityA =
+    const double rapidityA =
         0.5
         * log(
             sqrt(pow(cosh(param->colorCharge.rapidityA), 2.) + m * m / (P * P))
@@ -175,7 +176,7 @@ void Init::computeEffectiveRapidities(
                          pow(cosh(param->colorCharge.rapidityA), 2.)
                          + m * m / (P * P))
                      - sinh(param->colorCharge.rapidityA)));
-    rapidityB =
+    const double rapidityB =
         0.5
         * log(
             sqrt(pow(cosh(param->colorCharge.rapidityB), 2.) + m * m / (P * P))
@@ -187,6 +188,7 @@ void Init::computeEffectiveRapidities(
     messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
               << rapidityA << ", " << rapidityB;
     messager_.flush("info");
+    return {rapidityA, rapidityB};
 }
 
 void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
@@ -376,10 +378,11 @@ std::vector<double> Init::computeWilsonLineMomentumKernel(
     return momentumKernel;
 }
 
-void Init::computeWilsonLineColorChargeScales(
-    Lattice *lat, int sites, double g, double invNy,
-    std::vector<double> &colorChargeScaleA,
-    std::vector<double> &colorChargeScaleB) {
+ColorChargeScales Init::computeWilsonLineColorChargeScales(
+    Lattice *lat, int sites, double g, double invNy) {
+    ColorChargeScales scales;
+    std::vector<double> &colorChargeScaleA = scales.projectile;
+    std::vector<double> &colorChargeScaleB = scales.target;
     colorChargeScaleA.resize(static_cast<std::size_t>(sites));
     colorChargeScaleB.resize(static_cast<std::size_t>(sites));
 #pragma omp parallel for
@@ -389,6 +392,7 @@ void Init::computeWilsonLineColorChargeScales(
         colorChargeScaleB[static_cast<std::size_t>(pos)] =
             g * sqrt(lat->cells[pos]->getg2mu2B() * invNy);
     }
+    return scales;
 }
 
 void Init::setV(Lattice *lat, Parameters *param, Random *random) {
@@ -447,10 +451,10 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     // g2mu2 and Ny are fixed throughout Wilson-line construction.  Cache the
     // color-independent site scale once for each nucleus instead of repeating
     // the same sqrt in every longitudinal sheet.
-    std::vector<double> colorChargeScaleA;
-    std::vector<double> colorChargeScaleB;
-    computeWilsonLineColorChargeScales(
-        lat, sites, g, invNy, colorChargeScaleA, colorChargeScaleB);
+    const ColorChargeScales scales =
+        computeWilsonLineColorChargeScales(lat, sites, g, invNy);
+    const std::vector<double> &colorChargeScaleA = scales.projectile;
+    const std::vector<double> &colorChargeScaleB = scales.target;
 
     auto fillColorCharge = [&](const std::vector<double> &scale) {
         {

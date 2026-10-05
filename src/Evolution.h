@@ -50,17 +50,18 @@ class Evolution {
      * (evolveStepPersistent(), an anonymous-namespace helper in
      * Evolution.cpp that runs one shared `#pragma omp parallel` team
      * through evolvePi()/evolveE()/evolvePhi()/evolveU() in order) up to
-     * `param->evolution.maxTime` (or, if `evolution.inverseQsForMaxTime`, up to
-     * \f$1/Q_s\f$). At the final time step (and, if `output.writeOutputs
+     * `param->evolution.maxTime` (or, if
+     * `param->evolution.inverseQsForMaxTime`, up to
+     * \f$1/Q_s\f$). At the final time step (and, if `param->output.writeOutputs
      * == 5`, at four additional fixed intermediate times), temporarily
      * recenters the momenta from \f$\tau_{n-1/2}\f$ to \f$\tau_n\f$ to
      * measure EnergyMomentumTensor::compute() and either u() or
-     * `MyEigen::writeTmunu4D()` (depending on `output.writeEpsilonUHydro`),
-     * then restores the unmodified momenta so the measurement cannot perturb
-     * the trajectory. At the very end, runs checkGaussLaw(), and -- if
-     * `output.computeGluonMultiplicity` -- Eccentricity::compute() and
-     * GluonMultiplicity::compute(), stopping early if it reports no
-     * collision.
+     * `MyEigen::writeTmunu4D()` (depending on
+     * `param->output.writeEpsilonUHydro`), then restores the unmodified momenta
+     * so the measurement cannot perturb the trajectory. At the very end, runs
+     * checkGaussLaw(), and -- if `param->output.computeGluonMultiplicity` --
+     * Eccentricity::compute() and GluonMultiplicity::compute(), stopping early
+     * if it reports no collision.
      * \param[in,out] lat Lattice to evolve in place.
      * \param[in] group Group instance, forwarded to
      * GluonMultiplicity::compute().
@@ -158,11 +159,12 @@ class Evolution {
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     /**
      * The final-time flow measurement of run(), after
-     * EnergyMomentumTensor::compute(): with `output.writeEpsilonUHydro` the
-     * full u() solve and hydro output; otherwise only the raw \f$T^{\mu\nu}\f$
-     * output, preceded by the flow-velocity solve if
-     * `output.computeGluonMultiplicity` (so that Eccentricity::compute(), which
-     * weights by \f$\epsilon u^\tau\f$, sees the solved fields).
+     * EnergyMomentumTensor::compute(): with `param->output.writeEpsilonUHydro`
+     * the full u() solve and hydro output; otherwise only the raw
+     * \f$T^{\mu\nu}\f$ output, preceded by the flow-velocity solve if
+     * `param->output.computeGluonMultiplicity` (so that
+     * Eccentricity::compute(), which weights by \f$\epsilon u^\tau\f$, sees the
+     * solved fields).
      * \param[in,out] lat Lattice holding \f$T^{\mu\nu}\f$; receives
      * \f$\epsilon\f$ and \f$u^\mu\f$ when the solve runs.
      * \param[in] param Simulation parameters.

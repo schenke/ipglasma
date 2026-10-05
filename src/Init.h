@@ -5,6 +5,7 @@
 #define SRC_INIT_H_
 
 #include <memory>
+#include <vector>
 
 #include "CollisionGeometry.h"
 #include "FFT.h"
@@ -32,6 +33,23 @@ enum class InitializationMethod {
     /// Read previously written Wilson lines from a binary file
     /// (WilsonLineIO::read() with format `2`).
     ReadWlineBinary
+};
+
+/// The rapidities of the two nuclei, see Init::computeEffectiveRapidities().
+struct Rapidities {
+    /// Rapidity of the projectile (nucleus A).
+    double projectile;
+    /// Rapidity of the target (nucleus B).
+    double target;
+};
+
+/// Per-site color-charge scales of the two nuclei, see
+/// Init::computeWilsonLineColorChargeScales().
+struct ColorChargeScales {
+    /// The projectile's scale per site.
+    std::vector<double> projectile;
+    /// The target's scale per site.
+    std::vector<double> target;
 };
 
 /**
@@ -116,15 +134,16 @@ class Init {
      * with the identity outside the lattice bounds.
      * \param[in,out] lat Lattice whose `U`/`U2` fields are shifted in
      * place.
-     * \param[in] param Simulation parameters; `event.b`/`event.phiRP`
-     * give the impact parameter and reaction-plane angle.
+     * \param[in] param Simulation parameters;
+     * `param->event.b`/`param->event.phiRP` give the impact parameter and
+     * reaction-plane angle.
      */
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     /**
      * Samples this event's impact parameter and reaction-plane angle
      * (CollisionGeometry::sampleImpactParameter()).
-     * \param[in,out] param Simulation parameters; `event.b`/`event.phiRP`
-     * store the sampled values.
+     * \param[in,out] param Simulation parameters;
+     * `param->event.b`/`param->event.phiRP` store the sampled values.
      */
     void sampleImpactParameter(Parameters *param);
     /**
@@ -194,14 +213,13 @@ class Init {
     /**
      * Converts \p param's input rapidity to true rapidity when it's
      * flagged as pseudorapidity, otherwise passes it through unchanged.
-     * \param[in] param Simulation parameters; `colorCharge.usePseudoRapidity`
-     * selects the conversion, `colorCharge.jacobianMass`/`collision.sqrtS`
-     * parameterize it.
-     * \param[out] rapidityA Projectile's effective rapidity.
-     * \param[out] rapidityB Target's effective rapidity.
+     * \param[in] param Simulation parameters;
+     * `param->colorCharge.usePseudoRapidity` selects the conversion,
+     * `param->colorCharge.jacobianMass`/`param->collision.sqrtS` parameterize
+     * it.
+     * \return The effective rapidities of the projectile and the target.
      */
-    void computeEffectiveRapidities(
-        Parameters *param, double &rapidityA, double &rapidityB);
+    Rapidities computeEffectiveRapidities(Parameters *param);
     /**
      * setColorChargeDensity()'s `!useNucleus` (constant \f$g^2\mu\f$
      * background) branch: sets every cell's \f$g^2\mu_A^2\f$/
@@ -223,7 +241,7 @@ class Init {
     /**
      * Samples the transverse structure of every nucleon of both nuclei
      * (\c profilesA_/\c profilesB_) with the NucleonModel selected by
-     * `subnucleon.nucleonModel`.
+     * `param->subnucleon.nucleonModel`.
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.
      */
@@ -236,7 +254,7 @@ class Init {
      * \param[in] x Transverse \f$x\f$ position [fm].
      * \param[in] y Transverse \f$y\f$ position [fm].
      * \param[in] nucleiInAverage Number of nuclei averaged over
-     * (`collision.nucleiToAverage`); each \f$T_p\f$ is divided by it.
+     * (`nucleiToAverage`); each \f$T_p\f$ is divided by it.
      * \return \f$\sum T_p\f$ [GeV\f$^2\f$].
      */
     double computeNucleonThicknessAtCell(
@@ -308,15 +326,11 @@ class Init {
      * \param[in] sites Total number of lattice sites.
      * \param[in] g Coupling \f$g\f$.
      * \param[in] invNy \f$1/N_y\f$.
-     * \param[out] colorChargeScaleA Filled with the projectile's
-     * per-site scale, length \p sites.
-     * \param[out] colorChargeScaleB Filled with the target's per-site
-     * scale, length \p sites.
+     * \return The projectile's and the target's per-site scale, length
+     * \p sites each.
      */
-    void computeWilsonLineColorChargeScales(
-        Lattice *lat, int sites, double g, double invNy,
-        std::vector<double> &colorChargeScaleA,
-        std::vector<double> &colorChargeScaleB);
+    ColorChargeScales computeWilsonLineColorChargeScales(
+        Lattice *lat, int sites, double g, double invNy);
 };
 
 #endif  // SRC_INIT_H_

@@ -419,7 +419,7 @@ void solveFlowVelocityAtCell(
 /**
  * Decides whether writeRawTmunu() should write binary (`.ipgt`) or
  * text (`.dat`) output.
- * \param[in] param Simulation parameters; `output.writeTmunuBinary` is
+ * \param[in] param Simulation parameters; `param->output.writeTmunuBinary` is
  * the default, overridable at runtime by `IPGLASMA_BINARY_TMUNU` (any
  * value other than empty/`0`/`false`/`off`/`no`, case-insensitively,
  * enables binary output) -- a convenient override for benchmarking and

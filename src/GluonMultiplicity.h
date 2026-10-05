@@ -34,7 +34,7 @@ class GluonMultiplicity {
      * \f$dN/d\eta\f$) and \f$dE/dy\f$, with separate cut sums above
      * \f$k_T>3\f$ and \f$6\f$ GeV. At the final time step, optionally
      * hadronizes the spectrum (hadronizeAndWrite(), if
-     * `output.writeOutputs==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
+     * `param->output.writeOutputs==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
      * the `gluonMultiplicity<id>.json` target
      * (writeTarget()).
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
@@ -53,7 +53,7 @@ class GluonMultiplicity {
      * Standalone post-processing utility: reads a previous run's
      * `multiplicity<id>.dat` and `NpartdNdy<id>.dat`,
      * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
-     * (`param->colorCharge.jacobianMass`/`collision.sqrtS`), and writes
+     * (`param->colorCharge.jacobianMass`/`param->collision.sqrtS`), and writes
      * `NpartdNdy-mod.dat`. Not part of the normal Evolution::run() flow;
      * terminates the process (`exit(1)`) unconditionally when done, and also
      * exits early if either input file is missing.

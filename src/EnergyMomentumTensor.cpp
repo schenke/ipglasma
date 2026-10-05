@@ -12,7 +12,7 @@
 namespace {
 
 /**
- * Computes the traceless part of \p lhs minus \p rhs into \p out:
+ * Computes the traceless part of \p lhs minus \p rhs:
  * \f$(\text{lhs}-\text{rhs}) - \text{tr}(\text{lhs}-\text{rhs})/3\f$.
  * Used throughout tmunuOffDiagonalTeam() to turn a pair of four-link
  * chains into the traceless combination its off-diagonal
@@ -20,12 +20,13 @@ namespace {
  * \param[in] lhs Minuend matrix.
  * \param[in] rhs Subtrahend matrix.
  * \param[in] one Reusable identity matrix.
- * \param[out] out The traceless difference.
+ * \return The traceless difference.
  */
-inline void makeTmunuTracelessDifference(
-    const Matrix &lhs, const Matrix &rhs, const Matrix &one, Matrix &out) {
-    out = lhs - rhs;
+inline Matrix makeTmunuTracelessDifference(
+    const Matrix &lhs, const Matrix &rhs, const Matrix &one) {
+    Matrix out = lhs - rhs;
     out -= (out.trace() / 3.0) * one;
+    return out;
 }
 
 /// Scratch matrices for tmunuPlaquetteTeam(), reused across cells to
@@ -660,29 +661,29 @@ void tmunuOffDiagonalTeam(
                 scratch.Uy * scratch.UxpY * scratch.UDypX * scratch.UDx;
             scratch.chainB =
                 scratch.Ux * scratch.UypX * scratch.UDxpY * scratch.UDy;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.xMinus0);
+            scratch.xMinus0 = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.chainA =
                 scratch.UDxmX * scratch.UymX * scratch.UxmXpY * scratch.UDy;
             scratch.chainB =
                 scratch.Uy * scratch.UDxmXpY * scratch.UDymX * scratch.UxmX;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.xMinusM);
+            scratch.xMinusM = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.chainA =
                 scratch.UypX * scratch.UxpXpY * scratch.UDyp2X * scratch.UDxpX;
             scratch.chainB =
                 scratch.UxpX * scratch.Uyp2X * scratch.UDxpXpY * scratch.UDypX;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.xMinusP);
+            scratch.xMinusP = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.chainA =
                 scratch.UDx * scratch.Uy * scratch.UxpY * scratch.UDypX;
             scratch.chainB =
                 scratch.UypX * scratch.UDxpY * scratch.UDy * scratch.Ux;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.xMinusT);
+            scratch.xMinusT = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.xMinusSum0 = scratch.xMinus0 + scratch.xMinusM;
             scratch.xMinusSum1 = scratch.xMinusP + scratch.xMinusT;
@@ -695,22 +696,22 @@ void tmunuOffDiagonalTeam(
                 scratch.UDymY * scratch.UxmY * scratch.UypXmY * scratch.UDx;
             scratch.chainB =
                 scratch.Ux * scratch.UDypXmY * scratch.UDxmY * scratch.UymY;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.yPlusM);
+            scratch.yPlusM = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.chainA =
                 scratch.UxpY * scratch.UypXpY * scratch.UDxp2Y * scratch.UDypY;
             scratch.chainB =
                 scratch.UypY * scratch.Uxp2Y * scratch.UDypXpY * scratch.UDxpY;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.yPlusP);
+            scratch.yPlusP = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.chainA =
                 scratch.UDy * scratch.Ux * scratch.UypX * scratch.UDxpY;
             scratch.chainB =
                 scratch.UxpY * scratch.UDypX * scratch.UDx * scratch.Uy;
-            makeTmunuTracelessDifference(
-                scratch.chainA, scratch.chainB, one, scratch.yPlusT);
+            scratch.yPlusT = makeTmunuTracelessDifference(
+                scratch.chainA, scratch.chainB, one);
 
             scratch.yPlusSum0 = scratch.yPlus0 + scratch.yPlusM;
             scratch.yPlusSum1 = scratch.yPlusP + scratch.yPlusT;

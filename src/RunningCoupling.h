@@ -73,9 +73,9 @@ inline double computeRunningCouplingGfactorFromScale(
  * quantities when running coupling is enabled (\f$\alpha_s\f$ runs
  * with either the local \f$Q_s\f$ at this cell or one of the
  * event-averaged \f$Q_s\f$ choices, per
- * `param->coupling.runWithLocalQs`/`coupling.runWithQs`).
+ * `param->coupling.runWithLocalQs`/`param->coupling.runWithQs`).
  * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
- * from (only used when `coupling.runWithLocalQs`).
+ * from (only used when `param->coupling.runWithLocalQs`).
  * \param[in] param Simulation parameters.
  * \param[in] pos Flat cell index.
  * \param[in] N Lattice side length.

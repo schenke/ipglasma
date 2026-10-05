@@ -126,7 +126,7 @@ class JIMWLK {
      * instance, builds the momentum-space kernel and noise buffers, and
      * allocates the gauge-covariant-noise scratch fields (unconditionally,
      * since evolutionStep() always needs them).
-     * \param[in] param Simulation parameters; `lattice.size` sets the
+     * \param[in] param Simulation parameters; `param.lattice.size` sets the
      * lattice dimensions.
      * \param[in] group Non-owning pointer to the shared Group instance;
      * must outlive this JIMWLK.

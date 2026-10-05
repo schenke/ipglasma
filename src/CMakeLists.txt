@@ -25,3 +25,7 @@ else ()
     target_link_libraries (${exename} ${GSL_LIBRARIES} ${MPI_CXX_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS})
     install(TARGETS ${exename} DESTINATION ${CMAKE_HOME_DIRECTORY})
 endif ()
+
+# the HDF5 collection (writeOutputsToHDF5) calls this script
+target_compile_definitions(${exename} PRIVATE
+    IPGLASMA_HDF5_SCRIPT="${PROJECT_SOURCE_DIR}/utilities/combine_events_into_hdf5.py")

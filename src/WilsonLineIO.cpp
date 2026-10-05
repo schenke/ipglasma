@@ -49,9 +49,15 @@ std::string WilsonLineIO::fileName(
     std::stringstream Vname;
     Vname << param->wilsonLines.wilsonLinePath << "/WilsonLine";
     if (x >= 0) Vname << "_x_" << std::scientific << std::setprecision(5) << x;
+    // 2 (seed N + eventId) + iA with N events in the run: different for
+    // every nucleus and event of a run, and for runs with different seeds
+    // and the same N
+    const unsigned long long eventsPerRun =
+        static_cast<unsigned long long>(param->run.eventsPerRank)
+        * param->run.MPISize;
     Vname << "_"
-          << param->event.eventId
-                 + (iA + 2 * param->random.seed) * param->run.MPISize;
+          << 2 * (param->random.seed * eventsPerRun + param->event.eventId)
+                 + iA;
 
     const int fileFormat =
         (format < 0) ? param->wilsonLines.writeWilsonLines : format;
@@ -153,7 +159,17 @@ void WilsonLineIO::write(
     }
 }
 
-void WilsonLineIO::read(Lattice *lat, Parameters *param, int format, double x) {
+double WilsonLineIO::initialX(Parameters *param, NucleusRole nucleus) {
+    if (param->jimwlk.enabled) return param->jimwlk.initialX;
+    // the initial condition does not correspond to a fixed x
+    if (param->colorCharge.useFluctuatingX) return -1.;
+    const double rapidity = (nucleus == NucleusRole::Projectile)
+                                ? param->colorCharge.rapidityA
+                                : param->colorCharge.rapidityB;
+    return 0.01 * std::exp(-rapidity);
+}
+
+void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
     IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
     if (!isValidFormat(format)) {
         messager_ << "[WilsonLineIO::read]: Unknown format " << format
@@ -163,8 +179,12 @@ void WilsonLineIO::read(Lattice *lat, Parameters *param, int format, double x) {
         exit(1);
     }
 
-    string VOne_name = fileName(param, x, NucleusRole::Projectile, format);
-    string VTwo_name = fileName(param, x, NucleusRole::Target, format);
+    string VOne_name = fileName(
+        param, initialX(param, NucleusRole::Projectile),
+        NucleusRole::Projectile, format);
+    string VTwo_name = fileName(
+        param, initialX(param, NucleusRole::Target), NucleusRole::Target,
+        format);
 
     messager_ << "[WilsonLineIO::read]: Reading Wilson lines from files "
               << VOne_name << " and " << VTwo_name;

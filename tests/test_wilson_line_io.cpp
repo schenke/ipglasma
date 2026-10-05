@@ -1,6 +1,8 @@
+#include <cmath>
 #include <complex>
 #include <cstdio>
 #include <fstream>
+#include <set>
 #include <string>
 
 #include "Glauber.h"  // for NucleusRole
@@ -308,4 +310,59 @@ TEST_CASE(
             CHECK(matricesClose(lat2.U2[pos], lat.U2[pos], 1e-12));
         }
     }
+}
+
+TEST_CASE(
+    "WilsonLineIO::fileName: every nucleus and event of a run, and runs "
+    "with another seed, get different numbers") {
+    Parameters param;
+    makeLatticeParam(param, 4);
+    param.wilsonLines.writeWilsonLines = 2;
+    // one event on one rank: 2 seed + 1 and 2 seed + 2, as before
+    param.random.seed = 7;
+    param.run.eventsPerRank = 1;
+    CHECK(
+        WilsonLineIO::fileName(&param, -1., NucleusRole::Projectile)
+        == "./WilsonLine_15");
+    CHECK(
+        WilsonLineIO::fileName(&param, -1., NucleusRole::Target)
+        == "./WilsonLine_16");
+
+    // 3 events on each of 2 ranks, with seeds 7 and 8
+    param.run.MPISize = 2;
+    param.run.eventsPerRank = 3;
+    std::set<std::string> names;
+    for (const unsigned long long seed : {7ULL, 8ULL}) {
+        param.random.seed = seed;
+        for (int eventId = 0; eventId < 6; eventId++) {
+            param.event.eventId = eventId;
+            for (const NucleusRole nucleus :
+                 {NucleusRole::Projectile, NucleusRole::Target}) {
+                names.insert(WilsonLineIO::fileName(&param, 0.01, nucleus));
+            }
+        }
+    }
+    CHECK(names.size() == 2 * 6 * 2);
+}
+
+TEST_CASE(
+    "WilsonLineIO::initialX: the x of the initial Wilson lines' file "
+    "names") {
+    Parameters param;
+    makeLatticeParam(param, 4);
+    param.jimwlk.enabled = false;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.rapidityA = 1.;
+    param.colorCharge.rapidityB = 2.;
+    CHECK(
+        WilsonLineIO::initialX(&param, NucleusRole::Projectile)
+        == doctest::Approx(0.01 * std::exp(-1.)));
+    CHECK(
+        WilsonLineIO::initialX(&param, NucleusRole::Target)
+        == doctest::Approx(0.01 * std::exp(-2.)));
+    param.colorCharge.useFluctuatingX = true;
+    CHECK(WilsonLineIO::initialX(&param, NucleusRole::Projectile) < 0.);
+    param.jimwlk.enabled = true;
+    param.jimwlk.initialX = 0.005;
+    CHECK(WilsonLineIO::initialX(&param, NucleusRole::Target) == 0.005);
 }

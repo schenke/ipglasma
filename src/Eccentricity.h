@@ -24,7 +24,8 @@ namespace Eccentricity {
  * appends to `anisotropy<id>.dat` the \f$T^{xx}-T^{yy}\f$ spatial
  * anisotropy (via the anonymous-namespace `computeRotatedAnisotropy`
  * helper) resampled at ten angles around the flow-velocity event
- * plane \f$\Psi_U\f$ (computed from `getux()`/`getuy()`).
+ * plane \f$\Psi_U\f$ (computed from `getux()`/`getuy()`); the program only
+ * calls it with \p doAniso `0`, the anisotropy is a debugging helper.
  * The file is described in \ref md_OUTPUT "OUTPUT.md".
  * \param[in] lat Lattice to read the energy density (and, for
  * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.

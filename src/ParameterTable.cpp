@@ -654,9 +654,6 @@ const std::vector<ParameterSpec> &parameterTable() {
             .onlyIf(eccentricitiesComputed)
             .optional("0")
             .check(nonNegative()),
-        param(
-            "readMultFromFile", &P::output,
-            &OutputParameters::readMultFromFile),
 
         // output
         param("writeHydro", &P::output, &OutputParameters::writeHydro),

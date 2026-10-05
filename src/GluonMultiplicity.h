@@ -55,10 +55,10 @@ class GluonMultiplicity {
      * `multiplicity<id>.dat` and `NpartdNdy<id>.dat`,
      * recomputes \f$dN/d\eta\f$ from the pseudorapidity Jacobian
      * (`param->colorCharge.jacobianMass`/`param->collision.sqrtS`), and writes
-     * `NpartdNdy-mod.dat`. Not part of the normal Evolution::run() flow;
-     * terminates the process (`exit(1)`) unconditionally when done, and also
-     * exits early if either input file is missing.
-     * The file is described in \ref md_OUTPUT "OUTPUT.md".
+     * `NpartdNdy-mod.dat`. Not called by the program (no version of it
+     * writes these input files under these names); kept for post-processing
+     * such files. Terminates the process (`exit(1)`) unconditionally when
+     * done, and also exits early if either input file is missing.
      * \param[in] param Simulation parameters.
      */
     static void readNkt(Parameters *param);

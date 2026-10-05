@@ -247,6 +247,13 @@ int CollisionGeometry::computeNcollList(
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
     const bool gaussianWounding = param->collision.gaussianWounding;
+    // Gaussian wounding profile p(d) = G exp(-G d^2 / d2), d2 = sigmaNN/pi,
+    // of GLISSANDO (Broniowski, Rybczynski, Bozek, Comput. Phys. Commun.
+    // 180 (2009) 69, arXiv:0710.5731, Eq. (13)). It integrates to sigmaNN
+    // for any G; G = p(0) sets the shape. G = 0.92 is GLISSANDO's value,
+    // taken from the pp analyses of Amaldi and Schubert, Nucl. Phys. B 166
+    // (1980) 301 (ISR data) and Bialas and Bzdak, Acta Phys. Polon. B 38
+    // (2007) 159.
     const double G = 0.92;
     for (int i = 0; i < A1; i++) {
         for (int j = 0; j < A2; j++) {

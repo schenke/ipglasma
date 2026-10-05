@@ -115,9 +115,14 @@ class CollisionGeometry {
     /**
      * determineNpartAndNcoll()'s binary-collision pair loop: writes
      * `NcollList<id>.dat` and marks each colliding nucleon pair's
-     * `.collided`, using either a hard-sphere (\f$d_{ij}^2 <\f$ \p d2)
-     * or Gaussian-profile wounding criterion depending on
-     * `param->collision.gaussianWounding`.
+     * `.collided`. With `param->collision.gaussianWounding` off, a pair
+     * at transverse distance \f$d_{ij}\f$ collides if \f$d_{ij}^2 <\f$
+     * \p d2 (hard sphere); with it on, it collides with the probability
+     * \f$p(d_{ij}) = G\,e^{-G d_{ij}^2/d_2}\f$, \f$G = 0.92\f$, the
+     * Gaussian wounding profile of GLISSANDO \cite Broniowski:2007nz
+     * (Eq. (13)), with \f$G\f$ taken from the pp analyses of
+     * \cite Amaldi:1979kd and \cite Bialas:2006qf. Both profiles
+     * integrate to \f$\sigma_{NN}\f$.
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source (Gaussian wounding only).

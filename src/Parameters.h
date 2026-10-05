@@ -80,8 +80,11 @@ struct CollisionParameters {
     /// Number of nuclei to average over, for a smoother thickness
     /// distribution.
     int nucleiToAverage = 0;
-    /// Whether to use a hard-sphere profile (`0`) or Gaussian cross
-    /// section (`1`) to decide whether a nucleon is wounded.
+    /// Whether nucleons collide by a hard-sphere criterion (`0`,
+    /// transverse distance below \f$\sqrt{\sigma_{NN}/\pi}\f$) or with
+    /// the Gaussian probability \f$0.92\,e^{-0.92\,\pi d^2/\sigma_{NN}}\f$
+    /// of GLISSANDO \cite Broniowski:2007nz (`1`), see
+    /// CollisionGeometry::computeNcollList().
     bool gaussianWounding = false;
 };
 

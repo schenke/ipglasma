@@ -130,11 +130,12 @@ bool parseValue(const std::string &text, double &out);
  */
 bool parseValue(const std::string &text, std::string &out);
 /**
- * Converts a comma-separated list of floating-point values.
+ * Converts a comma-separated list of floating-point values; `none` is
+ * the empty list.
  * \param[in] text The value as written in the input, e.g. `1e-3,1e-4`.
  * \param[out] out Set to the list on success.
- * \return Whether \p text is one or more finite numbers separated by
- * single commas.
+ * \return Whether \p text is `none` or one or more finite numbers
+ * separated by single commas.
  */
 bool parseValue(const std::string &text, std::vector<double> &out);
 

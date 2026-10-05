@@ -34,7 +34,8 @@ class GluonMultiplicity {
      * \f$dN/d\eta\f$) and \f$dE/dy\f$, with separate cut sums above
      * \f$k_T>3\f$ and \f$6\f$ GeV. At the final time step, optionally
      * hadronizes the spectrum (hadronizeAndWrite(), if
-     * `param->output.writeOutputs==3`) and writes `NpartdNdy-t<t>-<id>.dat` and
+     * `param->output.writeHadronSpectrum`) and writes `NpartdNdy-t<t>-<id>.dat`
+     * and
      * the `gluonMultiplicity<id>.json` target
      * (writeTarget()).
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
@@ -64,7 +65,7 @@ class GluonMultiplicity {
 
   private:
     /**
-     * compute()'s `writeOutputs==3` hadronization step: convolves
+     * compute()'s `writeHadronSpectrum` hadronization step: convolves
      * the binned gluon spectrum \p n with the KKP fragmentation function
      * (`Fragmentation::kkp`), integrated over the fragmentation variable
      * \f$z\f$ via a GSL cubic spline, to get a hadron \f$p_T\f$ spectrum,

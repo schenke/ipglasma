@@ -112,10 +112,9 @@ const char *const tmunuComponents =
 TEST_CASE(
     "Output format: binary T^{mu nu} (.ipgt) has the documented header and "
     "[y][x][10] float32 data in GeV/fm^3") {
-    unsetenv("IPGLASMA_BINARY_TMUNU");
     Parameters param;
     makeOutputTestParam(param);
-    param.output.writeOutputs = 4;
+    param.output.writeTmunu = true;
     param.output.writeTmunuBinary = true;
     Lattice lat(&param, N);
     fillIdealFluid(lat, param);
@@ -159,10 +158,9 @@ TEST_CASE(
 TEST_CASE(
     "Output format: text T^{mu nu} (.dat) has the documented header and "
     "12-column rows, y outer") {
-    unsetenv("IPGLASMA_BINARY_TMUNU");
     Parameters param;
     makeOutputTestParam(param);
-    param.output.writeOutputs = 4;
+    param.output.writeTmunu = true;
     param.output.writeTmunuBinary = false;
     Lattice lat(&param, N);
     fillIdealFluid(lat, param);
@@ -189,8 +187,7 @@ TEST_CASE(
     "(eps in GeV/fm^3, u^mu)") {
     Parameters param;
     makeOutputTestParam(param);
-    param.output.writeOutputs = 1;
-    param.output.writeEpsilonUHydro = true;
+    param.output.writeHydro = true;
     Lattice lat(&param, N);
     fillIdealFluid(lat, param);
     MyEigen().flowVelocity4D(&lat, &param, it, /*finalFlag=*/true);
@@ -223,8 +220,7 @@ TEST_CASE(
     "pi = 0") {
     Parameters param;
     makeOutputTestParam(param);
-    param.output.writeOutputs = 2;
-    param.output.writeEpsilonUHydro = true;
+    param.output.writeJazma = true;
     Lattice lat(&param, N);
     fillIdealFluid(lat, param);
     MyEigen().flowVelocity4D(&lat, &param, it, /*finalFlag=*/true);

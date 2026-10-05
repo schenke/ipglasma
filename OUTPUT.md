@@ -42,26 +42,26 @@ files themselves.
 |---|---|---|---|
 | `usedParameters<id>.dat` | usedParameters | always | text, valid input file |
 | `WilsonLine[_x_<x>]_<n>[.txt]` | Wilson lines | `writeWilsonLines 1` or `2` | text or binary |
-| `initialWilsonLines<id>.ipgw` | Initial Wilson lines snapshot | `writeOutputs 5` | binary with JSON header |
-| `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, nucleons sampled | text |
-| `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, nucleons sampled | text |
-| `Tmunu-t<tau>-<id>.ipgt` / `.dat` | Energy-momentum tensor | `mode 1`, `writeOutputs` 4–7 | binary or text |
-| `epsilon-u-Hydro-t<tau>-<id>.dat`, `epsilon-u-Hydro-TauHydro-<id>.dat` | Hydro initial conditions | `mode 1`, odd `writeOutputs`, `writeEpsilonUHydro 1` | text |
-| `Jazma-Hydro-t<tau>-<id>.dat` | Jazma energy density | `mode 1`, `writeOutputs` 2, 3, 6, 7, `writeEpsilonUHydro 1` | text |
-| `eccentricities<id>.dat` | Eccentricities | `mode 1`, `computeGluonMultiplicity 1` | text, appended |
+| `initialWilsonLines<id>.ipgw` | Initial Wilson lines snapshot | `writeWilsonLineSnapshot 1`, color charges sampled | binary with JSON header |
+| `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, nucleons sampled, `writeNpartList 1`, `writeNcollList 1` | text |
+| `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, nuclei sampled, `writeNgluonEstimators 1` | text |
+| `Tmunu-t<tau>-<id>.ipgt` / `.dat` | Energy-momentum tensor | `mode 1`, `writeTmunu 1` | binary or text |
+| `epsilon-u-Hydro-t<tau>-<id>.dat`, `epsilon-u-Hydro-TauHydro-<id>.dat` | Hydro initial conditions | `mode 1`, `writeHydro 1` | text |
+| `Jazma-Hydro-t<tau>-<id>.dat` | Jazma energy density | `mode 1`, `writeJazma 1` | text |
+| `eccentricities<id>.dat` | Eccentricities | `mode 1`, `computeEccentricities 1` | text, appended |
 | `NpartdNdy-t<tau>-<id>.dat` | Multiplicity summary | `mode 1`, `computeGluonMultiplicity 1` | text |
 | `gluonMultiplicity<id>.json` | Gluon spectrum | `mode 1`, `computeGluonMultiplicity 1` | JSON |
-| `multiplicityHadrons<id>.dat` | Hadron spectrum | as above and `writeOutputs 3` | text |
+| `multiplicityHadrons<id>.dat` | Hadron spectrum | as above and `writeHadronSpectrum 1` | text |
 | `NpartdNdy-mod.dat` | Rescaled multiplicity | `readMultFromFile 1` | text |
-| `RESULTS_rank<rank>.h5` | HDF5 collection | `writeOutputsToHDF5 1` | HDF5 |
-| `ipglasma_fftw_wisdom.dat` | Diagnostic files | always | FFTW wisdom |
+| `RESULTS_rank<rank>.h5`, `RESULTS.h5` | HDF5 collection | `writeOutputsToHDF5 1` | HDF5 |
+| `ipglasma_fftw_wisdom.dat` | Diagnostic files | built with `-DIPGLASMA_DETERMINISTIC_FFT=ON` | FFTW wisdom |
 | `ipglasma_profile_rank<rank>.tsv`, `ipglasma_fingerprint_rank<rank>.tsv` | Diagnostic files | environment variables | tab-separated text |
 
 ## Order within an event
 
 1. `usedParameters<id>.dat`: the input parameters and the random seed.
 2. With sampled color charges, after the Wilson lines are built:
-   1. `initialWilsonLines<id>.ipgw` (`writeOutputs 5`);
+   1. `initialWilsonLines<id>.ipgw` (`writeWilsonLineSnapshot 1`);
    2. the initial Wilson lines (`writeWilsonLines` > 0, and without JIMWLK or
       with `jimwlkSaveSnapshots 1`).
 3. With JIMWLK:
@@ -70,20 +70,19 @@ files themselves.
    2. the final Wilson lines at `jimwlkXProjectile`/`jimwlkXTarget`
       (`writeWilsonLines` > 0).
 4. `mode 1`, for each impact parameter tried: `NcollList<id>.dat`,
-   `NpartList<id>.dat` and `NgluonEstimators<id>.dat`. Each try overwrites
-   the files of the previous one; once an impact parameter is accepted, its
-   collision geometry is appended to `usedParameters<id>.dat`.
-5. `mode 1`, during the evolution:
-   - with `writeOutputs 5`, the T^μν file (and, with
-     `writeEpsilonUHydro 1`, also the hydro file) at τ ≈ 0.1, 0.2, 0.3 and
-     0.4 fm/c, as far as these lie before `maxTime`;
-   - at the final time, the T^μν, hydro and Jazma files as switched on.
-6. With `computeGluonMultiplicity 1`, after the final time:
-   `eccentricities<id>.dat`, `NpartdNdy-t<tau>-<id>.dat`,
-   `gluonMultiplicity<id>.json` and, with `writeOutputs 3`,
-   `multiplicityHadrons<id>.dat`.
-7. With `writeOutputsToHDF5 1`, the event's text files are moved into
-   `RESULTS_rank<rank>.h5`.
+   `NpartList<id>.dat` and `NgluonEstimators<id>.dat`, as switched on. Each
+   try overwrites the files of the previous one; once an impact parameter is
+   accepted, its collision geometry is appended to `usedParameters<id>.dat`.
+5. `mode 1`, during the evolution: the hydro, Jazma and T^μν files that are
+   switched on, at each of the `outputTimes` (each rounded down to a time
+   step before the final one) and at the final time.
+6. `mode 1`, after the final time: `eccentricities<id>.dat`
+   (`computeEccentricities 1`), then, with `computeGluonMultiplicity 1`,
+   `multiplicityHadrons<id>.dat` (`writeHadronSpectrum 1`),
+   `NpartdNdy-t<tau>-<id>.dat` and `gluonMultiplicity<id>.json`.
+7. With `writeOutputsToHDF5 1`, some of the event's text files are moved into
+   `RESULTS_rank<rank>.h5` (see "HDF5 collection"); at the end of the run
+   these are merged into `RESULTS.h5`.
 
 ## usedParameters
 
@@ -148,8 +147,10 @@ The matrix elements are row-major and written with 15 significant digits.
 ## Initial Wilson lines snapshot
 
 `initialWilsonLines<id>.ipgw` (`WilsonLineIO::writeTrainingData()`), with
-`writeOutputs 5`. It holds both nuclei's Wilson lines right after they are
-built, before JIMWLK and the impact-parameter shift.
+`writeWilsonLineSnapshot 1`, in any `mode`, but not when the Wilson lines are
+read from file (`readInitialWilsonLines` 1 or 2). It holds both nuclei's
+Wilson lines right after they are built, before JIMWLK and the
+impact-parameter shift.
 
 | Bytes | Content |
 |---|---|
@@ -168,8 +169,9 @@ built, before JIMWLK and the impact-parameter shift.
 ## Participants and binary collisions
 
 `NpartList<id>.dat` and `NcollList<id>.dat`
-(`CollisionGeometry::determineNpartAndNcoll()`, `computeNcollList()`). They
-are not written with `useSmoothNucleus 1`. Positions are in fm, in the frame
+(`CollisionGeometry::determineNpartAndNcoll()`, `computeNcollList()`), with
+`writeNpartList 1` and `writeNcollList 1` (the default). They are not written
+with `useSmoothNucleus 1`. Positions are in fm, in the frame
 of the collision: the projectile is centred at +b/2 and the target at −b/2
 along the reaction plane. Two nucleons collide if their transverse distance
 is below √(σ_NN/π) (`gaussianWounding 0`) or with the Gaussian probability
@@ -193,8 +195,9 @@ x, y [fm] of the two colliding nucleons.
 
 ## Gluon number estimators
 
-`NgluonEstimators<id>.dat` (`CollisionGeometry::writeNgluonEstimatorsFile()`).
-One header line (`#`) and one line of four numbers:
+`NgluonEstimators<id>.dat` (`CollisionGeometry::writeNgluonEstimatorsFile()`),
+with `writeNgluonEstimators 1` (the default). One header line (`#`) and one
+line of four numbers:
 
 | Column | Content |
 |---|---|
@@ -210,8 +213,7 @@ in a cell, and S_T is the area. All four values are dimensionless.
 
 `Tmunu-t<tau>-<id>.ipgt` (binary, `writeTmunuBinary 1`, the default) or
 `Tmunu-t<tau>-<id>.dat` (text) (`MyEigen::writeRawTmunu()`), with
-`writeOutputs` 4–7. The environment variable `IPGLASMA_BINARY_TMUNU`
-overrides `writeTmunuBinary`.
+`writeTmunu 1`, at the final time and at `outputTimes`.
 
 Each output-grid point holds ten components, in GeV/fm³:
 
@@ -255,9 +257,9 @@ Points outside the lattice, or with T^ττ below 10⁻¹⁶ GeV/fm³, get
 
 ## Hydro initial conditions
 
-`epsilon-u-Hydro-t<tau>-<id>.dat` (intermediate times, `writeOutputs 5`) or
+`epsilon-u-Hydro-t<tau>-<id>.dat` (at `outputTimes`) or
 `epsilon-u-Hydro-TauHydro-<id>.dat` (final time) (`MyEigen::writeHydroText()`),
-with odd `writeOutputs` and `writeEpsilonUHydro 1`. Energy density, flow
+with `writeHydro 1`. Energy density, flow
 velocity and shear-stress tensor after Landau matching, in the format read by
 MUSIC.
 
@@ -281,8 +283,9 @@ are written as vacuum: ε = 0, u = (1, 0, 0, 0), π = 0.
 
 ## Jazma energy density
 
-`Jazma-Hydro-t<tau>-<id>.dat` (`MyEigen::writeJazma()`), with `writeOutputs`
-2, 3, 6 or 7 and `writeEpsilonUHydro 1`. The same layout and 18 columns as
+`Jazma-Hydro-t<tau>-<id>.dat` (`MyEigen::writeJazma()`), with
+`writeJazma 1`, at the final time and at `outputTimes`; `<tau>` is the time
+also for the final one. The same layout and 18 columns as
 the hydro file, but without the `tau=` entry in the header. Here
 ε ∝ g²μ²_A · g²μ²_B, normalized to the same total energy as the hydro
 output, with u = (1, 0, 0, 0) and π = 0.
@@ -290,7 +293,7 @@ output, with u = (1, 0, 0, 0) and π = 0.
 ## Eccentricities
 
 `eccentricities<id>.dat` (`Eccentricity::compute()`), at the final time with
-`computeGluonMultiplicity 1`. The line is *appended*, so rerunning an event
+`computeEccentricities 1`. The line is *appended*, so rerunning an event
 id in the same directory adds lines. The weights are ε u^τ (times the
 running-coupling factor), over cells with ε at least `eccentricityCutoff`
 (default 0), about the energy-weighted centroid.
@@ -353,7 +356,9 @@ The gluon spectrum is measured in transverse Coulomb gauge.
 ## Hadron spectrum
 
 `multiplicityHadrons<id>.dat` (`GluonMultiplicity::hadronizeAndWrite()`),
-with `computeGluonMultiplicity 1` and `writeOutputs 3`. The gluon spectrum
+with `computeGluonMultiplicity 1` and `writeHadronSpectrum 1`. It is written
+before the multiplicity summary, also for an event without gluons. The gluon
+spectrum
 convolved with KKP fragmentation functions. One line per p_T from 0 to 20 GeV
 in steps of 0.1 GeV:
 
@@ -386,20 +391,27 @@ with exit status 1:
 
 ## HDF5 collection
 
-`RESULTS_rank<rank>.h5`, with `writeOutputsToHDF5 1`. After each event,
-`utilities/combine_events_into_hdf5.py` collects the event's text files into
-the group `event-<id>` and then **deletes them**:
+`RESULTS_rank<rank>.h5` and `RESULTS.h5`, with `writeOutputsToHDF5 1`.
+After each event, `utilities/combine_events_into_hdf5.py` collects some of the
+event's text files into the group `event-<id>` of `RESULTS_rank<rank>.h5` and
+then **deletes them**:
 
 - `usedParameters<id>.dat`, as group attributes;
 - `NcollList<id>.dat`, `NpartList<id>.dat`, `NpartdNdy-t*-<id>.dat`,
-  `epsilon-u-Hydro-t*-<id>.dat` and the text `Tmunu-t*-<id>.dat`, as
-  datasets.
+  `epsilon-u-Hydro-t*-<id>.dat` (the hydro files at `outputTimes`, not the
+  final `epsilon-u-Hydro-TauHydro-<id>.dat`) and the text `Tmunu-t*-<id>.dat`,
+  as datasets.
 
-The binary `.ipgt` files are not collected.
+The other files, among them the binary `.ipgt` files, stay on disk. At the
+end of the run, rank 0 merges every `RESULTS_rank<rank>.h5` into `RESULTS.h5`
+with `h5copy` and deletes them. The script needs `python3` with `h5py` and
+`numpy`, and is called as `utilities/combine_events_into_hdf5.py`, so the run
+must be started in the repository root.
 
 ## Diagnostic files
 
-- **`ipglasma_fftw_wisdom.dat`:** FFTW's plan cache, read at start-up and
+- **`ipglasma_fftw_wisdom.dat`:** only when built with
+  `-DIPGLASMA_DETERMINISTIC_FFT=ON`. FFTW's plan cache, read at start-up and
   updated afterwards so later runs choose the same FFT algorithms (see
   "Reproducible runs" in the README).
 - **`ipglasma_profile_rank<rank>.tsv`:** with the environment variable

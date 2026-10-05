@@ -417,29 +417,6 @@ void solveFlowVelocityAtCell(
 }
 
 /**
- * Decides whether writeRawTmunu() should write binary (`.ipgt`) or
- * text (`.dat`) output.
- * \param[in] param Simulation parameters; `param->output.writeTmunuBinary` is
- * the default, overridable at runtime by `IPGLASMA_BINARY_TMUNU` (any
- * value other than empty/`0`/`false`/`off`/`no`, case-insensitively,
- * enables binary output) -- a convenient override for benchmarking and
- * existing launch scripts without editing the input file.
- * \return `true` if binary output should be written.
- */
-bool binaryTmunuEnabled(Parameters *param) {
-    const bool inputDefault = param->output.writeTmunuBinary;
-    const char *value = std::getenv("IPGLASMA_BINARY_TMUNU");
-    if (value == NULL || value[0] == '\0') return inputDefault;
-
-    // An explicitly set environment variable remains a convenient runtime
-    // override for benchmarking and existing launch scripts.
-    const string text(value);
-    return !(
-        text == "0" || text == "false" || text == "FALSE" || text == "off"
-        || text == "OFF" || text == "no" || text == "NO");
-}
-
-/**
  * Checks the host's byte order, since openTmunuBinaryOutput()'s format
  * is defined as little-endian.
  * \return `true` if this host is little-endian.
@@ -552,9 +529,9 @@ double MyEigen::writeHydroText(
     int N, double L, double a, double dtau, double gfactor, int hx, int hy,
     int heta, double hL, double deta, double ha, double tau0) {
     double Etot = 0.;
-    const bool writeText = param->output.writeOutputs % 2 == 1;
-    const bool needsEtot =
-        writeText || (param->output.writeOutputs % 4) / 2 == 1;
+    const bool writeText = param->output.writeHydro;
+    // writeJazma() normalizes with Etot
+    const bool needsEtot = writeText || param->output.writeJazma;
     if (tmunuOnly || !needsEtot) return Etot;
 
     IPG_PROFILE_SCOPE("output.hydro_text");
@@ -731,11 +708,11 @@ void MyEigen::writeRawTmunu(
     Lattice *lat, Parameters *param, int it, int N, double L, double a,
     double dtau, double gfactor, int hx, int hy, int heta, double hL,
     double deta, double ha, double tau0) {
-    if (static_cast<int>(param->output.writeOutputs / 4) != 1) return;
+    if (!param->output.writeTmunu) return;
 
     double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
     double resultTxeta, resultTyy, resultTyeta, resultTetaeta;
-    const bool writeBinaryTmunu = binaryTmunuEnabled(param);
+    const bool writeBinaryTmunu = param->output.writeTmunuBinary;
     stringstream strTmunu_name;
     strTmunu_name << "Tmunu-t" << it * dtau * a << "-" << param->event.eventId
                   << (writeBinaryTmunu ? ".ipgt" : ".dat");
@@ -892,7 +869,7 @@ void MyEigen::writeJazma(
     Lattice *lat, Parameters *param, int it, double Etot, int N, double L,
     double a, double dtau, int hx, int hy, int heta, double hL, double deta,
     double ha) {
-    if (static_cast<int>((param->output.writeOutputs % 4) / 2) != 1) return;
+    if (!param->output.writeJazma) return;
 
     int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
     double fracx, fracy, xlow, ylow, x, y;
@@ -1085,7 +1062,7 @@ void MyEigen::flowVelocity4DImpl(
     }
 
     // output for hydro
-    if (param->output.writeOutputs <= 0) return;
+    if (!param->output.anyFieldOutput()) return;
 
     double g = param->coupling.g;
     double gfactor;

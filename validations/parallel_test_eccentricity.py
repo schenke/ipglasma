@@ -197,16 +197,15 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "nuclearConfigurationsPath": ipglasma_path + "/nucleusConfigurations/",
         "writeOutputsToHDF5": 0,
         "writeWilsonLines": 0,
-        # writeOutputs must have its "value/4 == 1" bit set for
-        # MyEigen::flowVelocity4DImpl to write any Tmunu snapshot at all
-        # (see src/MyEigen.cpp); it returns immediately if writeOutputs<=0.
-        # writeOutputs==5 additionally enables the extra intermediate
-        # snapshots at tau=0.1,0.2,0.3,0.4 fm/c (see Evolution::run) which
-        # we don't need here, so 4 is the minimal value that writes just
-        # the final-time snapshot at it==itmax.
-        "writeOutputs": 4,
-        "writeEpsilonUHydro": 0,
+        # only the final-time Tmunu snapshot: no intermediate output times
+        # (the template has tau = 0.1, 0.2, 0.3, 0.4 fm/c), no hydro, Jazma
+        # or initial Wilson-line snapshot
+        "writeHydro": 0,
+        "writeJazma": 0,
+        "writeTmunu": 1,
         "writeTmunuBinary": 1,
+        "outputTimes": "none",
+        "writeWilsonLineSnapshot": 0,
         "useJIMWLK": 1 if use_jimwlk else 0,
         "useSeedList": 0,
         "useTimeForSeed": 0,

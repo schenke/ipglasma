@@ -63,6 +63,7 @@ target p
 bMin 0
 bMax 0
 computeGluonMultiplicity 0
+computeEccentricities 0
 rotateReactionPlane 1
 nucleonPositionsFromFile 1
 lightNucleusOption 5
@@ -81,11 +82,12 @@ LOutput 30
 sizeOutput 340
 etaSizeOutput 1
 dEtaOutput 0
-writeOutputs 1
+writeHydro 0
+writeJazma 0
+writeTmunu 0
 readInitialWilsonLines 0
 writeWilsonLines 2
 wilsonLinePath ./
-writeEpsilonUHydro 0
 writeTmunuBinary 1
 writeOutputsToHDF5 0
 useJIMWLK 1

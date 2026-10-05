@@ -144,8 +144,10 @@ void CollisionGeometry::computeQuantities(
         messager_.flush("warning");
     }
 
-    writeNgluonEstimatorsFile(
-        param, a, averageQs2, averageQs2Avg, averageQs2min2, count);
+    if (param->output.writeNgluonEstimators) {
+        writeNgluonEstimatorsFile(
+            param, a, averageQs2, averageQs2Avg, averageQs2min2, count);
+    }
 }
 
 // This function compute the collision geometry quantities, such as
@@ -169,27 +171,24 @@ WoundedNucleons CollisionGeometry::determineNpartAndNcoll(
     if (!param->nucleus.useSmoothNucleus) {
         wounded.Ncoll = computeNcollList(param, random, d2, b, phiRP);
 
-        stringstream strNpart_name;
-        strNpart_name << "NpartList" << param->event.eventId << ".dat";
-        string Npart_name;
-        Npart_name = strNpart_name.str();
-
-        ofstream foutNpart(Npart_name.c_str(), std::ios::out);
-
-        for (int i = 0; i < A1; i++) {
-            foutNpart << nucleusA_.at(i).x + b / 2. * cos(phiRP) << " "
-                      << nucleusA_.at(i).y + b / 2. * sin(phiRP) << " "
-                      << nucleusA_.at(i).proton << " "
-                      << nucleusA_.at(i).collided << endl;
+        if (param->output.writeNpartList) {
+            stringstream strNpart_name;
+            strNpart_name << "NpartList" << param->event.eventId << ".dat";
+            ofstream foutNpart(strNpart_name.str().c_str(), std::ios::out);
+            for (int i = 0; i < A1; i++) {
+                foutNpart << nucleusA_.at(i).x + b / 2. * cos(phiRP) << " "
+                          << nucleusA_.at(i).y + b / 2. * sin(phiRP) << " "
+                          << nucleusA_.at(i).proton << " "
+                          << nucleusA_.at(i).collided << endl;
+            }
+            foutNpart << endl;
+            for (int i = 0; i < A2; i++) {
+                foutNpart << nucleusB_.at(i).x - b / 2. * cos(phiRP) << " "
+                          << nucleusB_.at(i).y - b / 2. * sin(phiRP) << " "
+                          << nucleusB_.at(i).proton << " "
+                          << nucleusB_.at(i).collided << endl;
+            }
         }
-        foutNpart << endl;
-        for (int i = 0; i < A2; i++) {
-            foutNpart << nucleusB_.at(i).x - b / 2. * cos(phiRP) << " "
-                      << nucleusB_.at(i).y - b / 2. * sin(phiRP) << " "
-                      << nucleusB_.at(i).proton << " "
-                      << nucleusB_.at(i).collided << endl;
-        }
-        foutNpart.close();
 
         // in p+p assume that they collided in any case
         if (A1 == 1 && A2 == 1) {
@@ -237,12 +236,12 @@ WoundedNucleons CollisionGeometry::determineNpartAndNcoll(
 int CollisionGeometry::computeNcollList(
     Parameters *param, Random *random, double d2, double b, double phiRP) {
     int Ncoll = 0;
-    stringstream strNcoll_name;
-    strNcoll_name << "NcollList" << param->event.eventId << ".dat";
-    string Ncoll_name;
-    Ncoll_name = strNcoll_name.str();
-
-    ofstream foutNcoll(Ncoll_name.c_str(), std::ios::out);
+    ofstream foutNcoll;
+    if (param->output.writeNcollList) {
+        stringstream strNcoll_name;
+        strNcoll_name << "NcollList" << param->event.eventId << ".dat";
+        foutNcoll.open(strNcoll_name.str().c_str(), std::ios::out);
+    }
 
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
@@ -273,9 +272,11 @@ int CollisionGeometry::computeNcollList(
             }
 
             if (collided) {
-                foutNcoll << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2. << " "
-                          << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2.
-                          << endl;
+                if (foutNcoll.is_open()) {
+                    foutNcoll
+                        << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2. << " "
+                        << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2. << endl;
+                }
                 Ncoll++;
                 nucleusB_.at(j).collided = 1;
                 nucleusA_.at(i).collided = 1;
@@ -283,7 +284,6 @@ int CollisionGeometry::computeNcollList(
         }
     }
 
-    foutNcoll.close();
     return Ncoll;
 }
 

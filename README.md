@@ -159,27 +159,25 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 
 
 ### Output
-The files themselves (names, order, layout, columns and units) are described in [OUTPUT.md](OUTPUT.md). The parameters that switch them on:
+The files themselves (names, order, layout, columns and units) are described in [OUTPUT.md](OUTPUT.md). Every file has its own switch, except `usedParameters<event>.dat`, which is always written. The hydro, Jazma and $T^{\mu\nu}$ files, the multiplicity and the eccentricities are only computed in `mode 1`, and the geometry files only for events with sampled nuclei.
 
- - **writeOutputs**: this parameter controls output files (written in `mode 1`; the values add up as bits)
-   - 0: no output
-   - 1: output initial conditions $\epsilon$, $u^\mu$, and $\pi^{\mu\nu}$ for hydrodynamic simulations (needs `writeEpsilonUHydro 1`)
-   - 2: output the initial condition for energy density according to the Jazma model (needs `writeEpsilonUHydro 1`)
-   - 3: output 1 & 2; with `computeGluonMultiplicity 1` also the hadron spectrum
-   - 4: output initial $T^{\mu\nu}$ for the effective kinetic theory (KoMPoST) simulations
-   - 5: output 1 & 4; in addition the same outputs at $\tau \approx$ 0.1, 0.2, 0.3 and 0.4 fm/c, and a snapshot of the initial Wilson lines (`initialWilsonLines<id>.ipgw`)
-   - 6: output 2 & 4
-   - 7: output 1 & 2 & 4
- - **writeEpsilonUHydro** (optional, default `1`): write the hydro and Jazma files, which needs the Landau matching (flow velocity); with `0`, only $T^{\mu\nu}$ is written
- - **writeTmunuBinary** (optional, default `1`): $T^{\mu\nu}$ in binary (`.ipgt`, `1`) or text (`.dat`, `0`) format; the environment variable `IPGLASMA_BINARY_TMUNU` overrides it
+ - **writeHydro**: `1` writes the initial condition for hydrodynamic simulations, $\epsilon$, $u^\mu$ and $\pi^{\mu\nu}$ (`epsilon-u-Hydro-*.dat`), at the final time and at `outputTimes`
+ - **writeJazma**: `1` writes the energy density of the Jazma model (`Jazma-Hydro-*.dat`), at the final time and at `outputTimes`
+ - **writeTmunu**: `1` writes $T^{\mu\nu}$, e.g. for effective kinetic theory (KoMPoST) simulations (`Tmunu-*`), at the final time and at `outputTimes`
+ - **writeTmunuBinary** (optional, default `1`, read with `writeTmunu 1`): $T^{\mu\nu}$ in binary (`.ipgt`, `1`) or text (`.dat`, `0`) format
+ - **outputTimes** (optional, default `none`, read with `writeHydro`, `writeJazma` or `writeTmunu` 1): comma-separated proper times in fm/c (no spaces), e.g. `0.1,0.2,0.3,0.4`, at which these files are also written before the final time; `none` for only the final time. Each time is rounded down to a time step and must be smaller than `maxTime`; with `inverseQsForMaxTime 1`, times that are not before the final time are skipped
  - **sizeOutput**, **LOutput**: number of grid points per direction and side length [fm] of the transverse output grid the fields are interpolated to
  - **etaSizeOutput**, **dEtaOutput**: number of points and spacing of the (boost-invariant) $\eta$ grid in the hydro and Jazma files
- - **computeGluonMultiplicity**: at the final time, measure the gluon spectrum and multiplicity and the eccentricities (files `NpartdNdy-t*`, `gluonMultiplicity*.json`, `eccentricities*.dat`)
- - **eccentricityCutoff** (optional, default `0`): energy density in GeV/fm$^3$ below which a cell is left out of the eccentricities
+ - **computeGluonMultiplicity**: at the final time, measure the gluon spectrum and multiplicity (files `NpartdNdy-t*` and `gluonMultiplicity*.json`)
+ - **writeHadronSpectrum** (optional, default `0`, read with `computeGluonMultiplicity 1`): `1` also writes the hadron spectrum from fragmenting the gluon spectrum (`multiplicityHadrons<id>.dat`)
+ - **computeEccentricities**: at the final time, compute the eccentricities of the energy density (`eccentricities<id>.dat`)
+ - **eccentricityCutoff** (optional, default `0`, read with `computeEccentricities 1`): energy density in GeV/fm$^3$ below which a cell is left out of the eccentricities
+ - **writeNpartList**, **writeNcollList** and **writeNgluonEstimators** (optional, default `1`): write the positions of the nucleons and whether they collided (`NpartList<id>.dat`), the binary collisions (`NcollList<id>.dat`) and the gluon-number estimators (`NgluonEstimators<id>.dat`)
+ - **writeWilsonLineSnapshot** (optional, default `0`): `1` writes the initial Wilson lines of both nuclei as one binary file with a JSON header (`initialWilsonLines<id>.ipgw`) when they are built, in any `mode` (not with `readInitialWilsonLines` 1 or 2)
  - **readMultFromFile**: post-processing mode that rescales the multiplicity of an earlier run (see OUTPUT.md) and then stops; `0` for normal runs
- - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
+ - **writeOutputsToHDF5**: this parameter decides whether to collect output files into an HDF5 file
    - 0: no
-   - 1: yes; after each event its text files are moved into `RESULTS_rank<rank>.h5` (the originals are deleted)
+   - 1: yes; after each event, its `usedParameters`, `NpartList`, `NcollList` and `NpartdNdy-t*` files, the hydro files at `outputTimes` and the text $T^{\mu\nu}$ files are moved into `RESULTS_rank<rank>.h5` (the originals are deleted), and at the end of the run these are merged into `RESULTS.h5`. The other files stay on disk. Needs `python3` with `h5py` and `numpy` and the tool `h5copy`, and the run must be started in the repository root (it calls `utilities/combine_events_into_hdf5.py`)
  - **writeWilsonLines**: controls whether the generated Wilson lines are saved to disk. File names depend on random seed (parameter `seed`), see `WilsonLineIO::fileName()`. The initial Wilson lines are saved (with `useJIMWLK 1` only with `jimwlkSaveSnapshots 1`), and those after the JIMWLK evolution.
    - 0: do not save Wilson lines
    - 1: save in text format

@@ -34,7 +34,7 @@ void makeEvolutionTestParam(Parameters &param, int size) {
 
 TEST_CASE(
     "Evolution::finalFlowMeasurement fills epsilon and u^tau for "
-    "Eccentricity::compute() also with writeEpsilonUHydro off") {
+    "Eccentricity::compute() also without hydro output") {
     // Every cell holds the T^{mu nu} of an ideal fluid with energy density
     // e, pressure p = e/3 and velocity v along x, so the flow solve must
     // return epsilon = e and u^tau = gamma.
@@ -46,19 +46,25 @@ TEST_CASE(
     const double gamma = 1. / std::sqrt(1. - v * v);
 
     struct Case {
-        int writeEpsilonUHydro;
-        int computeGluonMultiplicity;
+        bool writeHydro;
+        bool computeEccentricities;
         bool expectSolve;
     };
-    for (const Case &c :
-         std::vector<Case> {{0, 1, true}, {1, 0, true}, {0, 0, false}}) {
-        CAPTURE(c.writeEpsilonUHydro);
-        CAPTURE(c.computeGluonMultiplicity);
+    for (const Case &c : std::vector<Case> {
+             {false, true, true}, {true, false, true}, {false, false, false}}) {
+        CAPTURE(c.writeHydro);
+        CAPTURE(c.computeEccentricities);
         Parameters param;
         makeEvolutionTestParam(param, N);
-        param.output.writeOutputs = 0;  // no output files
-        param.output.writeEpsilonUHydro = c.writeEpsilonUHydro;
-        param.output.computeGluonMultiplicity = c.computeGluonMultiplicity;
+        param.output.writeHydro = c.writeHydro;
+        param.output.writeJazma = false;
+        param.output.writeTmunu = false;
+        param.output.computeEccentricities = c.computeEccentricities;
+        // an empty output grid: the hydro file has only its header
+        param.output.sizeOutput = 0;
+        param.output.LOutput = param.lattice.L;
+        param.output.etaSizeOutput = 0;
+        param.output.dEtaOutput = 0.;
         Lattice lat(&param, N);
 
         const double a = param.lattice.L / N;
@@ -86,5 +92,23 @@ TEST_CASE(
                 CHECK(lat.cells[pos]->getutau() == 0.);
             }
         }
+        std::remove("epsilon-u-Hydro-TauHydro-0.dat");
     }
+}
+
+TEST_CASE(
+    "Evolution::outputSteps rounds the output times down to distinct steps "
+    "before the final one") {
+    const double stepLength = 0.01;  // fm/c
+    const int itmax = 40;
+    CHECK(Evolution::outputSteps({}, stepLength, itmax).empty());
+    CHECK(
+        Evolution::outputSteps({0.1, 0.2, 0.3}, stepLength, itmax)
+        == std::vector<int> {10, 20, 30});
+    // unsorted, duplicates after rounding, 0.005 is step 0 and 0.4 and
+    // 0.5 are not before the final step
+    CHECK(
+        Evolution::outputSteps(
+            {0.3, 0.104, 0.1, 0.005, 0.4, 0.5}, stepLength, itmax)
+        == std::vector<int> {10, 30});
 }

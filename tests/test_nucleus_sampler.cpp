@@ -94,6 +94,57 @@ TEST_CASE("NucleusSampler::sample places a proton at the origin") {
 }
 
 TEST_CASE(
+    "NucleusSampler::sample overlays nucleiToAverage independent nuclei") {
+    Parameters param;
+    makeInitTestParam(param, 4);
+    // a transverse polarization turns every nucleus the same way without
+    // random numbers, so the first projectile does not depend on how many
+    // nuclei follow it
+    param.nucleus.polarizationProjectile = 2;
+    param.nucleus.polarizationTarget = 2;
+    Glauber glauber;
+    glauber.initGlauber(
+        42., "O", "Ca", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0.,
+        0., 0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
+    auto sampleWith = [&](int nucleiToAverage) {
+        param.collision.nucleiToAverage = nucleiToAverage;
+        Random random;
+        random.init_genrand64(3);
+        NucleusSampler sampler;
+        return sampler.sample(&param, &random, &glauber);
+    };
+    const Nuclei single = sampleWith(1);
+    const Nuclei averaged = sampleWith(3);
+
+    struct Kind {
+        const std::vector<ReturnValue> &single, &averaged;
+        int A, Z;
+    };
+    for (const Kind &kind :
+         {Kind {single.projectile, averaged.projectile, 40, 20},
+          Kind {single.target, averaged.target, 16, 8}}) {
+        CAPTURE(kind.A);
+        REQUIRE(kind.single.size() == static_cast<size_t>(kind.A));
+        REQUIRE(kind.averaged.size() == static_cast<size_t>(3 * kind.A));
+        std::vector<std::vector<ReturnValue>> nuclei;
+        for (int i = 0; i < 3; i++) {
+            nuclei.emplace_back(
+                kind.averaged.begin() + i * kind.A,
+                kind.averaged.begin() + (i + 1) * kind.A);
+            CHECK(countProtons(nuclei.back()) == kind.Z);
+            checkCentered(nuclei.back());
+        }
+        // independently sampled
+        CHECK(nuclei[0].front().x != nuclei[1].front().x);
+        CHECK(nuclei[1].front().x != nuclei[2].front().x);
+    }
+    checkSamePositions(
+        std::vector<ReturnValue>(
+            averaged.projectile.begin(), averaged.projectile.begin() + 40),
+        single.projectile);
+}
+
+TEST_CASE(
     "NucleusSampler::generate gives A centered nucleons with Z protons for "
     "every Woods-Saxon variant") {
     struct Variant {

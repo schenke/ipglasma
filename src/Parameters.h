@@ -82,8 +82,9 @@ struct CollisionParameters {
     /// the event has this \f$N_{\text{part}}\f$.
     int useFixedNpart = 0;
     /// Number of nuclei to average over, for a smoother thickness
-    /// distribution.
-    int nucleiToAverage = 0;
+    /// distribution: NucleusSampler::sample() samples this many nuclei of
+    /// each kind, and every nucleon's thickness is divided by it.
+    int nucleiToAverage = 1;
     /// Whether nucleons collide by a hard-sphere criterion (`0`,
     /// transverse distance below \f$\sqrt{\sigma_{NN}/\pi}\f$) or with
     /// the Gaussian probability \f$0.92\,e^{-0.92\,\pi d^2/\sigma_{NN}}\f$

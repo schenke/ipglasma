@@ -35,39 +35,60 @@ void NucleusSampler::readConfigurations(
 }
 
 // This function samples the nucleon positions inside the projectile and
-// target nuclei. Both nuclei are centered at the origin.
+// target nuclei. Both nuclei are centered at the origin. With
+// nucleiToAverage > 1, each list holds that many independently sampled
+// nuclei on top of each other.
 Nuclei NucleusSampler::sample(
     Parameters *param, Random *random, Glauber *glauber) {
     IPG_PROFILE_SCOPE("initialization.sample_nuclei");
     messager_.info("[NucleusSampler::sample]: Sampling nucleon positions ... ");
-    Nuclei nuclei;
-    std::vector<ReturnValue> &nucleusA = nuclei.projectile;
-    std::vector<ReturnValue> &nucleusB = nuclei.target;
+    const int nucleiToAverage = param->collision.nucleiToAverage;
+    std::vector<std::vector<ReturnValue>> projectiles(nucleiToAverage);
+    std::vector<std::vector<ReturnValue>> targets(nucleiToAverage);
 
-    if (param->nucleus.nucleonPositionsFromFile) {
-        nucleusA = sampleFromConfigurations(
-            random, glauber->getGlauberData().projectile, configsA_);
-        nucleusB = sampleFromConfigurations(
-            random, glauber->getGlauberData().target, configsB_);
-    } else {
-        if (param->collision.nucleiToAverage > 1
-            && (glauber->nucleusA1() == 1 || glauber->nucleusA2() == 1)) {
-            messager_ << "[NucleusSampler::sample]: Averaging over nuclei is "
-                         "not supported for collisions involving protons. "
-                         "Exiting.";
-            messager_.flush("error");
-            exit(1);
-        }
-        nucleusA = sampleWoodsSaxon(random, glauber, NucleusRole::Projectile);
-        nucleusB = sampleWoodsSaxon(random, glauber, NucleusRole::Target);
+    // all positions before all rotations, the order of the random numbers
+    // for a single nucleus each
+    for (auto &nucleus : projectiles) {
+        nucleus =
+            samplePositions(param, random, glauber, NucleusRole::Projectile);
+    }
+    for (auto &nucleus : targets) {
+        nucleus = samplePositions(param, random, glauber, NucleusRole::Target);
     }
 
-    // global rotation of the nucleus
-    applyPolarizationRotation(
-        random, param->nucleus.polarizationProjectile, nucleusA);
-    applyPolarizationRotation(
-        random, param->nucleus.polarizationTarget, nucleusB);
+    // global rotation of each nucleus
+    for (auto &nucleus : projectiles) {
+        applyPolarizationRotation(
+            random, param->nucleus.polarizationProjectile, nucleus);
+    }
+    for (auto &nucleus : targets) {
+        applyPolarizationRotation(
+            random, param->nucleus.polarizationTarget, nucleus);
+    }
+
+    Nuclei nuclei;
+    for (const auto &nucleus : projectiles) {
+        nuclei.projectile.insert(
+            nuclei.projectile.end(), nucleus.begin(), nucleus.end());
+    }
+    for (const auto &nucleus : targets) {
+        nuclei.target.insert(
+            nuclei.target.end(), nucleus.begin(), nucleus.end());
+    }
     return nuclei;
+}
+
+std::vector<ReturnValue> NucleusSampler::samplePositions(
+    Parameters *param, Random *random, Glauber *glauber, NucleusRole role) {
+    if (!param->nucleus.nucleonPositionsFromFile) {
+        return sampleWoodsSaxon(random, glauber, role);
+    }
+    if (role == NucleusRole::Projectile) {
+        return sampleFromConfigurations(
+            random, glauber->getGlauberData().projectile, configsA_);
+    }
+    return sampleFromConfigurations(
+        random, glauber->getGlauberData().target, configsB_);
 }
 
 std::vector<ReturnValue> NucleusSampler::sampleWoodsSaxon(

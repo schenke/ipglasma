@@ -288,7 +288,9 @@ struct StringConfiguration {
  * spot is then moved to a uniformly random point on its string, from
  * the junction to its sampled position, and the nucleon's thickness is
  * that of hot spots at the projections of these points onto the
- * transverse plane (a HotSpotProfile).
+ * transverse plane (a HotSpotProfile). The minimum distance `dqMin`
+ * applies to the sampled hot spots, the ends of the strings, not to the
+ * moved ones, which can come arbitrarily close to each other.
  */
 class StringyNucleon : public NucleonModel {
   public:

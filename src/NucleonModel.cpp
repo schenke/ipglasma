@@ -132,19 +132,27 @@ int HotSpotNucleon::sampleNumberOfPartons(Random &random) const {
 
 std::unique_ptr<NucleonProfile> HotSpotNucleon::sample(
     Random &random, const ReturnValue &nucleon) const {
-    std::vector<double> x_array, y_array, z_array, BGq_array;
+    HotSpotConfiguration hotSpots = sampleHotSpots(random);
+    std::vector<double> BGq(hotSpots.x.size(), hotSpots.BGq);
+    return std::make_unique<HotSpotProfile>(
+        nucleon.x, nucleon.y, std::move(hotSpots.x), std::move(hotSpots.y),
+        std::move(BGq), std::move(hotSpots.normalization));
+}
+
+HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
+    Random &random, int number) const {
+    std::vector<double> x_array, y_array, z_array;
     const double sqrtBG = sqrt(BG_) * hbarc;  // fm
     const double BGqMean = BGq_;
     const double BGqVar = BGqVar_;
     const double BGq =
         (0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar));
-    const int Nq = sampleNumberOfPartons(random);
+    const int Nq = (number > 0) ? number : sampleNumberOfPartons(random);
     const double dq_min = dqMin_;  // fm
     const double dq_min_sq = dq_min * dq_min;
     const double omega = omega_;
 
     std::vector<double> r_array(Nq, 0.);
-    BGq_array.assign(Nq, BGq);
     for (int iq = 0; iq < Nq; iq++) {
         if (std::abs(omega - 1) < 1e-8) {
             double xq = sqrtBG * random.gauss();
@@ -216,9 +224,12 @@ std::unique_ptr<NucleonProfile> HotSpotNucleon::sample(
     }
 
     const int Npartons = std::max(1, static_cast<int>(x_array.size()));
-    std::vector<double> normalization =
+    HotSpotConfiguration hotSpots;
+    hotSpots.normalization =
         sampleQsNormalization(random, smearQs_, smearingWidth_, Npartons);
-    return std::make_unique<HotSpotProfile>(
-        nucleon.x, nucleon.y, std::move(x_array), std::move(y_array),
-        std::move(BGq_array), std::move(normalization));
+    hotSpots.x = std::move(x_array);
+    hotSpots.y = std::move(y_array);
+    hotSpots.z = std::move(z_array);
+    hotSpots.BGq = BGq;
+    return hotSpots;
 }

@@ -61,11 +61,13 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **nucleonModel**: transverse structure of a nucleon
   - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)
   - `hotspots`: `Nq` Gaussian hot spots of width `BGq`, whose positions are distributed with width `BG`
-  The parameters of the other model are not read.
+  - `strings`: three hot spots, sampled as for `hotspots`, connected by strings that meet at a junction, the point with the shortest total string length (Fermat point, computed in 3D). Each hot spot is moved to a uniformly random point on its string, between the junction and its sampled position, so the nucleon is smaller than with `hotspots` for the same `BG`. Uses the hot-spot parameters except `Nq` and `NqFluc`.
+
+  The parameters of the other models are not read.
 - **subNucleonParamType**: `0` uses the input values for the nucleon substructure; `1`, `2` or `4` draw them every event from a Bayesian posterior parameter set (`tables/posterior.csv` with variable Nq, `tables/posterior_Nq3.csv` or `tables/posterior5020_Nq3.csv` with Nq = 3), selected by **subNucleonParamSet** (`-1`: random). The posterior sets are fits of hot-spot nucleons, so they require `nucleonModel hotspots`. They replace `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `dqMin` and the number of hot spots, which are then not read from the input; `usedParameters<event>.dat` lists the values an event used.
-- **BGq** (`hotspots`): controls the hot spot width, hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
+- **BGq** (`hotspots`, `strings`): controls the hot spot width, hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
 - **Nq** (`hotspots`): mean number of hot spots per nucleon, at least 1; a fractional value such as 2.5 gives 2 or 3 hot spots with the corresponding probabilities (plus the fluctuation set by `NqFluc`)
-- **shiftConstituentQuarkProtonOrigin** (`hotspots`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
+- **shiftConstituentQuarkProtonOrigin** (`hotspots`, `strings`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations
 - **smearingWidth**: width of the saturation scale fluctuations, parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
 - **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition

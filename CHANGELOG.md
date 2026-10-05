@@ -48,6 +48,7 @@ The main categories for changes in this file are:
 
 ### Added
 * Add the optional input parameter `eccentricityCutoff` (GeV/fm³, default `0`): cells with a lower energy density are left out of the eccentricities. It replaces the hard-coded cutoff of 0, which was described in units of Λ_QCD⁴.
+* Add the string nucleon model, `nucleonModel strings`: three hot spots connected by strings that meet at their Fermat point (the junction, computed in 3D), each hot spot moved to a uniformly random point on its string. It corresponds to `Use_stringy_proton 2` of the stringy-proton branch, but samples the junction and the positions on the strings once per nucleon instead of anew for every lattice cell, and computes the junction in closed form instead of iteratively, so no event is rejected. The junction shift (`GeoM_shift`) is not included.
 * Add `OUTPUT.md`, which describes every output file (when it is written, in which order, its name, layout, columns and units); it is also part of the Doxygen documentation, and the functions writing the files point to it. Document the output parameters that were missing from the README (`writeEpsilonUHydro`, `writeTmunuBinary`, `computeGluonMultiplicity`, `readMultFromFile`, the output grid) and the extra outputs of `writeOutputs 3` and `5`. New tests check the documented layouts.
 * Add a JIMWLK small-x evolution stage, run on the projectile and target Wilson lines before the classical Yang-Mills evolution.
 * Add a new, more robust forward-lightcone Wilson-line solver (`Init::findUInForwardLightconeChun`).

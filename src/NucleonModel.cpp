@@ -89,6 +89,7 @@ std::unique_ptr<NucleonModel> NucleonModel::create(const Parameters &param) {
     const std::string &model = param.subnucleon.nucleonModel;
     if (model == "gaussian") return std::make_unique<GaussianNucleon>(param);
     if (model == "hotspots") return std::make_unique<HotSpotNucleon>(param);
+    if (model == "strings") return std::make_unique<StringyNucleon>(param);
     throw std::invalid_argument("unknown nucleonModel " + model);
 }
 
@@ -232,4 +233,78 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
     hotSpots.z = std::move(z_array);
     hotSpots.BGq = BGq;
     return hotSpots;
+}
+
+StringyNucleon::StringyNucleon(const Parameters &param) : hotSpots_(param) {}
+
+std::unique_ptr<NucleonProfile> StringyNucleon::sample(
+    Random &random, const ReturnValue &nucleon) const {
+    StringConfiguration strings = sampleStrings(random);
+    std::vector<double> BGq(strings.x.size(), strings.hotSpots.BGq);
+    return std::make_unique<HotSpotProfile>(
+        nucleon.x, nucleon.y, std::move(strings.x), std::move(strings.y),
+        std::move(BGq), std::move(strings.hotSpots.normalization));
+}
+
+StringConfiguration StringyNucleon::sampleStrings(Random &random) const {
+    StringConfiguration strings;
+    strings.hotSpots = hotSpots_.sampleHotSpots(random, numberOfHotSpots);
+    const HotSpotConfiguration &hotSpots = strings.hotSpots;
+    std::array<Point3, 3> ends;
+    for (int i = 0; i < numberOfHotSpots; i++) {
+        ends[i] = {hotSpots.x[i], hotSpots.y[i], hotSpots.z[i]};
+    }
+    strings.junction = fermatPoint(ends);
+    const Point3 &J = strings.junction;
+    for (int i = 0; i < numberOfHotSpots; i++) {
+        // uniform in (0, 1): a point on the string from the junction
+        // (t = 0) to the hot spot (t = 1)
+        const double t = random.genrand64_real3();
+        strings.t.push_back(t);
+        // the z component only enters through the junction
+        strings.x.push_back(J[0] + t * (ends[i][0] - J[0]));
+        strings.y.push_back(J[1] + t * (ends[i][1] - J[1]));
+    }
+    return strings;
+}
+
+Point3 StringyNucleon::fermatPoint(const std::array<Point3, 3> &points) {
+    auto difference = [](const Point3 &a, const Point3 &b) {
+        return Point3 {a[0] - b[0], a[1] - b[1], a[2] - b[2]};
+    };
+    auto dot = [](const Point3 &a, const Point3 &b) {
+        return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    };
+    // side[i] is the length of the side opposite to points[i]
+    std::array<double, 3> side;
+    for (int i = 0; i < 3; i++) {
+        const Point3 d = difference(points[(i + 1) % 3], points[(i + 2) % 3]);
+        side[i] = std::sqrt(dot(d, d));
+    }
+    // two coincident points: f(P) = 2|P - p| + |P - q| is smallest at p
+    const double tiny = 1e-12;  // fm
+    for (int i = 0; i < 3; i++) {
+        if (side[i] < tiny) return points[(i + 1) % 3];
+    }
+    // the angle at each vertex; one of at least 120 degrees puts the
+    // Fermat point at that vertex
+    std::array<double, 3> angle;
+    for (int i = 0; i < 3; i++) {
+        const Point3 u = difference(points[(i + 1) % 3], points[i]);
+        const Point3 v = difference(points[(i + 2) % 3], points[i]);
+        const double cosine =
+            dot(u, v) / (side[(i + 2) % 3] * side[(i + 1) % 3]);
+        if (cosine <= -0.5) return points[i];
+        angle[i] = std::acos(std::max(-1., std::min(1., cosine)));
+    }
+    // otherwise barycentric weights a / sin(A + pi/3), all positive
+    Point3 fermat {0., 0., 0.};
+    double weightSum = 0.;
+    for (int i = 0; i < 3; i++) {
+        const double weight = side[i] / std::sin(angle[i] + M_PI / 3.);
+        for (int k = 0; k < 3; k++) fermat[k] += weight * points[i][k];
+        weightSum += weight;
+    }
+    for (int k = 0; k < 3; k++) fermat[k] /= weightSum;
+    return fermat;
 }

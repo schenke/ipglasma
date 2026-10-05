@@ -527,6 +527,59 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::readInput: nucleonModel strings reads the hot-spot "
+    "parameters except the number of hot spots, and allows no posterior "
+    "set") {
+    std::string strings;
+    {
+        std::istringstream in(exampleInputWith("nucleonModel", "strings"));
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("Nq ", 0) == 0 || line.rfind("NqFluc ", 0) == 0) {
+                continue;  // always three hot spots
+            }
+            strings += line + "\n";
+        }
+    }
+    Parameters param;
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(strings));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.empty());
+    CHECK(param.subnucleon.nucleonModel == "strings");
+    CHECK(param.validationErrors().empty());
+
+    // the hot-spot parameters are still required
+    std::string withoutBGq;
+    {
+        std::istringstream in(strings);
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("BGq ", 0) != 0) withoutBGq += line + "\n";
+        }
+    }
+    CHECK(anyContains(readErrors(withoutBGq), "BGq is required"));
+
+    // the posterior sets are fits of hot-spot nucleons
+    std::string posterior;
+    {
+        std::istringstream in(strings);
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("subNucleonParamType ", 0) == 0) {
+                line = "subNucleonParamType 2";
+            }
+            posterior += line + "\n";
+        }
+    }
+    Parameters withPosterior;
+    REQUIRE(withPosterior.readInput(inputFromText(posterior)).empty());
+    CHECK(anyContains(
+        withPosterior.validationErrors(),
+        "requires nucleonModel hotspots, not strings"));
+}
+
+TEST_CASE(
     "Parameters::readInput: a posterior parameter set replaces m, BG, BGq, "
     "smearingWidth, QsMuRatio, dqMin and Nq, which are then not read") {
     // readInput() loads tables/posterior_Nq3.csv for type 2; provide a

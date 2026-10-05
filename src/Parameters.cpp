@@ -186,6 +186,21 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
+    // the final time is always written; an output time at or after it
+    // would not be reached
+    if (!evolution.inverseQsForMaxTime) {
+        for (const double t : output.outputTimes) {
+            if (t >= evolution.maxTime) {
+                std::ostringstream message;
+                message << "outputTimes value " << t
+                        << " must be smaller than maxTime ("
+                        << evolution.maxTime
+                        << "); the final time is always written";
+                fail(message);
+            }
+        }
+    }
+
     // averaging over nuclei is not supported for protons
     if (collision.nucleiToAverage > 1
         && (collision.projectile == "p" || collision.target == "p")) {

@@ -109,6 +109,22 @@ TEST_CASE(
     CHECK(param.validationErrors().empty());
 }
 
+TEST_CASE("Parameters::validationErrors: output times must be before maxTime") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.evolution.maxTime = 0.4;
+    param.evolution.inverseQsForMaxTime = false;
+    param.output.outputTimes = {0.1, 0.3};
+    CHECK(param.validationErrors().empty());
+    param.output.outputTimes = {0.1, 0.4, 0.5};
+    CHECK(param.validationErrors().size() == 2);
+    // with 1/<Qs> the final time is not known yet
+    param.evolution.inverseQsForMaxTime = true;
+    param.collision.useNucleus = true;
+    param.wilsonLines.readInitialWilsonLines = 0;
+    CHECK(param.validationErrors().empty());
+}
+
 TEST_CASE("Parameters::validationErrors: reports every failed check") {
     Parameters param;
     makeValidBaseline(param);

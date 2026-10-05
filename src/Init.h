@@ -300,8 +300,9 @@ class Init {
      * Poisson/UV-damping kernel (computeWilsonLineMomentumKernel()),
      * inverse FFT, exponentiate into an incremental SU(3) rotation
      * (Matrix::fromAlgebraExponent()), and left-multiply onto the running
-     * Wilson line. Optionally writes ML training data (`writeOutputs==5`)
-     * and/or an initial Wilson-line snapshot.
+     * Wilson line. Optionally writes the binary initial Wilson-line
+     * snapshot (`param->output.writeWilsonLineSnapshot`) and/or the
+     * Wilson-line files (`param->wilsonLines.writeWilsonLines`).
      * \param[in,out] lat Lattice whose `U`/`U2` are set.
      * \param[in] param Simulation parameters.
      * \param[in,out] random Random-number source.

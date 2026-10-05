@@ -328,21 +328,41 @@ struct OutputParameters {
     /// Whether to compute the gluon multiplicity spectrum (requires
     /// GaugeFix::fftChi()'s Coulomb-gauge fixing).
     bool computeGluonMultiplicity = false;
+    /// Whether to compute the eccentricities at the final time
+    /// (Eccentricity::compute(), which needs the flow-velocity solve).
+    bool computeEccentricities = false;
     /// Energy density [GeV/fm\f$^3\f$] below which a cell is left out of
     /// the eccentricities (see Eccentricity::compute()).
     double eccentricityCutoff = 0.;
     /// Whether to read the gluon spectrum \f$dN/d^2k_T\f$ from file and
     /// compute the integrated rate from it (`1`).
     bool readMultFromFile = false;
-    /// Whether to write large output files such as hydro input data
-    /// (`1`) or not (`0`); see README.md's "writeOutputs" bit values.
-    int writeOutputs = 0;
-    /// Whether to run the flow-velocity/hydro-output calculation (`1`)
-    /// or write only \f$T^{\mu\nu}\f$ at measurement times (`0`).
-    bool writeEpsilonUHydro = false;
+    /// Whether to write the hydro initial condition (\f$\epsilon\f$,
+    /// \f$u^\mu\f$, \f$\pi^{\mu\nu}\f$), `epsilon-u-Hydro-*.dat`.
+    bool writeHydro = false;
+    /// Whether to write the Jazma energy density, `Jazma-Hydro-*.dat`.
+    bool writeJazma = false;
+    /// Whether to write \f$T^{\mu\nu}\f$, `Tmunu-*`.
+    bool writeTmunu = false;
     /// Whether to write \f$T^{\mu\nu}\f$ as compact binary `.ipgt`
     /// (`1`) or formatted text `.dat` (`0`).
     bool writeTmunuBinary = false;
+    /// Proper times [fm/c] before the final time at which the switched-on
+    /// hydro, Jazma and \f$T^{\mu\nu}\f$ outputs are also written.
+    std::vector<double> outputTimes;
+    /// Whether to write the hadron spectrum `multiplicityHadrons<id>.dat`
+    /// (needs \c computeGluonMultiplicity).
+    bool writeHadronSpectrum = false;
+    /// Whether to write the binary snapshot `initialWilsonLines<id>.ipgw`
+    /// of the initial Wilson lines (WilsonLineIO::writeTrainingData()).
+    bool writeWilsonLineSnapshot = false;
+    /// Whether to write the participant list `NpartList<id>.dat`.
+    bool writeNpartList = true;
+    /// Whether to write the binary-collision list `NcollList<id>.dat`.
+    bool writeNcollList = true;
+    /// Whether to write the gluon-number estimators
+    /// `NgluonEstimators<id>.dat`.
+    bool writeNgluonEstimators = true;
     /// Whether to collect all output files into one HDF5 file (`1`) or
     /// not (`0`).
     bool writeOutputsToHDF5 = false;
@@ -354,6 +374,20 @@ struct OutputParameters {
     int etaSizeOutput = 0;
     /// Output-grid step size in rapidity.
     double dEtaOutput = 0.;
+
+    /**
+     * Returns whether a field output is switched on.
+     * \return Whether \c writeHydro, \c writeJazma or \c writeTmunu is
+     * set.
+     */
+    bool anyFieldOutput() const {
+        return writeHydro || writeJazma || writeTmunu;
+    }
+    /**
+     * Returns whether a field output needs the flow-velocity solve.
+     * \return Whether \c writeHydro or \c writeJazma is set.
+     */
+    bool anyFlowOutput() const { return writeHydro || writeJazma; }
 };
 
 /// Writing and reading Wilson lines.

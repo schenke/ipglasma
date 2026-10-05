@@ -8,6 +8,8 @@
 #include <omp.h>
 #endif
 
+#include <vector>
+
 #include "GluonMultiplicity.h"
 #include "Group.h"
 #include "Lattice.h"
@@ -52,22 +54,34 @@ class Evolution {
      * through evolvePi()/evolveE()/evolvePhi()/evolveU() in order) up to
      * `param->evolution.maxTime` (or, if
      * `param->evolution.inverseQsForMaxTime`, up to
-     * \f$1/Q_s\f$). At the final time step (and, if `param->output.writeOutputs
-     * == 5`, at four additional fixed intermediate times), temporarily
+     * \f$1/Q_s\f$). At the final time step (and at the steps of
+     * `param->output.outputTimes`, see outputSteps()), temporarily
      * recenters the momenta from \f$\tau_{n-1/2}\f$ to \f$\tau_n\f$ to
      * measure EnergyMomentumTensor::compute() and either u() or
-     * `MyEigen::writeTmunu4D()` (depending on
-     * `param->output.writeEpsilonUHydro`), then restores the unmodified momenta
+     * `MyEigen::writeTmunu4D()` (depending on whether a hydro or Jazma
+     * output needs the flow velocity), then restores the unmodified momenta
      * so the measurement cannot perturb the trajectory. At the very end, runs
-     * checkGaussLaw(), and -- if `param->output.computeGluonMultiplicity` --
-     * Eccentricity::compute() and GluonMultiplicity::compute(), stopping early
-     * if it reports no collision.
+     * checkGaussLaw(), Eccentricity::compute() if
+     * `param->output.computeEccentricities`, and GluonMultiplicity::compute()
+     * if `param->output.computeGluonMultiplicity`, stopping early if it
+     * reports no collision.
      * \param[in,out] lat Lattice to evolve in place.
      * \param[in] group Group instance, forwarded to
      * GluonMultiplicity::compute().
      * \param[in,out] param Simulation parameters.
      */
     void run(Lattice *lat, Group *group, Parameters *param);
+    /**
+     * Converts the intermediate output times to time steps, rounded down
+     * as the final step is.
+     * \param[in] times Proper times [fm/c] (`param->output.outputTimes`).
+     * \param[in] stepLength Length of one time step [fm/c].
+     * \param[in] itmax The final time step, which is always measured.
+     * \return The distinct steps between 1 and \p itmax - 1, in increasing
+     * order; times outside that range are left out.
+     */
+    static std::vector<int> outputSteps(
+        const std::vector<double> &times, double stepLength, int itmax);
     /**
      * Leapfrog coordinate update for the transverse gauge links: rotates
      * `Ux`/`Uy` by \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$ (a
@@ -159,10 +173,10 @@ class Evolution {
     void u(Lattice *lat, Parameters *param, int it, bool finalFlag);
     /**
      * The final-time flow measurement of run(), after
-     * EnergyMomentumTensor::compute(): with `param->output.writeEpsilonUHydro`
-     * the full u() solve and hydro output; otherwise only the raw
-     * \f$T^{\mu\nu}\f$ output, preceded by the flow-velocity solve if
-     * `param->output.computeGluonMultiplicity` (so that
+     * EnergyMomentumTensor::compute(): with `param->output.writeHydro` or
+     * `param->output.writeJazma` the full u() solve and the outputs;
+     * otherwise only the raw \f$T^{\mu\nu}\f$ output, preceded by the
+     * flow-velocity solve if `param->output.computeEccentricities` (so that
      * Eccentricity::compute(), which weights by \f$\epsilon u^\tau\f$, sees the
      * solved fields).
      * \param[in,out] lat Lattice holding \f$T^{\mu\nu}\f$; receives

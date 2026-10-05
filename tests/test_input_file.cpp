@@ -182,7 +182,9 @@ TEST_CASE("parseValue: lists are comma-separated doubles") {
     CHECK(list == std::vector<double> {5e-3, 2e-3, 0.0001});
     CHECK(parseValue("7", list));
     CHECK(list == std::vector<double> {7.});
-    for (const char *bad : {"1,,2", "1,", ",1", "1;2", ""}) {
+    CHECK(parseValue("none", list));
+    CHECK(list.empty());
+    for (const char *bad : {"1,,2", "1,", ",1", "1;2", "", "none,1"}) {
         CAPTURE(bad);
         CHECK_FALSE(parseValue(bad, list));
     }
@@ -406,6 +408,61 @@ TEST_CASE(
         REQUIRE(errors.size() == 1);
         CHECK_FALSE(anyContains(errors, "did you mean"));
     }
+}
+
+TEST_CASE(
+    "Parameters::readInput: outputTimes is only read with a field output, "
+    "defaults to none and must be positive") {
+    // the example input writes no field output and has outputTimes none
+    auto withLine = [](const std::string &text, const std::string &key,
+                       const std::string &value) {
+        std::istringstream in(text);
+        std::string line, result;
+        while (std::getline(in, line)) {
+            result += (line.rfind(key + " ", 0) == 0) ? key + " " + value + "\n"
+                                                      : line + "\n";
+        }
+        return result;
+    };
+    const std::string withTmunu = exampleInputWith("writeTmunu", "1");
+    {
+        Parameters param;
+        REQUIRE(param
+                    .readInput(inputFromText(
+                        withLine(withTmunu, "outputTimes", "0.1,0.3")))
+                    .empty());
+        CHECK(param.output.outputTimes == std::vector<double> {0.1, 0.3});
+        std::ostringstream written;
+        param.writeInputParameters(written);
+        CHECK(
+            written.str().find("\noutputTimes 0.1,0.3\n") != std::string::npos);
+    }
+    {
+        // not read without a field output
+        Parameters param;
+        REQUIRE(param
+                    .readInput(
+                        inputFromText(exampleInputWith("outputTimes", "0.1")))
+                    .empty());
+        CHECK(param.output.outputTimes.empty());
+    }
+    {
+        // optional, and written back as none
+        Parameters param;
+        REQUIRE(
+            param
+                .readInput(inputFromText(withLine(
+                    exampleInputWith("outputTimes", ""), "writeTmunu", "1")))
+                .empty());
+        CHECK(param.output.outputTimes.empty());
+        std::ostringstream written;
+        param.writeInputParameters(written);
+        CHECK(written.str().find("\noutputTimes none\n") != std::string::npos);
+    }
+    const std::vector<std::string> errors =
+        readErrors(withLine(withTmunu, "outputTimes", "0.1,0"));
+    REQUIRE(errors.size() == 1);
+    CHECK(anyContains(errors, "every time must be positive"));
 }
 
 TEST_CASE(

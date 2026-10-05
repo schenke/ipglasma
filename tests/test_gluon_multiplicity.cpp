@@ -26,7 +26,7 @@ void makeMultiplicityTestParam(Parameters &param) {
     param.evolution.maxTime = 0.4;
     param.evolution.inverseQsForMaxTime = false;
     param.coupling.runningCoupling = false;
-    param.output.writeOutputs = 0;
+    param.output.writeHadronSpectrum = false;
 }
 
 void setVacuum(Lattice &lat) {

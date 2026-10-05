@@ -57,7 +57,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details
 - **m**: infrared regulator in GeV
-- **BG**: controls the nucleon width, density profile is $T \sim e^{-b^2/(2B)}$
+- **BG**: nucleon width in GeV$^{-2}$. With `nucleonModel gaussian` the nucleon's thickness is $T \sim e^{-b^2/(2B_G)}$; with `hotspots` and `strings` it is the width of the hot-spot position distribution (see `omega`)
 - **nucleonModel**: transverse structure of a nucleon
   - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)
   - `hotspots`: `Nq` Gaussian hot spots of width `BGq`, whose positions are distributed with width `BG`
@@ -65,11 +65,18 @@ Each event writes the values of all input parameters it used to `usedParameters<
 
   The parameters of the other models are not read.
 - **subNucleonParamType**: `0` uses the input values for the nucleon substructure; `1`, `2` or `4` draw them every event from a Bayesian posterior parameter set (`tables/posterior.csv` with variable Nq, `tables/posterior_Nq3.csv` or `tables/posterior5020_Nq3.csv` with Nq = 3), selected by **subNucleonParamSet** (`-1`: random). The posterior sets are fits of hot-spot nucleons, so they require `nucleonModel hotspots`. They replace `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `dqMin` and the number of hot spots, which are then not read from the input; `usedParameters<event>.dat` lists the values an event used.
-- **BGq** (`hotspots`, `strings`): controls the hot spot width, hot spot density profile is $T_q \sim e^{-b^2/(2B_{Gq})}$
+- **protonAnisotropy** (`gaussian`): anisotropy $\xi > -1$ of the nucleon, $T \propto \sqrt{1+\xi}\, e^{-(b^2 + \xi (\vec b \cdot \hat n)^2)/(2B_G)}$ with a random direction $\hat n$ per nucleon, so the nucleon is narrower along $\hat n$ for $\xi > 0$; `0` gives a round nucleon
+- **BGq** (`hotspots`, `strings`): mean hot-spot width $B_q$ in GeV$^{-2}$, hot spot density profile is $T_q \sim e^{-b^2/(2B_q)}$. The hot spots of a nucleon share one width, 0.09 GeV$^{-2}$ plus a log-normal number with mean `BGq` $-$ 0.09 and variance `BGqVar`, so `BGq` must be larger than 0.09 GeV$^{-2}$
+- **BGqVar** (`hotspots`, `strings`): variance of the hot-spot width in GeV$^{-4}$ (see `BGq`); `0` gives every nucleon the width `BGq`
+- **dqMin** (`hotspots`, `strings`): minimum distance in fm between the hot spots of a nucleon, in 3D for `omega 1` and in the transverse plane otherwise. It is kept on a best-effort basis: a hot spot keeps its sampled radius and only its direction is redrawn, up to 100 times. With `strings` it applies to the ends of the strings
+- **omega** (`hotspots`, `strings`): radial distribution of the hot spots
+  - `1`: positions in 3D, each coordinate Gaussian with variance `BG` (transverse $\langle b^2 \rangle = 2 B_G$)
+  - otherwise: positions in the transverse plane, at a uniformly random angle and radius $b = \sqrt{\omega x B_G}$, where $x$ follows the density $\propto Q(1/\omega, x)$ (regularized upper incomplete gamma function), so $\langle b^2 \rangle \approx (1+\omega) B_G/2$. Note that this does not approach the `omega 1` case for $\omega \to 1$
 - **Nq** (`hotspots`): mean number of hot spots per nucleon, at least 1; a fractional value such as 2.5 gives 2 or 3 hot spots with the corresponding probabilities (plus the fluctuation set by `NqFluc`)
+- **NqFluc** (`hotspots`): mean of a Poisson-distributed number of additional hot spots per nucleon; `0` for no fluctuation. Every nucleon has at least one hot spot
 - **shiftConstituentQuarkProtonOrigin** (`hotspots`, `strings`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
-- **smearQs**: enable (1) or disable (0) saturation scale fluctuations
-- **smearingWidth**: width of the saturation scale fluctuations, parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
+- **smearQs**: enable (1) or disable (0) saturation scale fluctuations: the thickness of each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`) is multiplied by a log-normal factor $e^{X}/e^{\sigma^2/2}$ with mean 1, where $X$ is Gaussian with width $\sigma$ = `smearingWidth`
+- **smearingWidth**: width $\sigma$ of the saturation scale fluctuations (see `smearQs`), parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
 - **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition
   - 1: Dynamically determined $b_\perp$ dependent $x$
   - 0: Fixed $x$

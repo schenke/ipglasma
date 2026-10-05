@@ -158,20 +158,31 @@ struct SubnucleonParameters {
     /// hot spots, each moved to a random point on its string to the
     /// junction, see StringyNucleon).
     std::string nucleonModel = "gaussian";
-    /// Width [GeV\f$^{-2}\f$] of the Gaussian describing the proton's
-    /// shape, \f$T \sim e^{-b^2/(2B)}\f$.
+    /// Nucleon width \f$B_G\f$ [GeV\f$^{-2}\f$]: the thickness is
+    /// \f$T \sim e^{-b^2/(2B_G)}\f$ for `nucleonModel gaussian`; for
+    /// `hotspots` and `strings`, the width of the hot-spot position
+    /// distribution (see omega).
     double BG = 0.;
-    /// Mean width [GeV\f$^{-2}\f$] of the Gaussian describing one
-    /// constituent quark's ("hot spot") shape.
+    /// Mean width \f$B_q\f$ [GeV\f$^{-2}\f$] of the Gaussian describing
+    /// one constituent quark's ("hot spot") shape. The hot spots of a
+    /// nucleon share one width, 0.09 GeV\f$^{-2}\f$ plus a log-normal
+    /// number with mean BGq - 0.09 and variance BGqVar, so BGq must be
+    /// larger than 0.09 GeV\f$^{-2}\f$.
     double BGq = 0.;
-    /// Variance [GeV\f$^{-4}\f$] of the constituent-quark Gaussian
-    /// width.
+    /// Variance [GeV\f$^{-4}\f$] of the hot-spot width (see BGq).
     double BGqVar = 0.;
-    /// Minimum distance [fm] between valence (constituent) quarks.
+    /// Minimum distance [fm] between the hot spots of a nucleon, in 3D
+    /// for `omega 1` and in the transverse plane otherwise; best effort
+    /// (a hot spot keeps its radius and only its direction is redrawn,
+    /// up to 100 times). For `strings` it applies to the string ends.
     double dqMin = 0.;
-    /// Gamma-distribution shape parameter for constituent-quark
-    /// radial-position sampling (see Random::setGammaIncCDF()); `1`
-    /// reduces to plain 3D Gaussian sampling.
+    /// Radial distribution of the hot spots: for `1`, 3D positions with
+    /// each coordinate Gaussian of variance BG (transverse
+    /// \f$\langle b^2\rangle = 2B_G\f$); otherwise transverse positions
+    /// at radius \f$b=\sqrt{\omega x B_G}\f$, \f$x\f$ drawn with density
+    /// \f$\propto Q(1/\omega, x)\f$ (see Random::setGammaIncCDF()), so
+    /// \f$\langle b^2\rangle \approx (1+\omega)B_G/2\f$, which does not
+    /// approach the `1` case for \f$\omega\to1\f$.
     double omega = 0.;
     /// Mean number of hot spots (constituent quarks) per nucleon for
     /// `nucleonModel hotspots`, at least 1 (`strings` always has 3). Sets
@@ -179,10 +190,12 @@ struct SubnucleonParameters {
     /// probability equal to the fractional part, plus a Poisson fluctuation of
     /// mean NqFluc.
     double Nq = 0.;
-    /// Base number of constituent quarks (posterior-fit parameter; see
+    /// Mean number of hot spots before the NqFluc fluctuation: Nq, or the
+    /// value of a posterior parameter set (see
     /// setParamsWithPosteriorParameterSet()).
     double NqBase = 0.;
-    /// Fluctuation in the number of constituent quarks.
+    /// Mean of a Poisson-distributed number of additional hot spots per
+    /// nucleon (`nucleonModel hotspots`).
     double NqFluc = 0.;
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).
@@ -202,11 +215,14 @@ struct SubnucleonParameters {
     /// subNucleonParamType, modulo the table's row count; `-1` draws a
     /// random set every event.
     int subNucleonParamSet = 0;
-    /// Whether to smear \f$Q_s\f$ using a Poisson distribution around
-    /// its mean at every transverse position (`1`) or not (`0`).
+    /// Whether \f$Q_s\f$ fluctuates (`1`) or not (`0`): the thickness of
+    /// each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`)
+    /// is multiplied by a log-normal factor
+    /// \f$e^{X}/e^{\sigma^2/2}\f$ with mean 1, \f$X\f$ Gaussian with width
+    /// \f$\sigma\f$ = smearingWidth.
     bool smearQs = false;
-    /// Width of the Gaussian smearing around the mean \f$g^2\mu^2\f$
-    /// (parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
+    /// Width \f$\sigma\f$ of the \f$Q_s\f$ fluctuations (see smearQs;
+    /// parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
     double smearingWidth = 0.;
     /// UV damping length of the color-charge correlator [GeV\f$^{-1}\f$].
     double UVDamp = 0.;

@@ -218,12 +218,15 @@ class HotSpotNucleon : public NucleonModel {
      */
     int sampleNumberOfPartons(Random &random) const;
     /**
-     * Samples the hot spots of one nucleon, in this order: their width
-     * (log-normal around `BGq` with variance `BGqVar`), their number,
-     * their 3D positions (Gaussian with width `BG` for `omega 1`,
-     * otherwise transverse radii from the gamma distribution, keeping a
-     * best-effort minimum distance `dqMin`), the optional shift of their
-     * center of mass to the nucleon center, and their Qs normalization.
+     * Samples the hot spots of one nucleon, in this order: their common
+     * width (0.09 GeV\f$^{-2}\f$ plus a log-normal number with mean
+     * `BGq` - 0.09 and variance `BGqVar`), their number, their positions
+     * (for `omega 1` in 3D, each coordinate Gaussian with variance `BG`;
+     * otherwise in the transverse plane at radius
+     * \f$\sqrt{\omega x B_G}\f$ with \f$x\f$ from Random::sampleGammaInc()
+     * and a uniform angle; keeping a best-effort minimum distance
+     * `dqMin`), the optional shift of their center of mass to the nucleon
+     * center, and their Qs normalization.
      * \param[in,out] random Random-number source.
      * \param[in] number Number of hot spots; `0` samples it with
      * sampleNumberOfPartons().
@@ -235,14 +238,15 @@ class HotSpotNucleon : public NucleonModel {
     /// Width \f$B_G\f$ of the hot-spot position distribution
     /// [GeV\f$^{-2}\f$].
     double BG_;
-    /// Mean hot-spot width \f$B_q\f$ [GeV\f$^{-2}\f$].
+    /// Mean hot-spot width \f$B_q\f$ [GeV\f$^{-2}\f$], at least 0.09.
     double BGq_;
     /// Variance of the log-normal hot-spot width distribution.
     double BGqVar_;
     /// Minimum distance between hot spots [fm].
     double dqMin_;
     /// Gamma-distribution shape of the radial hot-spot positions; `1`
-    /// is a 3D Gaussian.
+    /// is a 3D Gaussian, other values place the hot spots in the
+    /// transverse plane.
     double omega_;
     /// Mean number of hot spots.
     double NqBase_;

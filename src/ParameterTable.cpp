@@ -519,7 +519,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("m", &P::subnucleon, &SubnucleonParameters::m)
             .onlyIf(inputParameters),
         param("BG", &P::subnucleon, &SubnucleonParameters::BG)
-            .onlyIf(inputParameters),
+            .onlyIf(inputParameters)
+            .check(positive()),
         // gaussian nucleons
         param(
             "protonAnisotropy", &P::subnucleon,
@@ -530,12 +531,19 @@ const std::vector<ParameterSpec> &parameterTable() {
                 return v > -1. ? "" : "must be larger than -1";
             }),
         // hot spots (also the ends of the strings of `strings`)
+        // the hot-spot width is 0.09 plus a log-normal number with mean
+        // BGq - 0.09, which needs a positive mean
         param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
-            .onlyIf(hotSpotsFromInput),
+            .onlyIf(hotSpotsFromInput)
+            .check([](const double &v) {
+                return v > 0.09 ? "" : "must be larger than 0.09 (GeV^-2)";
+            }),
         param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
-            .onlyIf(hotSpotSubstructure),
+            .onlyIf(hotSpotSubstructure)
+            .check(nonNegative()),
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
-            .onlyIf(hotSpotsFromInput),
+            .onlyIf(hotSpotsFromInput)
+            .check(nonNegative()),
         param("omega", &P::subnucleon, &SubnucleonParameters::omega)
             .onlyIf(hotSpotSubstructure)
             .check(positive()),
@@ -557,7 +565,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "smearingWidth", &P::subnucleon,
             &SubnucleonParameters::smearingWidth)
-            .onlyIf(inputParameters),
+            .onlyIf(inputParameters)
+            .check(nonNegative()),
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp),
         param(
             "minimumQs2ST", &P::colorCharge,

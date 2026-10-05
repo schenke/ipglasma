@@ -14,6 +14,7 @@
 #include "WilsonLineIO.h"
 
 using PhysConst::invHbarc;
+using PhysConst::isClose;
 using PhysConst::Nc;
 using PhysConst::Nc2m1;
 using PhysConst::smallEps;
@@ -132,7 +133,7 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     // Fixed coupling: alpha_s is already absorbed into the evolution step
     // count in evolution() (ds = alpha_s dy / pi^2), so the kernel must not
     // carry it again.
-    if (param_.jimwlk.alphaS > 1e-10) {
+    if (!isClose(param_.jimwlk.alphaS, 0.)) {
         return 1.0;
     }
 
@@ -188,7 +189,7 @@ void JIMWLK::evolution() {
     int steps_1 = 0;
     int steps_2 = 0;
     double as = param_.jimwlk.alphaS;
-    if (as > 1e-10) {
+    if (!isClose(as, 0.)) {
         // Fixed coupling
         steps_1 = static_cast<int>(
             as * std::log(x0 / param_.jimwlk.xProjectile) / (M_PI * M_PI * ds)

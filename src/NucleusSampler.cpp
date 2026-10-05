@@ -11,6 +11,9 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "PhysConst.h"
+
+using PhysConst::isClose;
 
 void NucleusSampler::readConfigurations(
     Parameters *param, Glauber *glauber, Random *random) {
@@ -150,7 +153,7 @@ std::vector<std::vector<float>> NucleusSampler::readConfigurationFile(
     bool readFlag = true;
     if (nucleusA == 2) {
         fileName = "DeuteronPol0Configs.bin.in";
-        if (std::abs(std::abs(polJz) - 1.) < 1e-8)
+        if (isClose(std::abs(polJz), 1.))
             fileName = "DeuteronPolpm1Configs.bin.in";
         if (polarizationFlag == 0) {
             auto ran = random->genrand64_real1();
@@ -250,14 +253,14 @@ std::vector<ReturnValue> NucleusSampler::generate(
     const double beta3 = data.beta3;
     const double beta4 = data.beta4;
     const double gamma = data.gamma;
-    if (std::abs(beta2) < 1e-15 && std::abs(beta4) < 1e-15
-        && std::abs(beta3) < 1e-15 && std::abs(gamma) < 1e-15) {
+    if (isClose(beta2, 0.) && isClose(beta4, 0.) && isClose(beta3, 0.)
+        && isClose(gamma, 0.)) {
         return generateWoodsSaxon(random, data);
     } else {
         if (data.forceDminFlag) {
             return generateDeformedWoodsSaxonForceDmin(random, data);
         } else {
-            if (std::abs(gamma) > 1e-15) {
+            if (!isClose(gamma, 0.)) {
                 return generateTriaxialWoodsSaxon(random, data);
             } else {
                 return generateDeformedWoodsSaxon(random, data);

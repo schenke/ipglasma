@@ -11,6 +11,7 @@
 #include "PhysConst.h"
 
 using PhysConst::hbarc;
+using PhysConst::isClose;
 
 namespace {
 /**
@@ -155,7 +156,7 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
 
     std::vector<double> r_array(Nq, 0.);
     for (int iq = 0; iq < Nq; iq++) {
-        if (std::abs(omega - 1) < 1e-8) {
+        if (isClose(omega, 1.)) {
             double xq = sqrtBG * random.gauss();
             double yq = sqrtBG * random.gauss();
             double zq = sqrtBG * random.gauss();
@@ -180,7 +181,7 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
             reject_flag = 0;
             double phi = 2. * M_PI * random.genrand64_real2();
             double theta = acos(1. - 2. * random.genrand64_real2());
-            if (std::abs(omega - 1) < 1e-8) {
+            if (isClose(omega, 1.)) {
                 x_i = r_i * sin(theta) * cos(phi);
                 y_i = r_i * sin(theta) * sin(phi);
                 z_i = r_i * cos(theta);

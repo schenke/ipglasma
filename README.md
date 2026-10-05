@@ -35,7 +35,7 @@ It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions
 
 
 ## Input parameters
-The input file is given as the first command line argument (default: `input`). Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
+The input file is given as the first command line argument (default: `input`). The optional second argument is the number of events each MPI rank generates (default: 1). Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
 
 The input file has one `key value` pair per line:
 - `#` starts a comment that runs to the end of the line, and blank lines are ignored.
@@ -44,23 +44,34 @@ The input file has one `key value` pair per line:
 
 Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
 
+### Run control
+- **mode**: `1` samples the collision, runs the classical Yang-Mills evolution and writes the outputs. Any other value stops after the Wilson lines of the two nuclei are built (and evolved with JIMWLK, see `useJIMWLK`); with `writeWilsonLines` they are written to disk
+- **maxTime**: proper time $\tau$ in fm/c at which the classical Yang-Mills evolution stops
+- **inverseQsForMaxTime**: `1` stops the evolution at $\tau = 1/\langle Q_s \rangle$ instead of `maxTime`, with $\langle Q_s \rangle$ the larger of the two nuclei's $Q_s$ averaged over the overlap region (see `runWithQs`). Not possible with `useNucleus 0` or `readInitialWilsonLines` 1 or 2, which do not compute $\langle Q_s \rangle$
+
+### Random seed
+- **seed**: random seed; MPI rank $r$ uses `seed` $+ 1000 r$. It also enters the names of the Wilson-line files (see `writeWilsonLines`), also with `useTimeForSeed 1` or `useSeedList 1`
+- **useTimeForSeed**: `1` draws the seed from `std::random_device` instead of taking `seed` (despite the name, not from the time); rank $r$ again adds $1000 r$
+- **useSeedList**: `1` reads one seed per MPI rank from the file `seedList` in the working directory (rank $r$ uses the $(r+1)$-th number); it overrides `seed` and `useTimeForSeed`
+
 ### Lattice
 - **size**: controls the size of the lattice that is `size`$^2$.
   - Recommended to be of the form $2^n$
 - **L**: the total physical extent of the lattice (in fm)
+- **Ny**: number of longitudinal layers of color charges per nucleus: each Wilson line is a product of `Ny` factors, each sampled with the color-charge density $g^2\mu^2/N_y$ (T. Lappi, Eur. Phys. J. C 55 (2008) 285)
 
 ### Initial state
 - **useNucleus**
   - 1: nucleus with finite geometry
   - 0: infinite target with constant color charge density controlled by `g2mu` (in lattice units)
+- **g2mu**: with `useNucleus 0`, the constant $g^2\mu$ in lattice units
+- **useGaussian**: with `useNucleus 0`, `1` multiplies the constant $g^2\mu^2$ by a Gaussian $e^{-x^2/(2\sigma_x^2) - y^2/(2\sigma_y^2)}/(2\pi\sigma_x\sigma_y)$ with $\sigma_x = 0.35$ fm and $\sigma_y = 0.5$ fm, centered on the lattice
 - **projectile** and **target**: specify nuclei
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details
-- **sigmaNN**: inelastic nucleon-nucleon cross section in mb, used to decide which nucleons collide
-- **gaussianWounding**: how it is decided whether two nucleons collide
-  - 0: hard sphere, they collide if their transverse distance $d$ is below $\sqrt{\sigma_{NN}/\pi}$
-  - 1: they collide with the probability $p(d) = G\, e^{-G \pi d^2/\sigma_{NN}}$, $G = 0.92$, the Gaussian wounding profile of GLISSANDO (Eq. (13) of [arXiv:0710.5731](https://arxiv.org/abs/0710.5731)); its value of $G$ is taken from analyses of pp scattering at ISR energies (U. Amaldi and K. R. Schubert, Nucl. Phys. B 166 (1980) 301) and from A. Białas and A. Bzdak, Acta Phys. Polon. B 38 (2007) 159. Both profiles integrate to $\sigma_{NN}$
+- **sqrtS**: center-of-mass energy per nucleon pair $\sqrt{s}$ in GeV. It enters Bjorken $x$ with `useFluctuatingX 1` (see `xQsFactor`) and the pseudorapidity Jacobian (see `usePseudoRapidity`); it does not set `sigmaNN`
 - **m**: infrared regulator in GeV
+- **UVDamp**: UV damping length in GeV$^{-1}$: the propagator $1/(k^2+m^2)$ that gives the gauge field of the color charges is multiplied by $e^{-|k|\,\mathrm{UVDamp}}$. Only applied with `m` $\neq 0$; `0` for no damping
 - **BG**: nucleon width in GeV$^{-2}$. With `nucleonModel gaussian` the nucleon's thickness is $T \sim e^{-b^2/(2B_G)}$; with `hotspots` and `strings` it is the width of the hot-spot position distribution (see `omega`)
 - **nucleonModel**: transverse structure of a nucleon
   - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)
@@ -81,12 +92,70 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **shiftConstituentQuarkProtonOrigin** (`hotspots`, `strings`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations: the thickness of each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`) is multiplied by a log-normal factor $e^{X}/e^{\sigma^2/2}$ with mean 1, where $X$ is Gaussian with width $\sigma$ = `smearingWidth`
 - **smearingWidth**: width $\sigma$ of the saturation scale fluctuations (see `smearQs`), parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
+- **QsMuRatio**: ratio $Q_s/(g^2\mu)$, the same for both nuclei: a cell's color-charge density is $g^2\mu = Q_s/$`QsMuRatio`, with $Q_s$ from `nucleusQsTableFileName`
+- **nucleusQsTableFileName**: file with the table of $Q_s^2$ as a function of the summed nucleon thickness $T_p$ and rapidity $y$ (e.g. `qs2Adj_vs_Tp_vs_Y_240.in` in the repository root), relative to the working directory; read with `useNucleus 1`
 - **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition
   - 1: Dynamically determined $b_\perp$ dependent $x$
   - 0: Fixed $x$
 - **rapidityA** and **rapidityB**:
   - If `useFluctuatingX 0`, then $x = 0.01 e^{-\mathrm{rapidityA}}$ for the projectile and $x = 0.01 e^{-\mathrm{rapidityB}}$ for the target; both must not be negative (the nuclear $Q_s$ table covers $0 \le y \le 10.75$, larger values use $Q_s$ at $y = 10.75$)
   - If `useFluctuatingX 1`, consider particle production at rapidity $y$
+- **xQsFactor**: with `useFluctuatingX 1`, the factor $\beta$ in $x = \beta Q_s e^{\pm y}/\sqrt{s}$ ($+$ for the projectile with $y$ = `rapidityA`, $-$ for the target with $y$ = `rapidityB`). $x$ and the local $Q_s$ are solved for self-consistently in every cell; for $x > 0.01$ the table's $Q_s^2$ at $y = 0$ is extrapolated with the factor $[(1-x)/0.99]^{5.6} (0.01/x)^{0.2}$
+- **usePseudoRapidity**: `1`: `rapidityA` and `rapidityB` are pseudorapidities $\eta$. They are converted to rapidities for a particle of mass `jacobianMass` and transverse momentum $P = 0.13 + 0.32 (\sqrt{s}/\mathrm{TeV})^{0.115}$ GeV, and the gluon multiplicity is given per unit $\eta$ instead of $y$
+- **jacobianMass**: mass in GeV in the rapidity-pseudorapidity Jacobian; only used with `usePseudoRapidity 1`
+
+### Collision geometry
+- **sigmaNN**: inelastic nucleon-nucleon cross section in mb, used to decide which nucleons collide
+- **gaussianWounding**: how it is decided whether two nucleons collide
+  - 0: hard sphere, they collide if their transverse distance $d$ is below $\sqrt{\sigma_{NN}/\pi}$
+  - 1: they collide with the probability $p(d) = G\, e^{-G \pi d^2/\sigma_{NN}}$, $G = 0.92$, the Gaussian wounding profile of GLISSANDO (Eq. (13) of [arXiv:0710.5731](https://arxiv.org/abs/0710.5731)); its value of $G$ is taken from analyses of pp scattering at ISR energies (U. Amaldi and K. R. Schubert, Nucl. Phys. B 166 (1980) 301) and from A. Białas and A. Bzdak, Acta Phys. Polon. B 38 (2007) 159. Both profiles integrate to $\sigma_{NN}$
+- **bMin** and **bMax**: range of the impact parameter $b$ in fm (with `useNucleus 0`, $b = 0$)
+- **sampleBFromLinearDistribution**: `1` samples $b$ with a probability density $\propto b$ (uniform in the transverse plane, as for minimum-bias events), `0` uniformly in $b$
+- **rotateReactionPlane**: `1` points the impact parameter in a uniformly random direction (reaction-plane angle $\phi_{RP}$ in $[0, 2\pi)$), `0` along $x$
+- **useFixedNpart**: if not `0`, the impact parameter and reaction-plane angle are resampled, keeping the nucleon positions, until the event has exactly this number of participants; the value must be reachable for the sampled nuclei
+- **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this (integer) value. $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area. `0` for no trigger
+
+### Nucleon positions
+- **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the Woods-Saxon distribution (see below)
+- **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`): directory of the configuration files; `nucleusConfigurations/download_nucleusTables.sh` downloads them
+- **lightNucleusOption**: which configuration file `nucleonPositionsFromFile 1` uses. The file is chosen by the mass number $A$:
+  - $A = 3$: `0` ³He, `1` triton
+  - $A = 12$ (C): `0` variational Monte Carlo (VMC), `1` alpha clusters
+  - $A = 16$ (O): `0` VMC, `1` alpha clusters, `2`/`3` clustered/uniform PGCM, `4`/`5` NLEFT with positive/negative weights
+  - $A = 20$ (Ne): `0` or `2` clustered PGCM, `3` uniform PGCM, `4`/`5` NLEFT with positive/negative weights
+  - $A = 40$: `0` VMC, `4` NLEFT (Ar files, also used for Ca)
+  - d, ⁴He, Ne22, Au and Pb have one file each (for the deuteron see `polarizationProjectileJz`); other values select the default file
+- **polarizationProjectile** and **polarizationTarget**: orientation of the nucleus, applied after its nucleon positions are sampled or read
+  - 0: random orientation
+  - 1: longitudinal: the nucleus' $z$ axis (the symmetry axis of a deformed Woods-Saxon nucleus) stays along the beam, with a random rotation about it
+  - 2: transverse: the $z$ axis is turned to the $+y$ direction
+- **polarizationProjectileJz** and **polarizationTargetJz**: for a deuteron read from file (`nucleonPositionsFromFile 1`), $|J_z| = 1$ (any value within $10^{-8}$ of 1) uses the $J_z = \pm 1$ configurations and any other value the $J_z = 0$ ones. With polarization `0` they are not used: each event takes $J_z = 0$ with probability 1/3 and $J_z = \pm 1$ otherwise
+- **useSmoothNucleus**: test option: `1` replaces the nucleons by the smooth Woods-Saxon thickness of each nucleus (without deformation, nucleons or hot spots); $N_\text{part}$ and $N_\text{coll}$ are set to 2, and the `NpartList`/`NcollList` files are not written
+- **nucleiToAverage**: at least 1, `1` for normal runs. A value $n > 1$ was meant to average the thickness over $n$ nuclei, but it currently only divides every nucleon's thickness by $n$, since the nucleons of $n$ nuclei are no longer sampled. Not allowed for collisions with a proton
+
+### Woods-Saxon distribution
+Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) Woods-Saxon distribution with diffuseness $a$ and radius $R(\theta, \phi) = R [1 + \beta_2 (\cos\gamma\, Y_{20} + \sin\gamma\, Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. `src/Glauber.cpp` has the built-in parameters of each species.
+
+- **useInputWSParams**: `1` replaces the built-in `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp` of both nuclei by the input values, which are only read with `1`. U and Xe have no built-in $\beta_2$: it is 0 unless set with `useInputWSParams 1`. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
+- **radiusWS**: radius $R$ in fm
+- **diffusenessWS**: diffuseness $a$ in fm
+- **beta2**, **beta3** and **beta4**: deformation parameters $\beta_2$, $\beta_3$ and $\beta_4$
+- **gamma**: triaxiality angle $\gamma$ in radians
+- **deltaRnp** and **deltaAnp**: neutron skin: neutrons are sampled with radius $R$ + `deltaRnp` and diffuseness $a$ + `deltaAnp` (in fm); both are 0 without `useInputWSParams 1`
+- **forceDMin**: `1` enforces `dMin` strictly for deformed nuclei: a nucleon's position is redrawn until it is at least `dMin` away from all others. `0` keeps `dMin` on a best-effort basis (see `dMin`)
+- **dMin**: minimum distance in fm between two nucleons of a Woods-Saxon nucleus, also read with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it. `0` for no minimum distance
+
+### Coupling
+- **g**: coupling constant $g$ of the classical Yang-Mills fields; with fixed coupling, $\alpha_s = g^2/(4\pi)$
+- **runningCoupling**: `0` for the fixed coupling. `1` rescales the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities by $g^2/(4\pi\alpha_s(Q))$, with $\alpha_s(Q) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (Q/\Lambda_\mathrm{QCD})^{2/c}]}$, $\beta_0 = (11 N_c - 2 N_f)/3$ and $Q$ = `runningCouplingQsFactor` times the $Q_s$ chosen by `runWithQs` and `runWithLocalQs`. The energy density and $T^{\mu\nu}$ output always use the smaller $Q_s$ averaged over the overlap region. Needs `useNucleus 1`, `readInitialWilsonLines 0` and `LambdaQCD` < `mu0`
+- **mu0**: $\mu_0$ in GeV, keeps $\alpha_s$ finite for $Q \to 0$
+- **c**: how sharply $\alpha_s$ changes over from the $\mu_0$ to the $Q$ regime; must be positive
+- **LambdaQCD** (optional, default `0.2`): $\Lambda_\mathrm{QCD}$ in GeV
+- **nFlavors** (optional, default `3`): number of quark flavors $N_f$ in $\beta_0$, between 0 and 16; also used by the JIMWLK running coupling
+- **runWithQs**: which of the two nuclei's $Q_s$ sets the scale: `0` the smaller, `1` the average, `2` the larger, averaged ($\sqrt{\langle Q_s^2 \rangle}$) over the overlap region, or per cell with `runWithLocalQs 1`
+- **runningCouplingQsFactor**: factor multiplying $Q_s$ (or $k_T$ with `runWithKt 1`) to give the scale $Q$
+- **runWithLocalQs**: `1` uses the local $Q_s$ of each cell for the gluon multiplicity and the eccentricities instead of the overlap-region average
+- **runWithKt**: `1` computes the gluon multiplicity with $\alpha_s(Q)$, $Q$ = `runningCouplingQsFactor` $k_T$, in each $k_T$ bin instead of with the $Q_s$-based coupling
 
 
 ### Output
@@ -111,11 +180,12 @@ The files themselves (names, order, layout, columns and units) are described in 
  - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
    - 0: no
    - 1: yes; after each event its text files are moved into `RESULTS_rank<rank>.h5` (the originals are deleted)
- - **writeWilsonLines**: controls whether the generated Wilson lines are saved to disk. File names depend on random seed (parameter `seed`), see `WilsonLineIO::fileName()`. Wilson lines at the initial condition and after the JIMWLK evolution are saved.
+ - **writeWilsonLines**: controls whether the generated Wilson lines are saved to disk. File names depend on random seed (parameter `seed`), see `WilsonLineIO::fileName()`. The initial Wilson lines are saved (with `useJIMWLK 1` only with `jimwlkSaveSnapshots 1`), and those after the JIMWLK evolution.
    - 0: do not save Wilson lines
    - 1: save in text format
    - 2: save in binary format (faster I/O, smaller file size)
  - **wilsonLinePath** (optional): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
+ - **readInitialWilsonLines**: `0` samples the color charges and builds the Wilson lines; `1` (text) or `2` (binary) instead reads the initial Wilson lines of both nuclei from `wilsonLinePath`, e.g. written by an earlier run with the same `seed` and number of MPI ranks. The reader expects the file names without the `_x_<x>` part, as written with `useFluctuatingX 1` and `useJIMWLK 0`; other files have to be renamed. No collision geometry is sampled: the nuclei collide at $b = 0$, and `runningCoupling 1` and `inverseQsForMaxTime 1` are not possible
 
 ### JIMWLK evolution
 Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` which corresponds to having a fixed $x$ at the initial state of the evolution.
@@ -124,11 +194,14 @@ Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` wh
 - **jimwlkInitialX**: Bjorken-x at the initial condition
 - **jimwlkXProjectile**: Bjorken-$x$ to which the projectile is evolved
 - **jimwlkXTarget**: Bjorken-$x$ to which the target is evolved
+- **jimwlkSaveSnapshots**: `1` also writes the Wilson lines during the evolution, at the $x$ values in `jimwlkXSnapshotList`, in the format of `writeWilsonLines` (which must be 1 or 2) and with the $x$ in the file name; the initial Wilson lines are then written too
+- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces) to save snapshots at, read with `jimwlkSaveSnapshots 1`. They must be in decreasing order between `jimwlkInitialX` and the final $x$: a snapshot is saved in the evolution step that passes the value, and the first value that is never passed ends the snapshots
 - **jimwlkMass**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkAlphaS**: Coupling constant in the JIMWLK evolution
   - 0 (any value within $10^{-8}$ of 0): Use running coupling
 - **jimwlkLambdaQCD** $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkMu0**: Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
+- **jimwlkC** (optional, default `0.2`): parameter $c$ in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712); $N_f$ there is `nFlavors`
 - **jimwlkDs**: step size in JIMWLK evolution. Recommended values
   - 0.005 with running coupling
   - 0.0005 with fixed coupling

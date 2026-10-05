@@ -130,7 +130,7 @@ class WilsonLineIO {
         const std::string &fileName, Parameters *param, NucleusRole role,
         std::vector<Matrix> &U);
     /**
-     * The `writeOutputs==5` diagnostic of Init::setV(): writes
+     * The `writeWilsonLineSnapshot` diagnostic of Init::setV(): writes
      * `initialWilsonLines<id>.ipgw`, a binary snapshot of the two nuclei's
      * just-constructed initial Wilson lines (\c lat->U/\c lat->U2) as full
      * \f$3\times3\f$ complex matrices per cell, little-endian

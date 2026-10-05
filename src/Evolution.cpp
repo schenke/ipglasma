@@ -726,10 +726,8 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     }
 
     int itmax = static_cast<int>(maxtime / (a * dtau) + 0.00000000001);
-    int it0 = static_cast<int>(0.1 / (a * dtau) + 0.0000000001);
-    int it1 = static_cast<int>(0.2 / (a * dtau) + 0.0000000001);
-    int it2 = static_cast<int>(0.3 / (a * dtau) + 0.0000000001);
-    int it3 = static_cast<int>(0.4 / (a * dtau) + 0.0000000001);
+    const std::vector<int> intermediateSteps =
+        outputSteps(param->output.outputTimes, a * dtau, itmax);
 
     // Tmunu is defined at the integer coordinate time tau_n, while the
     // leapfrog momenta E1, E2, and pi live at tau_{n-1/2}.  Keep reusable
@@ -743,25 +741,24 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     messager_ << "[Evolution::run]: Starting evolution: num of time steps="
               << itmax;
     messager_.flush("info");
-    if ((param->output.writeOutputs == 5)) {
-        messager_ << "[Evolution::run]: Measuring at times " << it0 * a * dtau
-                  << ", " << it1 * a * dtau << ", " << it2 * a * dtau << ", "
-                  << it3 * a * dtau << ", " << itmax * a * dtau << ". ";
+    if (!intermediateSteps.empty()) {
+        messager_ << "[Evolution::run]: Measuring at times";
+        for (const int step : intermediateSteps) {
+            messager_ << " " << step * a * dtau << ",";
+        }
+        messager_ << " " << itmax * a * dtau << ". ";
         messager_.flush("info");
     }
     messager_ << "[Evolution::run]:  a = " << a;
     messager_.flush("info");
     messager_ << "[Evolution::run]:  dtau = " << dtau;
     messager_.flush("info");
-    messager_ << "[Evolution::run]:  it0 = " << it0;
-    messager_.flush("info");
 
     // do evolution
     for (int it = 1; it <= itmax; it++) {
         const bool finalTmunuMeasurement = (it == itmax);
-        const bool intermediateTmunuMeasurement =
-            (param->output.writeOutputs == 5)
-            && (it == it0 || it == it1 || it == it2 || it == it3);
+        const bool intermediateTmunuMeasurement = std::binary_search(
+            intermediateSteps.begin(), intermediateSteps.end(), it);
         const bool measureTmunu =
             finalTmunuMeasurement || intermediateTmunuMeasurement;
 
@@ -786,7 +783,7 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             EnergyMomentumTensor::compute(lat, param, it);
             //  Preserve the historical intermediate-time finalFlag=false path
             //  when hydro output is enabled.
-            if (param->output.writeEpsilonUHydro) {
+            if (param->output.anyFlowOutput()) {
                 u(lat, param, it, false);
             } else {
                 MyEigen myeigen;
@@ -823,11 +820,12 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         }
 
         int success = 1;
-        if (param->output.computeGluonMultiplicity) {
-            if (it == itmax) {
+        if (it == itmax) {
+            if (param->output.computeEccentricities) {
                 Eccentricity::compute(
                     lat, param, it, param->output.eccentricityCutoff, 0);
-
+            }
+            if (param->output.computeGluonMultiplicity) {
                 success = gluonMultiplicity_.compute(lat, group, param, it);
             }
         }
@@ -836,17 +834,29 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
     }
 }
 
+std::vector<int> Evolution::outputSteps(
+    const std::vector<double> &times, double stepLength, int itmax) {
+    std::vector<int> steps;
+    for (const double t : times) {
+        const int step = static_cast<int>(t / stepLength + 0.0000000001);
+        // the final step is always measured
+        if (step >= 1 && step < itmax) steps.push_back(step);
+    }
+    std::sort(steps.begin(), steps.end());
+    steps.erase(std::unique(steps.begin(), steps.end()), steps.end());
+    return steps;
+}
+
 void Evolution::finalFlowMeasurement(Lattice *lat, Parameters *param, int it) {
-    // Hydro flow fields are optional. Tmunu output remains available
-    // through the lightweight writer when the expensive eigen solve is
-    // disabled.
-    if (param->output.writeEpsilonUHydro) {
+    // The flow-velocity solve is only run when an output needs it. Tmunu
+    // output remains available through the lightweight writer without it.
+    if (param->output.anyFlowOutput()) {
         u(lat, param, it, true);
     } else {
         MyEigen myeigen;
         // Eccentricity::compute() weights by epsilon * u^tau, which only the
         // flow-velocity solve sets.
-        if (param->output.computeGluonMultiplicity) {
+        if (param->output.computeEccentricities) {
             myeigen.solveFlowVelocity(lat, param, it);
         }
         myeigen.writeTmunu4D(lat, param, it);

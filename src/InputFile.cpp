@@ -129,6 +129,10 @@ bool parseValue(const std::string &text, std::string &out) {
 }
 
 bool parseValue(const std::string &text, std::vector<double> &out) {
+    if (text == "none") {
+        out.clear();
+        return true;
+    }
     std::vector<double> values;
     std::size_t start = 0;
     while (true) {

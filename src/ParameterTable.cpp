@@ -58,11 +58,13 @@ void writeValue(std::ostream &out, double value) {
     out.write(buffer, result.ptr - buffer);
 }
 /**
- * Writes \p values comma-separated, in input-file syntax.
+ * Writes \p values comma-separated (`none` if empty), in input-file
+ * syntax.
  * \param[out] out Stream to write to.
  * \param[in] values Values to write.
  */
 void writeValue(std::ostream &out, const std::vector<double> &values) {
+    if (values.empty()) out << "none";
     for (std::size_t i = 0; i < values.size(); i++) {
         if (i > 0) out << ",";
         writeValue(out, values[i]);
@@ -99,7 +101,7 @@ std::string typeName() {
         return "a non-negative integer";
     if constexpr (std::is_same_v<T, double>) return "a number";
     if constexpr (std::is_same_v<T, std::vector<double>>)
-        return "a comma-separated list of numbers";
+        return "a comma-separated list of numbers, or none";
     return "a value";
 }
 
@@ -308,14 +310,39 @@ bool wsDeformParamsSet(const Parameters &p) {
 bool saveSnapshotsSet(const Parameters &p) { return p.jimwlk.saveSnapshots; }
 
 /**
- * Condition for the eccentricity cutoff: the eccentricities are only
- * computed together with the gluon multiplicity.
+ * Condition for the hadron spectrum, which is computed from the gluon
+ * spectrum.
  * \param[in] p The parameters read so far.
  * \return Whether `computeGluonMultiplicity` is set.
  */
 bool gluonMultiplicityComputed(const Parameters &p) {
     return p.output.computeGluonMultiplicity;
 }
+
+/**
+ * Condition for the eccentricity cutoff.
+ * \param[in] p The parameters read so far.
+ * \return Whether `computeEccentricities` is set.
+ */
+bool eccentricitiesComputed(const Parameters &p) {
+    return p.output.computeEccentricities;
+}
+
+/**
+ * Condition for the output times.
+ * \param[in] p The parameters read so far.
+ * \return Whether a hydro, Jazma or T^{mu nu} output is switched on.
+ */
+bool fieldOutputWritten(const Parameters &p) {
+    return p.output.anyFieldOutput();
+}
+
+/**
+ * Condition for the T^{mu nu} format.
+ * \param[in] p The parameters read so far.
+ * \return Whether `writeTmunu` is set.
+ */
+bool tmunuWritten(const Parameters &p) { return p.output.writeTmunu; }
 
 /**
  * Condition for the parameters of the gaussian nucleon model.
@@ -619,9 +646,12 @@ const std::vector<ParameterSpec> &parameterTable() {
             "computeGluonMultiplicity", &P::output,
             &OutputParameters::computeGluonMultiplicity),
         param(
+            "computeEccentricities", &P::output,
+            &OutputParameters::computeEccentricities),
+        param(
             "eccentricityCutoff", &P::output,
             &OutputParameters::eccentricityCutoff)
-            .onlyIf(gluonMultiplicityComputed)
+            .onlyIf(eccentricitiesComputed)
             .optional("0")
             .check(nonNegative()),
         param(
@@ -629,13 +659,38 @@ const std::vector<ParameterSpec> &parameterTable() {
             &OutputParameters::readMultFromFile),
 
         // output
-        param("writeOutputs", &P::output, &OutputParameters::writeOutputs),
-        param(
-            "writeEpsilonUHydro", &P::output,
-            &OutputParameters::writeEpsilonUHydro)
-            .optional("1"),
+        param("writeHydro", &P::output, &OutputParameters::writeHydro),
+        param("writeJazma", &P::output, &OutputParameters::writeJazma),
+        param("writeTmunu", &P::output, &OutputParameters::writeTmunu),
         param(
             "writeTmunuBinary", &P::output, &OutputParameters::writeTmunuBinary)
+            .onlyIf(tmunuWritten)
+            .optional("1"),
+        param("outputTimes", &P::output, &OutputParameters::outputTimes)
+            .onlyIf(fieldOutputWritten)
+            .optional("none")
+            .check([](const std::vector<double> &times) {
+                for (const double t : times) {
+                    if (t <= 0.) return "every time must be positive";
+                }
+                return "";
+            }),
+        param(
+            "writeHadronSpectrum", &P::output,
+            &OutputParameters::writeHadronSpectrum)
+            .onlyIf(gluonMultiplicityComputed)
+            .optional("0"),
+        param(
+            "writeWilsonLineSnapshot", &P::output,
+            &OutputParameters::writeWilsonLineSnapshot)
+            .optional("0"),
+        param("writeNpartList", &P::output, &OutputParameters::writeNpartList)
+            .optional("1"),
+        param("writeNcollList", &P::output, &OutputParameters::writeNcollList)
+            .optional("1"),
+        param(
+            "writeNgluonEstimators", &P::output,
+            &OutputParameters::writeNgluonEstimators)
             .optional("1"),
         param(
             "writeOutputsToHDF5", &P::output,

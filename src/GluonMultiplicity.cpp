@@ -402,7 +402,7 @@ int GluonMultiplicity::compute(
         multiplicityPhaseStart);
 
     // compute hadrons using fragmentation function
-    if (it == itmax && param->output.writeOutputs == 3) {
+    if (it == itmax && param->output.writeHadronSpectrum) {
         hadronizeAndWrite(param, a, dkt, bins, n, Nhgsl, hbins);
         multiplicityPhaseStart = ipg::wallSeconds();
     }

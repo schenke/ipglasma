@@ -526,7 +526,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     evolveNucleusWilsonLine(colorChargeScaleA, lat->U);
     evolveNucleusWilsonLine(colorChargeScaleB, lat->U2);
 
-    if (param->output.writeOutputs == 5) {
+    if (param->output.writeWilsonLineSnapshot) {
         WilsonLineIO().writeTrainingData(lat, param);
     }
 

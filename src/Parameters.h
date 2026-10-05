@@ -22,8 +22,9 @@ struct LatticeParameters {
 
 /// Classical Yang-Mills evolution.
 struct EvolutionParameters {
-    /// Run mode: `1` run the evolution, `2` analysis with files from
-    /// disk.
+    /// Run mode: `1` samples the collision and runs the classical
+    /// Yang-Mills evolution; any other value stops after the Wilson lines
+    /// of the two nuclei are built (and evolved with JIMWLK).
     int mode = 0;
     /// Maximal evolution time [fm/c].
     double maxTime = 0.;
@@ -34,14 +35,16 @@ struct EvolutionParameters {
 
 /// Random-number seeding.
 struct RandomParameters {
-    /// Random seed added to the current time to generate the full seed
-    /// (or the full seed itself, depending on \c useTimeForSeed).
+    /// Random seed; MPI rank \f$r\f$ uses `seed + 1000 r` unless \c
+    /// useTimeForSeed or \c useSeedList is set. Also part of the
+    /// Wilson-line file names (see WilsonLineIO::fileName()).
     unsigned long long int seed = 0;
-    /// Whether to read random seeds from a file (`1`); overrides \c
-    /// useTimeForSeed if set.
+    /// Whether to read one random seed per MPI rank from the file
+    /// `seedList` (`1`); overrides \c seed and \c useTimeForSeed.
     bool useSeedList = false;
-    /// Whether to use the system time to generate a random seed (`1`)
-    /// or not (`0`).
+    /// Whether to draw the random seed from `std::random_device` (`1`)
+    /// instead of using \c seed (`0`); not based on the time despite the
+    /// name.
     bool useTimeForSeed = false;
 };
 
@@ -67,15 +70,16 @@ struct CollisionParameters {
     /// Whether to use nuclei with finite geometry (`1`) or a constant
     /// \f$g^2\mu\f$ distribution over the lattice (`0`).
     bool useNucleus = false;
-    /// Whether to use a Gaussian profile on top of the constant
-    /// background (`1`).
+    /// With `useNucleus 0`, whether to multiply the constant
+    /// \f$g^2\mu^2\f$ by a normalized Gaussian of widths 0.35 fm in
+    /// \f$x\f$ and 0.5 fm in \f$y\f$ (`1`).
     bool useGaussian = false;
     /// \f$g^2\mu\f$ [lattice units], used for the constant
     /// (`useNucleus=0`) color-charge-density mode.
     double g2mu = 0.;
-    /// If `0`, don't demand a given \f$N_{\text{part}}\f$; if `>1`,
-    /// resample the initial configuration until this
-    /// \f$N_{\text{part}}\f$ is reached.
+    /// If `0`, don't demand a given \f$N_{\text{part}}\f$; otherwise
+    /// resample the impact parameter, keeping the nucleon positions, until
+    /// the event has this \f$N_{\text{part}}\f$.
     int useFixedNpart = 0;
     /// Number of nuclei to average over, for a smoother thickness
     /// distribution.
@@ -142,11 +146,14 @@ struct NucleusParameters {
     /// Neutron-skin diffuseness offset [fm] between proton and neutron
     /// density profiles.
     double deltaAnp = 0.;
-    /// Whether to enforce \c dMin as a minimum inter-nucleon
-    /// distance when sampling nucleon positions.
+    /// Whether to enforce \c dMin strictly for deformed nuclei, redrawing
+    /// a nucleon's position until it is far enough from all others (`1`),
+    /// instead of on a best-effort basis (`0`).
     bool forceDMin = false;
-    /// Minimum inter-nucleon distance [fm], enforced when \c
-    /// forceDMin is set.
+    /// Minimum inter-nucleon distance [fm] of a Woods-Saxon nucleus.
+    /// Without \c forceDMin best effort: a nucleon keeps its radius and
+    /// only its direction is redrawn, up to 100 times; triaxial nuclei
+    /// (\f$\gamma \neq 0\f$) then ignore it.
     double dMin = 0.;
 };
 
@@ -231,20 +238,24 @@ struct SubnucleonParameters {
     /// Width \f$\sigma\f$ of the \f$Q_s\f$ fluctuations (see smearQs;
     /// parameter \f$\sigma\f$ in Eq. (23) of \cite Mantysaari:2016jaz).
     double smearingWidth = 0.;
-    /// UV damping length of the color-charge correlator [GeV\f$^{-1}\f$].
+    /// UV damping length [GeV\f$^{-1}\f$]: the propagator
+    /// \f$1/(k^2+m^2)\f$ from the color charges to the gauge field is
+    /// multiplied by \f$e^{-|k|\,\text{UVDamp}}\f$; only with \c m
+    /// \f$\neq 0\f$.
     double UVDamp = 0.;
 };
 
 /// Saturation scale, color charges and rapidity/x of the nuclei.
 struct ColorChargeParameters {
-    /// Ratio between \f$Q_s\f$ and \f$\mu\f$ for nucleus A:
+    /// Ratio between \f$Q_s\f$ and \f$g^2\mu\f$ for both nuclei:
     /// \f$Q_s = \text{QsMuRatio} \cdot g^2\mu\f$.
     double QsMuRatio = 0.;
     /// File name of the table giving \f$Q_s^2\f$ as a function of
     /// rapidity \f$Y\f$ and \f$Q_s^2(Y=0)\f$.
     std::string nucleusQsTableFileName;
-    /// If `>0`, exclude events with \f$Q_{s,\min}^2 S_T <\f$ this
-    /// value (used to trigger on high-multiplicity events).
+    /// Resample the impact parameter, keeping the nuclei, until
+    /// \f$Q_{s,\min}^2 S_T >\f$ this value (used to trigger on
+    /// high-multiplicity events).
     int minimumQs2ST = 0;
     /// Longitudinal "resolution" (see Lappi, Eur. Phys. J. C55, 285).
     int Ny = 0;

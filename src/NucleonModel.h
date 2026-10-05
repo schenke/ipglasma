@@ -179,6 +179,24 @@ class GaussianNucleon : public NucleonModel {
     double smearingWidth_;
 };
 
+/**
+ * The hot spots of one sampled nucleon, before they are turned into a
+ * profile (see HotSpotNucleon::sampleHotSpots()).
+ */
+struct HotSpotConfiguration {
+    /// \f$x\f$ offsets from the nucleon center [fm].
+    std::vector<double> x;
+    /// \f$y\f$ offsets from the nucleon center [fm].
+    std::vector<double> y;
+    /// Longitudinal (\f$z\f$) offsets [fm]; `0` for `omega != 1`.
+    std::vector<double> z;
+    /// Width \f$B_q\f$ shared by the nucleon's hot spots
+    /// [GeV\f$^{-2}\f$].
+    double BGq;
+    /// Qs normalization factor of each hot spot.
+    std::vector<double> normalization;
+};
+
 /// `nucleonModel hotspots`: HotSpotProfile nucleons.
 class HotSpotNucleon : public NucleonModel {
   public:
@@ -198,6 +216,19 @@ class HotSpotNucleon : public NucleonModel {
      * \return The number of hot spots.
      */
     int sampleNumberOfPartons(Random &random) const;
+    /**
+     * Samples the hot spots of one nucleon, in this order: their width
+     * (log-normal around `BGq` with variance `BGqVar`), their number,
+     * their 3D positions (Gaussian with width `BG` for `omega 1`,
+     * otherwise transverse radii from the gamma distribution, keeping a
+     * best-effort minimum distance `dqMin`), the optional shift of their
+     * center of mass to the nucleon center, and their Qs normalization.
+     * \param[in,out] random Random-number source.
+     * \param[in] number Number of hot spots; `0` samples it with
+     * sampleNumberOfPartons().
+     * \return The hot spots, relative to the nucleon center.
+     */
+    HotSpotConfiguration sampleHotSpots(Random &random, int number = 0) const;
 
   private:
     /// Width \f$B_G\f$ of the hot-spot position distribution

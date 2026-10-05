@@ -52,7 +52,6 @@ files themselves.
 | `NpartdNdy-t<tau>-<id>.dat` | Multiplicity summary | `mode 1`, `computeGluonMultiplicity 1` | text |
 | `gluonMultiplicity<id>.json` | Gluon spectrum | `mode 1`, `computeGluonMultiplicity 1` | JSON |
 | `multiplicityHadrons<id>.dat` | Hadron spectrum | as above and `writeHadronSpectrum 1` | text |
-| `NpartdNdy-mod.dat` | Rescaled multiplicity | `readMultFromFile 1` | text |
 | `RESULTS_rank<rank>.h5`, `RESULTS.h5` | HDF5 collection | `writeOutputsToHDF5 1` | HDF5 |
 | `ipglasma_fftw_wisdom.dat` | Diagnostic files | built with `-DIPGLASMA_DETERMINISTIC_FFT=ON` | FFTW wisdom |
 | `ipglasma_profile_rank<rank>.tsv`, `ipglasma_fingerprint_rank<rank>.tsv` | Diagnostic files | environment variables | tab-separated text |
@@ -66,7 +65,7 @@ files themselves.
       with `jimwlkSaveSnapshots 1`).
 3. With JIMWLK:
    1. the Wilson-line snapshots at the x values of `jimwlkXSnapshotList`
-      (`jimwlkSaveSnapshots 1`);
+      (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
    2. the final Wilson lines at `jimwlkXProjectile`/`jimwlkXTarget`
       (`writeWilsonLines` > 0).
 4. `mode 1`, for each impact parameter tried: `NcollList<id>.dat`,
@@ -115,14 +114,20 @@ in the run.
 - **Name.**
   - `_x_<x>` gives Bjorken x in scientific notation with 5 decimals; it is
     left out with `useFluctuatingX 1` (no fixed x).
-  - `<n> = <id> + (iA + 2*seed) * nRanks`, where `iA` is 1 for the projectile
-    and 2 for the target.
+  - `<n> = 2 (seed · N + <id>) + iA`, where N is the number of events of the
+    run (events per rank times MPI ranks) and `iA` is 1 for the projectile and
+    2 for the target. So no two files of a run, nor of runs with different
+    seeds and the same N, have the same number; one event on one rank gives
+    2·seed + 1 and 2·seed + 2.
   - Text files end in `.txt`; binary files have no extension.
 - **When.**
   - The initial Wilson lines: without JIMWLK at x = 0.01·exp(−`rapidityA`/`B`),
     with JIMWLK at `jimwlkInitialX`.
-  - JIMWLK snapshots and final Wilson lines, see "Order within an event" above.
-  - `readInitialWilsonLines 1`/`2` reads the files back.
+  - JIMWLK snapshots, at the step closest to each value of
+    `jimwlkXSnapshotList` and named with that value, and the final Wilson
+    lines, see "Order within an event" above.
+  - `readInitialWilsonLines 1`/`2` reads the initial files back, under the
+    names a run with the same parameters writes.
 
 **Text format** (`writeWilsonLines 1`): one line per site, `ix` outer and
 `iy` inner, with a blank line after each `ix`. Each line holds 20 columns:
@@ -370,25 +375,6 @@ in steps of 0.1 GeV:
 | 5 | T_pp [fm⁻²] |
 | 6 | b [fm] |
 
-## Rescaled multiplicity
-
-`NpartdNdy-mod.dat` (`GluonMultiplicity::readNkt()`), with
-`readMultFromFile 1`.
-
-This post-processing mode reads `multiplicity<id>.dat` and
-`NpartdNdy<id>.dat` from an earlier run. The current code writes neither
-file under these names. It converts dN/dy to dN/dη with the
-`jacobianMass`/`sqrtS` Jacobian, writes one line, and then stops the program
-with exit status 1:
-
-| Column | Content |
-|---|---|
-| 1 | N_part |
-| 2 | dN/dη from the old `NpartdNdy` file |
-| 3 | dN/dη integrated from the old spectrum |
-| 4 | T_pp |
-| 5 | b |
-
 ## HDF5 collection
 
 `RESULTS_rank<rank>.h5` and `RESULTS.h5`, with `writeOutputsToHDF5 1`.
@@ -403,10 +389,12 @@ then **deletes them**:
   as datasets.
 
 The other files, among them the binary `.ipgt` files, stay on disk. At the
-end of the run, rank 0 merges every `RESULTS_rank<rank>.h5` into `RESULTS.h5`
-with `h5copy` and deletes them. The script needs `python3` with `h5py` and
-`numpy`, and is called as `utilities/combine_events_into_hdf5.py`, so the run
-must be started in the repository root.
+end of the run, rank 0 copies the groups of every `RESULTS_rank<rank>.h5`
+into `RESULTS.h5` and deletes the per-rank file; a file that cannot be read,
+or one with a group that `RESULTS.h5` already holds, is kept (and the program
+warns). The script needs `python3` with `h5py` and `numpy`; the program calls
+it from the source tree (`utilities/combine_events_into_hdf5.py`), so the run
+can start in any directory.
 
 ## Diagnostic files
 

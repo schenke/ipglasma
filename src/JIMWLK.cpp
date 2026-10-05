@@ -222,7 +222,31 @@ void JIMWLK::runEvolutionLoop(
     messager_ << "[JIMWLK::evolution]: Evolving " << label
               << ", evolution steps " << steps;
     messager_.flush("info");
-    unsigned int iSnapshot = 0;
+
+    std::vector<int> snapshotStep;
+    if (saveSnapshots) {
+        snapshotStep = snapshotSteps(xSnapshotList, x0, dlogx, steps);
+        for (std::size_t i = 0; i < xSnapshotList.size(); i++) {
+            if (snapshotStep[i] >= 0) continue;
+            messager_ << "[JIMWLK::evolution]: x = " << xSnapshotList[i]
+                      << " of jimwlkXSnapshotList is not between " << x0
+                      << " and " << x0 * exp(-steps * dlogx) << " (the "
+                      << label << " evolution); no snapshot is saved for it.";
+            messager_.flush("warning");
+        }
+    }
+    // writes the snapshots due after `step` steps, named with their
+    // requested x
+    auto saveSnapshotsAfter = [&](int step) {
+        for (std::size_t i = 0; i < snapshotStep.size(); i++) {
+            if (snapshotStep[i] == step) {
+                WilsonLineIO().write(
+                    lat_ptr_, &param_, nucleus, xSnapshotList[i]);
+            }
+        }
+    };
+
+    saveSnapshotsAfter(0);
     for (int ids = 0; ids < steps; ids++) {
         // steps (from user-configurable JIMWLK parameters, no lower bound
         // enforced) can be under 10, making this 0; guard against the
@@ -232,20 +256,28 @@ void JIMWLK::runEvolutionLoop(
             messager_ << "[JIMWLK::evolution]: Step " << ids;
             messager_.flush("info");
         }
-        double xLoc = x0 * exp(-ids * dlogx);
         evolutionStep(nucleus);
-        if (saveSnapshots) {
-            if (iSnapshot < xSnapshotList.size()) {
-                if (xLoc > xSnapshotList[iSnapshot]
-                    && xLoc * exp(-dlogx) < xSnapshotList[iSnapshot]) {
-                    WilsonLineIO().write(lat_ptr_, &param_, nucleus, xLoc);
-                    iSnapshot++;
-                }
-            }
-        }
+        saveSnapshotsAfter(ids + 1);
     }
     messager_ << "[JIMWLK::evolution]: Done.";
     messager_.flush("info");
+}
+
+std::vector<int> JIMWLK::snapshotSteps(
+    const std::vector<double> &xSnapshotList, double x0, double dlogx,
+    int steps) {
+    std::vector<int> result;
+    for (const double x : xSnapshotList) {
+        // the number of steps to reach x exactly
+        const double exact = std::log(x0 / x) / dlogx;
+        if (!(exact >= -0.5 && exact <= steps + 0.5)) {
+            result.push_back(-1);
+        } else {
+            const int step = static_cast<int>(std::floor(exact + 0.5));
+            result.push_back(std::min(std::max(step, 0), steps));
+        }
+    }
+    return result;
 }
 
 void JIMWLK::evolutionStep(NucleusRole nucleus) {

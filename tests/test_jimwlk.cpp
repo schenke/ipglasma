@@ -140,3 +140,24 @@ TEST_CASE(
     const double alphasC025 = jimwlk.getAlphas(x, y);
     CHECK(alphasC025 == doctest::Approx(0.3453365551834896));
 }
+
+TEST_CASE(
+    "JIMWLK::snapshotSteps saves each x at the closest step and skips x "
+    "outside the evolution") {
+    // x_k = 0.01 e^{-0.1 k}, k = 0..20
+    const double x0 = 0.01;
+    const double dlogx = 0.1;
+    const int steps = 20;
+    const std::vector<double> requested = {
+        x0,                    // before the first step
+        x0 * std::exp(-0.53),  // closer to step 5 than to 6
+        x0 * std::exp(-0.57),  // closer to step 6
+        x0 * std::exp(-2.04),  // half a step past the end at most: step 20
+        x0 * std::exp(0.04),   // just above x0: step 0
+        x0 * std::exp(-2.2),   // beyond the end
+        x0 * std::exp(0.2),    // above x0
+        0.};
+    CHECK(
+        JIMWLK::snapshotSteps(requested, x0, dlogx, steps)
+        == std::vector<int> {0, 5, 6, 20, 0, -1, -1, -1});
+}

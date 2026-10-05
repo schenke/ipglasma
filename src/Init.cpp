@@ -533,21 +533,13 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     // output U
     if (param->wilsonLines.writeWilsonLines > 0
         && (param->jimwlk.saveSnapshots || !param->jimwlk.enabled)) {
-        double x_projectile, x_target;
-        if (param->jimwlk.enabled) {
-            x_projectile = x_target = param->jimwlk.initialX;
-        } else {
-            if (param->colorCharge.useFluctuatingX) {
-                // Initial condition does not correspond to a fixed x
-                x_projectile = x_target = -1;
-            } else {
-                x_projectile = 0.01 * std::exp(-param->colorCharge.rapidityA);
-                x_target = 0.01 * std::exp(-param->colorCharge.rapidityB);
-            }
-        }
         WilsonLineIO io;
-        io.write(lat, param, NucleusRole::Projectile, x_projectile);
-        io.write(lat, param, NucleusRole::Target, x_target);
+        io.write(
+            lat, param, NucleusRole::Projectile,
+            WilsonLineIO::initialX(param, NucleusRole::Projectile));
+        io.write(
+            lat, param, NucleusRole::Target,
+            WilsonLineIO::initialX(param, NucleusRole::Target));
     }
 
     messager_ << "[Init::setV]: Wilson lines V_A and V_B set on rank "

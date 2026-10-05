@@ -204,19 +204,36 @@ class JIMWLK {
      * Projectile, `lat_ptr_->U2` for Target) to evolve.
      */
     void evolutionStep(NucleusRole nucleus);
+    /**
+     * Finds the evolution step at which to save each JIMWLK snapshot:
+     * after \f$k\f$ steps the Wilson lines are at
+     * \f$x_k = x_0 e^{-k\,\delta}\f$, and each requested \f$x\f$ is saved
+     * at the \f$k\f$ whose \f$x_k\f$ is closest to it in \f$\ln x\f$, so at
+     * most half a step away.
+     * \param[in] xSnapshotList The requested \f$x\f$ values, in any order.
+     * \param[in] x0 Bjorken \f$x\f$ before the first step.
+     * \param[in] dlogx The step \f$\delta\f$ in \f$\ln(1/x)\f$.
+     * \param[in] steps Number of evolution steps.
+     * \return For each requested \f$x\f$, the number of steps after which
+     * to save it (`0`: before the first step), or `-1` if it is more than
+     * half a step outside the evolved range.
+     */
+    static std::vector<int> snapshotSteps(
+        const std::vector<double> &xSnapshotList, double x0, double dlogx,
+        int steps);
 
   private:
     /**
      * Shared by evolution()'s projectile and target passes: runs \p
      * steps Langevin steps for \p nucleus, logging progress and writing
-     * any snapshots due in \p xSnapshotList along the way.
+     * the snapshots of \p xSnapshotList along the way, at the steps
+     * snapshotSteps() finds, each named with its requested \f$x\f$.
      * \param[in] nucleus Which nucleus to evolve.
      * \param[in] steps Number of Langevin steps to run.
      * \param[in] x0 Starting Bjorken \f$x\f$ for this evolution.
      * \param[in] dlogx Logarithmic \f$x\f$ step size per Langevin step.
-     * \param[in] saveSnapshots Whether to write a Wilson-line snapshot
-     * whenever \f$x\f$ crosses one of \p xSnapshotList's values.
-     * \param[in] xSnapshotList Sorted \f$x\f$ values to snapshot at, if
+     * \param[in] saveSnapshots Whether to write Wilson-line snapshots.
+     * \param[in] xSnapshotList \f$x\f$ values to snapshot at, if
      * \p saveSnapshots.
      */
     void runEvolutionLoop(

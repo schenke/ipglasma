@@ -1075,8 +1075,9 @@ void MyEigen::flowVelocity4DImpl(
     double muZero = param->coupling.mu0;
 
     if (param->coupling.runningCoupling) {
-        // run with average Q_s only ! local makes no sense here (stuff has
-        // moved in the mean time)
+        // always with the smaller Q_s averaged over the overlap region,
+        // whatever runWithQs selects; the local Q_s makes no sense here,
+        // since the fields have moved since the collision
         gfactor = computeRunningCouplingGfactorFromScale(
             g, muZero, c, param->coupling.LambdaQCD, param->coupling.nFlavors,
             param->coupling.runningCouplingQsFactor

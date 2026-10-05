@@ -1,3 +1,5 @@
+#include <cstdlib>
+#include <string>
 #include <thread>
 
 #include "Instrumentation.h"
@@ -13,8 +15,33 @@ TEST_CASE("ipg::wallSeconds is finite and monotonically non-decreasing") {
     CHECK((t2 - t1) < 5.0);  // sanity bound, not a tight one
 }
 
-// Profiler/fingerprintEnabled are gated by environment variables read once
-// at process start (IPGLASMA_PROFILE, IPGLASMA_FINGERPRINT) and, for
-// Profiler, held in a process-wide singleton -- neither is a "simple",
-// self-contained unit to test without process isolation, so they are not
+TEST_CASE(
+    "ipg::fingerprintEnabled: the disabling values are matched "
+    "case-insensitively") {
+    const char *previous = std::getenv("IPGLASMA_FINGERPRINT");
+    const std::string saved = previous ? previous : "";
+
+    unsetenv("IPGLASMA_FINGERPRINT");
+    CHECK_FALSE(ipg::fingerprintEnabled());
+    for (const char *off :
+         {"", "0", "false", "False", "FALSE", "off", "Off", "no", "No", "NO"}) {
+        CAPTURE(off);
+        setenv("IPGLASMA_FINGERPRINT", off, 1);
+        CHECK_FALSE(ipg::fingerprintEnabled());
+    }
+    for (const char *on : {"1", "yes", "true", "On"}) {
+        CAPTURE(on);
+        setenv("IPGLASMA_FINGERPRINT", on, 1);
+        CHECK(ipg::fingerprintEnabled());
+    }
+
+    if (previous) {
+        setenv("IPGLASMA_FINGERPRINT", saved.c_str(), 1);
+    } else {
+        unsetenv("IPGLASMA_FINGERPRINT");
+    }
+}
+
+// Profiler reads IPGLASMA_PROFILE once and is a process-wide singleton, so it
+// is not a self-contained unit to test without process isolation and is not
 // covered here.

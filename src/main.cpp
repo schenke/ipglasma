@@ -40,6 +40,12 @@ using std::ofstream;
 using std::string;
 using std::stringstream;
 
+// The HDF5 collection script; CMake sets its absolute path, so a run can
+// start in any directory.
+#ifndef IPGLASMA_HDF5_SCRIPT
+#define IPGLASMA_HDF5_SCRIPT "utilities/combine_events_into_hdf5.py"
+#endif
+
 bool readInput(Parameters *param, int argc, char *argv[], int rank);
 void display_logo();
 void writeparams(Parameters *param);
@@ -73,6 +79,7 @@ int main(int argc, char *argv[]) {
     Parameters *param = &paramStorage;
     param->run.MPIRank = rank;
     param->run.MPISize = size;
+    param->run.eventsPerRank = nev;
 
     // read and validate the parameters from the input file
     if (!readInput(param, argc, argv, rank)) {
@@ -210,11 +217,6 @@ int main(int argc, char *argv[]) {
         // initialize evolution object
         Evolution evolution(nn);
 
-        // either read k_T spectrum from file or do a fresh start
-        if (param->output.readMultFromFile) {
-            GluonMultiplicity::readNkt(param);
-        }
-
         // Keep the lattice lifetime inside this block so destruction is timed
         // before the per-event profile is written.
         {
@@ -285,7 +287,7 @@ int main(int argc, char *argv[]) {
                 h5output_filename << "RESULTS_rank" << rank;
                 stringstream collect_command;
                 collect_command
-                    << "python3 utilities/combine_events_into_hdf5.py ."
+                    << "python3 \"" << IPGLASMA_HDF5_SCRIPT << "\" ."
                     << " --output_filename " << h5output_filename.str()
                     << " --event_id " << param->event.eventId;
                 status = system(collect_command.str().c_str());
@@ -322,7 +324,7 @@ int main(int argc, char *argv[]) {
     if (h5Flag == 1 && rank == 0) {
         int status = 0;
         stringstream collect_command;
-        collect_command << "python3 utilities/combine_events_into_hdf5.py ."
+        collect_command << "python3 \"" << IPGLASMA_HDF5_SCRIPT << "\" ."
                         << " --output_filename RESULTS"
                         << " --combine_hdf5_files_only";
         status = system(collect_command.str().c_str());

@@ -56,6 +56,10 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **projectile** and **target**: specify nuclei
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details
+- **sigmaNN**: inelastic nucleon-nucleon cross section in mb, used to decide which nucleons collide
+- **gaussianWounding**: how it is decided whether two nucleons collide
+  - 0: hard sphere, they collide if their transverse distance $d$ is below $\sqrt{\sigma_{NN}/\pi}$
+  - 1: they collide with the probability $p(d) = G\, e^{-G \pi d^2/\sigma_{NN}}$, $G = 0.92$, the Gaussian wounding profile of GLISSANDO (Eq. (13) of [arXiv:0710.5731](https://arxiv.org/abs/0710.5731)); its value of $G$ is taken from analyses of pp scattering at ISR energies (U. Amaldi and K. R. Schubert, Nucl. Phys. B 166 (1980) 301) and from A. Białas and A. Bzdak, Acta Phys. Polon. B 38 (2007) 159. Both profiles integrate to $\sigma_{NN}$
 - **m**: infrared regulator in GeV
 - **BG**: nucleon width in GeV$^{-2}$. With `nucleonModel gaussian` the nucleon's thickness is $T \sim e^{-b^2/(2B_G)}$; with `hotspots` and `strings` it is the width of the hot-spot position distribution (see `omega`)
 - **nucleonModel**: transverse structure of a nucleon

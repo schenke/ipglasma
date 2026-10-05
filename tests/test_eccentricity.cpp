@@ -3,6 +3,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <vector>
 
 #include "Cell.h"
 #include "Eccentricity.h"
@@ -145,4 +146,41 @@ TEST_CASE(
 
     std::remove("anisotropy0.dat");
     std::remove("eccentricities0.dat");
+}
+
+TEST_CASE(
+    "Eccentricity::compute leaves out cells below the cutoff, given in "
+    "GeV/fm^3") {
+    const int N = 16;
+    Parameters param;
+    makeEccentricityTestParam(param, N);  // a = 1 fm
+    Lattice lat(&param, N);
+    // epsilon = 1 fm^-4 (0.197 GeV/fm^3) in a 4 x 6 block, 0.1 fm^-4
+    // (0.0197 GeV/fm^3) elsewhere
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const bool inBlock = ix >= 6 && ix < 10 && iy >= 5 && iy < 11;
+            const int pos = lat.positionFromXY(ix, iy);
+            lat.cells[pos]->setEpsilon(inBlock ? 1. : 0.1);
+            lat.cells[pos]->setutau(1.0);
+        }
+    }
+    auto area = [&](double cutoff) {
+        std::remove("eccentricities0.dat");
+        Eccentricity::compute(&lat, &param, /*it=*/3, cutoff, /*doAniso=*/0);
+        std::ifstream in("eccentricities0.dat");
+        std::string line;
+        std::getline(in, line);
+        in.close();
+        std::remove("eccentricities0.dat");
+        std::istringstream columns(line);
+        std::vector<double> values;
+        for (double value; columns >> value;) values.push_back(value);
+        REQUIRE(values.size() == 23);
+        CHECK(values[13] == doctest::Approx(cutoff));  // column 14
+        return values[19];  // column 20: area of the cells kept [fm^2]
+    };
+    CHECK(area(0.) == doctest::Approx(N * N));
+    CHECK(area(0.1) == doctest::Approx(4 * 6));  // between the two values
+    CHECK(area(0.01) == doctest::Approx(N * N));
 }

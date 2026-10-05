@@ -93,6 +93,7 @@ The files themselves (names, order, layout, columns and units) are described in 
  - **sizeOutput**, **LOutput**: number of grid points per direction and side length [fm] of the transverse output grid the fields are interpolated to
  - **etaSizeOutput**, **dEtaOutput**: number of points and spacing of the (boost-invariant) $\eta$ grid in the hydro and Jazma files
  - **computeGluonMultiplicity**: at the final time, measure the gluon spectrum and multiplicity and the eccentricities (files `NpartdNdy-t*`, `gluonMultiplicity*.json`, `eccentricities*.dat`)
+ - **eccentricityCutoff** (optional, default `0`): energy density in GeV/fm$^3$ below which a cell is left out of the eccentricities
  - **readMultFromFile**: post-processing mode that rescales the multiplicity of an earlier run (see OUTPUT.md) and then stops; `0` for normal runs
  - **writeOutputsToHDF5**: this parameter decides whether to collect all the IPGlasma output files into a hdf5 data file
    - 0: no

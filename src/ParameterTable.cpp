@@ -440,7 +440,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         // random seed
         param("seed", &P::random, &RandomParameters::seed),
         param("useSeedList", &P::random, &RandomParameters::useSeedList),
-        param("useTimeForSeed", &P::random, &RandomParameters::useTimeForSeed),
+        param("useRandomSeed", &P::random, &RandomParameters::useRandomSeed),
 
         // collision system and geometry
         param("projectile", &P::collision, &CollisionParameters::projectile),
@@ -791,6 +791,7 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"x_target_jimwlk", "jimwlkXTarget"},
         {"saveSnapshots", "jimwlkSaveSnapshots"},
         {"xSnapshotList", "jimwlkXSnapshotList"},
+        {"useTimeForSeed", "useRandomSeed"},
     };
     return renamed;
 }

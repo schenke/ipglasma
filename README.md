@@ -50,9 +50,9 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **inverseQsForMaxTime**: `1` stops the evolution at $\tau = 1/\langle Q_s \rangle$ instead of `maxTime`, with $\langle Q_s \rangle$ the larger of the two nuclei's $Q_s$ averaged over the overlap region (see `runWithQs`). Not possible with `useNucleus 0` or `readInitialWilsonLines` 1 or 2, which do not compute $\langle Q_s \rangle$
 
 ### Random seed
-- **seed**: random seed; MPI rank $r$ uses `seed` $+ 1000 r$. It also enters the names of the Wilson-line files (see `writeWilsonLines`), also with `useTimeForSeed 1` or `useSeedList 1`
-- **useTimeForSeed**: `1` draws the seed from `std::random_device` instead of taking `seed` (despite the name, not from the time); rank $r$ again adds $1000 r$
-- **useSeedList**: `1` reads one seed per MPI rank from the file `seedList` in the working directory (rank $r$ uses the $(r+1)$-th number); it overrides `seed` and `useTimeForSeed`
+- **seed**: random seed; MPI rank $r$ uses `seed` $+ 1000 r$. It also enters the names of the Wilson-line files (see `writeWilsonLines`), also with `useRandomSeed 1` or `useSeedList 1`
+- **useRandomSeed**: `1` draws the seed from `std::random_device` instead of taking `seed`; rank $r$ again adds $1000 r$
+- **useSeedList**: `1` reads one seed per MPI rank from the file `seedList` in the working directory (rank $r$ uses the $(r+1)$-th number); it overrides `seed` and `useRandomSeed`
 
 ### Lattice
 - **size**: controls the size of the lattice that is `size`$^2$.

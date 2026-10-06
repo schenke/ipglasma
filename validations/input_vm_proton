@@ -56,7 +56,7 @@ runWithKt 0
 Ny 50
 useSeedList 0
 seed 199
-useTimeForSeed 1
+useRandomSeed 1
 projectile p
 target p
 bMin 0

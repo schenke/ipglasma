@@ -93,6 +93,7 @@ readInitialWilsonLines 0
 readWilsonLinesX 0
 writeWilsonLines 2
 wilsonLinePath ./
+writeWilsonLineGeometry 1
 writeTmunuBinary 1
 writeOutputsToHDF5 0
 useJIMWLK 1

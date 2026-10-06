@@ -399,6 +399,10 @@ struct WilsonLineParameters {
     /// to, or existing ones read from (see
     /// WilsonLineIO::fileName()).
     std::string wilsonLinePath;
+    /// Whether to write each nucleus' geometry file
+    /// (WilsonLineIO::writeGeometry()) with its Wilson lines (`1`), which
+    /// reading them back with \c readInitialWilsonLines needs.
+    bool writeGeometry = true;
     /// Whether to generate initial Wilson lines (`0`), or read them
     /// from plain text (`1`) or binary (`2`).
     int readInitialWilsonLines = 0;

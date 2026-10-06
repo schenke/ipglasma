@@ -338,6 +338,15 @@ bool fieldOutputWritten(const Parameters &p) {
 }
 
 /**
+ * Condition for the geometry files written with the Wilson lines.
+ * \param[in] p The parameters read so far.
+ * \return Whether `writeWilsonLines` is 1 or 2.
+ */
+bool wilsonLinesWritten(const Parameters &p) {
+    return p.wilsonLines.writeWilsonLines != 0;
+}
+
+/**
  * Condition for the x of the Wilson lines to read.
  * \param[in] p The parameters read so far.
  * \return Whether `readInitialWilsonLines` is 1 or 2.
@@ -715,6 +724,11 @@ const std::vector<ParameterSpec> &parameterTable() {
             "wilsonLinePath", &P::wilsonLines,
             &WilsonLineParameters::wilsonLinePath)
             .optional("./"),
+        param(
+            "writeWilsonLineGeometry", &P::wilsonLines,
+            &WilsonLineParameters::writeGeometry)
+            .onlyIf(wilsonLinesWritten)
+            .optional("1"),
         param(
             "readInitialWilsonLines", &P::wilsonLines,
             &WilsonLineParameters::readInitialWilsonLines)

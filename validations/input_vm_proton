@@ -86,6 +86,7 @@ writeJazma 0
 writeTmunu 0
 readInitialWilsonLines 0
 writeWilsonLines 2
+writeWilsonLineGeometry 0
 wilsonLinePath ./
 writeTmunuBinary 1
 writeOutputsToHDF5 0

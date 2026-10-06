@@ -45,8 +45,8 @@ import numpy as np
 
 MAGIC = b"IPGTMU01"
 
-# Order of the 10 independent components IP-Glasma writes out. Index 0
-# (T00) is the local energy density in GeV/fm^4.
+# Order of the 10 independent components IP-Glasma writes out, all in
+# GeV/fm^3. Index 0 (T00) is T^tautau.
 COMPONENTS = [
     "T00", "Txx", "Tyy", "tau2_Tetaeta",
     "neg_T0x", "neg_T0y", "neg_tau_T0eta",

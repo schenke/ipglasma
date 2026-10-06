@@ -89,8 +89,10 @@ class CollisionGeometry {
     /**
      * Computes and logs this event's collision-geometry summary
      * (\f$N_{\text{part}}\f$, \f$N_{\text{coll}}\f$, \f$T_{pp}\f$,
-     * average \f$Q_s\f$, \f$\alpha_s\f$), writes the
-     * `usedParameters*.dat`/`NgluonEstimators*.dat` files, and marks
+     * average \f$Q_s\f$, \f$\alpha_s\f$), appends the collision geometry to
+     * `usedParameters*.dat` if the event is accepted, writes
+     * `NgluonEstimators*.dat` (with `param->output.writeNgluonEstimators`),
+     * and marks
      * the event a success or failure (e.g. no overlap region, no
      * physical \f$Q_s\f$, or \f$Q_{s,\min}^2 S_T\f$ below
      * `param->colorCharge.minimumQs2ST`).
@@ -101,8 +103,9 @@ class CollisionGeometry {
     void computeQuantities(Lattice *lat, Parameters *param, Random *random);
     /**
      * Determines \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$ from the
-     * nucleon positions, writes `NcollList*.dat`/`NpartList*.dat`, and
-     * sets `param->event.Npart`.
+     * nucleon positions, writes `NcollList*.dat`/`NpartList*.dat` (with
+     * `param->output.writeNcollList`/`writeNpartList`, not with
+     * `param->nucleus.useSmoothNucleus`), and sets `param->event.Npart`.
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in,out] param Simulation parameters.
      * \param[in,out] random Random-number source (Gaussian wounding).
@@ -186,7 +189,8 @@ class CollisionGeometry {
     /**
      * Appends this event's collision geometry to `usedParameters<id>.dat`
      * as comment lines (called only when computeQuantities() marks the
-     * event a success).
+     * event a success), and with read Wilson lines the `QsMuRatio` taken
+     * from their geometry files.
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] param Simulation parameters.
      * \param[in] phiRP Reaction-plane angle [rad].

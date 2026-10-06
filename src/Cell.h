@@ -37,13 +37,13 @@ class Cell {
     /// projectile (nucleus A) [lattice units].
     double g2mu2A_;
     /// Local nuclear thickness function \f$T_p^A\f$ for the projectile
-    /// (nucleus A) [1/fm^2].
+    /// (nucleus A) [GeV^2].
     double TpA_;
     /// Local \f$g^2\mu_B^2\f$ color-charge-density-squared value for the
     /// target (nucleus B) [lattice units].
     double g2mu2B_;
     /// Local nuclear thickness function \f$T_p^B\f$ for the target
-    /// (nucleus B) [1/fm^2].
+    /// (nucleus B) [GeV^2].
     double TpB_;
 
     /// \f$T^{\tau\tau}\f$ component of the energy-momentum tensor
@@ -159,27 +159,27 @@ class Cell {
     /**
      * Sets the projectile's (nucleus A) local nuclear thickness
      * function \f$T_p^A\f$.
-     * \param[in] x The new \f$T_p^A\f$ value [1/fm^2].
+     * \param[in] x The new \f$T_p^A\f$ value [GeV^2].
      */
     void setTpA(double x) { TpA_ = x; }
     /**
      * Sets the target's (nucleus B) local nuclear thickness function
      * \f$T_p^B\f$.
-     * \param[in] x The new \f$T_p^B\f$ value [1/fm^2].
+     * \param[in] x The new \f$T_p^B\f$ value [GeV^2].
      */
     void setTpB(double x) { TpB_ = x; }
     /**
      * Returns the projectile's (nucleus A) local nuclear thickness
      * function, used to look up the local saturation scale
      * \f$Q_s^2\f$.
-     * \return The stored \f$T_p^A\f$ value [1/fm^2].
+     * \return The stored \f$T_p^A\f$ value [GeV^2].
      */
     double getTpA() const { return TpA_; }
     /**
      * Returns the target's (nucleus B) local nuclear thickness
      * function, used to look up the local saturation scale
      * \f$Q_s^2\f$.
-     * \return The stored \f$T_p^B\f$ value [1/fm^2].
+     * \return The stored \f$T_p^B\f$ value [GeV^2].
      */
     double getTpB() const { return TpB_; }
 

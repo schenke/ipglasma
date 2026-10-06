@@ -363,8 +363,9 @@ struct OutputParameters {
     /// Whether to write the gluon-number estimators
     /// `NgluonEstimators<id>.dat`.
     bool writeNgluonEstimators = true;
-    /// Whether to collect all output files into one HDF5 file (`1`) or
-    /// not (`0`).
+    /// Whether to collect some of the output files, per event and rank,
+    /// into `RESULTS_rank<rank>.h5` and merge these into `RESULTS.h5` at the
+    /// end of the run (`1`), see utilities/combine_events_into_hdf5.py.
     bool writeOutputsToHDF5 = false;
     /// Physical lattice size for the output grid [fm].
     double LOutput = 0.;
@@ -392,8 +393,9 @@ struct OutputParameters {
 
 /// Writing and reading Wilson lines.
 struct WilsonLineParameters {
-    /// Whether to write generated Wilson lines (before any evolution)
-    /// as text (`1`), binary (`2`), or not at all (`0`).
+    /// Format of the Wilson-line files written (the initial ones, JIMWLK
+    /// snapshots and the final ones after JIMWLK): text (`1`), binary
+    /// (`2`), or none (`0`).
     int writeWilsonLines = 0;
     /// Path to the directory where generated Wilson lines are written
     /// to, or existing ones read from (see

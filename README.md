@@ -42,7 +42,7 @@ The input file has one `key value` pair per line:
 - A line with only `EndOfFile` ends the input; everything after it is ignored. It is optional.
 - Unknown keys, keys given twice, missing required keys and malformed values (e.g. `256.0` for an integer) are errors. All problems are reported at once before the run stops.
 
-Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
+Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, `useRandomSeed 1` draws a new seed, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
 
 ### Run control
 - **mode**: `1` samples the collision, runs the classical Yang-Mills evolution and writes the outputs. Any other value stops after the Wilson lines of the two nuclei are built (and evolved with JIMWLK, see `useJIMWLK`); with `writeWilsonLines` they are written to disk
@@ -159,7 +159,7 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 
 
 ### Output
-The files themselves (names, order, layout, columns and units) are described in [OUTPUT.md](OUTPUT.md). Every file has its own switch, except `usedParameters<event>.dat`, which is always written. The hydro, Jazma and $T^{\mu\nu}$ files, the multiplicity and the eccentricities are only computed in `mode 1`, and the geometry files only for events with sampled nuclei.
+The files themselves (names, order, layout, columns and units) are described in [OUTPUT.md](OUTPUT.md). Every output has its own switch, except `usedParameters<event>.dat`, which is always written (`NpartdNdy-t*` and `gluonMultiplicity*.json` share `computeGluonMultiplicity`). The hydro, Jazma and $T^{\mu\nu}$ files, the multiplicity, the eccentricities and the collision-geometry files (`NpartList`, `NcollList`, `NgluonEstimators`) are only written in `mode 1`, the collision-geometry files and the Wilson-line geometry files only with `useNucleus 1`.
 
  - **writeHydro**: `1` writes the initial condition for hydrodynamic simulations, $\epsilon$, $u^\mu$ and $\pi^{\mu\nu}$ (`epsilon-u-Hydro-*.dat`), at the final time and at `outputTimes`
  - **writeJazma**: `1` writes the energy density of the Jazma model (`Jazma-Hydro-*.dat`), at the final time and at `outputTimes`
@@ -167,7 +167,7 @@ The files themselves (names, order, layout, columns and units) are described in 
  - **writeTmunuBinary** (optional, default `1`, read with `writeTmunu 1`): $T^{\mu\nu}$ in binary (`.ipgt`, `1`) or text (`.dat`, `0`) format
  - **outputTimes** (optional, default `none`, read with `writeHydro`, `writeJazma` or `writeTmunu` 1): comma-separated proper times in fm/c (no spaces), e.g. `0.1,0.2,0.3,0.4`, at which these files are also written before the final time; `none` for only the final time. Each time is rounded down to a time step and must be smaller than `maxTime`; with `inverseQsForMaxTime 1`, times that are not before the final time are skipped
  - **sizeOutput**, **LOutput**: number of grid points per direction and side length [fm] of the transverse output grid the fields are interpolated to
- - **etaSizeOutput**, **dEtaOutput**: number of points and spacing of the (boost-invariant) $\eta$ grid in the hydro and Jazma files
+ - **etaSizeOutput**, **dEtaOutput**: number of points and spacing of the (boost-invariant) $\eta$ grid in the hydro and Jazma files; the $T^{\mu\nu}$ files hold one $\eta$ slice and only record them in their header
  - **computeGluonMultiplicity**: at the final time, measure the gluon spectrum and multiplicity (files `NpartdNdy-t*` and `gluonMultiplicity*.json`)
  - **writeHadronSpectrum** (optional, default `0`, read with `computeGluonMultiplicity 1`): `1` also writes the hadron spectrum from fragmenting the gluon spectrum (`multiplicityHadrons<id>.dat`)
  - **computeEccentricities**: at the final time, compute the eccentricities of the energy density (`eccentricities<id>.dat`)
@@ -181,7 +181,7 @@ The files themselves (names, order, layout, columns and units) are described in 
    - 0: do not save Wilson lines
    - 1: save in text format
    - 2: save in binary format (faster I/O, smaller file size)
- - **wilsonLinePath** (optional): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. The directory must already exist, otherwise the run fails at startup.
+ - **wilsonLinePath** (optional): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. When Wilson lines are written, the directory must already exist, otherwise the run fails at startup.
  - **writeWilsonLineGeometry** (optional, default `1`, read with `writeWilsonLines` 1 or 2): `1` writes the geometry files `WilsonLineGeometry_<n>` with the Wilson lines (about 12% of their size). Reading the Wilson lines back with `readInitialWilsonLines` and `useNucleus 1` needs them; runs that only produce Wilson lines for other codes, e.g. for vector-meson production, can set `0`
  - **readInitialWilsonLines**: `0` samples the color charges and builds the Wilson lines; `1` (text) or `2` (binary) instead reads the Wilson lines of both nuclei from `wilsonLinePath`, under the names a run with the same `seed`, number of events and MPI ranks writes, at the x of `readWilsonLinesX`. With `useNucleus 1` it also reads their geometry files, so the collision is treated like one of sampled nuclei: the impact parameter is sampled with the same collision criterion, and $N_\text{part}$, $N_\text{coll}$, $\langle Q_s \rangle$ and all outputs are computed as usual. The geometry files must match the run's `size`, `L`, `g`, `projectile` and `target`; `QsMuRatio` is taken from them, since the color-charge densities were built with it. A run that reads the Wilson lines with the parameters of the run that wrote them, and with a fixed impact parameter and reaction plane and `gaussianWounding 0`, reproduces that run's outputs
  - **readWilsonLinesX** (optional, default `0`, read with `readInitialWilsonLines` 1 or 2): Bjorken $x$ in the names of the Wilson-line files to read, e.g. the final $x$ of a JIMWLK evolution or a snapshot's $x$; both nuclei are read at this $x$. `0` reads the initial Wilson lines, at x = `jimwlkInitialX` with `useJIMWLK 1`, no x with `useFluctuatingX 1`, and x = 0.01 e$^{-y}$ with $y$ = `rapidityA`/`rapidityB` otherwise. With `useJIMWLK 1`, the read Wilson lines are evolved from this $x$ (which must then not be smaller than `jimwlkXProjectile` and `jimwlkXTarget`)
@@ -193,8 +193,8 @@ Note that when using the JIMWLK evolution, one should use `useFluctuatingX 0` wh
 - **jimwlkInitialX**: Bjorken-x at the initial condition
 - **jimwlkXProjectile**: Bjorken-$x$ to which the projectile is evolved
 - **jimwlkXTarget**: Bjorken-$x$ to which the target is evolved
-- **jimwlkSaveSnapshots**: `1` also writes the Wilson lines during the evolution, at the $x$ values in `jimwlkXSnapshotList`, in the format of `writeWilsonLines` (which must be 1 or 2); the initial Wilson lines are then written too
-- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces), in any order, to save snapshots at, read with `jimwlkSaveSnapshots 1`. Each is saved at the evolution step whose $x$ is closest to it in $\ln x$ (at most half a step away), in a file named with the requested value. A value more than half a step outside a nucleus' evolution (above `jimwlkInitialX` or below its final $x$) is skipped with a warning
+- **jimwlkSaveSnapshots**: `1` also writes the Wilson lines during the evolution, at the $x$ values in `jimwlkXSnapshotList`, in the format of `writeWilsonLines` (which must be 1 or 2); the initial Wilson lines are then written too (unless they were read from file)
+- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces), in any order, to save snapshots at, read with `jimwlkSaveSnapshots 1`. Each is saved at the evolution step whose $x$ is closest to it in $\ln x$ (at most half a step away), in a file named with the requested value. A value more than half a step outside a nucleus' evolution (above its starting $x$, `jimwlkInitialX` or the `readWilsonLinesX` of read Wilson lines, or below its final $x$) is skipped with a warning
 - **jimwlkMass**: Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkAlphaS**: Coupling constant in the JIMWLK evolution
   - 0 (any value within $10^{-8}$ of 0): Use running coupling

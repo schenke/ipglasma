@@ -8,7 +8,8 @@ files themselves.
 ## Conventions
 
 - **Location.** All files are written to the working directory, except the
-  Wilson lines, which go to `wilsonLinePath`.
+  Wilson-line and geometry files, which go to `wilsonLinePath`, and the
+  profile and fingerprint files, which go to `IPGLASMA_PROFILE_DIR`.
 - **Event id.** `<id>` in a file name is the event id
   `rank + iev * nRanks`, where `iev` = 0, 1, … counts the events of an MPI
   rank and `nRanks` is the number of MPI ranks.
@@ -16,7 +17,10 @@ files themselves.
   the default stream precision (6 significant digits, e.g. `0.4` or
   `0.0996094`).
 - **Text precision.** Text files use 6 significant digits unless stated
-  otherwise.
+  otherwise. Exceptions: the parameter values in `usedParameters` are
+  written exactly (shortest round-trip form), the posterior-set values there
+  with 9 digits, the Wilson-line text files with 15, the gluon-spectrum JSON
+  and the fingerprint file with 17, and the profile file with 12.
 - **Lattice coordinates.** The lattice has `size` × `size` sites with spacing
   `a = L/size`. Site `(ix, iy)` sits at `x = -L/2 + a*ix`, `y = -L/2 + a*iy`
   [fm]. In memory and in the Wilson-line files the site index is
@@ -32,9 +36,13 @@ files themselves.
   are multiplied by the factor g²/(4π α_s), with α_s evaluated at
   `runningCouplingQsFactor` × ⟨Q_s⟩(min).
 - **Byte order.** The binary formats with a JSON header (`.ipgt`, `.ipgw`,
-  `.ipgf`) are little-endian by definition, and the code refuses to write
-  them on a big-endian host. The binary Wilson-line files are written in the
-  host's byte order.
+  `.ipgf` and the Wilson-line geometry files) are little-endian by
+  definition, and the code refuses to write (or, for the geometry files, to
+  read) them on a big-endian host. The binary Wilson-line files are written
+  in the host's byte order.
+- **Short runs.** With a `maxTime` below one time step (0.1 `a`), there is no
+  time step, so none of the files written at the final time (hydro, Jazma,
+  T^μν, eccentricities, multiplicity) is written.
 
 ## Overview
 
@@ -44,8 +52,8 @@ files themselves.
 | `WilsonLine[_x_<x>]_<n>[.txt]` | Wilson lines | `writeWilsonLines 1` or `2` | text or binary |
 | `WilsonLineGeometry_<n>` | Wilson-line geometry | `writeWilsonLines 1` or `2`, `writeWilsonLineGeometry 1` (default), `useNucleus 1` | binary with JSON header |
 | `initialWilsonLines<id>.ipgw` | Initial Wilson lines snapshot | `writeWilsonLineSnapshot 1`, color charges sampled | binary with JSON header |
-| `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, nucleons sampled, `writeNpartList 1`, `writeNcollList 1` | text |
-| `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, nuclei sampled, `writeNgluonEstimators 1` | text |
+| `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, `useNucleus 1`, `useSmoothNucleus 0`, `writeNpartList 1`, `writeNcollList 1` | text |
+| `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, `useNucleus 1`, `writeNgluonEstimators 1` | text |
 | `Tmunu-t<tau>-<id>.ipgt` / `.dat` | Energy-momentum tensor | `mode 1`, `writeTmunu 1` | binary or text |
 | `epsilon-u-Hydro-t<tau>-<id>.dat`, `epsilon-u-Hydro-TauHydro-<id>.dat` | Hydro initial conditions | `mode 1`, `writeHydro 1` | text |
 | `Jazma-Hydro-t<tau>-<id>.dat` | Jazma energy density | `mode 1`, `writeJazma 1` | text |
@@ -66,19 +74,25 @@ files themselves.
       with `jimwlkSaveSnapshots 1`);
    3. the geometry files of both nuclei (`writeWilsonLines` > 0,
       `writeWilsonLineGeometry 1`, `useNucleus 1`). A run that reads Wilson
-      lines writes them here too.
+      lines does not write them again: they have the same names as the files
+      it read.
 3. With JIMWLK:
    1. the Wilson-line snapshots at the x values of `jimwlkXSnapshotList`
       (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
    2. the final Wilson lines at `jimwlkXProjectile`/`jimwlkXTarget`
       (`writeWilsonLines` > 0).
-4. `mode 1`, for each impact parameter tried: `NcollList<id>.dat`,
-   `NpartList<id>.dat` and `NgluonEstimators<id>.dat`, as switched on. Each
-   try overwrites the files of the previous one; once an impact parameter is
-   accepted, its collision geometry is appended to `usedParameters<id>.dat`.
-5. `mode 1`, during the evolution: the hydro, Jazma and T^μν files that are
-   switched on, at each of the `outputTimes` (each rounded down to a time
-   step before the final one) and at the final time.
+4. `mode 1` with `useNucleus 1` (sampled nuclei, or nuclei read with their
+   Wilson lines), for each impact parameter tried, as switched on:
+   `NcollList<id>.dat`, then `NpartList<id>.dat`, then, once an impact
+   parameter is accepted, its collision geometry is appended to
+   `usedParameters<id>.dat`, then `NgluonEstimators<id>.dat` (not for a try
+   rejected by `useFixedNpart` or for lack of overlap). Each try overwrites
+   the files of the previous one.
+5. `mode 1`, during the evolution: the hydro, T^μν and Jazma files that are
+   switched on, in this order, at each of the `outputTimes` and at the final
+   time. Each output time is rounded down to a time step; times below one
+   time step or not before the final step are skipped, and times that round
+   to the same step are written once.
 6. `mode 1`, after the final time: `eccentricities<id>.dat`
    (`computeEccentricities 1`), then, with `computeGluonMultiplicity 1`,
    `multiplicityHadrons<id>.dat` (`writeHadronSpectrum 1`),
@@ -86,6 +100,8 @@ files themselves.
 7. With `writeOutputsToHDF5 1`, some of the event's text files are moved into
    `RESULTS_rank<rank>.h5` (see "HDF5 collection"); at the end of the run
    these are merged into `RESULTS.h5`.
+8. The fingerprint row (`IPGLASMA_FINGERPRINT`) and, at the end of the
+   event, the profile rows (`IPGLASMA_PROFILE`).
 
 ## usedParameters
 
@@ -102,37 +118,47 @@ information:
   was used and its values of `m`, `BG`, `BGq`, `smearingWidth`, `NqBase`,
   `QsMuRatio` and `dqMin`;
 - `# Random seed used on rank <rank>: <seed>`;
-- with `mode 1`, once an impact parameter is accepted:
+- with `mode 1` and `useNucleus 1`, once an impact parameter is accepted, a
+  block starting with `# Collision geometry of this event:`:
   - `b` [fm], `phiRP`, `Npart` and `Ncoll`;
   - with running coupling, the event-averaged Q_s [GeV] selected by
-    `runWithQs` and α_s; otherwise the fixed α_s.
+    `runWithQs` and α_s (0 with `runWithKt 1`); otherwise the fixed α_s;
+  - with `readInitialWilsonLines` 1 or 2, `# QsMuRatio = <value> (from the
+    Wilson-line geometry files)`, the value the event used instead of the
+    input one.
 
 Running the file again gives the same parameters, but not the same event:
 the random numbers also depend on the MPI rank and on the event's position
-in the run.
+in the run, `useRandomSeed 1` draws a new seed, and `subNucleonParamSet -1`
+draws a new posterior set.
 
 ## Wilson lines
 
 `<wilsonLinePath>/WilsonLine[_x_<x>]_<n>[.txt]` (`WilsonLineIO::write()`).
 
 - **Name.**
-  - `_x_<x>` gives Bjorken x in scientific notation with 5 decimals; it is
-    left out with `useFluctuatingX 1` (no fixed x).
-  - `<n> = 2 (seed · N + <id>) + iA`, where N is the number of events of the
-    run (events per rank times MPI ranks) and `iA` is 1 for the projectile and
-    2 for the target. So no two files of a run, nor of runs with different
+  - `_x_<x>` gives Bjorken x in scientific notation with 5 decimals. Only
+    the initial Wilson lines with `useFluctuatingX 1` and `useJIMWLK 0` have
+    no fixed x and leave it out; JIMWLK snapshots and final lines always
+    have it.
+  - `<n> = 2 (seed · N + <id>) + iA`, where seed is the input parameter
+    `seed` (also with `useRandomSeed 1` or `useSeedList 1`), N is the number
+    of events of the run (events per rank times MPI ranks) and `iA` is 1 for
+    the projectile and 2 for the target. So no two files of a run, nor of runs with different
     seeds and the same N, have the same number; one event on one rank gives
     2·seed + 1 and 2·seed + 2.
   - Text files end in `.txt`; binary files have no extension.
 - **When.**
-  - The initial Wilson lines: without JIMWLK at x = 0.01·exp(−`rapidityA`/`B`),
-    with JIMWLK at `jimwlkInitialX`.
+  - The initial Wilson lines: without JIMWLK at x = 0.01·exp(−`rapidityA`/`B`)
+    (no x with `useFluctuatingX 1`), with JIMWLK at `jimwlkInitialX` (and
+    only with `jimwlkSaveSnapshots 1`).
   - JIMWLK snapshots, at the step closest to each value of
     `jimwlkXSnapshotList` and named with that value, and the final Wilson
     lines, see "Order within an event" above.
   - `readInitialWilsonLines 1`/`2` reads the files back, under the names a
     run with the same parameters writes, at the x of `readWilsonLinesX`
-    (default: the initial Wilson lines), together with the geometry files.
+    (default: the initial Wilson lines), with `useNucleus 1` together with
+    the geometry files.
     The fields are stored as built, centered at the origin; the impact
     parameter is applied after reading, as for sampled nuclei.
 
@@ -160,11 +186,13 @@ The matrix elements are row-major and written with 15 significant digits.
 
 `<wilsonLinePath>/WilsonLineGeometry_<n>` (`WilsonLineIO::writeGeometry()`),
 one per nucleus, with the same number `<n>` as its Wilson-line files and no
-x, since one geometry serves the Wilson lines at every x. Written whenever
-the event writes Wilson lines (`writeWilsonLines` 1 or 2) of nuclei
-(`useNucleus 1`), unless `writeWilsonLineGeometry 0`;
-`readInitialWilsonLines` reads it to sample the collision geometry of read
-Wilson lines.
+x, since one geometry serves the Wilson lines at every x. Written right
+after the Wilson lines are built, with `writeWilsonLines` 1 or 2 and
+`useNucleus 1`, unless `writeWilsonLineGeometry 0`, also with JIMWLK when
+only the final Wilson lines are written. A run that reads Wilson lines does
+not write it again. `readInitialWilsonLines` reads it to sample the
+collision geometry of read Wilson lines; it must match the run's `size`,
+`L`, `g`, `projectile` and `target`.
 
 Little-endian by definition:
 
@@ -175,7 +203,7 @@ Little-endian by definition:
 | M | JSON metadata: `format`, `version`, `dtype` (`<f8`), `nucleus` (`projectile` or `target`), `species`, `nucleons`, `N`, `L_fm`, `g`, `QsMuRatio`, `blocks`, `native_site_index` |
 | nucleons × 4 × 8 | `float64` x, y, z [fm] and proton (1 or 0) of each nucleon, centered at the origin |
 | N² × 8 | `float64` g²μ² of each site, as stored on the lattice, sites `ix` outer and `iy` inner |
-| N² × 8 | `float64` T_p [fm⁻²] of each site, in the same order |
+| N² × 8 | `float64` T_p [GeV²] (the summed nucleon thickness, as stored on the lattice) of each site, in the same order |
 
 ## Initial Wilson lines snapshot
 
@@ -196,15 +224,17 @@ impact-parameter shift.
   (projectile), beam 1 = V_B (target), and complex part 0 = real,
   1 = imaginary.
 - **Metadata:** repeats the format name (`ipglasma-initial-wilson-lines`),
-  version, dtype, shape and axis order, and adds `event_id`, `N`, `Nc`,
-  `L_fm`, `a_fm` and `rapidity`.
+  version, dtype, shape and axis order, and adds `fields` (`VA`, `VB`),
+  `complex_part`, `native_site_index`, `event_id`, `N`, `Nc`, `L_fm`, `a_fm`
+  and `rapidity` (the mean of `rapidityA` and `rapidityB`).
 
 ## Participants and binary collisions
 
 `NpartList<id>.dat` and `NcollList<id>.dat`
 (`CollisionGeometry::determineNpartAndNcoll()`, `computeNcollList()`), with
-`writeNpartList 1` and `writeNcollList 1` (the default). They are not written
-with `useSmoothNucleus 1`. Positions are in fm, in the frame
+`writeNpartList 1` and `writeNcollList 1` (the default), in `mode 1` with
+`useNucleus 1` (also for nuclei read with their Wilson lines). They are not
+written with `useSmoothNucleus 1`. Positions are in fm, in the frame
 of the collision: the projectile is centred at +b/2 and the target at −b/2
 along the reaction plane. Two nucleons collide if their transverse distance
 is below √(σ_NN/π) (`gaussianWounding 0`) or with the Gaussian probability
@@ -229,7 +259,8 @@ x, y [fm] of the two colliding nucleons.
 ## Gluon number estimators
 
 `NgluonEstimators<id>.dat` (`CollisionGeometry::writeNgluonEstimatorsFile()`),
-with `writeNgluonEstimators 1` (the default). One header line (`#`) and one
+with `writeNgluonEstimators 1` (the default), in `mode 1` with
+`useNucleus 1`, also with `useSmoothNucleus 1`. One header line (`#`) and one
 line of four numbers:
 
 | Column | Content |
@@ -318,10 +349,12 @@ are written as vacuum: ε = 0, u = (1, 0, 0, 0), π = 0.
 
 `Jazma-Hydro-t<tau>-<id>.dat` (`MyEigen::writeJazma()`), with
 `writeJazma 1`, at the final time and at `outputTimes`; `<tau>` is the time
-also for the final one. The same layout and 18 columns as
-the hydro file, but without the `tau=` entry in the header. Here
-ε ∝ g²μ²_A · g²μ²_B, normalized to the same total energy as the hydro
-output, with u = (1, 0, 0, 0) and π = 0.
+also for the final one. The same 18 columns and point order (η outer, then
+x, then y) as the hydro file, but without the `tau=` entry in the header and
+without a blank line between η slices. Here ε ∝ g²μ²_A · g²μ²_B, normalized
+to the same total energy as the hydro output, with u = (1, 0, 0, 0) and
+π = 0. Only points outside the lattice get ε = 0; the hydro file's 0.5 fm
+edge margin and ε threshold do not apply.
 
 ## Eccentricities
 
@@ -362,7 +395,7 @@ no gluons (dN/dy = 0), which ends the event. One line:
 | 7–9 | `N/A` (placeholders) |
 | 10, 11 | dN/dy, dE/dy [GeV] for k_T > 3 GeV |
 | 12, 13 | dN/dy, dE/dy [GeV] for k_T > 6 GeV |
-| 14 | g²/(4π α_s) at `runningCouplingQsFactor` × ⟨Q_s⟩(max) |
+| 14 | g²/(4π α_s) at `runningCouplingQsFactor` × ⟨Q_s⟩(max), whatever `runWithQs` is (issue #55); also written with `runningCoupling 0`, where it is not applied |
 
 ## Gluon spectrum
 
@@ -410,15 +443,23 @@ After each event, `utilities/combine_events_into_hdf5.py` collects some of the
 event's text files into the group `event-<id>` of `RESULTS_rank<rank>.h5` and
 then **deletes them**:
 
-- `usedParameters<id>.dat`, as group attributes;
-- `NcollList<id>.dat`, `NpartList<id>.dat`, `NpartdNdy-t*-<id>.dat`,
-  `epsilon-u-Hydro-t*-<id>.dat` (the hydro files at `outputTimes`, not the
-  final `epsilon-u-Hydro-TauHydro-<id>.dat`) and the text `Tmunu-t*-<id>.dat`,
-  as datasets.
+- `usedParameters<id>.dat`, each line as a group attribute named by its
+  line number;
+- as datasets, named like the files:
+  - `NcollList<id>.dat` (N_coll × 2) and `NpartList<id>.dat` (one row of 4
+    per nucleon, without the blank line between the nuclei);
+  - `NpartdNdy-t*-<id>.dat`, with the `N/A` placeholders stored as 0;
+  - `epsilon-u-Hydro-t*-<id>.dat` (the hydro files at `outputTimes`, not the
+    final `epsilon-u-Hydro-TauHydro-<id>.dat`), without the η, x, y columns
+    (15 columns), with the attributes `header`, `x_size`, `y_size`, `dx`,
+    `dy`, `nx` and `ny`;
+  - the text `Tmunu-t*-<id>.dat`, without the `ix`, `iy` columns (10
+    columns), with the same attributes.
 
 The other files, among them the binary `.ipgt` files, stay on disk. At the
 end of the run, rank 0 copies the groups of every `RESULTS_rank<rank>.h5`
-into `RESULTS.h5` and deletes the per-rank file; a file that cannot be read
+into `RESULTS.h5`, which is opened for appending, and deletes the per-rank
+file; a file that cannot be read
 or copied, or one with a group that `RESULTS.h5` already holds, is kept (and
 the program warns), and the groups already copied from it are removed again,
 so a later run can merge it. The script needs `python3` with `h5py` and `numpy`; the program calls
@@ -428,18 +469,20 @@ can start in any directory.
 ## Diagnostic files
 
 - **`ipglasma_fftw_wisdom.dat`:** only when built with
-  `-DIPGLASMA_DETERMINISTIC_FFT=ON`. FFTW's plan cache, read at start-up and
-  updated afterwards so later runs choose the same FFT algorithms (see
-  "Reproducible runs" in the README).
+  `-DIPGLASMA_DETERMINISTIC_FFT=ON`. FFTW's plan cache, read and written
+  again whenever an FFT is set up (several times per event), via a temporary
+  `ipglasma_fftw_wisdom.dat.tmp.<pid>`, so later runs choose the same FFT
+  algorithms (see "Reproducible runs" in the README).
 - **`ipglasma_profile_rank<rank>.tsv`:** with the environment variable
   `IPGLASMA_PROFILE=1`, in `IPGLASMA_PROFILE_DIR` (default `.`).
   - Appended per event, tab-separated, with the columns `rank`, `event`,
-    `phase`, `seconds`, `calls`, `percent_event`.
+    `phase`, `seconds`, `calls`, `percent_event`, including an `event.total`
+    row.
 - **`ipglasma_fingerprint_rank<rank>.tsv`:** with
   `IPGLASMA_FINGERPRINT=1`, also in `IPGLASMA_PROFILE_DIR`.
   - Per event and field (ε, the T^μν components, …), the columns `rank`,
     `event`, `field`, `count`, `nonfinite`, `hash_fnv1a64`, `mean`, `rms`,
-    `min`, `max`.
+    `min`, `max`, and an `ALL_FIELDS` row with the hash of all fields.
   - Used to compare runs for bit-identical results.
 
 ## Writers not used in a normal run
@@ -452,11 +495,19 @@ on.
   - then ten lines `tau ratio ratio2 angle=<Ψ>` for Ψ = Ψ_U + kπ/8. `ratio`
     is ⟨T^xx − T^yy⟩/⟨T^xx + T^yy⟩ in the frame rotated by Ψ; `ratio2` is the
     same unrotated.
-- **`evolvedFields<id>_it<step>.ipgf`** (`Evolution::writeEvolvedFields()`):
+- **`evolvedFields<id>_it<step>.ipgf`** (`Evolution::writeEvolvedFields()`),
+  with the step zero-padded to 8 digits (e.g. `evolvedFields0_it00000123.ipgf`):
   - magic `IPGFLD1\0`, then the metadata length as a little-endian `uint64`,
     then JSON metadata;
   - then `float32` data of shape `[6, 2, N, N, 3, 3]`, with axes `[field,
     complex_part, x, y, row, col]` and fields φ, π, E1, E2, U_x, U_y;
   - U_x, U_y and φ are at τ, E1, E2 and π at τ − dτ/2.
 - **`<prefix>Phi-<n>.txt`, `<prefix>Pi-<n>.txt`**
-  (`Lattice::writeSU3Matrices()`): φ and π in the Wilson-line text format.
+  (`Lattice::writeSU3Matrices()`): φ and π in the Wilson-line text format,
+  with `<n>` = `<id>` + 2·seed·nRanks for φ and `<id>` + (2·seed + 1)·nRanks
+  for π (not the Wilson-line numbering).
+- **`NpartdNdy-mod.dat`** (`GluonMultiplicity::readNkt()`): reads
+  `multiplicity<id>.dat` and `NpartdNdy<id>.dat` (names no version of the
+  program writes), converts dN/dy to dN/dη with the `jacobianMass`/`sqrtS`
+  Jacobian, writes one line (N_part, the two dN/dη, T_pp, b) and stops the
+  program with exit status 1.

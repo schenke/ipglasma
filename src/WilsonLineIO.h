@@ -13,6 +13,17 @@
 #include "PrettyOstream.h"
 
 /**
+ * The nucleons and the color-charge and thickness maps of one nucleus,
+ * as stored next to its Wilson lines, see WilsonLineIO::readGeometry().
+ */
+struct NucleusGeometry {
+    /// The nucleons, centered at the origin.
+    std::vector<ReturnValue> nucleons;
+    /// \f$Q_s/(g^2\mu)\f$ the color-charge map was built with.
+    double QsMuRatio = 0.;
+};
+
+/**
  * Writing and reading the projectile's and target's Wilson lines
  * (lat->U / lat->U2), in the text (`1`) or binary (`2`) format selected
  * by `writeWilsonLines` / `readInitialWilsonLines`.
@@ -96,9 +107,61 @@ class WilsonLineIO {
      */
     static double initialX(Parameters *param, NucleusRole nucleus);
     /**
-     * Reads both nuclei's initial Wilson lines from disk, from the files
-     * a run with the same parameters writes (fileName() with
-     * initialX()), in text or binary format depending on \p format.
+     * The \f$x\f$ in the names of the Wilson-line files read():
+     * `readWilsonLinesX` if it is set (positive), otherwise initialX().
+     * \param[in] param Simulation parameters.
+     * \param[in] nucleus Which nucleus.
+     * \return The \f$x\f$, or `-1` for none.
+     */
+    static double xToRead(Parameters *param, NucleusRole nucleus);
+    /**
+     * Generates the name of a nucleus' geometry file, which
+     * writeGeometry() writes and readGeometry() reads:
+     * `<wilsonLines.wilsonLinePath>/WilsonLineGeometry_<n>`, with the same
+     * number \f$n\f$ as the nucleus' Wilson-line files (fileName()) and no
+     * \f$x\f$, since one geometry serves the Wilson lines at every
+     * \f$x\f$.
+     * \param[in] param Simulation parameters.
+     * \param[in] nucleus Which nucleus.
+     * \return The generated file path.
+     */
+    static std::string geometryFileName(Parameters *param, NucleusRole nucleus);
+    /**
+     * Writes a nucleus' geometry file (geometryFileName()), which
+     * readGeometry() needs to collide the nucleus' Wilson lines like
+     * sampled ones: its nucleons and its \f$g^2\mu^2\f$ and \f$T_p\f$ maps
+     * as little-endian doubles, preceded by an 8-byte magic string, an
+     * 8-byte metadata length and a JSON metadata header.
+     * The file is described in \ref md_OUTPUT "OUTPUT.md".
+     * \param[in] lat Lattice to read the color-charge densities
+     * (`g2mu2A`/`g2mu2B`) and thicknesses (`TpA`/`TpB`) from.
+     * \param[in] param Simulation parameters.
+     * \param[in] nucleus Which nucleus.
+     * \param[in] nucleons The nucleus' nucleons, centered at the origin.
+     */
+    void writeGeometry(
+        Lattice *lat, Parameters *param, NucleusRole nucleus,
+        const std::vector<ReturnValue> &nucleons);
+    /**
+     * Reads a nucleus' geometry file (geometryFileName()), sets its
+     * \f$g^2\mu^2\f$ and \f$T_p\f$ maps on \p lat and returns its nucleons.
+     * Exits with an error if the file is missing or belongs to another
+     * nucleus, species, lattice or \f$g\f$.
+     * \param[in,out] lat Lattice whose `g2mu2A`/`TpA` (projectile) or
+     * `g2mu2B`/`TpB` (target) are set.
+     * \param[in] param Simulation parameters.
+     * \param[in] nucleus Which nucleus.
+     * \return The nucleons and the \f$Q_s/(g^2\mu)\f$ ratio the file was
+     * written with.
+     */
+    NucleusGeometry readGeometry(
+        Lattice *lat, Parameters *param, NucleusRole nucleus);
+    /**
+     * Reads both nuclei's Wilson lines from disk, from the files a run
+     * with the same parameters writes (fileName() with xToRead()), in text
+     * or binary format depending on \p format. The fields are placed as
+     * written, centered at the origin; the impact parameter is applied
+     * later, by Init::shiftFieldsWithImpactParameter().
      * \param[in,out] lat Lattice whose `U`/`U2` are set.
      * \param[in] param Simulation parameters.
      * \param[in] format `1` for plain text, `2` for binary; exits with
@@ -107,38 +170,26 @@ class WilsonLineIO {
      */
     void read(Lattice *lat, Parameters *param, int format);
     /**
-     * read()'s `format==1` branch: reads one nucleus' Wilson
-     * line from a plain-text file, shifting it by \f$\mp b/2\f$ along
-     * the impact-parameter direction and dropping any resulting
-     * out-of-bounds column (on the low side for the projectile, the
-     * high side for the target).
+     * read()'s `format==1` branch: reads one nucleus' Wilson line from a
+     * plain-text file, site by site in the order write() writes them.
      * \param[in] fileName Path to read from; exits with an error if it
      * doesn't exist.
      * \param[in] param Simulation parameters.
-     * \param[in] role Which nucleus this file belongs to (selects the
-     * sign of the \f$b/2\f$ shift and which side out-of-bounds columns
-     * are dropped on).
      * \param[out] U Wilson-line field to fill (`lat->U` or `lat->U2`).
      */
     void readText(
-        const std::string &fileName, Parameters *param, NucleusRole role,
-        std::vector<Matrix> &U);
+        const std::string &fileName, Parameters *param, std::vector<Matrix> &U);
     /**
-     * read()'s `format==2` branch: reads one nucleus' Wilson
-     * line from a binary file (the format write()'s
-     * binary mode writes), shifting it by \f$\mp b/2\f$ along the
-     * impact-parameter direction.
+     * read()'s `format==2` branch: reads one nucleus' Wilson line from a
+     * binary file (the format write()'s binary mode writes).
      * \param[in] fileName Path to read from; exits with an error if it
      * doesn't exist, or if the file's lattice size/physical length
      * don't match \p param.
      * \param[in] param Simulation parameters.
-     * \param[in] role Which nucleus this file belongs to (selects the
-     * sign of the \f$b/2\f$ shift).
      * \param[out] U Wilson-line field to fill (`lat->U` or `lat->U2`).
      */
     void readBinary(
-        const std::string &fileName, Parameters *param, NucleusRole role,
-        std::vector<Matrix> &U);
+        const std::string &fileName, Parameters *param, std::vector<Matrix> &U);
     /**
      * The `writeWilsonLineSnapshot` diagnostic of Init::setV(): writes
      * `initialWilsonLines<id>.ipgw`, a binary snapshot of the two nuclei's

@@ -541,6 +541,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             lat, param, NucleusRole::Target,
             WilsonLineIO::initialX(param, NucleusRole::Target));
     }
+    writeGeometry(lat, param);
 
     messager_ << "[Init::setV]: Wilson lines V_A and V_B set on rank "
               << param->run.MPIRank << ". ";
@@ -582,11 +583,15 @@ void Init::init(
 
     if (init_method == InitializationMethod::ReadWlineBinary
         or init_method == InitializationMethod::ReadWlineText) {
-        // to read Wilson lines from file
+        // to read Wilson lines from file, with their nuclei's geometry so
+        // that main's collision-geometry loop treats them like sampled ones
         WilsonLineIO().read(
             lat, param,
             (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
-        param->event.success = 1;
+        if (param->collision.useNucleus) {
+            readGeometry(lat, param);
+            writeGeometry(lat, param);
+        }
     } else {
         // to generate your own Wilson lines
         if (param->collision.useNucleus) {
@@ -597,6 +602,39 @@ void Init::init(
         // sample color charges and find Wilson lines V_A and V_B
         setV(lat, param, random);
     }
+}
+
+void Init::writeGeometry(Lattice *lat, Parameters *param) {
+    // with every event whose Wilson lines are written, so that they can be
+    // read back and collided like sampled ones
+    if (param->wilsonLines.writeWilsonLines == 0
+        || !param->collision.useNucleus)
+        return;
+    WilsonLineIO io;
+    io.writeGeometry(lat, param, NucleusRole::Projectile, nucleusA_);
+    io.writeGeometry(lat, param, NucleusRole::Target, nucleusB_);
+}
+
+void Init::readGeometry(Lattice *lat, Parameters *param) {
+    WilsonLineIO io;
+    NucleusGeometry projectile =
+        io.readGeometry(lat, param, NucleusRole::Projectile);
+    NucleusGeometry target = io.readGeometry(lat, param, NucleusRole::Target);
+    // the color-charge maps were built with this ratio, which a posterior
+    // parameter set may have chosen for the event
+    if (!PhysConst::isClose(projectile.QsMuRatio, target.QsMuRatio)) {
+        messager_ << "[Init::readGeometry]: the geometry files of the "
+                     "projectile and the target were written with different "
+                     "QsMuRatio ("
+                  << projectile.QsMuRatio << ", " << target.QsMuRatio
+                  << "). Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+    param->colorCharge.QsMuRatio = projectile.QsMuRatio;
+    // move-assign: collisionGeometry_ keeps referring to these vectors
+    nucleusA_ = std::move(projectile.nucleons);
+    nucleusB_ = std::move(target.nucleons);
 }
 
 void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {

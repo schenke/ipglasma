@@ -338,6 +338,15 @@ bool fieldOutputWritten(const Parameters &p) {
 }
 
 /**
+ * Condition for the x of the Wilson lines to read.
+ * \param[in] p The parameters read so far.
+ * \return Whether `readInitialWilsonLines` is 1 or 2.
+ */
+bool wilsonLinesRead(const Parameters &p) {
+    return p.wilsonLines.readInitialWilsonLines != 0;
+}
+
+/**
  * Condition for the T^{mu nu} format.
  * \param[in] p The parameters read so far.
  * \return Whether `writeTmunu` is set.
@@ -710,6 +719,10 @@ const std::vector<ParameterSpec> &parameterTable() {
             "readInitialWilsonLines", &P::wilsonLines,
             &WilsonLineParameters::readInitialWilsonLines)
             .check(oneOf({0, 1, 2}, " (0: sample, 1: text, 2: binary)")),
+        param("readWilsonLinesX", &P::wilsonLines, &WilsonLineParameters::readX)
+            .onlyIf(wilsonLinesRead)
+            .optional("0")
+            .check(nonNegative()),
 
         // JIMWLK
         param("useJIMWLK", &P::jimwlk, &JimwlkParameters::enabled),

@@ -152,23 +152,34 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
-    // <Qs> is only computed from the collision geometry of a sampled
-    // nucleus; without it, 1/<Qs> and the running coupling at the
-    // event-averaged Qs (used at least for the hydro output) are undefined
-    const bool noAverageQs =
-        !collision.useNucleus || wilsonLines.readInitialWilsonLines != 0;
-    if (noAverageQs && evolution.inverseQsForMaxTime) {
+    // <Qs> is only computed from the collision geometry of nuclei (sampled
+    // or read with their Wilson lines); without it, 1/<Qs> and the running
+    // coupling at the event-averaged Qs (used at least for the hydro
+    // output) are undefined
+    if (!collision.useNucleus && evolution.inverseQsForMaxTime) {
         std::ostringstream message;
         message << "inverseQsForMaxTime = 1 needs the event-averaged Qs, which "
-                   "is not computed with useNucleus = 0 or "
-                   "readInitialWilsonLines = 1 or 2";
+                   "is not computed with useNucleus = 0";
         fail(message);
     }
-    if (noAverageQs && coupling.runningCoupling) {
+    if (!collision.useNucleus && coupling.runningCoupling) {
         std::ostringstream message;
         message << "runningCoupling = 1 needs the event-averaged Qs, which is "
-                   "not computed with useNucleus = 0 or "
-                   "readInitialWilsonLines = 1 or 2";
+                   "not computed with useNucleus = 0";
+        fail(message);
+    }
+
+    // JIMWLK evolves read Wilson lines from readWilsonLinesX to smaller x
+    if (jimwlk.enabled && wilsonLines.readInitialWilsonLines != 0
+        && wilsonLines.readX > 0.
+        && (wilsonLines.readX < jimwlk.xProjectile
+            || wilsonLines.readX < jimwlk.xTarget)) {
+        std::ostringstream message;
+        message << "readWilsonLinesX (" << wilsonLines.readX
+                << ") must not be smaller than jimwlkXProjectile ("
+                << jimwlk.xProjectile << ") and jimwlkXTarget ("
+                << jimwlk.xTarget
+                << "): JIMWLK evolves the read Wilson lines from there";
         fail(message);
     }
 

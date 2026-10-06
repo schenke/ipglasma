@@ -112,9 +112,11 @@ class Init {
     /**
      * Top-level initialization entry point: reads the \f$Q_s^2\f$ table
      * and any pre-tabulated nucleon configurations, then either reads
-     * the Wilson lines from disk or samples nucleon positions/color
+     * the Wilson lines and (with `useNucleus 1`) their nuclei's geometry
+     * from disk (readGeometry()) or samples nucleon positions/color
      * charges and constructs them from scratch, depending on \p
-     * init_method.
+     * init_method. Either way, the impact parameter is sampled afterwards
+     * by main's collision-geometry loop.
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
      * \param[in] random Non-owning pointer to the shared Random
@@ -308,6 +310,25 @@ class Init {
      * \param[in,out] random Random-number source.
      */
     void setV(Lattice *lat, Parameters *param, Random *random);
+    /**
+     * Writes both nuclei's geometry files (WilsonLineIO::writeGeometry())
+     * when the event writes Wilson lines (`writeWilsonLines` 1 or 2) of
+     * nuclei (`useNucleus 1`), so that readGeometry() can read them back.
+     * \param[in] lat Lattice holding the color-charge densities and
+     * thicknesses.
+     * \param[in] param Simulation parameters.
+     */
+    void writeGeometry(Lattice *lat, Parameters *param);
+    /**
+     * Reads both nuclei's geometry files (WilsonLineIO::readGeometry()) for
+     * Wilson lines read from disk: sets the color-charge densities and
+     * thicknesses on \p lat, the nucleon lists, and
+     * `param->colorCharge.QsMuRatio` to the value the files were written
+     * with. Exits with an error if the two files disagree on it.
+     * \param[in,out] lat Lattice to set.
+     * \param[in,out] param Simulation parameters.
+     */
+    void readGeometry(Lattice *lat, Parameters *param);
     /**
      * setV()'s lattice Poisson/UV kernel: depends only on transverse
      * momentum and run parameters, so it's computed once and reused for

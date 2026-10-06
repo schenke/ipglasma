@@ -2,6 +2,7 @@
 
 #include "WilsonLineIO.h"
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstdint>
@@ -25,39 +26,63 @@ using std::stringstream;
 
 namespace {
 /**
- * Lattice column a Wilson-line column read from file goes to: shifted by
- * \f$-b/2\f$ for the projectile and \f$+b/2\f$ for the target, and
- * rounded to the nearest column, the same way for both file formats.
- * \param[in] column Column \f$i_x\f$ in the file.
- * \param[in] a Lattice spacing [fm].
- * \param[in] b Impact parameter [fm].
- * \param[in] isProjectile Whether the file holds the projectile.
- * \return The shifted column; may lie outside the lattice.
+ * The number in the names of a nucleus' Wilson-line and geometry files:
+ * \f$2(sN + i) + j\f$, see WilsonLineIO::fileName().
+ * \param[in] param Simulation parameters.
+ * \param[in] nucleus Which nucleus.
+ * \return The number.
  */
-int shiftedColumn(int column, double a, double b, bool isProjectile) {
-    const double x =
-        isProjectile ? (a * column - b / 2.) : (a * column + b / 2.);
-    return static_cast<int>(std::lround(x / a));
-}
-}  // namespace
-
-std::string WilsonLineIO::fileName(
-    Parameters *param, const double x, NucleusRole nucleus, int format) {
-    const bool isProjectile = (nucleus == NucleusRole::Projectile);
-    const int iA = isProjectile ? 1 : 2;
-
-    std::stringstream Vname;
-    Vname << param->wilsonLines.wilsonLinePath << "/WilsonLine";
-    if (x >= 0) Vname << "_x_" << std::scientific << std::setprecision(5) << x;
+unsigned long long fileNumber(Parameters *param, NucleusRole nucleus) {
+    const int iA = (nucleus == NucleusRole::Projectile) ? 1 : 2;
     // 2 (seed N + eventId) + iA with N events in the run: different for
     // every nucleus and event of a run, and for runs with different seeds
     // and the same N
     const unsigned long long eventsPerRun =
         static_cast<unsigned long long>(param->run.eventsPerRank)
         * param->run.MPISize;
-    Vname << "_"
-          << 2 * (param->random.seed * eventsPerRun + param->event.eventId)
-                 + iA;
+    return 2 * (param->random.seed * eventsPerRun + param->event.eventId) + iA;
+}
+
+/**
+ * The value of \p key in the flat JSON object of a geometry file's header
+ * (as written by WilsonLineIO::writeGeometry()), without quotes.
+ * \param[in] json The header.
+ * \param[in] key The key.
+ * \return The value, or an empty string if \p key is missing.
+ */
+std::string jsonValue(const std::string &json, const std::string &key) {
+    const std::string pattern = "\"" + key + "\":";
+    const std::size_t start = json.find(pattern);
+    if (start == std::string::npos) return "";
+    const std::size_t begin = start + pattern.size();
+    if (begin < json.size() && json[begin] == '"') {
+        const std::size_t end = json.find('"', begin + 1);
+        return json.substr(begin + 1, end - begin - 1);
+    }
+    const std::size_t end = json.find_first_of(",}", begin);
+    return json.substr(begin, end - begin);
+}
+
+/// Magic string at the start of a geometry file.
+const char kGeometryMagic[8] = {'I', 'P', 'G', 'G', 'E', 'O', '1', '\0'};
+
+/**
+ * Checks the host's byte order; the geometry files are little-endian by
+ * definition.
+ * \return `true` if this host is little-endian.
+ */
+bool littleEndianHost() {
+    const std::uint16_t probe = 1;
+    return *reinterpret_cast<const unsigned char *>(&probe) == 1;
+}
+}  // namespace
+
+std::string WilsonLineIO::fileName(
+    Parameters *param, const double x, NucleusRole nucleus, int format) {
+    std::stringstream Vname;
+    Vname << param->wilsonLines.wilsonLinePath << "/WilsonLine";
+    if (x >= 0) Vname << "_x_" << std::scientific << std::setprecision(5) << x;
+    Vname << "_" << fileNumber(param, nucleus);
 
     const int fileFormat =
         (format < 0) ? param->wilsonLines.writeWilsonLines : format;
@@ -169,6 +194,19 @@ double WilsonLineIO::initialX(Parameters *param, NucleusRole nucleus) {
     return 0.01 * std::exp(-rapidity);
 }
 
+std::string WilsonLineIO::geometryFileName(
+    Parameters *param, NucleusRole nucleus) {
+    std::stringstream name;
+    name << param->wilsonLines.wilsonLinePath << "/WilsonLineGeometry_"
+         << fileNumber(param, nucleus);
+    return name.str();
+}
+
+double WilsonLineIO::xToRead(Parameters *param, NucleusRole nucleus) {
+    if (param->wilsonLines.readX > 0.) return param->wilsonLines.readX;
+    return initialX(param, nucleus);
+}
+
 void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
     IPG_PROFILE_SCOPE("initialization.read_wilson_lines");
     if (!isValidFormat(format)) {
@@ -180,10 +218,10 @@ void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
     }
 
     string VOne_name = fileName(
-        param, initialX(param, NucleusRole::Projectile),
-        NucleusRole::Projectile, format);
+        param, xToRead(param, NucleusRole::Projectile), NucleusRole::Projectile,
+        format);
     string VTwo_name = fileName(
-        param, initialX(param, NucleusRole::Target), NucleusRole::Target,
+        param, xToRead(param, NucleusRole::Target), NucleusRole::Target,
         format);
 
     messager_ << "[WilsonLineIO::read]: Reading Wilson lines from files "
@@ -191,11 +229,11 @@ void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
     messager_.flush("info");
 
     if (format == 1) {
-        readText(VOne_name, param, NucleusRole::Projectile, lat->U);
-        readText(VTwo_name, param, NucleusRole::Target, lat->U2);
+        readText(VOne_name, param, lat->U);
+        readText(VTwo_name, param, lat->U2);
     } else if (format == 2) {
-        readBinary(VOne_name, param, NucleusRole::Projectile, lat->U);
-        readBinary(VTwo_name, param, NucleusRole::Target, lat->U2);
+        readBinary(VOne_name, param, lat->U);
+        readBinary(VTwo_name, param, lat->U2);
     }
 
     messager_ << "[WilsonLineIO::read]: Wilson lines V_A and V_B set on rank "
@@ -204,13 +242,8 @@ void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
 }
 
 void WilsonLineIO::readText(
-    const std::string &fileName, Parameters *param, NucleusRole role,
-    std::vector<Matrix> &U) {
-    const bool isProjectile = (role == NucleusRole::Projectile);
-    int N = param->lattice.size;
-
-    double L = param->lattice.L;
-    double a = L / static_cast<double>(N);
+    const std::string &fileName, Parameters *param, std::vector<Matrix> &U) {
+    const int N = param->lattice.size;
 
     Matrix temp(1.);
 
@@ -246,14 +279,7 @@ void WilsonLineIO::readText(
             temp.set(2, 1, complex<double>(Re[7], Im[7]));
             temp.set(2, 2, complex<double>(Re[8], Im[8]));
 
-            double bb = param->event.b;
-            a = L / static_cast<double>(N);
-
-            const int ix = shiftedColumn(i, a, bb, isProjectile);
-            if (ix < 0 || ix >= N) continue;
-
-            int pos = latticeIndex(ix, j, N);
-            U[pos] = (temp);
+            U[latticeIndex(i, j, N)] = temp;
         }
     }
 
@@ -261,9 +287,7 @@ void WilsonLineIO::readText(
 }
 
 void WilsonLineIO::readBinary(
-    const std::string &fileName, Parameters *param, NucleusRole role,
-    std::vector<Matrix> &U) {
-    const bool isProjectile = (role == NucleusRole::Projectile);
+    const std::string &fileName, Parameters *param, std::vector<Matrix> &U) {
     std::ifstream InStream;
     InStream.precision(15);
     InStream.open(fileName.c_str(), std::ios::in | std::ios::binary);
@@ -323,33 +347,23 @@ void WilsonLineIO::readBinary(
 
             // PositionIndx enumerates the sites in the writer's order
             // (see WilsonLineIO::write), i.e. latticeIndex().
-            int ixRaw = latticeX(PositionIndx, N);
-            int iy = latticeY(PositionIndx, N);
-
-            double bb = param->event.b;
-            a = L / static_cast<double>(N);
-
-            // shift here by half an impact parameter
-            const int ix = shiftedColumn(ixRaw, a, bb, isProjectile);
+            const int ix = latticeX(PositionIndx, N);
+            const int iy = latticeY(PositionIndx, N);
 
             int MatrixIndx = TEMPINDX - PositionIndx * 9;
             int j = MatrixIndx / 3;
             int k = MatrixIndx - j * 3;
 
-            int indx = latticeIndex(ix, iy, N);
-            if (ix < 0 || ix >= N) {
-                if (bb == 0) {
-                    messager_ << "[WilsonLineIO::read]: datafile " << fileName
-                              << " has an element " << indx << " (iy=" << iy
-                              << ", ix=" << ix << "), but the grid is N=" << N
-                              << ". Element is (" << re << " + " << im
-                              << "i), skipping it.";
-                    messager_.flush("warning");
-                }
+            if (ix >= N) {
+                messager_ << "[WilsonLineIO::read]: datafile " << fileName
+                          << " has more than N^2 sites (N=" << N
+                          << "); skipping element (" << re << " + " << im
+                          << "i).";
+                messager_.flush("warning");
                 INPUT_CTR++;
                 continue;
             }
-            U[indx].set(j, k, complex<double>(re, im));
+            U[latticeIndex(ix, iy, N)].set(j, k, complex<double>(re, im));
         }
         INPUT_CTR++;
     }
@@ -448,4 +462,171 @@ void WilsonLineIO::writeTrainingData(Lattice *lat, Parameters *param) {
         << "[WilsonLineIO::writeTrainingData]: Wrote incoming Wilson lines to "
         << filename.str();
     messager_.flush("info");
+}
+
+void WilsonLineIO::writeGeometry(
+    Lattice *lat, Parameters *param, NucleusRole nucleus,
+    const std::vector<ReturnValue> &nucleons) {
+    if (!littleEndianHost()) {
+        throw std::runtime_error(
+            "WilsonLineIO::writeGeometry requires a little-endian host");
+    }
+    const bool isProjectile = (nucleus == NucleusRole::Projectile);
+    const int N = param->lattice.size;
+    const std::size_t sites = static_cast<std::size_t>(N) * N;
+
+    // nucleons (x, y, z, proton), then the g^2 mu^2 and T_p maps
+    std::vector<double> payload;
+    payload.reserve(4 * nucleons.size() + 2 * sites);
+    for (const ReturnValue &nucleon : nucleons) {
+        payload.push_back(nucleon.x);
+        payload.push_back(nucleon.y);
+        payload.push_back(nucleon.z);
+        payload.push_back(nucleon.proton ? 1. : 0.);
+    }
+    for (std::size_t pos = 0; pos < sites; pos++) {
+        payload.push_back(
+            isProjectile ? lat->cells[pos]->getg2mu2A()
+                         : lat->cells[pos]->getg2mu2B());
+    }
+    for (std::size_t pos = 0; pos < sites; pos++) {
+        payload.push_back(
+            isProjectile ? lat->cells[pos]->getTpA()
+                         : lat->cells[pos]->getTpB());
+    }
+
+    std::stringstream metadata;
+    metadata << std::setprecision(17)
+             << "{\"format\":\"ipglasma-nucleus-geometry\","
+             << "\"version\":1,"
+             << "\"dtype\":\"<f8\","
+             << "\"nucleus\":\"" << (isProjectile ? "projectile" : "target")
+             << "\","
+             << "\"species\":\""
+             << (isProjectile ? param->collision.projectile
+                              : param->collision.target)
+             << "\","
+             << "\"nucleons\":" << nucleons.size() << ","
+             << "\"N\":" << N << ","
+             << "\"L_fm\":" << param->lattice.L << ","
+             << "\"g\":" << param->coupling.g << ","
+             << "\"QsMuRatio\":" << param->colorCharge.QsMuRatio << ","
+             << "\"blocks\":[\"nucleons[nucleons][x_fm,y_fm,z_fm,proton]\","
+                "\"g2mu2[N*N]\",\"Tp_per_fm2[N*N]\"],"
+             << "\"native_site_index\":\"pos=x*N+y\"}";
+    const std::string metadataString = metadata.str();
+
+    const std::string name = geometryFileName(param, nucleus);
+    std::ofstream output(
+        name.c_str(), std::ios::out | std::ios::binary | std::ios::trunc);
+    const std::uint64_t metadataBytes =
+        static_cast<std::uint64_t>(metadataString.size());
+    output.write(kGeometryMagic, sizeof(kGeometryMagic));
+    output.write(
+        reinterpret_cast<const char *>(&metadataBytes), sizeof(metadataBytes));
+    output.write(metadataString.data(), metadataString.size());
+    output.write(
+        reinterpret_cast<const char *>(payload.data()),
+        static_cast<std::streamsize>(payload.size() * sizeof(double)));
+    output.close();
+    if (!output) {
+        messager_ << "[WilsonLineIO::writeGeometry]: could not write " << name
+                  << ". Exiting.";
+        messager_.flush("error");
+        exit(1);
+    }
+}
+
+NucleusGeometry WilsonLineIO::readGeometry(
+    Lattice *lat, Parameters *param, NucleusRole nucleus) {
+    const bool isProjectile = (nucleus == NucleusRole::Projectile);
+    const std::string name = geometryFileName(param, nucleus);
+    auto fail = [this, &name](const std::string &reason) {
+        messager_ << "[WilsonLineIO::readGeometry]: " << name << ": " << reason
+                  << ". Exiting.";
+        messager_.flush("error");
+        exit(1);
+    };
+    if (!littleEndianHost()) fail("reading needs a little-endian host");
+
+    std::ifstream input(name.c_str(), std::ios::in | std::ios::binary);
+    if (!input) {
+        fail(
+            "not found (reading Wilson lines needs the geometry file written "
+            "with them)");
+    }
+    char magic[8];
+    std::uint64_t metadataBytes = 0;
+    input.read(magic, sizeof(magic));
+    input.read(reinterpret_cast<char *>(&metadataBytes), sizeof(metadataBytes));
+    if (!input || !std::equal(magic, magic + sizeof(magic), kGeometryMagic)) {
+        fail("not a geometry file");
+    }
+    std::string metadata(static_cast<std::size_t>(metadataBytes), '\0');
+    input.read(&metadata[0], static_cast<std::streamsize>(metadataBytes));
+
+    // the geometry must belong to this lattice, coupling and species
+    const int N = param->lattice.size;
+    const std::string species =
+        isProjectile ? param->collision.projectile : param->collision.target;
+    if (jsonValue(metadata, "nucleus")
+        != (isProjectile ? "projectile" : "target")) {
+        fail("holds the other nucleus");
+    }
+    if (jsonValue(metadata, "species") != species) {
+        fail(
+            "holds " + jsonValue(metadata, "species") + ", but this run has "
+            + species);
+    }
+    if (std::atoi(jsonValue(metadata, "N").c_str()) != N) {
+        fail(
+            "has size " + jsonValue(metadata, "N") + ", but this run has "
+            + std::to_string(N));
+    }
+    if (std::abs(
+            std::atof(jsonValue(metadata, "L_fm").c_str()) - param->lattice.L)
+        > 1e-5) {
+        fail("has another L than this run");
+    }
+    if (!PhysConst::isClose(
+            std::atof(jsonValue(metadata, "g").c_str()), param->coupling.g)) {
+        fail("was written with another g than this run");
+    }
+
+    NucleusGeometry geometry;
+    geometry.QsMuRatio = std::atof(jsonValue(metadata, "QsMuRatio").c_str());
+    const std::size_t count = static_cast<std::size_t>(
+        std::atoll(jsonValue(metadata, "nucleons").c_str()));
+    const std::size_t sites = static_cast<std::size_t>(N) * N;
+    std::vector<double> payload(4 * count + 2 * sites);
+    input.read(
+        reinterpret_cast<char *>(payload.data()),
+        static_cast<std::streamsize>(payload.size() * sizeof(double)));
+    if (!input) fail("is truncated");
+
+    geometry.nucleons.resize(count);
+    for (std::size_t i = 0; i < count; i++) {
+        ReturnValue &nucleon = geometry.nucleons[i];
+        nucleon.x = payload[4 * i];
+        nucleon.y = payload[4 * i + 1];
+        nucleon.z = payload[4 * i + 2];
+        nucleon.proton = payload[4 * i + 3] != 0.;
+        nucleon.phi = 0.;
+        nucleon.collided = 0;
+    }
+    const double *g2mu2 = payload.data() + 4 * count;
+    const double *Tp = g2mu2 + sites;
+    for (std::size_t pos = 0; pos < sites; pos++) {
+        if (isProjectile) {
+            lat->cells[pos]->setg2mu2A(g2mu2[pos]);
+            lat->cells[pos]->setTpA(Tp[pos]);
+        } else {
+            lat->cells[pos]->setg2mu2B(g2mu2[pos]);
+            lat->cells[pos]->setTpB(Tp[pos]);
+        }
+    }
+    messager_ << "[WilsonLineIO::readGeometry]: Read " << count
+              << " nucleons and the color-charge densities from " << name;
+    messager_.flush("info");
+    return geometry;
 }

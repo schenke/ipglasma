@@ -90,6 +90,7 @@ writeNpartList 1
 writeNcollList 1
 writeNgluonEstimators 1
 readInitialWilsonLines 0
+readWilsonLinesX 0
 writeWilsonLines 2
 wilsonLinePath ./
 writeTmunuBinary 1

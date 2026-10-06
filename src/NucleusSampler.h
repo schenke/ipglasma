@@ -190,7 +190,11 @@ class NucleusSampler {
      * generate()'s triaxial (\f$\gamma\neq0\f$), non-forced-\f$d_{\min}\f$
      * variant: like generateDeformedWoodsSaxonForceDmin()'s per-nucleon
      * `(r, \theta, \phi)` sampling against the triaxial surface, but
-     * without any minimum-distance rejection.
+     * without any minimum-distance rejection. The other samplers keep
+     * \f$d_{\min}\f$ on a best-effort basis by redrawing only the angles
+     * the density does not depend on; a triaxial density depends on
+     * \f$\phi\f$ as well, so that would bias it. For a minimum distance,
+     * use `forceDMin 1`.
      * \param[in,out] random Random-number source.
      * \param[in] data The nucleus' species and deformed Woods-Saxon
      * parameters.

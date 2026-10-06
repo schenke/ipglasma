@@ -569,6 +569,10 @@ void CollisionGeometry::writeUsedParametersFile(
     } else
         fout1 << "# using fixed coupling alpha_s=" << param->event.alphas
               << endl;
+    if (param->wilsonLines.readInitialWilsonLines != 0) {
+        fout1 << "# QsMuRatio = " << param->colorCharge.QsMuRatio
+              << " (from the Wilson-line geometry files)" << endl;
+    }
     fout1.close();
 }
 

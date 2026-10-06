@@ -181,7 +181,7 @@ void JIMWLK::evolution() {
     initializeNoise();
 
     // Calculate evolution steps for different nuclei
-    double x0 = param_.jimwlk.initialX;
+    double x0 = startX(param_);
     double ds = param_.jimwlk.Ds;
     bool saveSnapshots = param_.jimwlk.saveSnapshots;
     std::vector<double> xSnapshotList = param_.jimwlk.xSnapshotList;
@@ -261,6 +261,15 @@ void JIMWLK::runEvolutionLoop(
     }
     messager_ << "[JIMWLK::evolution]: Done.";
     messager_.flush("info");
+}
+
+double JIMWLK::startX(const Parameters &param) {
+    // Wilson lines read at readWilsonLinesX are evolved from there
+    if (param.wilsonLines.readInitialWilsonLines != 0
+        && param.wilsonLines.readX > 0.) {
+        return param.wilsonLines.readX;
+    }
+    return param.jimwlk.initialX;
 }
 
 std::vector<int> JIMWLK::snapshotSteps(

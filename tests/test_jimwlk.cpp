@@ -161,3 +161,17 @@ TEST_CASE(
         JIMWLK::snapshotSteps(requested, x0, dlogx, steps)
         == std::vector<int> {0, 5, 6, 20, 0, -1, -1, -1});
 }
+
+TEST_CASE(
+    "JIMWLK::startX: Wilson lines read at readWilsonLinesX are evolved from "
+    "there") {
+    Parameters param;
+    param.jimwlk.initialX = 0.01;
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.wilsonLines.readX = 0.;
+    CHECK(JIMWLK::startX(param) == 0.01);
+    param.wilsonLines.readInitialWilsonLines = 2;
+    CHECK(JIMWLK::startX(param) == 0.01);  // the initial lines
+    param.wilsonLines.readX = 0.002;
+    CHECK(JIMWLK::startX(param) == 0.002);
+}

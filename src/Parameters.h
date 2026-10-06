@@ -402,6 +402,11 @@ struct WilsonLineParameters {
     /// Whether to generate initial Wilson lines (`0`), or read them
     /// from plain text (`1`) or binary (`2`).
     int readInitialWilsonLines = 0;
+    /// Bjorken \f$x\f$ in the names of the Wilson-line files to read with
+    /// \c readInitialWilsonLines (input `readWilsonLinesX`); `0` reads
+    /// those of the initial condition (WilsonLineIO::initialX()). JIMWLK
+    /// evolves read Wilson lines from this \f$x\f$.
+    double readX = 0.;
 };
 
 /// JIMWLK small-x evolution.

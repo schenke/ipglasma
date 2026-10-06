@@ -42,6 +42,7 @@ files themselves.
 |---|---|---|---|
 | `usedParameters<id>.dat` | usedParameters | always | text, valid input file |
 | `WilsonLine[_x_<x>]_<n>[.txt]` | Wilson lines | `writeWilsonLines 1` or `2` | text or binary |
+| `WilsonLineGeometry_<n>` | Wilson-line geometry | `writeWilsonLines 1` or `2`, `useNucleus 1` | binary with JSON header |
 | `initialWilsonLines<id>.ipgw` | Initial Wilson lines snapshot | `writeWilsonLineSnapshot 1`, color charges sampled | binary with JSON header |
 | `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, nucleons sampled, `writeNpartList 1`, `writeNcollList 1` | text |
 | `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, nuclei sampled, `writeNgluonEstimators 1` | text |
@@ -62,7 +63,9 @@ files themselves.
 2. With sampled color charges, after the Wilson lines are built:
    1. `initialWilsonLines<id>.ipgw` (`writeWilsonLineSnapshot 1`);
    2. the initial Wilson lines (`writeWilsonLines` > 0, and without JIMWLK or
-      with `jimwlkSaveSnapshots 1`).
+      with `jimwlkSaveSnapshots 1`);
+   3. the geometry files of both nuclei (`writeWilsonLines` > 0,
+      `useNucleus 1`). A run that reads Wilson lines writes them here too.
 3. With JIMWLK:
    1. the Wilson-line snapshots at the x values of `jimwlkXSnapshotList`
       (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
@@ -126,8 +129,11 @@ in the run.
   - JIMWLK snapshots, at the step closest to each value of
     `jimwlkXSnapshotList` and named with that value, and the final Wilson
     lines, see "Order within an event" above.
-  - `readInitialWilsonLines 1`/`2` reads the initial files back, under the
-    names a run with the same parameters writes.
+  - `readInitialWilsonLines 1`/`2` reads the files back, under the names a
+    run with the same parameters writes, at the x of `readWilsonLinesX`
+    (default: the initial Wilson lines), together with the geometry files.
+    The fields are stored as built, centered at the origin; the impact
+    parameter is applied after reading, as for sampled nuclei.
 
 **Text format** (`writeWilsonLines 1`): one line per site, `ix` outer and
 `iy` inner, with a blank line after each `ix`. Each line holds 20 columns:
@@ -148,6 +154,26 @@ The matrix elements are row-major and written with 15 significant digits.
 | 8 | `double` | `a` [fm] |
 | 8 | `double` | `rapidityA` (projectile) or `rapidityB` (target) |
 | N² × 9 × 16 | `double` pairs | (Re, Im) of each matrix element, sites `ix` outer and `iy` inner, elements row-major |
+
+## Wilson-line geometry
+
+`<wilsonLinePath>/WilsonLineGeometry_<n>` (`WilsonLineIO::writeGeometry()`),
+one per nucleus, with the same number `<n>` as its Wilson-line files and no
+x, since one geometry serves the Wilson lines at every x. Written whenever
+the event writes Wilson lines (`writeWilsonLines` 1 or 2) of nuclei
+(`useNucleus 1`); `readInitialWilsonLines` reads it to sample the collision
+geometry of read Wilson lines.
+
+Little-endian by definition:
+
+| Bytes | Content |
+|---|---|
+| 8 | magic `IPGGEO1\0` |
+| 8 | length M of the JSON metadata, `uint64` |
+| M | JSON metadata: `format`, `version`, `dtype` (`<f8`), `nucleus` (`projectile` or `target`), `species`, `nucleons`, `N`, `L_fm`, `g`, `QsMuRatio`, `blocks`, `native_site_index` |
+| nucleons × 4 × 8 | `float64` x, y, z [fm] and proton (1 or 0) of each nucleon, centered at the origin |
+| N² × 8 | `float64` g²μ² of each site, as stored on the lattice, sites `ix` outer and `iy` inner |
+| N² × 8 | `float64` T_p [fm⁻²] of each site, in the same order |
 
 ## Initial Wilson lines snapshot
 

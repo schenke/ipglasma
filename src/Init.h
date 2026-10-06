@@ -313,7 +313,8 @@ class Init {
     /**
      * Writes both nuclei's geometry files (WilsonLineIO::writeGeometry())
      * when the event writes Wilson lines (`writeWilsonLines` 1 or 2) of
-     * nuclei (`useNucleus 1`), so that readGeometry() can read them back.
+     * nuclei (`useNucleus 1`) and `writeWilsonLineGeometry` is set, so that
+     * readGeometry() can read them back.
      * \param[in] lat Lattice holding the color-charge densities and
      * thicknesses.
      * \param[in] param Simulation parameters.

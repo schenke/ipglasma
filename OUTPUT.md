@@ -42,7 +42,7 @@ files themselves.
 |---|---|---|---|
 | `usedParameters<id>.dat` | usedParameters | always | text, valid input file |
 | `WilsonLine[_x_<x>]_<n>[.txt]` | Wilson lines | `writeWilsonLines 1` or `2` | text or binary |
-| `WilsonLineGeometry_<n>` | Wilson-line geometry | `writeWilsonLines 1` or `2`, `useNucleus 1` | binary with JSON header |
+| `WilsonLineGeometry_<n>` | Wilson-line geometry | `writeWilsonLines 1` or `2`, `writeWilsonLineGeometry 1` (default), `useNucleus 1` | binary with JSON header |
 | `initialWilsonLines<id>.ipgw` | Initial Wilson lines snapshot | `writeWilsonLineSnapshot 1`, color charges sampled | binary with JSON header |
 | `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, nucleons sampled, `writeNpartList 1`, `writeNcollList 1` | text |
 | `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, nuclei sampled, `writeNgluonEstimators 1` | text |
@@ -65,7 +65,8 @@ files themselves.
    2. the initial Wilson lines (`writeWilsonLines` > 0, and without JIMWLK or
       with `jimwlkSaveSnapshots 1`);
    3. the geometry files of both nuclei (`writeWilsonLines` > 0,
-      `useNucleus 1`). A run that reads Wilson lines writes them here too.
+      `writeWilsonLineGeometry 1`, `useNucleus 1`). A run that reads Wilson
+      lines writes them here too.
 3. With JIMWLK:
    1. the Wilson-line snapshots at the x values of `jimwlkXSnapshotList`
       (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
@@ -161,8 +162,9 @@ The matrix elements are row-major and written with 15 significant digits.
 one per nucleus, with the same number `<n>` as its Wilson-line files and no
 x, since one geometry serves the Wilson lines at every x. Written whenever
 the event writes Wilson lines (`writeWilsonLines` 1 or 2) of nuclei
-(`useNucleus 1`); `readInitialWilsonLines` reads it to sample the collision
-geometry of read Wilson lines.
+(`useNucleus 1`), unless `writeWilsonLineGeometry 0`;
+`readInitialWilsonLines` reads it to sample the collision geometry of read
+Wilson lines.
 
 Little-endian by definition:
 

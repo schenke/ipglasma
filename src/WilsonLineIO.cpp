@@ -512,7 +512,7 @@ void WilsonLineIO::writeGeometry(
              << "\"g\":" << param->coupling.g << ","
              << "\"QsMuRatio\":" << param->colorCharge.QsMuRatio << ","
              << "\"blocks\":[\"nucleons[nucleons][x_fm,y_fm,z_fm,proton]\","
-                "\"g2mu2[N*N]\",\"Tp_per_fm2[N*N]\"],"
+                "\"g2mu2[N*N]\",\"Tp_GeV2[N*N]\"],"
              << "\"native_site_index\":\"pos=x*N+y\"}";
     const std::string metadataString = metadata.str();
 

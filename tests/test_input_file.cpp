@@ -523,7 +523,8 @@ TEST_CASE(
         {"maxTime", "maxtime"},
         {"dMin", "d_min"},
         {"jimwlkC", "c_jimwlk"},
-        {"useRandomSeed", "useTimeForSeed"}};
+        {"useRandomSeed", "useTimeForSeed"},
+        {"writeWilsonLines", "writeInitialWilsonLines"}};
     while (std::getline(in, line)) {
         for (const auto &[newKey, oldKey] : renames) {
             if (line.rfind(newKey + " ", 0) == 0) {
@@ -537,6 +538,20 @@ TEST_CASE(
     for (const auto &[newKey, oldKey] : renames) {
         CHECK(anyContains(errors, oldKey + " was renamed to " + newKey));
     }
+}
+
+TEST_CASE(
+    "Parameters::readInput: a removed or replaced pre-2.0 key gets a hint") {
+    const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
+        readSourceFile("input"), "Rapidity 0\nNc 3\nwriteOutputs 2\n"));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.size() == 3);
+    CHECK(anyContains(
+        errors,
+        "unknown parameter Rapidity (replaced by rapidityA and rapidityB)"));
+    CHECK(anyContains(errors, "unknown parameter Nc (removed: "));
+    CHECK(anyContains(
+        errors, "unknown parameter writeOutputs (replaced by writeHydro"));
 }
 
 TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {

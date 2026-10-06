@@ -77,7 +77,8 @@ class WilsonLineIO {
      * \param[in] lat Lattice holding the Wilson lines.
      * \param[in] param Simulation parameters; `param->lattice.size`,
      * `param->lattice.L`, `param->event.eventId`, `param->random.seed`,
-     * `param->run.MPISize`, `param->wilsonLines.wilsonLinePath`,
+     * `param->run.MPISize`, `param->run.eventsPerRank`,
+     * `param->wilsonLines.wilsonLinePath`,
      * `param->wilsonLines.writeWilsonLines` and (binary format only)
      * `param->colorCharge.rapidityA`/`param->colorCharge.rapidityB` are used.
      * \param[in] nucleus Which of \c U (Projectile) / \c U2 (Target) to

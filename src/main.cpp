@@ -89,12 +89,13 @@ int main(int argc, char *argv[]) {
         return 1;
     }
 
-    // initialize random generator using time and seed from input file
+    // initialize random generator with the seed from the input file, from
+    // std::random_device or from the file seedList
     Random randomStorage;
     Random *random = &randomStorage;
     unsigned long long int rnum;
     if (!param->random.useSeedList) {
-        if (param->random.useTimeForSeed) {
+        if (param->random.useRandomSeed) {
             std::random_device ran_dev;
             rnum = ran_dev();
         } else {
@@ -104,7 +105,7 @@ int main(int argc, char *argv[]) {
             messager.flush("info");
         }
         param->run.randomSeed = rnum + rank * 1000;
-        if (param->random.useTimeForSeed) {
+        if (param->random.useRandomSeed) {
             messager << "[main::main]: Random seed = " << param->run.randomSeed;
             messager.flush("info");
         }
@@ -451,7 +452,7 @@ void writeparams(Parameters *param) {
              "reproduce this event:\n"
              "# the random numbers also depend on the MPI rank and the "
              "event's position in\n"
-             "# the run (and on the time with useTimeForSeed 1), and "
+             "# the run (and are drawn anew with useRandomSeed 1), and "
              "subNucleonParamSet -1\n"
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);

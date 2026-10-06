@@ -208,7 +208,7 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "writeWilsonLineSnapshot": 0,
         "useJIMWLK": 1 if use_jimwlk else 0,
         "useSeedList": 0,
-        "useTimeForSeed": 0,
+        "useRandomSeed": 0,
         "jimwlkSaveSnapshots": 0,
     }
     if L is not None:

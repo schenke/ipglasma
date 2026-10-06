@@ -588,10 +588,9 @@ void Init::init(
         WilsonLineIO().read(
             lat, param,
             (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
-        if (param->collision.useNucleus) {
-            readGeometry(lat, param);
-            writeGeometry(lat, param);
-        }
+        // (the geometry files are not written again: a run that writes the
+        // Wilson lines it read, e.g. after JIMWLK, uses the same names)
+        if (param->collision.useNucleus) readGeometry(lat, param);
     } else {
         // to generate your own Wilson lines
         if (param->collision.useNucleus) {

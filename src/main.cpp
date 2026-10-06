@@ -88,6 +88,9 @@ int main(int argc, char *argv[]) {
 #endif
         return 1;
     }
+    // the geometry files of read Wilson lines set QsMuRatio for their event
+    // only (Init::readGeometry())
+    const double inputQsMuRatio = param->colorCharge.QsMuRatio;
 
     // initialize random generator with the seed from the input file, from
     // std::random_device or from the file seedList
@@ -147,6 +150,7 @@ int main(int argc, char *argv[]) {
 
     // event loop starts ...
     for (int iev = 0; iev < nev; iev++) {
+        param->colorCharge.QsMuRatio = inputQsMuRatio;
         const int profiler_event_id = rank + iev * size;
         ipg::Profiler::instance().beginEvent(profiler_event_id);
 

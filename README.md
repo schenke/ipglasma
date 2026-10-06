@@ -143,7 +143,7 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 - **gamma**: triaxiality angle $\gamma$ in radians
 - **deltaRnp** and **deltaAnp**: neutron skin: neutrons are sampled with radius $R$ + `deltaRnp` and diffuseness $a$ + `deltaAnp` (in fm); both are 0 without `useInputWSParams 1`
 - **forceDMin**: `1` enforces `dMin` strictly for deformed nuclei: a nucleon's position is redrawn until it is at least `dMin` away from all others. `0` keeps `dMin` on a best-effort basis (see `dMin`)
-- **dMin**: minimum distance in fm between two nucleons of a Woods-Saxon nucleus, also read with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it. `0` for no minimum distance
+- **dMin**: minimum distance in fm between two nucleons of a Woods-Saxon nucleus, also read with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it, since their density depends on every angle (use `forceDMin 1` for them). `0` for no minimum distance
 
 ### Coupling
 - **g**: coupling constant $g$ of the classical Yang-Mills fields; with fixed coupling, $\alpha_s = g^2/(4\pi)$

@@ -153,7 +153,8 @@ struct NucleusParameters {
     /// Minimum inter-nucleon distance [fm] of a Woods-Saxon nucleus.
     /// Without \c forceDMin best effort: a nucleon keeps its radius and
     /// only its direction is redrawn, up to 100 times; triaxial nuclei
-    /// (\f$\gamma \neq 0\f$) then ignore it.
+    /// (\f$\gamma \neq 0\f$) then ignore it (see
+    /// NucleusSampler::generateTriaxialWoodsSaxon()).
     double dMin = 0.;
 };
 

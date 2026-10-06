@@ -819,19 +819,32 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"saveSnapshots", "jimwlkSaveSnapshots"},
         {"xSnapshotList", "jimwlkXSnapshotList"},
         {"useTimeForSeed", "useRandomSeed"},
+        {"writeInitialWilsonLines", "writeWilsonLines"},
     };
     return renamed;
 }
 
 /**
- * Input keys of IP-Glasma before 2.0 that have no single new name, with
- * a hint at what replaced them.
+ * Input keys of IP-Glasma before 2.0 that have no single new name or were
+ * removed, with a hint at what replaced them.
  * \return Map from each old key to the hint.
  */
 const std::map<std::string, std::string> &replacedKeys() {
     static const std::map<std::string, std::string> replaced = {
         {"useConstituentQuarkProton",
          "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
+        {"Rapidity", "replaced by rapidityA and rapidityB"},
+        {"writeOutputs",
+         "replaced by writeHydro, writeJazma, writeTmunu, outputTimes, "
+         "writeHadronSpectrum and writeWilsonLineSnapshot"},
+        {"Nc", "removed: the code is SU(3) only"},
+        {"rmax", "removed: color charges cover the whole lattice"},
+        {"dtau", "removed: the time step follows from maxTime, L and size"},
+        {"tDistNu", "removed: it had no effect"},
+        {"useFatTails", "removed: it had no effect"},
+        {"writeEvolution", "removed: it had no effect"},
+        {"readMultFromFile",
+         "removed: no version of the code writes the files it read"},
     };
     return replaced;
 }

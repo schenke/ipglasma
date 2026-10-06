@@ -258,6 +258,12 @@ TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
         param2.readInput(inputFromText(exampleInputWith("wilsonLinePath", "")))
             .empty());
     CHECK(param2.wilsonLines.wilsonLinePath == "./");
+    Parameters param3;
+    REQUIRE(param3
+                .readInput(inputFromText(
+                    exampleInputWith("writeWilsonLineGeometry", "")))
+                .empty());
+    CHECK(param3.wilsonLines.writeGeometry);
 }
 
 TEST_CASE("Parameters::readInput: values must have the parameter's type") {

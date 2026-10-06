@@ -608,8 +608,9 @@ void Init::writeGeometry(Lattice *lat, Parameters *param) {
     // with every event whose Wilson lines are written, so that they can be
     // read back and collided like sampled ones
     if (param->wilsonLines.writeWilsonLines == 0
-        || !param->collision.useNucleus)
+        || !param->wilsonLines.writeGeometry || !param->collision.useNucleus) {
         return;
+    }
     WilsonLineIO io;
     io.writeGeometry(lat, param, NucleusRole::Projectile, nucleusA_);
     io.writeGeometry(lat, param, NucleusRole::Target, nucleusB_);

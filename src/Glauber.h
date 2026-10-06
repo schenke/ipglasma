@@ -267,9 +267,7 @@ class Glauber {
      * \param[in] a_WS Woods-Saxon surface diffuseness override [fm],
      * used only if \p setWSDeformParams.
      * \param[in] beta2 Quadrupole deformation override
-     * [dimensionless], used only if \p setWSDeformParams (also used
-     * unconditionally for the handful of species whose built-in \c
-     * beta2 is a sentinel meaning "use the caller's value").
+     * [dimensionless], used only if \p setWSDeformParams.
      * \param[in] beta3 Octupole deformation override [dimensionless],
      * used only if \p setWSDeformParams.
      * \param[in] beta4 Hexadecapole deformation override

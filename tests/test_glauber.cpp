@@ -35,6 +35,32 @@ TEST_CASE("Glauber::findNucleusData: known species have the right A/Z") {
     CHECK(proton.Z == 1);
 }
 
+TEST_CASE(
+    "Glauber::findNucleusData: U and Xe have built-in deformations, "
+    "independent of the beta2 argument") {
+    Glauber glauber;
+    struct Case {
+        const char *name;
+        double beta2, beta4;
+    };
+    for (const Case &c :
+         {Case {"U", 0.28, 0.093}, Case {"Xe", 0.162, -0.003}}) {
+        CAPTURE(c.name);
+        Nucleus nucleus {};
+        glauber.findNucleusData(
+            &nucleus, c.name, /*setWSDeformParams=*/false, 0., 0., 0.5, 0., 0.,
+            0., /*forceDminFlag=*/false, 0., 0., 0.);
+        CHECK(nucleus.beta2 == doctest::Approx(c.beta2));
+        CHECK(nucleus.beta4 == doctest::Approx(c.beta4));
+
+        glauber.findNucleusData(
+            &nucleus, c.name, /*setWSDeformParams=*/true, 6., 0.5, 0.2, 0.,
+            0.05, 0., /*forceDminFlag=*/false, 0., 0., 0.);
+        CHECK(nucleus.beta2 == doctest::Approx(0.2));
+        CHECK(nucleus.beta4 == doctest::Approx(0.05));
+    }
+}
+
 TEST_CASE("Glauber::findNucleusData: setWSDeformParams overrides beta2/R_WS") {
     Nucleus nucleus {};
     Glauber glauber;

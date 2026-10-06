@@ -10,7 +10,6 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
-#include <limits>
 #include <sstream>
 #include <string>
 
@@ -20,11 +19,6 @@ using PhysConst::mbToFm2;
 using std::string;
 
 namespace {
-
-/// Sentinel used by \c kNucleusTemplates' \c beta2 field for U and Xe,
-/// whose \c beta2 historically defaults to whatever the caller passed
-/// into findNucleusData() rather than a fixed literal.
-constexpr double kUseCallerBeta2 = std::numeric_limits<double>::quiet_NaN();
 
 /**
  * One row of Glauber::findNucleusData()'s built-in per-species table.
@@ -43,7 +37,7 @@ struct NucleusTemplate {
     double w_WS;
     /// Surface diffuseness [fm].
     double a_WS;
-    /// Quadrupole deformation [dimensionless] (may be `kUseCallerBeta2`).
+    /// Quadrupole deformation [dimensionless].
     double beta2;
     /// Octupole deformation [dimensionless].
     double beta3;
@@ -59,6 +53,9 @@ struct NucleusTemplate {
 
 /// Built-in Woods-Saxon/density-profile parameters, one row per
 /// supported species name; see NucleusTemplate for the field meanings.
+/// The deformations of O and Xe are from FRDM(2012) \cite Moller:2015fba;
+/// U's \f$\beta_2 = 0.28\f$ and the other parameters have no recorded
+/// source.
 const NucleusTemplate kNucleusTemplates[] = {
     {"Au", 197, 79, 6.37, 0, 0.535, -0.13, 0., -0.03, 0., 3},
     {"Pb", 208, 82, 6.62, 0., 0.546, 0.0, 0., 0.0, 0., 3},
@@ -67,6 +64,7 @@ const NucleusTemplate kNucleusTemplates[] = {
     {"He4", 4, 2, 0, 0, 0, 0.0, 0., 0.0, 0., 1},
     {"d", 2, 1, 1.0, 1.18, 0.228, 0.0, 0., 0.0, 0., 8},
     {"C", 12, 6, 2.44, 1.403, 1.635, 0.0, 0., 0.0, 0., 1},
+    // beta2 and beta4 from FRDM(2012), arXiv:1508.06294
     {"O", 16, 8, 2.608, -0.051, 0.513, -0.01, 0., -0.122, 0., 3},
     {"Ne", 20, 10, 2.8, 0.0, 0.57, 0.0, 0., 0.0, 0., 3},
     {"Ne22", 22, 10, 2.782, 0.0, 0.549, 0.0, 0., 0.0, 0., 3},
@@ -78,10 +76,12 @@ const NucleusTemplate kNucleusTemplates[] = {
     {"Cu", 63, 29, 4.163, 0, 0.606, 0.162, 0., 0.006, 0., 3},
     {"Fe", 56, 26, 4.106, 0, 0.519, 0.0, 0., 0.0, 0., 3},
     {"Pt", 195, 78, 6.78, 0, 0.54, 0.0, 0., 0.0, 0., 3},
-    {"U", 238, 92, 6.81, 0, 0.55, kUseCallerBeta2, 0., 0.093, 0., 3},
+    // beta2 = 0.28: no recorded source
+    {"U", 238, 92, 6.81, 0, 0.55, 0.28, 0., 0.093, 0., 3},
     {"Ru", 96, 44, 5.085, 0, 0.46, 0.158, 0., 0.0, 0., 3},
     {"Zr", 96, 40, 5.02, 0, 0.46, 0.0, 0., 0.0, 0., 3},
-    {"Xe", 129, 54, 5.42, 0, 0.57, kUseCallerBeta2, 0., -0.003, 0., 3},
+    // beta2 and beta4 from FRDM(2012), arXiv:1508.06294
+    {"Xe", 129, 54, 5.42, 0, 0.57, 0.162, 0., -0.003, 0., 3},
 };
 
 }  // namespace
@@ -114,7 +114,7 @@ void Glauber::findNucleusData(
     nucleus->R_WS = tmpl->R_WS;
     nucleus->w_WS = tmpl->w_WS;
     nucleus->a_WS = tmpl->a_WS;
-    nucleus->beta2 = std::isnan(tmpl->beta2) ? beta2 : tmpl->beta2;
+    nucleus->beta2 = tmpl->beta2;
     nucleus->beta3 = tmpl->beta3;
     nucleus->beta4 = tmpl->beta4;
     nucleus->gamma = tmpl->gamma;

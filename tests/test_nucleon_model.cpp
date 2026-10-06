@@ -203,7 +203,7 @@ TEST_CASE(
     };
     const double without = closePairFraction(0.);
     const double with = closePairFraction(0.3);
-    CHECK(without > 0.1);
+    CHECK(without > 0.05);
     CHECK(with < without / 4.);
 }
 
@@ -219,10 +219,12 @@ TEST_CASE(
          {0.0012159547566270032, 0.1424820795261299, 0.0059570302662717454},
          {0.012469481836384959, 0.095459167771926923, 0.044697293222758824}},
         // omega = 2 (transverse gamma-distributed radii)
-        {{0.14102867950110543, 0.0031792272509544805, 0.001158864499172682},
-         {0.031111785576826728, 5.8065139259764331e-06, 2.2767536952053522e-09},
-         {0.049810738087300084, 0.011669559549845221, 0.0016938040070285157}}};
-    const int expectedNq[2][3] = {{3, 3, 3}, {3, 2, 4}};
+        {{0.10838912598795411, 0.043272629724808741, 0.039804447034985278},
+         {6.424269855251876e-15, 7.0122015504103813e-17,
+          3.9299184869361983e-16},
+         {6.5356186543335552e-09, 0.00050504370277445413,
+          3.9983364009132724e-17}}};
+    const int expectedNq[2][3] = {{3, 3, 3}, {3, 2, 3}};
     const double points[3][2] = {{0.3, -0.2}, {0.6, 0.1}, {-0.1, -0.5}};
 
     for (int io = 0; io < 2; ++io) {
@@ -473,10 +475,10 @@ TEST_CASE(
          {0.067710670547497645, 0.0018023507228984231, 8.3750080501346203e-06},
          {0.04893515017337597, 0.006223252893511509, 0.0072116750964462545}},
         // omega = 2 (in the transverse plane)
-        {{0.16727568843466295, 0.016035469215763525, 0.0010477318473265445},
-         {0.023444465761166905, 0.0042044758566608734, 0.0016717585390443976},
-         {0.014312410429116873, 5.5722266360508553e-06,
-          2.7781712707968981e-13}}};
+        {{0.12445122085035619, 0.030008010471454388, 0.0014726305023888813},
+         {0.0013897276534128875, 0.00012969240868316879, 0.018993590089068438},
+         {0.00042511836921709927, 2.4288605315594275e-05,
+          9.3576497076028076e-20}}};
     const double points[3][2] = {{0.3, -0.2}, {0.6, 0.1}, {-0.1, -0.5}};
 
     for (int io = 0; io < 2; ++io) {
@@ -531,5 +533,48 @@ TEST_CASE(
             }
         }
         CHECK(someZ == PhysConst::isClose(omega, 1.));
+    }
+}
+
+TEST_CASE(
+    "HotSpotNucleon: omega close to 1 reproduces the transverse distribution "
+    "of the 3D Gaussian hot spots of omega 1") {
+    // For omega = 1 the transverse positions are a 2D Gaussian of variance
+    // BG per coordinate: <b^2> = 2 BG, <b^4> = 8 BG^2 and
+    // P(b^2 < 2 BG) = 1 - 1/e. For omega != 1, b^2 = 2 omega x BG with x of
+    // density Q(1/omega, x), which tends to e^{-x} for omega -> 1, giving
+    // <b^2> = (1 + omega) BG.
+    const double expectedFraction = 1. - std::exp(-1.);
+    for (const double omega : {0.99, 1., 1.01}) {
+        CAPTURE(omega);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.omega = omega;
+        // one hot spot, not moved back to the nucleon center
+        param.subnucleon.shiftConstituentQuarkProtonOrigin = false;
+        const HotSpotNucleon model(param);
+        Random random;
+        random.init_genrand64(43ULL);
+        random.setGammaIncCDF(omega);
+        const double BG = param.subnucleon.BG * hbarc * hbarc;  // fm^2
+
+        const int samples = 100000;
+        double sumB2 = 0., sumB4 = 0.;
+        int inside = 0;
+        for (int i = 0; i < samples; ++i) {
+            const HotSpotConfiguration hotSpots =
+                model.sampleHotSpots(random, 1);
+            const double b2 =
+                (hotSpots.x[0] * hotSpots.x[0] + hotSpots.y[0] * hotSpots.y[0])
+                / BG;
+            sumB2 += b2;
+            sumB4 += b2 * b2;
+            if (b2 < 2.) inside++;
+        }
+        CHECK(sumB2 / samples == doctest::Approx(2.).epsilon(0.02));
+        CHECK(sumB4 / samples == doctest::Approx(8.).epsilon(0.04));
+        CHECK(
+            static_cast<double>(inside) / samples
+            == doctest::Approx(expectedFraction).epsilon(0.02));
     }
 }

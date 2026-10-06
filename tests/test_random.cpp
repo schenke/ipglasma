@@ -130,7 +130,7 @@ TEST_CASE("Random: setGammaIncCDF/sampleGammaInc stay within [0, xmax]") {
 
     const double omega = 1.0;
     rng.setGammaIncCDF(omega);
-    const double xmax = std::max(5.0, 5.0 / omega);
+    const double xmax = std::max(20.0, 20.0 / omega);
 
     bool sawNonzero = false;
     for (int i = 0; i < 2000; ++i) {

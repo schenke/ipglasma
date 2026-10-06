@@ -197,10 +197,11 @@ struct SubnucleonParameters {
     /// PhysConst::inputTolerance), 3D positions with
     /// each coordinate Gaussian of variance BG (transverse
     /// \f$\langle b^2\rangle = 2B_G\f$); otherwise transverse positions
-    /// at radius \f$b=\sqrt{\omega x B_G}\f$, \f$x\f$ drawn with density
+    /// at radius \f$b=\sqrt{2\omega x B_G}\f$, \f$x\f$ drawn with density
     /// \f$\propto Q(1/\omega, x)\f$ (see Random::setGammaIncCDF()), so
-    /// \f$\langle b^2\rangle \approx (1+\omega)B_G/2\f$, which does not
-    /// approach the `1` case for \f$\omega\to1\f$.
+    /// \f$\langle b^2\rangle = (1+\omega)B_G\f$. For \f$\omega\to1\f$
+    /// the density becomes \f$\propto e^{-b^2/2B_G}\f$, the transverse
+    /// projection of the `1` case.
     double omega = 0.;
     /// Mean number of hot spots (constituent quarks) per nucleon for
     /// `nucleonModel hotspots`, at least 1 (`strings` always has 3). Sets

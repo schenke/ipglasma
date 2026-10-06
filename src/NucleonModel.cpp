@@ -164,7 +164,9 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
             double zq = sqrtBG * random.gauss();
             r_array[iq] = sqrt(xq * xq + yq * yq + zq * zq);
         } else {
-            double bperp = sqrtBG * sqrt(omega * random.sampleGammaInc());
+            // RMS radius is sqrt(2*B), this gives the prefactor below
+            double bperp =
+                sqrt(2.) * sqrtBG * sqrt(omega * random.sampleGammaInc());
             r_array[iq] = bperp;  // bperp in 2D (asuume z = 0)
         }
     }

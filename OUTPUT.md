@@ -390,9 +390,10 @@ then **deletes them**:
 
 The other files, among them the binary `.ipgt` files, stay on disk. At the
 end of the run, rank 0 copies the groups of every `RESULTS_rank<rank>.h5`
-into `RESULTS.h5` and deletes the per-rank file; a file that cannot be read,
-or one with a group that `RESULTS.h5` already holds, is kept (and the program
-warns). The script needs `python3` with `h5py` and `numpy`; the program calls
+into `RESULTS.h5` and deletes the per-rank file; a file that cannot be read
+or copied, or one with a group that `RESULTS.h5` already holds, is kept (and
+the program warns), and the groups already copied from it are removed again,
+so a later run can merge it. The script needs `python3` with `h5py` and `numpy`; the program calls
 it from the source tree (`utilities/combine_events_into_hdf5.py`), so the run
 can start in any directory.
 

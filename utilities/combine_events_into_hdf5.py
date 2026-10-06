@@ -186,9 +186,10 @@ def collect_IPGlasma_events_MPI(results_folder):
 def combine_hdf5_files_into_one(results_path, results_name):
     """Copies the groups of every <results_name>_rank*.h5 in results_path
     into <results_name>.h5 and deletes each per-rank file whose groups were
-    all copied. A file that cannot be read, or one with a group that
-    <results_name>.h5 already holds, is kept. Returns whether every file
-    was copied."""
+    all copied. A file that cannot be read or copied, or one with a group
+    that <results_name>.h5 already holds, is kept, and the groups copied
+    from it are removed again, so that a later run can merge it. Returns
+    whether every file was copied."""
     print("combining to one hdf5 file {}.h5 ...".format(results_name))
     h5_filelist = sorted(
             glob(path.join(results_path, "{}_rank*.h5".format(results_name))))
@@ -196,6 +197,8 @@ def combine_hdf5_files_into_one(results_path, results_name):
     with h5py.File("{}.h5".format(results_name), "a") as hfout:
         for filename in h5_filelist:
             print("processing {0} ... ".format(filename))
+            # the groups this file adds to hfout, removed again on failure
+            new_groups = []
             try:
                 with h5py.File(filename, "r") as hftemp:
                     existing = [g for g in hftemp.keys() if g in hfout]
@@ -203,9 +206,13 @@ def combine_hdf5_files_into_one(results_path, results_name):
                         raise RuntimeError(
                             "{0}.h5 already holds {1}".format(
                                 results_name, ", ".join(existing)))
-                    for gtemp in hftemp.keys():
+                    new_groups = list(hftemp.keys())
+                    for gtemp in new_groups:
                         hftemp.copy(hftemp[gtemp], hfout, name=gtemp)
-            except (OSError, RuntimeError) as error:
+            except Exception as error:
+                for gtemp in new_groups:
+                    if gtemp in hfout:
+                        del hfout[gtemp]
                 print("could not combine {0} ({1}); it is kept".format(
                     filename, error))
                 all_copied = False

@@ -147,7 +147,8 @@ class Evolution {
      */
     void checkGaussLaw(Lattice *lat, Parameters *param);
     /**
-     * Writes a binary snapshot (`evolvedFields<id>_it<it>.ipgf`) of the
+     * Writes a binary snapshot (`evolvedFields<id>_it<it>.ipgf`, \p it
+     * zero-padded to 8 digits) of the
      * six evolved fields (\f$\phi\f$, \f$\pi\f$, \c U (\f$E_1\f$), \c U2
      * (\f$E_2\f$), \c Ux, \c Uy) as full \f$3\times3\f$ complex
      * matrices per cell, little-endian single-precision, preceded by an

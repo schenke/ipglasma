@@ -152,10 +152,31 @@ TEST_CASE(
         CHECK(param.validationErrors().empty());
         param.collision.useNucleus = false;
         CHECK(param.validationErrors().size() == 1);
+        // read Wilson lines come with their nuclei's geometry
         param.collision.useNucleus = true;
         param.wilsonLines.readInitialWilsonLines = 2;
-        CHECK(param.validationErrors().size() == 1);
+        CHECK(param.validationErrors().empty());
     }
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: JIMWLK evolves read Wilson lines only to "
+    "smaller x") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.jimwlk.enabled = 1;
+    param.jimwlk.xProjectile = 1e-3;
+    param.jimwlk.xTarget = 2e-3;
+    param.wilsonLines.readInitialWilsonLines = 2;
+    param.wilsonLines.readX = 5e-3;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readX = 1.5e-3;  // below jimwlkXTarget
+    CHECK(param.validationErrors().size() == 1);
+    param.wilsonLines.readX = 0.;  // the initial lines
+    CHECK(param.validationErrors().empty());
+    param.jimwlk.enabled = 0;
+    param.wilsonLines.readX = 1e-4;
+    CHECK(param.validationErrors().empty());
 }
 
 TEST_CASE(

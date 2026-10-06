@@ -4,6 +4,7 @@
 #include <fstream>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "Glauber.h"  // for NucleusRole
 #include "Lattice.h"
@@ -141,11 +142,12 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "WilsonLineIO::readText/readBinary round-trip a synthetic "
-    "file into lat->U") {
+    "WilsonLineIO::readText/readBinary put every site of a synthetic file "
+    "in place, whatever the impact parameter") {
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
+    // the readers do not shift; Init::shiftFieldsWithImpactParameter() does
     param.event.b = 3.0;
 
     WilsonLineIO io;
@@ -168,20 +170,15 @@ TEST_CASE(
     }
 
     Lattice lat(&param, N);
-    io.readText(textPath, &param, NucleusRole::Projectile, lat.U);
+    io.readText(textPath, &param, lat.U);
     std::remove(textPath.c_str());
 
-    // a=1 (L=N), b=3: isProjectile shifts x by -b/2=-1.5 and rounds to the
-    // nearest column, as the binary reader does: ix = round(i - 1.5), so
-    // i=0,1 -> -2,-1 (skipped), i=2 -> ix=1, i=3 -> ix=2; column 0 keeps
-    // its initial identity.
-    for (int j = 0; j < N; ++j) {
-        CHECK(
-            lat.U[latticeIndex(0, j, N)].get(0).real() == doctest::Approx(1.));
-        const int pos2 = latticeIndex(1, j, N);  // from i=2
-        CHECK(lat.U[pos2].get(0).real() == doctest::Approx(2000. + j * 100.));
-        const int pos3 = latticeIndex(2, j, N);  // from i=3
-        CHECK(lat.U[pos3].get(0).real() == doctest::Approx(3000. + j * 100.));
+    for (int i = 0; i < N; ++i) {
+        for (int j = 0; j < N; ++j) {
+            CHECK(
+                lat.U[latticeIndex(i, j, N)].get(0).real()
+                == doctest::Approx(1000. * i + 100. * j));
+        }
     }
 
     // Binary format: header (N, Nc, L, a, dummy) then N*N*9 (re,im) pairs in
@@ -217,16 +214,19 @@ TEST_CASE(
     }
 
     Lattice lat2(&param, N);
-    io.readBinary(binPath, &param, NucleusRole::Target, lat2.U2);
+    io.readBinary(binPath, &param, lat2.U2);
     std::remove(binPath.c_str());
 
-    // isProjectile=false: ix = round(ixRaw + 1.5). ixRaw=0 -> ix=round(1.5)=2
-    // (round-half-to-even or away-from-zero both give 2 here).
-    for (int iy = 0; iy < N; ++iy) {
-        const int pos = latticeIndex(2, iy, N);
-        CHECK(
-            lat2.U2[pos].get(0).real()
-            == doctest::Approx(0. + 10. * 0 + iy * 100.));
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const Matrix &matrix = lat2.U2[latticeIndex(ix, iy, N)];
+            CHECK(
+                matrix.get(0).real()
+                == doctest::Approx(1000. * ix + 100. * iy));
+            CHECK(
+                matrix.get(5).imag()
+                == doctest::Approx(-(1000. * ix + 100. * iy + 12.)));
+        }
     }
 }
 
@@ -238,7 +238,6 @@ TEST_CASE(
         CAPTURE(format);
         Parameters param;
         makeInitTestParam(param, N);
-        param.event.b = 0.;
         param.wilsonLines.wilsonLinePath = ".";
         param.wilsonLines.writeWilsonLines = format;
 
@@ -253,9 +252,9 @@ TEST_CASE(
         WilsonLineIO io;
         Lattice lat2(&param, N);
         if (format == 1) {
-            io.readText(path, &param, NucleusRole::Projectile, lat2.U);
+            io.readText(path, &param, lat2.U);
         } else {
-            io.readBinary(path, &param, NucleusRole::Projectile, lat2.U);
+            io.readBinary(path, &param, lat2.U);
         }
         std::remove(path.c_str());
 
@@ -284,7 +283,6 @@ TEST_CASE(
         Parameters param;
         makeInitTestParam(param, N);
         param.lattice.L = 7.;
-        param.event.b = 0.;
         param.wilsonLines.wilsonLinePath = ".";
         param.wilsonLines.writeWilsonLines = format;
 
@@ -299,9 +297,9 @@ TEST_CASE(
         WilsonLineIO io;
         Lattice lat2(&param, N);
         if (format == 1) {
-            io.readText(path, &param, NucleusRole::Target, lat2.U2);
+            io.readText(path, &param, lat2.U2);
         } else {
-            io.readBinary(path, &param, NucleusRole::Target, lat2.U2);
+            io.readBinary(path, &param, lat2.U2);
         }
         std::remove(path.c_str());
 
@@ -365,4 +363,91 @@ TEST_CASE(
     param.jimwlk.enabled = true;
     param.jimwlk.initialX = 0.005;
     CHECK(WilsonLineIO::initialX(&param, NucleusRole::Target) == 0.005);
+}
+
+TEST_CASE(
+    "WilsonLineIO::writeGeometry -> readGeometry restores the nucleons, the "
+    "color-charge and thickness maps and QsMuRatio exactly") {
+    const int N = 4;
+    Parameters param;
+    makeInitTestParam(param, N);
+    param.wilsonLines.wilsonLinePath = ".";
+    param.run.eventsPerRank = 1;
+    param.collision.projectile = "Au";
+    param.collision.target = "Pb";
+    param.coupling.g = 1.;
+    param.colorCharge.QsMuRatio = 0.643;
+
+    Lattice lat(&param, N);
+    for (int pos = 0; pos < N * N; ++pos) {
+        lat.cells[pos]->setg2mu2A(0.1 * pos + 1. / 3.);
+        lat.cells[pos]->setg2mu2B(0.2 * pos + 1. / 7.);
+        lat.cells[pos]->setTpA(0.01 * pos);
+        lat.cells[pos]->setTpB(0.02 * pos + 1e-9);
+    }
+    std::vector<ReturnValue> nucleons(3);
+    for (int i = 0; i < 3; ++i) {
+        nucleons[i].x = 1.1 * i - 0.3;
+        nucleons[i].y = -0.7 * i + 1. / 3.;
+        nucleons[i].z = 0.5 * i;
+        nucleons[i].proton = (i != 1);
+        nucleons[i].collided = 1;
+    }
+
+    WilsonLineIO io;
+    // the same number as the Wilson-line files
+    CHECK(
+        WilsonLineIO::geometryFileName(&param, NucleusRole::Target)
+        == "./WilsonLineGeometry_2");
+    io.writeGeometry(&lat, &param, NucleusRole::Projectile, nucleons);
+    io.writeGeometry(&lat, &param, NucleusRole::Target, nucleons);
+
+    param.colorCharge.QsMuRatio = 0.5;  // the file's value wins
+    Lattice lat2(&param, N);
+    const NucleusGeometry projectile =
+        io.readGeometry(&lat2, &param, NucleusRole::Projectile);
+    const NucleusGeometry target =
+        io.readGeometry(&lat2, &param, NucleusRole::Target);
+    std::remove(WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile)
+                    .c_str());
+    std::remove(
+        WilsonLineIO::geometryFileName(&param, NucleusRole::Target).c_str());
+
+    CHECK(projectile.QsMuRatio == 0.643);
+    CHECK(target.QsMuRatio == 0.643);
+    for (const NucleusGeometry *geometry : {&projectile, &target}) {
+        REQUIRE(geometry->nucleons.size() == 3);
+        for (int i = 0; i < 3; ++i) {
+            CAPTURE(i);
+            CHECK(geometry->nucleons[i].x == nucleons[i].x);
+            CHECK(geometry->nucleons[i].y == nucleons[i].y);
+            CHECK(geometry->nucleons[i].z == nucleons[i].z);
+            CHECK(geometry->nucleons[i].proton == nucleons[i].proton);
+            CHECK(geometry->nucleons[i].collided == 0);
+        }
+    }
+    for (int pos = 0; pos < N * N; ++pos) {
+        CAPTURE(pos);
+        CHECK(lat2.cells[pos]->getg2mu2A() == lat.cells[pos]->getg2mu2A());
+        CHECK(lat2.cells[pos]->getg2mu2B() == lat.cells[pos]->getg2mu2B());
+        CHECK(lat2.cells[pos]->getTpA() == lat.cells[pos]->getTpA());
+        CHECK(lat2.cells[pos]->getTpB() == lat.cells[pos]->getTpB());
+    }
+}
+
+TEST_CASE(
+    "WilsonLineIO::xToRead: readWilsonLinesX if it is set, otherwise the "
+    "initial x") {
+    Parameters param;
+    makeLatticeParam(param, 4);
+    param.jimwlk.enabled = false;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.rapidityA = 1.;
+    param.wilsonLines.readX = 0.;
+    CHECK(
+        WilsonLineIO::xToRead(&param, NucleusRole::Projectile)
+        == WilsonLineIO::initialX(&param, NucleusRole::Projectile));
+    param.wilsonLines.readX = 2e-4;
+    CHECK(WilsonLineIO::xToRead(&param, NucleusRole::Projectile) == 2e-4);
+    CHECK(WilsonLineIO::xToRead(&param, NucleusRole::Target) == 2e-4);
 }

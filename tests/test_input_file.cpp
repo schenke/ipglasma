@@ -514,7 +514,10 @@ TEST_CASE(
     std::istringstream in(readSourceFile("input"));
     std::string line, oldInput;
     const std::vector<std::pair<std::string, std::string>> renames = {
-        {"maxTime", "maxtime"}, {"dMin", "d_min"}, {"jimwlkC", "c_jimwlk"}};
+        {"maxTime", "maxtime"},
+        {"dMin", "d_min"},
+        {"jimwlkC", "c_jimwlk"},
+        {"useRandomSeed", "useTimeForSeed"}};
     while (std::getline(in, line)) {
         for (const auto &[newKey, oldKey] : renames) {
             if (line.rfind(newKey + " ", 0) == 0) {

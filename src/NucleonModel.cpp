@@ -145,6 +145,8 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
     Random &random, int number) const {
     std::vector<double> x_array, y_array, z_array;
     const double sqrtBG = sqrt(BG_) * hbarc;  // fm
+    // one width for all hot spots of the nucleon: on average BGq_ (exactly
+    // BGq_ with BGqVar_ = 0), never below 0.09 GeV^-2
     const double BGqMean = BGq_;
     const double BGqVar = BGqVar_;
     const double BGq =

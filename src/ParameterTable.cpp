@@ -490,7 +490,6 @@ const std::vector<ParameterSpec> &parameterTable() {
             "rotateReactionPlane", &P::collision,
             &CollisionParameters::rotateReactionPlane),
         param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
-        param("useGaussian", &P::collision, &CollisionParameters::useGaussian),
         param(
             "useSmoothNucleus", &P::nucleus,
             &NucleusParameters::useSmoothNucleus),
@@ -868,6 +867,7 @@ const std::map<std::string, std::string> &replacedKeys() {
         {"writeEvolution", "removed: it had no effect"},
         {"readMultFromFile",
          "removed: no version of the code writes the files it read"},
+        {"useGaussian", "removed: useNucleus 0 always uses a constant g2mu"},
     };
     return replaced;
 }

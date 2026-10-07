@@ -191,41 +191,11 @@ double Init::computeEffectiveRapidity(Parameters *param) {
 
 void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
     const int N = param->lattice.size;
-    const double L = param->lattice.L;
-    if (param->collision.useGaussian) {
-        double sigmax = 0.35;
-        double sigmay = 0.5;
-        for (int ix = 0; ix < N; ix++)  // loop over all positions
-        {
-            double x = ix * L / double(N) - L / 2.;
-            for (int iy = 0; iy < N; iy++) {
-                double y = iy * L / double(N) - L / 2.;
-                int localpos = lat->positionFromXY(ix, iy);
-                double envelope = exp(
-                                      -(x * x / (2. * sigmax * sigmax)
-                                        + y * y / (2. * sigmay * sigmay)))
-                                  / (2. * M_PI * sigmax * sigmay);
-                lat->cells[localpos]->setg2mu2A(
-                    envelope * param->collision.g2mu * param->collision.g2mu
-                    / param->coupling.g / param->coupling.g);
-                lat->cells[localpos]->setg2mu2B(
-                    envelope * param->collision.g2mu * param->collision.g2mu
-                    / param->coupling.g / param->coupling.g);
-            }
-        }
-    } else {
-        for (int ix = 0; ix < N; ix++)  // loop over all positions
-        {
-            for (int iy = 0; iy < N; iy++) {
-                int localpos = lat->positionFromXY(ix, iy);
-                lat->cells[localpos]->setg2mu2A(
-                    param->collision.g2mu * param->collision.g2mu
-                    / param->coupling.g / param->coupling.g);
-                lat->cells[localpos]->setg2mu2B(
-                    param->collision.g2mu * param->collision.g2mu
-                    / param->coupling.g / param->coupling.g);
-            }
-        }
+    const double g2mu2 = param->collision.g2mu * param->collision.g2mu
+                         / param->coupling.g / param->coupling.g;
+    for (int pos = 0; pos < N * N; pos++) {
+        lat->cells[pos]->setg2mu2A(g2mu2);
+        lat->cells[pos]->setg2mu2B(g2mu2);
     }
     param->event.success = 1;
     messager_.info(

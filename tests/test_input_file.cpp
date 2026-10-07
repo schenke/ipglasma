@@ -610,12 +610,16 @@ TEST_CASE(
 TEST_CASE(
     "Parameters::readInput: a removed or replaced pre-2.0 key gets a hint") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
-        readSourceFile("input"), "\nNc 3\nwriteOutputs 2\n"));
+        readSourceFile("input"), "\nNc 3\nwriteOutputs 2\nuseGaussian 0\n"));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.size() == 2);
+    CHECK(errors.size() == 3);
     CHECK(anyContains(errors, "unknown parameter Nc (removed: "));
     CHECK(anyContains(
         errors, "unknown parameter writeOutputs (replaced by writeHydro"));
+    CHECK(anyContains(
+        errors,
+        "unknown parameter useGaussian (removed: useNucleus 0 always uses a "
+        "constant g2mu)"));
 }
 
 TEST_CASE(

@@ -35,7 +35,6 @@ targetX 0.0001
 useFluctuatingX 1
 xQsFactor 1
 useNucleus 1
-useGaussian 0
 useInputWSParams 0
 radiusWS 6.6
 diffusenessWS 0.52

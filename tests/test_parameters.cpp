@@ -160,19 +160,55 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: JIMWLK evolves read Wilson lines only to "
-    "smaller x") {
+    "Parameters::validationErrors: JIMWLK evolves sampled Wilson lines from "
+    "jimwlkInitialX only to smaller x") {
     Parameters param;
     makeValidBaseline(param);
     param.jimwlk.enabled = 1;
+    param.jimwlk.initialX = 0.01;
+    param.colorCharge.projectileX = 1e-3;
+    param.colorCharge.targetX = 0.01;  // no evolution
+    CHECK(param.validationErrors().empty());
+    param.colorCharge.targetX = 0.02;
+    std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find("must not be larger than jimwlkInitialX (0.01)")
+        != std::string::npos);
+    param.colorCharge.targetX = 1e-3;
+    param.colorCharge.projectileX = 0.02;
+    errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find("must not be larger than jimwlkInitialX")
+        != std::string::npos);
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: JIMWLK evolves read Wilson lines from "
+    "readWilsonLinesX only to smaller x") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.jimwlk.enabled = 1;
+    param.jimwlk.initialX = 0.01;
     param.colorCharge.projectileX = 1e-3;
     param.colorCharge.targetX = 2e-3;
     param.wilsonLines.readInitialWilsonLines = 2;
     param.wilsonLines.readX = 5e-3;
     CHECK(param.validationErrors().empty());
     param.wilsonLines.readX = 1.5e-3;  // below targetX
+    std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find("must not be larger than readWilsonLinesX (0.0015)")
+        != std::string::npos);
+    // the read x, not jimwlkInitialX, is where JIMWLK starts
+    param.wilsonLines.readX = 5e-3;
+    param.jimwlk.initialX = 1e-3;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readX = 0.;  // the initial lines, at jimwlkInitialX
     CHECK(param.validationErrors().size() == 1);
-    param.wilsonLines.readX = 0.;  // the initial lines
+    param.jimwlk.initialX = 0.01;
     CHECK(param.validationErrors().empty());
     param.jimwlk.enabled = 0;
     param.wilsonLines.readX = 1e-4;

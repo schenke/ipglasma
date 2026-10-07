@@ -184,17 +184,23 @@ std::vector<std::string> Parameters::validationErrors() const {
         fail(message);
     }
 
-    // JIMWLK evolves read Wilson lines from readWilsonLinesX to smaller x
-    if (jimwlk.enabled && wilsonLines.readInitialWilsonLines != 0
-        && wilsonLines.readX > 0.
-        && (wilsonLines.readX < colorCharge.projectileX
-            || wilsonLines.readX < colorCharge.targetX)) {
+    // JIMWLK evolves to smaller x: from readWilsonLinesX for read Wilson
+    // lines, otherwise from jimwlkInitialX
+    if (jimwlk.enabled
+        && (colorCharge.projectileX > xBeforeJimwlk(NucleusRole::Projectile)
+            || colorCharge.targetX > xBeforeJimwlk(NucleusRole::Target))) {
+        const bool readLines =
+            wilsonLines.readInitialWilsonLines != 0 && wilsonLines.readX > 0.;
         std::ostringstream message;
-        message << "readWilsonLinesX (" << wilsonLines.readX
-                << ") must not be smaller than projectileX ("
-                << colorCharge.projectileX << ") and targetX ("
-                << colorCharge.targetX
-                << "): JIMWLK evolves the read Wilson lines from there";
+        message << "projectileX (" << colorCharge.projectileX
+                << ") and targetX (" << colorCharge.targetX
+                << ") must not be larger than "
+                << (readLines ? "readWilsonLinesX (" : "jimwlkInitialX (")
+                << xBeforeJimwlk(NucleusRole::Projectile)
+                << "): JIMWLK evolves "
+                << (readLines ? "the read Wilson lines"
+                              : "the initial condition")
+                << " from there to smaller x";
         fail(message);
     }
 

@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 
+#include "NucleusRole.h"
 #include "PrettyOstream.h"
 #include "Random.h"
 
@@ -16,17 +17,6 @@
 /// integrands to keep \f$\xi=0\f$/\f$\xi=1\f$ away from a
 /// \f$\log(0)\f$ or division-by-zero singularity.
 #define TINY (1.0e-10)
-
-/**
- * Which of the two colliding nuclei a lattice/nucleon-sampling operation
- * applies to.
- */
-enum class NucleusRole {
-    /// The first (\f$A\f$) nucleus.
-    Projectile,
-    /// The second (\f$B\f$) nucleus.
-    Target,
-};
 
 /**
  * Selects which integrand evaluateIntegrand()/integral() sample.

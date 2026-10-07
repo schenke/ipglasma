@@ -125,16 +125,12 @@ void WilsonLineIO::write(
         std::ofstream Outfile1;
         Outfile1.open(wLineFile, std::ios::out | std::ios::binary);
 
-        double temp = (nucleus == NucleusRole::Projectile)
-                          ? param->colorCharge.rapidityA
-                          : param->colorCharge.rapidityB;
-
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
         Outfile1.write((char *)&Nc, sizeof(int));
         Outfile1.write((char *)&L, sizeof(double));
         Outfile1.write((char *)&a, sizeof(double));
-        Outfile1.write((char *)&temp, sizeof(double));
+        Outfile1.write((char *)&x, sizeof(double));
 
         double val1[2];
 
@@ -184,27 +180,12 @@ void WilsonLineIO::write(
     }
 }
 
-double WilsonLineIO::initialX(Parameters *param, NucleusRole nucleus) {
-    if (param->jimwlk.enabled) return param->jimwlk.initialX;
-    // the initial condition does not correspond to a fixed x
-    if (param->colorCharge.useFluctuatingX) return -1.;
-    const double rapidity = (nucleus == NucleusRole::Projectile)
-                                ? param->colorCharge.rapidityA
-                                : param->colorCharge.rapidityB;
-    return 0.01 * std::exp(-rapidity);
-}
-
 std::string WilsonLineIO::geometryFileName(
     Parameters *param, NucleusRole nucleus) {
     std::stringstream name;
     name << param->wilsonLines.wilsonLinePath << "/WilsonLineGeometry_"
          << fileNumber(param, nucleus);
     return name.str();
-}
-
-double WilsonLineIO::xToRead(Parameters *param, NucleusRole nucleus) {
-    if (param->wilsonLines.readX > 0.) return param->wilsonLines.readX;
-    return initialX(param, nucleus);
 }
 
 void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
@@ -218,10 +199,10 @@ void WilsonLineIO::read(Lattice *lat, Parameters *param, int format) {
     }
 
     string VOne_name = fileName(
-        param, xToRead(param, NucleusRole::Projectile), NucleusRole::Projectile,
-        format);
+        param, param->xBeforeJimwlk(NucleusRole::Projectile),
+        NucleusRole::Projectile, format);
     string VTwo_name = fileName(
-        param, xToRead(param, NucleusRole::Target), NucleusRole::Target,
+        param, param->xBeforeJimwlk(NucleusRole::Target), NucleusRole::Target,
         format);
 
     messager_ << "[WilsonLineIO::read]: Reading Wilson lines from files "
@@ -431,7 +412,8 @@ void WilsonLineIO::writeTrainingData(Lattice *lat, Parameters *param) {
              << "\"Nc\":" << Nc << ","
              << "\"L_fm\":" << L << ","
              << "\"a_fm\":" << a << ","
-             << "\"rapidity\":" << param->colorCharge.rapidity() << "}";
+             << "\"x_A\":" << param->initialX(NucleusRole::Projectile) << ","
+             << "\"x_B\":" << param->initialX(NucleusRole::Target) << "}";
     const std::string metadataString = metadata.str();
 
     std::stringstream filename;

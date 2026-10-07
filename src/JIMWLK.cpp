@@ -180,8 +180,10 @@ void JIMWLK::initializeNoise() {
 void JIMWLK::evolution() {
     initializeNoise();
 
-    // Calculate evolution steps for different nuclei
-    double x0 = startX(param_);
+    // Calculate evolution steps for different nuclei, from the x of the
+    // read Wilson lines, otherwise from jimwlkInitialX
+    const double x0A = param_.xBeforeJimwlk(NucleusRole::Projectile);
+    const double x0B = param_.xBeforeJimwlk(NucleusRole::Target);
     double ds = param_.jimwlk.Ds;
     bool saveSnapshots = param_.jimwlk.saveSnapshots;
     std::vector<double> xSnapshotList = param_.jimwlk.xSnapshotList;
@@ -192,26 +194,28 @@ void JIMWLK::evolution() {
     if (!isClose(as, 0.)) {
         // Fixed coupling
         steps_1 = static_cast<int>(
-            as * std::log(x0 / param_.jimwlk.xProjectile) / (M_PI * M_PI * ds)
+            as * std::log(x0A / param_.colorCharge.projectileX)
+                / (M_PI * M_PI * ds)
             + 0.5);
         steps_2 = static_cast<int>(
-            as * std::log(x0 / param_.jimwlk.xTarget) / (M_PI * M_PI * ds)
+            as * std::log(x0B / param_.colorCharge.targetX) / (M_PI * M_PI * ds)
             + 0.5);
         dlogx = M_PI * M_PI * ds / as;
     } else {
         // Running coupling
         steps_1 = static_cast<int>(
-            std::log(x0 / param_.jimwlk.xProjectile) / (M_PI * M_PI * ds)
+            std::log(x0A / param_.colorCharge.projectileX) / (M_PI * M_PI * ds)
             + 0.5);
         steps_2 = static_cast<int>(
-            std::log(x0 / param_.jimwlk.xTarget) / (M_PI * M_PI * ds) + 0.5);
+            std::log(x0B / param_.colorCharge.targetX) / (M_PI * M_PI * ds)
+            + 0.5);
     }
 
     runEvolutionLoop(
-        NucleusRole::Projectile, steps_1, x0, dlogx, saveSnapshots,
+        NucleusRole::Projectile, steps_1, x0A, dlogx, saveSnapshots,
         xSnapshotList);
     runEvolutionLoop(
-        NucleusRole::Target, steps_2, x0, dlogx, saveSnapshots, xSnapshotList);
+        NucleusRole::Target, steps_2, x0B, dlogx, saveSnapshots, xSnapshotList);
 }
 
 void JIMWLK::runEvolutionLoop(
@@ -261,15 +265,6 @@ void JIMWLK::runEvolutionLoop(
     }
     messager_ << "[JIMWLK::evolution]: Done.";
     messager_.flush("info");
-}
-
-double JIMWLK::startX(const Parameters &param) {
-    // Wilson lines read at readWilsonLinesX are evolved from there
-    if (param.wilsonLines.readInitialWilsonLines != 0
-        && param.wilsonLines.readX > 0.) {
-        return param.wilsonLines.readX;
-    }
-    return param.jimwlk.initialX;
 }
 
 std::vector<int> JIMWLK::snapshotSteps(

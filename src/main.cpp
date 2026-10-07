@@ -254,10 +254,10 @@ int main(int argc, char *argv[]) {
                     WilsonLineIO io;
                     io.write(
                         &lat, param, NucleusRole::Projectile,
-                        param->jimwlk.xProjectile);
+                        param->colorCharge.projectileX);
                     io.write(
                         &lat, param, NucleusRole::Target,
-                        param->jimwlk.xTarget);
+                        param->colorCharge.targetX);
                 }
             }
 

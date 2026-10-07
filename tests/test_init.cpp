@@ -21,48 +21,80 @@
 using PhysConst::hbarc;
 
 TEST_CASE(
-    "Init::computeEffectiveRapidities passes rapidity through unchanged "
+    "Init::computeEffectiveRapidity passes rapidity through unchanged "
     "when usePseudoRapidity is off") {
     Parameters param;
     makeInitTestParam(param, 4);
     param.colorCharge.usePseudoRapidity = false;
-    param.colorCharge.rapidityA = 1.5;
-    param.colorCharge.rapidityB = -0.8;
+    param.colorCharge.rapidity = 1.5;
 
     int nn[2] = {4, 4};
     Init init(nn);
-    const Rapidities rapidities = init.computeEffectiveRapidities(&param);
-    const double rapidityA = rapidities.projectile;
-    const double rapidityB = rapidities.target;
-
-    CHECK(rapidityA == doctest::Approx(1.5));
-    CHECK(rapidityB == doctest::Approx(-0.8));
+    CHECK(init.computeEffectiveRapidity(&param) == doctest::Approx(1.5));
 }
 
 TEST_CASE(
-    "Init::computeEffectiveRapidities converts pseudorapidity to rapidity "
+    "Init::computeEffectiveRapidity converts pseudorapidity to rapidity "
     "when enabled") {
     Parameters param;
     makeInitTestParam(param, 4);
     param.colorCharge.usePseudoRapidity = true;
-    param.colorCharge.rapidityA = 1.0;
-    param.colorCharge.rapidityB = 1.0;
+    param.colorCharge.rapidity = 1.0;
     param.colorCharge.jacobianMass = 0.14;
     param.collision.sqrtS = 200.0;
 
     int nn[2] = {4, 4};
     Init init(nn);
-    const Rapidities rapidities = init.computeEffectiveRapidities(&param);
-    const double rapidityA = rapidities.projectile;
-    const double rapidityB = rapidities.target;
+    const double rapidity = init.computeEffectiveRapidity(&param);
 
-    // Same pseudorapidity input on both sides must give the same rapidity
-    // output (the conversion formula is symmetric in A vs B), and the
-    // conversion must actually have changed the value (it wouldn't at
-    // pseudorapidity 0, but 1.0 is not a fixed point).
-    CHECK(rapidityA == doctest::Approx(rapidityB));
-    CHECK(rapidityA != doctest::Approx(1.0));
-    CHECK(std::isfinite(rapidityA));
+    // the conversion must actually have changed the value (it wouldn't at
+    // pseudorapidity 0, but 1.0 is not a fixed point)
+    CHECK(rapidity != doctest::Approx(1.0));
+    CHECK(std::isfinite(rapidity));
+}
+
+TEST_CASE(
+    "Init::computeCellColorCharge: Q_s^2 at projectileX/targetX with a fixed "
+    "x, and at jimwlkInitialX with JIMWLK") {
+    const int N = 4;
+    Parameters param;
+    makeInitTestParam(param, N);  // a = 1 fm
+    param.colorCharge.QsMuRatio = 1.;
+    param.coupling.g = 1.;
+    param.colorCharge.projectileX = 1e-3;  // y = ln 10
+    param.colorCharge.targetX = 1e-4;      // y = ln 100
+    param.jimwlk.initialX = 5e-3;          // y = ln 2
+    Lattice lat(&param, N);
+    const int pos = 5;
+    lat.cells[pos]->setTpA(1.);
+    lat.cells[pos]->setTpB(2.);
+
+    int nn[2] = {N, N};
+    Init init(nn);
+    const std::string fileName = writeLinearQsTable();  // Qs^2 = 2 T + 3 y
+    init.readQsTable(fileName);
+    std::remove(fileName.c_str());
+    // g^2 mu^2 = Qs^2 a^2 / hbarc^2 with QsMuRatio = g = 1
+    const double toLattice = 1. / (hbarc * hbarc);
+
+    param.jimwlk.enabled = false;
+    param.colorCharge.useFluctuatingX = false;
+    init.computeCellColorCharge(&lat, &param, pos, 1., /*rapidity=*/5.);
+    CHECK(
+        lat.cells[pos]->getg2mu2A()
+        == doctest::Approx((2. * 1. + 3. * std::log(10.)) * toLattice));
+    CHECK(
+        lat.cells[pos]->getg2mu2B()
+        == doctest::Approx((2. * 2. + 3. * std::log(100.)) * toLattice));
+
+    param.jimwlk.enabled = true;
+    init.computeCellColorCharge(&lat, &param, pos, 1., /*rapidity=*/5.);
+    CHECK(
+        lat.cells[pos]->getg2mu2A()
+        == doctest::Approx((2. * 1. + 3. * std::log(2.)) * toLattice));
+    CHECK(
+        lat.cells[pos]->getg2mu2B()
+        == doctest::Approx((2. * 2. + 3. * std::log(2.)) * toLattice));
 }
 
 TEST_CASE(

@@ -16,8 +16,8 @@ void makeJimwlkTestParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.rapidityA = 0.0;
-    param.colorCharge.rapidityB = 0.0;
+    param.colorCharge.projectileX = 0.01;
+    param.colorCharge.targetX = 0.01;
     param.jimwlk.mu0 = 0.2;
     param.jimwlk.LambdaQCD = 0.2;
     param.jimwlk.c = 0.2;
@@ -67,8 +67,8 @@ TEST_CASE(
     // Fixed coupling (jimwlk.alphaS > 0): steps_1 = as*log(x0/x_proj) /
     // (pi^2*ds) + 0.5. These values give steps_1 = steps_2 = 1.
     param.jimwlk.initialX = 0.01;
-    param.jimwlk.xProjectile = 0.008;
-    param.jimwlk.xTarget = 0.008;
+    param.colorCharge.projectileX = 0.008;
+    param.colorCharge.targetX = 0.008;
 
     Group group;
     Random random;
@@ -106,7 +106,7 @@ TEST_CASE(
 
 TEST_CASE(
     "JIMWLK::getAlphas: running-coupling branch matches an independently "
-    "computed reference value, and is sensitive to nFlavors/c_jimwlk") {
+    "computed reference value, and is sensitive to nFlavors/jimwlkC") {
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);
@@ -160,18 +160,4 @@ TEST_CASE(
     CHECK(
         JIMWLK::snapshotSteps(requested, x0, dlogx, steps)
         == std::vector<int> {0, 5, 6, 20, 0, -1, -1, -1});
-}
-
-TEST_CASE(
-    "JIMWLK::startX: Wilson lines read at readWilsonLinesX are evolved from "
-    "there") {
-    Parameters param;
-    param.jimwlk.initialX = 0.01;
-    param.wilsonLines.readInitialWilsonLines = 0;
-    param.wilsonLines.readX = 0.;
-    CHECK(JIMWLK::startX(param) == 0.01);
-    param.wilsonLines.readInitialWilsonLines = 2;
-    CHECK(JIMWLK::startX(param) == 0.01);  // the initial lines
-    param.wilsonLines.readX = 0.002;
-    CHECK(JIMWLK::startX(param) == 0.002);
 }

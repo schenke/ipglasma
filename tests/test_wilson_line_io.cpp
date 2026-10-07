@@ -82,18 +82,18 @@ TEST_CASE(
     REQUIRE(in.good());
 
     int n = 0, nc = 0;
-    double L = 0.0, a = 0.0, rapidity = 0.0;
+    double L = 0.0, a = 0.0, x = 0.0;
     in.read(reinterpret_cast<char *>(&n), sizeof(int));
     in.read(reinterpret_cast<char *>(&nc), sizeof(int));
     in.read(reinterpret_cast<char *>(&L), sizeof(double));
     in.read(reinterpret_cast<char *>(&a), sizeof(double));
-    in.read(reinterpret_cast<char *>(&rapidity), sizeof(double));
+    in.read(reinterpret_cast<char *>(&x), sizeof(double));
 
     CHECK(n == length);
     CHECK(nc == 3);
     CHECK(L == doctest::Approx(param.lattice.L));
     CHECK(a == doctest::Approx(param.lattice.L / length));
-    CHECK(rapidity == doctest::Approx(param.colorCharge.rapidityA));
+    CHECK(x == -1.);  // no fixed x
 
     // The writer nests ix outer / iy inner (see Lattice.cpp), so the
     // site-th 9-(re, im)-pair block in the file must be lat.U[site], i.e.
@@ -112,6 +112,34 @@ TEST_CASE(
     CHECK(in.good());
     in.close();
     std::remove(path.c_str());
+}
+
+TEST_CASE(
+    "WilsonLineIO::write (binary format) stores the x of the Wilson lines in "
+    "the header") {
+    const int length = 4;
+    Parameters param;
+    makeLatticeParam(param, length);
+    param.wilsonLines.writeWilsonLines = 2;  // binary
+    Lattice lat(&param, length);
+
+    for (const auto &[nucleus, x] :
+         {std::pair<NucleusRole, double> {NucleusRole::Projectile, 1e-3},
+          {NucleusRole::Target, 2.5e-4}}) {
+        const double xValue = x;
+        CAPTURE(xValue);
+        WilsonLineIO().write(&lat, &param, nucleus, x);
+        const std::string path = WilsonLineIO::fileName(&param, x, nucleus);
+        std::ifstream in(path, std::ios::binary);
+        REQUIRE(in.good());
+        // skip N, Nc, L and a
+        in.seekg(2 * sizeof(int) + 2 * sizeof(double));
+        double xInFile = 0.;
+        in.read(reinterpret_cast<char *>(&xInFile), sizeof(double));
+        CHECK(xInFile == x);
+        in.close();
+        std::remove(path.c_str());
+    }
 }
 
 TEST_CASE(
@@ -344,28 +372,6 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "WilsonLineIO::initialX: the x of the initial Wilson lines' file "
-    "names") {
-    Parameters param;
-    makeLatticeParam(param, 4);
-    param.jimwlk.enabled = false;
-    param.colorCharge.useFluctuatingX = false;
-    param.colorCharge.rapidityA = 1.;
-    param.colorCharge.rapidityB = 2.;
-    CHECK(
-        WilsonLineIO::initialX(&param, NucleusRole::Projectile)
-        == doctest::Approx(0.01 * std::exp(-1.)));
-    CHECK(
-        WilsonLineIO::initialX(&param, NucleusRole::Target)
-        == doctest::Approx(0.01 * std::exp(-2.)));
-    param.colorCharge.useFluctuatingX = true;
-    CHECK(WilsonLineIO::initialX(&param, NucleusRole::Projectile) < 0.);
-    param.jimwlk.enabled = true;
-    param.jimwlk.initialX = 0.005;
-    CHECK(WilsonLineIO::initialX(&param, NucleusRole::Target) == 0.005);
-}
-
-TEST_CASE(
     "WilsonLineIO::writeGeometry -> readGeometry restores the nucleons, the "
     "color-charge and thickness maps and QsMuRatio exactly") {
     const int N = 4;
@@ -408,8 +414,9 @@ TEST_CASE(
         io.readGeometry(&lat2, &param, NucleusRole::Projectile);
     const NucleusGeometry target =
         io.readGeometry(&lat2, &param, NucleusRole::Target);
-    std::remove(WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile)
-                    .c_str());
+    std::remove(
+        WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile)
+            .c_str());
     std::remove(
         WilsonLineIO::geometryFileName(&param, NucleusRole::Target).c_str());
 
@@ -433,21 +440,4 @@ TEST_CASE(
         CHECK(lat2.cells[pos]->getTpA() == lat.cells[pos]->getTpA());
         CHECK(lat2.cells[pos]->getTpB() == lat.cells[pos]->getTpB());
     }
-}
-
-TEST_CASE(
-    "WilsonLineIO::xToRead: readWilsonLinesX if it is set, otherwise the "
-    "initial x") {
-    Parameters param;
-    makeLatticeParam(param, 4);
-    param.jimwlk.enabled = false;
-    param.colorCharge.useFluctuatingX = false;
-    param.colorCharge.rapidityA = 1.;
-    param.wilsonLines.readX = 0.;
-    CHECK(
-        WilsonLineIO::xToRead(&param, NucleusRole::Projectile)
-        == WilsonLineIO::initialX(&param, NucleusRole::Projectile));
-    param.wilsonLines.readX = 2e-4;
-    CHECK(WilsonLineIO::xToRead(&param, NucleusRole::Projectile) == 2e-4);
-    CHECK(WilsonLineIO::xToRead(&param, NucleusRole::Target) == 2e-4);
 }

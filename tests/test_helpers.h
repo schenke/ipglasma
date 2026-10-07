@@ -4,9 +4,27 @@
 #define TESTS_TEST_HELPERS_H_
 
 #include <complex>
+#include <fstream>
+#include <string>
 
 #include "Matrix.h"
 #include "Parameters.h"
+
+// Writes a nuclear Q_s table with Qs^2 = 2 T + 3 y, which bilinear
+// interpolation reproduces exactly: 240 values T = 0.5 + 0.1 iT (outer)
+// times 44 rapidities y = 0.25 iy (inner), one "y T Qs^2" line each.
+inline std::string writeLinearQsTable() {
+    const std::string fileName = "ipglasma_test_qs_table.in";
+    std::ofstream out(fileName);
+    for (int iT = 0; iT < 240; ++iT) {
+        for (int iy = 0; iy < 44; ++iy) {
+            const double T = 0.5 + 0.1 * iT;
+            const double y = 0.25 * iy;
+            out << y << " " << T << " " << 2. * T + 3. * y << "\n";
+        }
+    }
+    return fileName;
+}
 
 // Matches test_lattice.cpp's makeLatticeParam: Parameters holds a
 // PrettyOstream member, which holds a non-copyable/non-movable
@@ -19,8 +37,8 @@ inline void makeInitTestParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.rapidityA = 0.0;
-    param.colorCharge.rapidityB = 0.0;
+    param.colorCharge.projectileX = 0.01;
+    param.colorCharge.targetX = 0.01;
 }
 
 // A deterministic, position-dependent (not merely diagonal) matrix, so
@@ -56,8 +74,8 @@ inline void makeLatticeParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.rapidityA = 0.0;
-    param.colorCharge.rapidityB = 0.0;
+    param.colorCharge.projectileX = 0.01;
+    param.colorCharge.targetX = 0.01;
     param.wilsonLines.wilsonLinePath = ".";
 }
 

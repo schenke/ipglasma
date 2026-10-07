@@ -313,6 +313,10 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"jimwlkLambdaQCD", "0", "must be positive"},
              {"writeWilsonLines", "3", "must be one of 0, 1, 2"},
              {"readInitialWilsonLines", "3", "must be one of 0, 1, 2"},
+             {"sqrtS", "0", "must be positive"},
+             {"projectileX", "0", "must be positive"},
+             {"targetX", "-1e-3", "must be positive"},
+             {"jimwlkInitialX", "0", "must be positive"},
          }) {
         CAPTURE(c.key);
         CAPTURE(c.value);
@@ -386,7 +390,7 @@ TEST_CASE(
     reread.writeInputParameters(rewritten);
     CHECK(rewritten.str() == written.str());
     // exact doubles, not rounded ones
-    CHECK(reread.jimwlk.xProjectile == param.jimwlk.xProjectile);
+    CHECK(reread.colorCharge.projectileX == param.colorCharge.projectileX);
     CHECK(reread.run.dtau == param.run.dtau);
 }
 
@@ -472,6 +476,70 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::readInput: projectileX and targetX are only read with "
+    "useFluctuatingX 0") {
+    // fluctuating x (which excludes JIMWLK): x comes from the local Q_s
+    std::string text;
+    {
+        std::istringstream in(
+            exampleInputWith("projectileX", ""));  // drop projectileX
+        std::string line;
+        while (std::getline(in, line)) {
+            if (line.rfind("targetX ", 0) == 0) continue;
+            if (line.rfind("useFluctuatingX ", 0) == 0) {
+                line = "useFluctuatingX 1";
+            } else if (line.rfind("useJIMWLK ", 0) == 0) {
+                line = "useJIMWLK 0";
+            }
+            text += line + "\n";
+        }
+    }
+    Parameters param;
+    CHECK(param.readInput(inputFromText(text)).empty());
+    CHECK(param.validationErrors().empty());
+
+    // a fixed x (the shipped input): both are required
+    const std::vector<std::string> errors =
+        readErrors(exampleInputWith("projectileX", ""));
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "test: projectileX is required but not given");
+}
+
+TEST_CASE(
+    "Parameters::readInput: xQsFactor is only read, and must be positive, "
+    "with useFluctuatingX 1") {
+    // a fixed x (the shipped input): not needed
+    CHECK(readErrors(exampleInputWith("xQsFactor", "")).empty());
+    CHECK(readErrors(exampleInputWith("xQsFactor", "0")).empty());
+
+    // a fluctuating x (without JIMWLK)
+    auto fluctuatingInputWith = [](const std::string &value) {
+        std::istringstream in(exampleInputWith("xQsFactor", value));
+        std::string line, text;
+        while (std::getline(in, line)) {
+            if (line.rfind("useFluctuatingX ", 0) == 0) {
+                line = "useFluctuatingX 1";
+            } else if (line.rfind("useJIMWLK ", 0) == 0) {
+                line = "useJIMWLK 0";
+            }
+            text += line + "\n";
+        }
+        return text;
+    };
+    CHECK(readErrors(fluctuatingInputWith("1")).empty());
+    std::vector<std::string> errors = readErrors(fluctuatingInputWith(""));
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "test: xQsFactor is required but not given");
+    for (const std::string value : {"0", "-1"}) {
+        CAPTURE(value);
+        errors = readErrors(fluctuatingInputWith(value));
+        REQUIRE(errors.size() == 1);
+        CHECK(anyContains(errors, "xQsFactor " + value));
+        CHECK(anyContains(errors, "must be positive"));
+    }
+}
+
+TEST_CASE(
     "Parameters::readInput: jimwlkXSnapshotList is only read with "
     "jimwlkSaveSnapshots 1") {
     std::string text;
@@ -522,7 +590,6 @@ TEST_CASE(
     const std::vector<std::pair<std::string, std::string>> renames = {
         {"maxTime", "maxtime"},
         {"dMin", "d_min"},
-        {"jimwlkC", "c_jimwlk"},
         {"useRandomSeed", "useTimeForSeed"},
         {"writeWilsonLines", "writeInitialWilsonLines"}};
     while (std::getline(in, line)) {
@@ -543,15 +610,25 @@ TEST_CASE(
 TEST_CASE(
     "Parameters::readInput: a removed or replaced pre-2.0 key gets a hint") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
-        readSourceFile("input"), "Rapidity 0\nNc 3\nwriteOutputs 2\n"));
+        readSourceFile("input"), "\nNc 3\nwriteOutputs 2\n"));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.size() == 3);
-    CHECK(anyContains(
-        errors,
-        "unknown parameter Rapidity (replaced by rapidityA and rapidityB)"));
+    CHECK(errors.size() == 2);
     CHECK(anyContains(errors, "unknown parameter Nc (removed: "));
     CHECK(anyContains(
         errors, "unknown parameter writeOutputs (replaced by writeHydro"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: the removed rapidityA/rapidityB point to their "
+    "replacements") {
+    const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
+        readSourceFile("input"), "rapidityA 0\nrapidityB 0\n"));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.size() == 2);
+    CHECK(anyContains(
+        errors, "unknown parameter rapidityA (replaced by projectileX"));
+    CHECK(anyContains(
+        errors, "unknown parameter rapidityB (replaced by targetX"));
 }
 
 TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {

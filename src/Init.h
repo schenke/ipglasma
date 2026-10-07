@@ -5,6 +5,7 @@
 #define SRC_INIT_H_
 
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "CollisionGeometry.h"
@@ -33,14 +34,6 @@ enum class InitializationMethod {
     /// Read previously written Wilson lines from a binary file
     /// (WilsonLineIO::read() with format `2`).
     ReadWlineBinary
-};
-
-/// The rapidities of the two nuclei, see Init::computeEffectiveRapidities().
-struct Rapidities {
-    /// Rapidity of the projectile (nucleus A).
-    double projectile;
-    /// Rapidity of the target (nucleus B).
-    double target;
 };
 
 /// Per-site color-charge scales of the two nuclei, see
@@ -130,6 +123,12 @@ class Init {
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber,
         InitializationMethod init_method);
     /**
+     * Reads the nuclear \f$Q_s\f$ table that setColorChargeDensity() and
+     * computeCellColorCharge() interpolate (NuclearQsTable::read()).
+     * \param[in] fileName Path of the table file.
+     */
+    void readQsTable(const std::string &fileName);
+    /**
      * Shifts the projectile's and target's Wilson-line fields by
      * \f$\mp b/2\f$ along the impact-parameter direction so they sit at
      * their correct separated positions on the shared lattice, filling
@@ -161,20 +160,20 @@ class Init {
     /**
      * Sets \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$ at one cell from its
      * already-accumulated \f$T_p^A\f$/\f$T_p^B\f$, via NuclearQsTable::qs2()
-     * and (if enabled) the fluctuating-\f$x\f$ iterative solve. Called
-     * from setColorChargeDensity()'s per-cell loop
+     * and (with `useFluctuatingX 1`) the fluctuating-\f$x\f$ iterative
+     * solve. Called from setColorChargeDensity()'s per-cell loop
      * \param[in,out] lat Lattice to read \f$T_p\f$ from and write
      * \f$g^2\mu^2\f$ into.
      * \param[in] param Simulation parameters.
      * \param[in] ipos Flat cell index.
      * \param[in] a Lattice spacing [fm].
-     * \param[in] rapidityA Effective rapidity for the projectile (see
-     * computeEffectiveRapidities()).
-     * \param[in] rapidityB Effective rapidity for the target.
+     * \param[in] rapidity With `useFluctuatingX 1`, the rapidity the
+     * fluctuating-\f$x\f$ iteration starts from (see
+     * computeEffectiveRapidity()); not used with a fixed \f$x\f$, which
+     * is Parameters::initialX().
      */
     void computeCellColorCharge(
-        Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
-        double rapidityB);
+        Lattice *lat, Parameters *param, int ipos, double a, double rapidity);
     /**
      * computeCellColorCharge()'s `useFluctuatingX` iterative solve
      * for one nucleus's \f$g^2\mu^2\f$ at this cell: iterates the
@@ -213,15 +212,15 @@ class Init {
     void setColorChargeDensity(
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber);
     /**
-     * Converts \p param's input rapidity to true rapidity when it's
+     * Converts `param->colorCharge.rapidity` to true rapidity when it's
      * flagged as pseudorapidity, otherwise passes it through unchanged.
      * \param[in] param Simulation parameters;
      * `param->colorCharge.usePseudoRapidity` selects the conversion,
      * `param->colorCharge.jacobianMass`/`param->collision.sqrtS` parameterize
      * it.
-     * \return The effective rapidities of the projectile and the target.
+     * \return The effective rapidity.
      */
-    Rapidities computeEffectiveRapidities(Parameters *param);
+    double computeEffectiveRapidity(Parameters *param);
     /**
      * setColorChargeDensity()'s `!useNucleus` (constant \f$g^2\mu\f$
      * background) branch: sets every cell's \f$g^2\mu_A^2\f$/

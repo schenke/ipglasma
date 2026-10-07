@@ -160,19 +160,55 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: JIMWLK evolves read Wilson lines only to "
-    "smaller x") {
+    "Parameters::validationErrors: JIMWLK evolves sampled Wilson lines from "
+    "jimwlkInitialX only to smaller x") {
     Parameters param;
     makeValidBaseline(param);
     param.jimwlk.enabled = 1;
-    param.jimwlk.xProjectile = 1e-3;
-    param.jimwlk.xTarget = 2e-3;
+    param.jimwlk.initialX = 0.01;
+    param.colorCharge.projectileX = 1e-3;
+    param.colorCharge.targetX = 0.01;  // no evolution
+    CHECK(param.validationErrors().empty());
+    param.colorCharge.targetX = 0.02;
+    std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find("must not be larger than jimwlkInitialX (0.01)")
+        != std::string::npos);
+    param.colorCharge.targetX = 1e-3;
+    param.colorCharge.projectileX = 0.02;
+    errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find("must not be larger than jimwlkInitialX")
+        != std::string::npos);
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: JIMWLK evolves read Wilson lines from "
+    "readWilsonLinesX only to smaller x") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.jimwlk.enabled = 1;
+    param.jimwlk.initialX = 0.01;
+    param.colorCharge.projectileX = 1e-3;
+    param.colorCharge.targetX = 2e-3;
     param.wilsonLines.readInitialWilsonLines = 2;
     param.wilsonLines.readX = 5e-3;
     CHECK(param.validationErrors().empty());
-    param.wilsonLines.readX = 1.5e-3;  // below jimwlkXTarget
+    param.wilsonLines.readX = 1.5e-3;  // below targetX
+    std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find("must not be larger than readWilsonLinesX (0.0015)")
+        != std::string::npos);
+    // the read x, not jimwlkInitialX, is where JIMWLK starts
+    param.wilsonLines.readX = 5e-3;
+    param.jimwlk.initialX = 1e-3;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readX = 0.;  // the initial lines, at jimwlkInitialX
     CHECK(param.validationErrors().size() == 1);
-    param.wilsonLines.readX = 0.;  // the initial lines
+    param.jimwlk.initialX = 0.01;
     CHECK(param.validationErrors().empty());
     param.jimwlk.enabled = 0;
     param.wilsonLines.readX = 1e-4;
@@ -231,24 +267,34 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: rejects negative rapidities only with a "
-    "fixed x, where they index the Q_s table directly") {
+    "Parameters::validationErrors: rejects an x above the Q_s table only "
+    "where Q_s^2 is looked up at it") {
     Parameters param;
     makeValidBaseline(param);
     param.wilsonLines.readInitialWilsonLines = 0;
     param.colorCharge.useFluctuatingX = false;
-    param.colorCharge.rapidityA = 0.;
-    param.colorCharge.rapidityB = -0.5;
+    param.colorCharge.projectileX = 0.01;
+    param.colorCharge.targetX = 0.02;
     CHECK(param.validationErrors().size() == 1);
-    param.colorCharge.rapidityA = -0.5;
-    param.colorCharge.rapidityB = 0.;
+    param.colorCharge.projectileX = 0.02;
+    param.colorCharge.targetX = 0.01;
     CHECK(param.validationErrors().size() == 1);
 
-    // a fluctuating x looks up the table at y >= 0 only
+    // a fluctuating x does not use projectileX and targetX
     param.colorCharge.useFluctuatingX = true;
     CHECK(param.validationErrors().empty());
-    // no color charges are sampled
+    // with JIMWLK, Q_s^2 is looked up at jimwlkInitialX
     param.colorCharge.useFluctuatingX = false;
+    param.jimwlk.enabled = 1;
+    param.jimwlk.initialX = 0.01;
+    param.colorCharge.projectileX = 1e-3;
+    param.colorCharge.targetX = 1e-3;
+    CHECK(param.validationErrors().empty());
+    param.jimwlk.initialX = 0.02;
+    CHECK(param.validationErrors().size() == 1);
+    param.jimwlk.enabled = 0;
+    param.colorCharge.projectileX = 0.02;
+    // no color charges are sampled
     param.wilsonLines.readInitialWilsonLines = 2;
     CHECK(param.validationErrors().empty());
     param.wilsonLines.readInitialWilsonLines = 0;
@@ -271,4 +317,65 @@ TEST_CASE(
     const std::string problem =
         param.loadPosteriorParameterSetsFromFile(file.path(), parsed);
     CHECK(problem == file.path() + ":3: x is not a number");
+}
+
+TEST_CASE(
+    "Parameters::initialX: jimwlkInitialX with JIMWLK, none with a "
+    "fluctuating x, otherwise projectileX/targetX") {
+    Parameters param;
+    param.jimwlk.enabled = false;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.projectileX = 1e-3;
+    param.colorCharge.targetX = 2e-3;
+    param.jimwlk.initialX = 0.005;
+    CHECK(param.initialX(NucleusRole::Projectile) == 1e-3);
+    CHECK(param.initialX(NucleusRole::Target) == 2e-3);
+    param.colorCharge.useFluctuatingX = true;
+    CHECK(param.initialX(NucleusRole::Projectile) < 0.);
+    CHECK(param.initialX(NucleusRole::Target) < 0.);
+    param.colorCharge.useFluctuatingX = false;
+    param.jimwlk.enabled = true;
+    CHECK(param.initialX(NucleusRole::Projectile) == 0.005);
+    CHECK(param.initialX(NucleusRole::Target) == 0.005);
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: rejects JIMWLK together with a "
+    "fluctuating x") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.jimwlk.enabled = 1;
+    param.jimwlk.initialX = 0.01;
+    param.colorCharge.useFluctuatingX = false;
+    CHECK(param.validationErrors().empty());
+    param.colorCharge.useFluctuatingX = true;
+    const std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].find(
+            "useJIMWLK = 1 and useFluctuatingX = 1 are mutually "
+            "exclusive")
+        != std::string::npos);
+    param.jimwlk.enabled = 0;
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
+    "Parameters::xBeforeJimwlk: readWilsonLinesX if Wilson lines are read "
+    "and it is set, otherwise the initial x") {
+    Parameters param;
+    param.jimwlk.enabled = false;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.projectileX = 1e-3;
+    param.wilsonLines.readInitialWilsonLines = 2;
+    param.wilsonLines.readX = 0.;
+    CHECK(param.xBeforeJimwlk(NucleusRole::Projectile) == 1e-3);
+    param.wilsonLines.readX = 2e-4;
+    CHECK(param.xBeforeJimwlk(NucleusRole::Projectile) == 2e-4);
+    CHECK(param.xBeforeJimwlk(NucleusRole::Target) == 2e-4);
+    // not read: the initial x, jimwlkInitialX where JIMWLK starts
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.jimwlk.enabled = true;
+    param.jimwlk.initialX = 0.01;
+    CHECK(param.xBeforeJimwlk(NucleusRole::Projectile) == 0.01);
 }

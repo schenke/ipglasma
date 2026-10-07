@@ -45,12 +45,30 @@ TEST_CASE(
 
     int nn[2] = {4, 4};
     Init init(nn);
-    const double rapidity = init.computeEffectiveRapidity(&param);
+    auto rapidityOf = [&](double eta) {
+        param.colorCharge.rapidity = eta;
+        return init.computeEffectiveRapidity(&param);
+    };
 
-    // the conversion must actually have changed the value (it wouldn't at
-    // pseudorapidity 0, but 1.0 is not a fixed point)
-    CHECK(rapidity != doctest::Approx(1.0));
-    CHECK(std::isfinite(rapidity));
+    // independent reference: y = atanh(p_z/E) for p_T = P and mass m
+    const double m = 0.14;
+    const double P = 0.13 + 0.32 * std::pow(200.0 / 1000., 0.115);
+    for (double eta : {-2.5, -1.0, 0.3, 1.0, 4.0}) {
+        CAPTURE(eta);
+        const double pz = P * std::sinh(eta);
+        const double E =
+            std::sqrt(P * P * std::cosh(eta) * std::cosh(eta) + m * m);
+        CHECK(rapidityOf(eta) == doctest::Approx(std::atanh(pz / E)));
+        // a massive particle has |y| < |eta|, with the sign of eta
+        CHECK(std::abs(rapidityOf(eta)) < std::abs(eta));
+        CHECK(rapidityOf(-eta) == doctest::Approx(-rapidityOf(eta)));
+    }
+    // eta = 0 is y = 0 (issue #66: a misplaced parenthesis gave y != 0)
+    CHECK(rapidityOf(0.) == doctest::Approx(0.).epsilon(1e-12));
+
+    // massless particles have y = eta
+    param.colorCharge.jacobianMass = 0.;
+    CHECK(rapidityOf(1.7) == doctest::Approx(1.7));
 }
 
 TEST_CASE(

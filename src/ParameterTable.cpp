@@ -356,6 +356,22 @@ bool wilsonLinesRead(const Parameters &p) {
 }
 
 /**
+ * Condition for the fixed x of the nuclei; with a fluctuating x, x comes
+ * from the local Q_s (and useJIMWLK 1 requires useFluctuatingX 0).
+ * \param[in] p The parameters read so far.
+ * \return Whether `useFluctuatingX` is 0.
+ */
+bool fixedX(const Parameters &p) { return !p.colorCharge.useFluctuatingX; }
+
+/**
+ * Condition for the factor in the fluctuating x = xQsFactor Q_s
+ * e^{+-y}/sqrt(s).
+ * \param[in] p The parameters read so far.
+ * \return Whether `useFluctuatingX` is 1.
+ */
+bool fluctuatingX(const Parameters &p) { return p.colorCharge.useFluctuatingX; }
+
+/**
  * Condition for the T^{mu nu} format.
  * \param[in] p The parameters read so far.
  * \return Whether `writeTmunu` is set.
@@ -622,11 +638,6 @@ const std::vector<ParameterSpec> &parameterTable() {
             &ColorChargeParameters::nucleusQsTableFileName),
 
         // rapidity and x
-        param(
-            "projectileX", &P::colorCharge, &ColorChargeParameters::projectileX)
-            .check(positive()),
-        param("targetX", &P::colorCharge, &ColorChargeParameters::targetX)
-            .check(positive()),
         param("rapidity", &P::colorCharge, &ColorChargeParameters::rapidity),
         param(
             "usePseudoRapidity", &P::colorCharge,
@@ -637,7 +648,15 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "useFluctuatingX", &P::colorCharge,
             &ColorChargeParameters::useFluctuatingX),
+        param(
+            "projectileX", &P::colorCharge, &ColorChargeParameters::projectileX)
+            .onlyIf(fixedX)
+            .check(positive()),
+        param("targetX", &P::colorCharge, &ColorChargeParameters::targetX)
+            .onlyIf(fixedX)
+            .check(positive()),
         param("xQsFactor", &P::colorCharge, &ColorChargeParameters::xQsFactor)
+            .onlyIf(fluctuatingX)
             .check(positive()),
 
         // running coupling
@@ -826,8 +845,10 @@ const std::map<std::string, std::string> &replacedKeys() {
         {"useConstituentQuarkProton",
          "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
         {"Rapidity",
-         "replaced by projectileX and targetX (the x of the nuclei) and "
-         "rapidity (the rapidity of the spectra)"},
+         "replaced by projectileX and targetX (the x of the nuclei; "
+         "Rapidity y was  setting x = 0.01 exp(-y)) and by rapidity which is "
+         "the rapidity of "
+         "the spectra"},
         {"rapidityA",
          "replaced by projectileX (the x of the projectile) and rapidity "
          "(the rapidity of the spectra)"},

@@ -523,24 +523,30 @@ void CollisionGeometry::logQuantities(
               << param->event.averageQsmin << " GeV";
     messager_.flush("info");
 
-    messager_ << "[CollisionGeometry::computeQuantities]: resulting Y(Qs(max)*"
-              << param->colorCharge.xQsFactor << ") = "
-              << log(0.01
-                     / (param->event.averageQs * param->colorCharge.xQsFactor
-                        / param->collision.sqrtS));
-    messager_.flush("info");
-    messager_ << "[CollisionGeometry::computeQuantities]: resulting Y(Qs(avg)*"
-              << param->colorCharge.xQsFactor << ") = "
-              << log(0.01
-                     / (param->event.averageQsAvg * param->colorCharge.xQsFactor
-                        / param->collision.sqrtS));
-    messager_.flush("info");
-    messager_ << "[CollisionGeometry::computeQuantities]: resulting Y(Qs(min)*"
-              << param->colorCharge.xQsFactor << ") =  "
-              << log(0.01
-                     / (param->event.averageQsmin * param->colorCharge.xQsFactor
-                        / param->collision.sqrtS));
-    messager_.flush("info");
+    // the rapidities a fluctuating x = xQsFactor Q_s/sqrt(s) corresponds to
+    if (param->colorCharge.useFluctuatingX) {
+        messager_
+            << "[CollisionGeometry::computeQuantities]: resulting Y(Qs(max)*"
+            << param->colorCharge.xQsFactor << ") = "
+            << log(0.01
+                   / (param->event.averageQs * param->colorCharge.xQsFactor
+                      / param->collision.sqrtS));
+        messager_.flush("info");
+        messager_
+            << "[CollisionGeometry::computeQuantities]: resulting Y(Qs(avg)*"
+            << param->colorCharge.xQsFactor << ") = "
+            << log(0.01
+                   / (param->event.averageQsAvg * param->colorCharge.xQsFactor
+                      / param->collision.sqrtS));
+        messager_.flush("info");
+        messager_
+            << "[CollisionGeometry::computeQuantities]: resulting Y(Qs(min)*"
+            << param->colorCharge.xQsFactor << ") =  "
+            << log(0.01
+                   / (param->event.averageQsmin * param->colorCharge.xQsFactor
+                      / param->collision.sqrtS));
+        messager_.flush("info");
+    }
 }
 
 void CollisionGeometry::writeUsedParametersFile(

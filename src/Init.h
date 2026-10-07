@@ -224,9 +224,8 @@ class Init {
     /**
      * setColorChargeDensity()'s `!useNucleus` (constant \f$g^2\mu\f$
      * background) branch: sets every cell's \f$g^2\mu_A^2\f$/
-     * \f$g^2\mu_B^2\f$ to `param->collision.g2mu`'s value, optionally
-     * modulated by a fixed Gaussian envelope (`useGaussian`); marks
-     * the event a success.
+     * \f$g^2\mu_B^2\f$ to `param->collision.g2mu`'s value; marks the
+     * event a success.
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
      */

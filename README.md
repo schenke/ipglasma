@@ -65,7 +65,6 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - 1: nucleus with finite geometry
   - 0: infinite target with constant color charge density controlled by `g2mu` (in lattice units)
 - **g2mu**: with `useNucleus 0`, the constant $g^2\mu$ in lattice units
-- **useGaussian**: with `useNucleus 0`, `1` multiplies the constant $g^2\mu^2$ by a Gaussian $e^{-x^2/(2\sigma_x^2) - y^2/(2\sigma_y^2)}/(2\pi\sigma_x\sigma_y)$ with $\sigma_x = 0.35$ fm and $\sigma_y = 0.5$ fm, centered on the lattice
 - **projectile** and **target**: specify nuclei
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details

@@ -70,10 +70,6 @@ struct CollisionParameters {
     /// Whether to use nuclei with finite geometry (`1`) or a constant
     /// \f$g^2\mu\f$ distribution over the lattice (`0`).
     bool useNucleus = false;
-    /// With `useNucleus 0`, whether to multiply the constant
-    /// \f$g^2\mu^2\f$ by a normalized Gaussian of widths 0.35 fm in
-    /// \f$x\f$ and 0.5 fm in \f$y\f$ (`1`).
-    bool useGaussian = false;
     /// \f$g^2\mu\f$ [lattice units], used for the constant
     /// (`useNucleus=0`) color-charge-density mode.
     double g2mu = 0.;

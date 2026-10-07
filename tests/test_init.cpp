@@ -163,7 +163,6 @@ TEST_CASE(
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.collision.useGaussian = false;
     param.collision.g2mu = 6.0;
     param.coupling.g = 2.0;
     Lattice lat(&param, N);
@@ -177,30 +176,6 @@ TEST_CASE(
         CHECK(lat.cells[pos]->getg2mu2B() == doctest::Approx(9.0));
     }
     CHECK(param.event.success == 1);
-}
-
-TEST_CASE(
-    "Init::setConstantColorChargeDensity: Gaussian background peaks at the "
-    "lattice center with the documented envelope") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    param.collision.useGaussian = true;
-    param.collision.g2mu = 6.0;
-    param.coupling.g = 2.0;
-    Lattice lat(&param, N);
-
-    int nn[2] = {N, N};
-    Init init(nn);
-    init.setConstantColorChargeDensity(&lat, &param);
-
-    // Center cell: x = ix*L/N - L/2 = 0 at ix = N/2 (same for y).
-    const double sigmax = 0.35, sigmay = 0.5;
-    const double envelope = 1.0 / (2.0 * M_PI * sigmax * sigmay);
-    const int centerPos = latticeIndex(N / 2, N / 2, N);
-    const double expected = envelope * 6.0 * 6.0 / 2.0 / 2.0;
-    CHECK(lat.cells[centerPos]->getg2mu2A() == doctest::Approx(expected));
-    CHECK(lat.cells[centerPos]->getg2mu2B() == doctest::Approx(expected));
 }
 
 TEST_CASE(

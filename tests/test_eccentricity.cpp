@@ -49,10 +49,9 @@ TEST_CASE(
             const double x = -param.lattice.L / 2. + a * ix;
             const double y = -param.lattice.L / 2. + a * iy;
             const int pos = lat.positionFromXY(ix, iy);
-            lat.cells[pos]->setEpsilon(
-                std::exp(
-                    -x * x / (2. * sigmaX * sigmaX)
-                    - y * y / (2. * sigmaY * sigmaY)));
+            lat.cells[pos]->setEpsilon(std::exp(
+                -x * x / (2. * sigmaX * sigmaX)
+                - y * y / (2. * sigmaY * sigmaY)));
             lat.cells[pos]->setutau(1.0);
         }
     }

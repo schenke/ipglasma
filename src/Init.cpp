@@ -181,10 +181,8 @@ double Init::computeEffectiveRapidity(Parameters *param) {
     const double rapidity =
         0.5
         * log(
-            sqrt(pow(cosh(input), 2.) + m * m / (P * P))
-            + sinh(input)
-                  / (sqrt(pow(cosh(input), 2.) + m * m / (P * P))
-                     - sinh(input)));
+            (sqrt(pow(cosh(input), 2.) + m * m / (P * P)) + sinh(input))
+            / (sqrt(pow(cosh(input), 2.) + m * m / (P * P)) - sinh(input)));
     messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
               << rapidity;
     messager_.flush("info");

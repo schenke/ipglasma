@@ -146,15 +146,15 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 
 ### Coupling
 - **g**: coupling constant $g$ of the classical Yang-Mills fields; with fixed coupling, $\alpha_s = g^2/(4\pi)$
-- **runningCoupling**: `0` for the fixed coupling. `1` rescales the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities by $g^2/(4\pi\alpha_s(Q))$, with $\alpha_s(Q) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (Q/\Lambda_\mathrm{QCD})^{2/c}]}$, $\beta_0 = (11 N_c - 2 N_f)/3$ and $Q$ = `runningCouplingQsFactor` times the $Q_s$ chosen by `runWithQs` and `runWithLocalQs`. The energy density and $T^{\mu\nu}$ output always use the smaller $Q_s$ averaged over the overlap region. Needs `useNucleus 1` and `LambdaQCD` < `mu0`
+- **runningCoupling**: `0` for the fixed coupling. `1` rescales the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities by $g^2/(4\pi\alpha_s(Q))$, with $\alpha_s(Q) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (Q/\Lambda_\mathrm{QCD})^{2/c}]}$, $\beta_0 = (11 N_c - 2 N_f)/3$ and $Q$ = `runningCouplingQsFactor` times the $Q_s$ chosen by `runWithQs` and `runWithLocalQs`. All of them use the same factor in each cell, except that the gluon multiplicity uses $k_T$ with `runWithKt 1`. Needs `useNucleus 1` and `LambdaQCD` < `mu0`
 - **mu0**: $\mu_0$ in GeV, keeps $\alpha_s$ finite for $Q \to 0$
 - **c**: how sharply $\alpha_s$ changes over from the $\mu_0$ to the $Q$ regime; must be positive
 - **LambdaQCD** (optional, default `0.2`): $\Lambda_\mathrm{QCD}$ in GeV
 - **nFlavors** (optional, default `3`): number of quark flavors $N_f$ in $\beta_0$, between 0 and 16; also used by the JIMWLK running coupling
 - **runWithQs**: which of the two nuclei's $Q_s$ sets the scale: `0` the smaller, `1` the average, `2` the larger, averaged ($\sqrt{\langle Q_s^2 \rangle}$) over the overlap region, or per cell with `runWithLocalQs 1`
 - **runningCouplingQsFactor**: factor multiplying $Q_s$ (or $k_T$ with `runWithKt 1`) to give the scale $Q$
-- **runWithLocalQs**: `1` uses the local $Q_s$ of each cell for the gluon multiplicity and the eccentricities instead of the overlap-region average
-- **runWithKt**: `1` computes the gluon multiplicity with $\alpha_s(Q)$, $Q$ = `runningCouplingQsFactor` $k_T$, in each $k_T$ bin instead of with the $Q_s$-based coupling
+- **runWithLocalQs**: `1` uses the local $Q_s$ of each cell instead of the overlap-region average (for the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities)
+- **runWithKt**: `1` computes the gluon multiplicity with $\alpha_s(Q)$, $Q$ = `runningCouplingQsFactor` $k_T$, in each $k_T$ bin instead of with the $Q_s$-based coupling; the energy density and $T^{\mu\nu}$ output and the eccentricities keep the $Q_s$-based coupling
 
 
 ### Output

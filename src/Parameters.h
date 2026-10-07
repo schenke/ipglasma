@@ -320,7 +320,8 @@ struct CouplingParameters {
     double runningCouplingQsFactor = 0.;
     /// Whether \f$\alpha_s\f$ should run with the local \f$Q_s\f$ from
     /// nuclei A and B (`1`) or the average (`0`); both still use \c
-    /// runWithQs's max/average/min choice.
+    /// runWithQs's max/average/min choice. Applies to the field outputs,
+    /// the gluon spectrum and the eccentricity weights alike.
     bool runWithLocalQs = false;
     /// Whether \f$\alpha_s\f$ should run with \f$k_T\f$ (`1`) instead;
     /// overrides any \c runWithQs-based running if set.

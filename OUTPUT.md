@@ -33,8 +33,11 @@ files themselves.
   - `etaSizeOutput` copies in η with spacing `dEtaOutput`, centred on η = 0.
     The fields are boost invariant, so all η slices are identical.
 - **Running coupling.** With `runningCoupling 1`, the hydro and T^μν outputs
-  are multiplied by the factor g²/(4π α_s), with α_s evaluated at
-  `runningCouplingQsFactor` × ⟨Q_s⟩(min).
+  are multiplied by the factor g²/(4π α_s) of the gluon spectrum and the
+  eccentricities, with α_s evaluated at `runningCouplingQsFactor` × the Q_s
+  that `runWithQs` selects: averaged over the overlap region, or with
+  `runWithLocalQs 1` the one of each cell, interpolated to the output grid
+  like the fields.
 - **Byte order.** The binary formats with a JSON header (`.ipgt`, `.ipgw`,
   `.ipgf` and the Wilson-line geometry files) are little-endian by
   definition, and the code refuses to write (or, for the geometry files, to
@@ -397,7 +400,7 @@ no gluons (dN/dy = 0), which ends the event. One line:
 | 7–9 | `N/A` (placeholders) |
 | 10, 11 | dN/dy, dE/dy [GeV] for k_T > 3 GeV |
 | 12, 13 | dN/dy, dE/dy [GeV] for k_T > 6 GeV |
-| 14 | g²/(4π α_s) at `runningCouplingQsFactor` × ⟨Q_s⟩(max), whatever `runWithQs` is (issue #55); also written with `runningCoupling 0`, where it is not applied |
+| 14 | g²/(4π α_s) at `runningCouplingQsFactor` × the ⟨Q_s⟩ that `runWithQs` selects; 1 with `runningCoupling 0`. With `runWithLocalQs 1` or `runWithKt 1`, the factor applied to the spectrum varies per cell or k_T bin, and this is the one at the event-averaged ⟨Q_s⟩ |
 
 ## Gluon spectrum
 

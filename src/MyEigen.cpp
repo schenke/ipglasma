@@ -73,6 +73,36 @@ void closeBufferedTextOutput(ofstream &output, const string &filename) {
 }
 
 /**
+ * Bilinearly interpolates per-cell values, given the four
+ * surrounding-cell indices (`pos1`/`pos2` share the low-\f$y\f$ row,
+ * `pos3`/`pos4` the high-\f$y\f$ row) and the fractional offsets
+ * within that cell. Each pair counts as `0` when out of the lattice.
+ * \param[in] pos1 Low-\f$x\f$, low-\f$y\f$ corner index.
+ * \param[in] pos2 High-\f$x\f$, low-\f$y\f$ corner index.
+ * \param[in] pos3 Low-\f$x\f$, high-\f$y\f$ corner index.
+ * \param[in] pos4 High-\f$x\f$, high-\f$y\f$ corner index.
+ * \param[in] N Lattice side length, used to range-check each index.
+ * \param[in] fracx Fractional \f$x\f$ offset within the cell, `[0,1)`.
+ * \param[in] fracy Fractional \f$y\f$ offset within the cell, `[0,1)`.
+ * \param[in] valueAt Returns the value of the cell at a position.
+ * \return The bilinearly interpolated value.
+ */
+template <typename ValueAt>
+double interpolateCorners(
+    int pos1, int pos2, int pos3, int pos4, int N, double fracx, double fracy,
+    ValueAt valueAt) {
+    double x1 = 0.;
+    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0 && pos2 < N * N) {
+        x1 = (1. - fracx) * valueAt(pos1) + fracx * valueAt(pos2);
+    }
+    double x2 = 0.;
+    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0 && pos4 < N * N) {
+        x2 = (1. - fracx) * valueAt(pos3) + fracx * valueAt(pos4);
+    }
+    return (1. - fracy) * x1 + fracy * x2;
+}
+
+/**
  * Bilinearly interpolates a per-cell scalar field, given the four
  * surrounding-cell indices (`pos1`/`pos2` share the low-\f$y\f$ row,
  * `pos3`/`pos4` the high-\f$y\f$ row) and the fractional offsets
@@ -100,27 +130,34 @@ void closeBufferedTextOutput(ofstream &output, const string &filename) {
 double interpolateCellField(
     Lattice *lat, int pos1, int pos2, int pos3, int pos4, int N, double fracx,
     double fracy, double (Cell::*getter)() const, bool takeAbs = false) {
-    double x1 = 0.;
-    if (pos1 >= 0 && pos1 < N * N && pos2 >= 0 && pos2 < N * N) {
-        double v1 = (lat->cells[pos1]->*getter)();
-        double v2 = (lat->cells[pos2]->*getter)();
-        if (takeAbs) {
-            v1 = abs(v1);
-            v2 = abs(v2);
-        }
-        x1 = (1. - fracx) * v1 + fracx * v2;
-    }
-    double x2 = 0.;
-    if (pos3 >= 0 && pos3 < N * N && pos4 >= 0 && pos4 < N * N) {
-        double v3 = (lat->cells[pos3]->*getter)();
-        double v4 = (lat->cells[pos4]->*getter)();
-        if (takeAbs) {
-            v3 = abs(v3);
-            v4 = abs(v4);
-        }
-        x2 = (1. - fracx) * v3 + fracx * v4;
-    }
-    return (1. - fracy) * x1 + fracy * x2;
+    return interpolateCorners(
+        pos1, pos2, pos3, pos4, N, fracx, fracy, [&](int pos) {
+            const double value = (lat->cells[pos]->*getter)();
+            return takeAbs ? abs(value) : value;
+        });
+}
+
+/**
+ * Bilinearly interpolates the running-coupling factor to an output
+ * point, like interpolateCellField() interpolates a cell field.
+ * \param[in] coupling The factor of every lattice cell.
+ * \param[in] pos1 Low-\f$x\f$, low-\f$y\f$ corner index.
+ * \param[in] pos2 High-\f$x\f$, low-\f$y\f$ corner index.
+ * \param[in] pos3 Low-\f$x\f$, high-\f$y\f$ corner index.
+ * \param[in] pos4 High-\f$x\f$, high-\f$y\f$ corner index.
+ * \param[in] N Lattice side length.
+ * \param[in] fracx Fractional \f$x\f$ offset within the cell, `[0,1)`.
+ * \param[in] fracy Fractional \f$y\f$ offset within the cell, `[0,1)`.
+ * \return The interpolated factor, or `coupling.uniform` if the factor
+ * is the same in every cell.
+ */
+double interpolateCouplingFactor(
+    const CouplingFactor &coupling, int pos1, int pos2, int pos3, int pos4,
+    int N, double fracx, double fracy) {
+    if (coupling.perCell.empty()) return coupling.uniform;
+    return interpolateCorners(
+        pos1, pos2, pos3, pos4, N, fracx, fracy,
+        [&](int pos) { return coupling.perCell[pos]; });
 }
 
 /**
@@ -526,8 +563,8 @@ void MyEigen::writeTmunu4D(Lattice *lat, Parameters *param, int it) {
 
 double MyEigen::writeHydroText(
     Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly,
-    int N, double L, double a, double dtau, double gfactor, int hx, int hy,
-    int heta, double hL, double deta, double ha, double tau0) {
+    int N, double L, double a, double dtau, const CouplingFactor &coupling,
+    int hx, int hy, int heta, double hL, double deta, double ha, double tau0) {
     double Etot = 0.;
     const bool writeText = param->output.writeHydro;
     // writeJazma() normalizes with Etot
@@ -600,6 +637,8 @@ double MyEigen::writeHydroText(
                     pos4 = lat->positionFromXY(xposUp, yposUp);
 
                     fracy = (y - ylow) / a;
+                    const double gfactor = interpolateCouplingFactor(
+                        coupling, pos1, pos2, pos3, pos4, N, fracx, fracy);
 
                     // Note: the interpolated utau computed here would be
                     // immediately overwritten below by the u^mu
@@ -706,8 +745,8 @@ double MyEigen::writeHydroText(
 
 void MyEigen::writeRawTmunu(
     Lattice *lat, Parameters *param, int it, int N, double L, double a,
-    double dtau, double gfactor, int hx, int hy, int heta, double hL,
-    double deta, double ha, double tau0) {
+    double dtau, const CouplingFactor &coupling, int hx, int hy, int heta,
+    double hL, double deta, double ha, double tau0) {
     if (!param->output.writeTmunu) return;
 
     double resultT00, resultT0x, resultT0y, resultT0eta, resultTxx, resultTxy;
@@ -767,6 +806,8 @@ void MyEigen::writeRawTmunu(
 
                 fracx = (x - xlow) / a;
                 fracy = (y - ylow) / a;
+                const double gfactor = interpolateCouplingFactor(
+                    coupling, pos1, pos2, pos3, pos4, N, fracx, fracy);
 
                 resultT00 = interpolateCellField(
                     lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
@@ -1064,27 +1105,14 @@ void MyEigen::flowVelocity4DImpl(
     // output for hydro
     if (!param->output.anyFieldOutput()) return;
 
-    double g = param->coupling.g;
-    double gfactor;
     int hx = param->output.sizeOutput;
     int hy = hx;
     int heta = param->output.etaSizeOutput;
     double hL = param->output.LOutput;
     double deta = param->output.dEtaOutput;
-    double c = param->coupling.c;
-    double muZero = param->coupling.mu0;
-
-    if (param->coupling.runningCoupling) {
-        // always with the smaller Q_s averaged over the overlap region,
-        // whatever runWithQs selects; the local Q_s makes no sense here,
-        // since the fields have moved since the collision
-        gfactor = computeRunningCouplingGfactorFromScale(
-            g, muZero, c, param->coupling.LambdaQCD, param->coupling.nFlavors,
-            param->coupling.runningCouplingQsFactor
-                * param->event.averageQsmin);
-    } else {
-        gfactor = 1.;
-    }
+    // the running-coupling factor of the gluon spectrum and the
+    // eccentricity weights (issue #55)
+    const CouplingFactor coupling = latticeCouplingFactor(lat, param);
 
     if (hL > L) {
         messager_.warning(
@@ -1096,10 +1124,10 @@ void MyEigen::flowVelocity4DImpl(
     double ha = hL / static_cast<double>(hx);
 
     const double Etot = writeHydroText(
-        lat, param, it, finalFlag, tmunuOnly, N, L, a, dtau, gfactor, hx, hy,
+        lat, param, it, finalFlag, tmunuOnly, N, L, a, dtau, coupling, hx, hy,
         heta, hL, deta, ha, tau0);
     writeRawTmunu(
-        lat, param, it, N, L, a, dtau, gfactor, hx, hy, heta, hL, deta, ha,
+        lat, param, it, N, L, a, dtau, coupling, hx, hy, heta, hL, deta, ha,
         tau0);
     if (tmunuOnly) return;
     writeJazma(lat, param, it, Etot, N, L, a, dtau, hx, hy, heta, hL, deta, ha);

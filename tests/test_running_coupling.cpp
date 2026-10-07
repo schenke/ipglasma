@@ -130,3 +130,61 @@ TEST_CASE(
             == doctest::Approx(factorAt(0.)));
     }
 }
+
+TEST_CASE(
+    "eventRunningCouplingGfactor and latticeCouplingFactor: the factor of "
+    "computeRunningCouplingGfactor, uniform unless Q_s is local") {
+    const int N = 4;
+    Parameters param;
+    makeLatticeParam(param, N);
+    param.coupling.g = 1.3;
+    param.coupling.c = 0.2;
+    param.coupling.mu0 = 0.3;
+    param.coupling.LambdaQCD = 0.2;
+    param.coupling.nFlavors = 3;
+    param.coupling.runningCouplingQsFactor = 0.5;
+    param.colorCharge.QsMuRatio = 0.6;
+    param.event.averageQsmin = 0.8;
+    param.event.averageQsAvg = 1.1;
+    param.event.averageQs = 1.7;
+    Lattice lat(&param, N);
+    for (int pos = 0; pos < N * N; pos++) {
+        lat.cells[pos]->setg2mu2A(0.02 * (pos + 1));
+        lat.cells[pos]->setg2mu2B(0.03 * (N * N - pos));
+    }
+    const double a = param.lattice.L / N;
+    auto cellFactor = [&](int pos) {
+        return computeRunningCouplingGfactor(
+            &lat, &param, pos, N, a, param.coupling.g, param.coupling.c,
+            param.coupling.mu0);
+    };
+
+    param.coupling.runningCoupling = false;
+    CHECK(eventRunningCouplingGfactor(&param) == 1.);
+    CouplingFactor factor = latticeCouplingFactor(&lat, &param);
+    CHECK(factor.perCell.empty());
+    CHECK(factor.uniform == 1.);
+
+    param.coupling.runningCoupling = true;
+    param.coupling.runWithLocalQs = false;
+    const double averages[3] = {0.8, 1.1, 1.7};  // runWithQs 0 / 1 / 2
+    for (int choice = 0; choice < 3; choice++) {
+        CAPTURE(choice);
+        param.coupling.runWithQs = choice;
+        CHECK(eventAverageQs(&param) == averages[choice]);
+        CHECK(eventRunningCouplingGfactor(&param) == cellFactor(5));
+        factor = latticeCouplingFactor(&lat, &param);
+        CHECK(factor.perCell.empty());
+        CHECK(factor.uniform == cellFactor(5));
+    }
+
+    param.coupling.runWithLocalQs = true;
+    param.coupling.runWithQs = 1;
+    factor = latticeCouplingFactor(&lat, &param);
+    REQUIRE(factor.perCell.size() == static_cast<std::size_t>(N * N));
+    for (int pos = 0; pos < N * N; pos++) {
+        CAPTURE(pos);
+        CHECK(factor.perCell[pos] == cellFactor(pos));
+    }
+    CHECK(factor.perCell[5] != factor.perCell[6]);
+}

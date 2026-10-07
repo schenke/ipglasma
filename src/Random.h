@@ -172,13 +172,13 @@ class Random {
 
     /**
      * Builds the tabulated inverse-CDF sampler sampleGammaInc() draws
-     * from: 1000 abscissas \f$x_i = i \cdot x_{\max}/1000\f$ for
-     * \f$i=0,\ldots,999\f$ (so evenly spaced over \f$[0, x_{\max})\f$,
-     * \f$x_{\max} = \max(5, 5/\omega)\f$, never reaching \f$x_{\max}\f$
+     * from: 4000 abscissas \f$x_i = i \cdot x_{\max}/4000\f$ for
+     * \f$i=0,\ldots,3999\f$ (so evenly spaced over \f$[0, x_{\max})\f$,
+     * \f$x_{\max} = \max(20, 20/\omega)\f$, never reaching \f$x_{\max}\f$
      * itself), paired with the regularized upper incomplete gamma
      * function \f$Q(1/\omega, x)\f$'s cumulative sum evaluated at each
      * bin's *left* edge (i.e. `gammaIncCDF_[i]` excludes bin `i`'s own
-     * weight), normalized by the sum over all 1000 bins. Consequently
+     * weight), normalized by the sum over all 4000 bins. Consequently
      * the table's last entry is strictly below `1`, not `1` itself;
      * sampleGammaInc() maps the remaining upper-tail probability (any
      * draw above that last entry) onto the last abscissa rather than

@@ -291,8 +291,10 @@ void Random::gaussBulk(
 void Random::setGammaIncCDF(const double omega) {
     gammaIncCDF_.clear();
     gammaIncCDFx_.clear();
-    double xmax = std::max(5., 5. / omega);
-    int nX = 1000;
+    // the tail beyond xmax is negligible (Q(1, 20) ~ 2e-9): a cut at 5
+    // lowered <x> by ~3% and made <b^2> jump at omega = 1
+    double xmax = std::max(20., 20. / omega);
+    int nX = 4000;
     gammaIncCDF_.resize(nX, 0.);
     gammaIncCDFx_.resize(nX, 0.);
     double CDF = 0.;

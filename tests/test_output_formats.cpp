@@ -243,6 +243,10 @@ TEST_CASE(
     "[2][2][N][N][3][3] float32 data") {
     Parameters param;
     makeOutputTestParam(param);
+    param.jimwlk.enabled = false;
+    param.colorCharge.useFluctuatingX = false;
+    param.colorCharge.projectileX = 1e-3;
+    param.colorCharge.targetX = 2e-3;
     Lattice lat(&param, N);
     for (int pos = 0; pos < N * N; ++pos) {
         lat.U[pos] = makeTestMatrix(pos);
@@ -263,6 +267,8 @@ TEST_CASE(
         metadata.find("\"format\":\"ipglasma-initial-wilson-lines\"")
         != std::string::npos);
     CHECK(metadata.find("\"shape\":[2,2,8,8,3,3]") != std::string::npos);
+    CHECK(metadata.find("\"x_A\":0.001,\"x_B\":0.002}") != std::string::npos);
+    CHECK(metadata.find("rapidity") == std::string::npos);
 
     const std::size_t elements = 2 * 2 * N * N * 9;
     std::vector<float> data(elements);

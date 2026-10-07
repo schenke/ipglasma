@@ -31,7 +31,6 @@ TEST_CASE("WilsonLineIO::write (text format) writes a non-empty file") {
     param.wilsonLines.writeWilsonLines = 1;  // text
     param.colorCharge.useFluctuatingX =
         true;  // with this option, no x value in the generated filename
-    param.colorCharge.rapidity = 0.7;  // written to the header
     Lattice lat(&param, length);
 
     WilsonLineIO().write(&lat, &param, NucleusRole::Projectile);
@@ -57,7 +56,6 @@ TEST_CASE(
     param.wilsonLines.writeWilsonLines = 2;  // binary
     param.colorCharge.useFluctuatingX =
         true;  // with this option, no x value in the generated filename
-    param.colorCharge.rapidity = 0.7;  // written to the header
     Lattice lat(&param, length);
 
     // Give two off-diagonal sites (ix != iy, swapped between them) distinct
@@ -84,18 +82,18 @@ TEST_CASE(
     REQUIRE(in.good());
 
     int n = 0, nc = 0;
-    double L = 0.0, a = 0.0, rapidity = 0.0;
+    double L = 0.0, a = 0.0, x = 0.0;
     in.read(reinterpret_cast<char *>(&n), sizeof(int));
     in.read(reinterpret_cast<char *>(&nc), sizeof(int));
     in.read(reinterpret_cast<char *>(&L), sizeof(double));
     in.read(reinterpret_cast<char *>(&a), sizeof(double));
-    in.read(reinterpret_cast<char *>(&rapidity), sizeof(double));
+    in.read(reinterpret_cast<char *>(&x), sizeof(double));
 
     CHECK(n == length);
     CHECK(nc == 3);
     CHECK(L == doctest::Approx(param.lattice.L));
     CHECK(a == doctest::Approx(param.lattice.L / length));
-    CHECK(rapidity == doctest::Approx(param.colorCharge.rapidity));
+    CHECK(x == -1.);  // no fixed x
 
     // The writer nests ix outer / iy inner (see Lattice.cpp), so the
     // site-th 9-(re, im)-pair block in the file must be lat.U[site], i.e.
@@ -114,6 +112,34 @@ TEST_CASE(
     CHECK(in.good());
     in.close();
     std::remove(path.c_str());
+}
+
+TEST_CASE(
+    "WilsonLineIO::write (binary format) stores the x of the Wilson lines in "
+    "the header") {
+    const int length = 4;
+    Parameters param;
+    makeLatticeParam(param, length);
+    param.wilsonLines.writeWilsonLines = 2;  // binary
+    Lattice lat(&param, length);
+
+    for (const auto &[nucleus, x] :
+         {std::pair<NucleusRole, double> {NucleusRole::Projectile, 1e-3},
+          {NucleusRole::Target, 2.5e-4}}) {
+        const double xValue = x;
+        CAPTURE(xValue);
+        WilsonLineIO().write(&lat, &param, nucleus, x);
+        const std::string path = WilsonLineIO::fileName(&param, x, nucleus);
+        std::ifstream in(path, std::ios::binary);
+        REQUIRE(in.good());
+        // skip N, Nc, L and a
+        in.seekg(2 * sizeof(int) + 2 * sizeof(double));
+        double xInFile = 0.;
+        in.read(reinterpret_cast<char *>(&xInFile), sizeof(double));
+        CHECK(xInFile == x);
+        in.close();
+        std::remove(path.c_str());
+    }
 }
 
 TEST_CASE(

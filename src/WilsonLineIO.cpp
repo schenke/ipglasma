@@ -125,14 +125,12 @@ void WilsonLineIO::write(
         std::ofstream Outfile1;
         Outfile1.open(wLineFile, std::ios::out | std::ios::binary);
 
-        double temp = param->colorCharge.rapidity;
-
         // print header ------------- //
         Outfile1.write((char *)&N, sizeof(int));
         Outfile1.write((char *)&Nc, sizeof(int));
         Outfile1.write((char *)&L, sizeof(double));
         Outfile1.write((char *)&a, sizeof(double));
-        Outfile1.write((char *)&temp, sizeof(double));
+        Outfile1.write((char *)&x, sizeof(double));
 
         double val1[2];
 
@@ -414,7 +412,8 @@ void WilsonLineIO::writeTrainingData(Lattice *lat, Parameters *param) {
              << "\"Nc\":" << Nc << ","
              << "\"L_fm\":" << L << ","
              << "\"a_fm\":" << a << ","
-             << "\"rapidity\":" << param->colorCharge.rapidity << "}";
+             << "\"x_A\":" << param->initialX(NucleusRole::Projectile) << ","
+             << "\"x_B\":" << param->initialX(NucleusRole::Target) << "}";
     const std::string metadataString = metadata.str();
 
     std::stringstream filename;

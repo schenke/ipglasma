@@ -79,16 +79,16 @@ class WilsonLineIO {
      * `param->lattice.L`, `param->event.eventId`, `param->random.seed`,
      * `param->run.MPISize`, `param->run.eventsPerRank`,
      * `param->wilsonLines.wilsonLinePath`,
-     * `param->wilsonLines.writeWilsonLines` and (binary format only)
-     * `param->colorCharge.rapidity` are used.
+     * and `param->wilsonLines.writeWilsonLines` are used.
      * \param[in] nucleus Which of \c U (Projectile) / \c U2 (Target) to
      * write.
-     * \param[in] x If non-negative, included in the generated file name
-     * (see fileName()); the default `-1` omits it.
+     * \param[in] x Bjorken \f$x\f$ of the Wilson lines. If non-negative,
+     * included in the generated file name (see fileName()); the default
+     * `-1` (no fixed \f$x\f$) omits it. Also stored in the binary header.
      *
      * Format `1` (text): one line per site, `ix iy
      * MatrixToString()`. Format `2` (binary): a
-     * `{N, Nc, L, a, rapidity}` header followed by every site's 9
+     * `{N, Nc, L, a, x}` header followed by every site's 9
      * complex components as consecutive `{real, imag}` `double` pairs,
      * indexed `N*ix+iy` (matching every other `U`/`U2` indexing in
      * the codebase; see WilsonLineIO::read for the matching reader).

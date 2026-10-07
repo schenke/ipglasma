@@ -179,7 +179,7 @@ The matrix elements are row-major and written with 15 significant digits.
 | 4 | `int32` | N_c = 3 |
 | 8 | `double` | `L` [fm] |
 | 8 | `double` | `a` [fm] |
-| 8 | `double` | `rapidity` |
+| 8 | `double` | Bjorken x of the Wilson lines, the x in the file name; −1 with `useFluctuatingX 1` (no fixed x) |
 | N² × 9 × 16 | `double` pairs | (Re, Im) of each matrix element, sites `ix` outer and `iy` inner, elements row-major |
 
 ## Wilson-line geometry
@@ -226,7 +226,9 @@ impact-parameter shift.
 - **Metadata:** repeats the format name (`ipglasma-initial-wilson-lines`),
   version, dtype, shape and axis order, and adds `fields` (`VA`, `VB`),
   `complex_part`, `native_site_index`, `event_id`, `N`, `Nc`, `L_fm`, `a_fm`
-  and `rapidity` (the input `rapidity`).
+  and `x_A`/`x_B`, the Bjorken x of the projectile's and the target's
+  Wilson lines (`jimwlkInitialX` with JIMWLK, otherwise `projectileX`/
+  `targetX`; −1 with `useFluctuatingX 1`, where x is not fixed).
 
 ## Participants and binary collisions
 

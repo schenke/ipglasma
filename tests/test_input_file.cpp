@@ -528,7 +528,6 @@ TEST_CASE(
     const std::vector<std::pair<std::string, std::string>> renames = {
         {"maxTime", "maxtime"},
         {"dMin", "d_min"},
-        {"jimwlkC", "c_jimwlk"},
         {"useRandomSeed", "useTimeForSeed"},
         {"writeWilsonLines", "writeInitialWilsonLines"}};
     while (std::getline(in, line)) {
@@ -558,35 +557,16 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::readInput: the removed rapidityA/rapidityB and the renamed "
-    "jimwlkXProjectile/jimwlkXTarget point to their replacements") {
+    "Parameters::readInput: the removed rapidityA/rapidityB point to their "
+    "replacements") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
-        readSourceFile("input"),
-        "rapidityA 0\nrapidityB 0\njimwlkXProjectile 1e-4\n"
-        "jimwlkXTarget 1e-4\n"));
+        readSourceFile("input"), "rapidityA 0\nrapidityB 0\n"));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.size() == 4);
+    CHECK(errors.size() == 2);
     CHECK(anyContains(
         errors, "unknown parameter rapidityA (replaced by projectileX"));
     CHECK(anyContains(
         errors, "unknown parameter rapidityB (replaced by targetX"));
-    CHECK(anyContains(
-        errors,
-        "unknown parameter jimwlkXProjectile (renamed to projectileX)"));
-    CHECK(anyContains(
-        errors, "unknown parameter jimwlkXTarget (renamed to targetX)"));
-}
-
-TEST_CASE(
-    "Parameters::readInput: an input with the old JIMWLK x key instead of "
-    "the new one is told it was renamed") {
-    const std::string text = exampleInputWith(
-        "targetX", "");  // drop targetX, give the old key instead
-    const std::vector<std::string> errors =
-        readErrors(insertBeforeEndOfFile(text, "jimwlkXTarget 1e-4\n"));
-    for (const std::string &error : errors) CAPTURE(error);
-    REQUIRE(errors.size() == 1);
-    CHECK(anyContains(errors, "jimwlkXTarget was renamed to targetX"));
 }
 
 TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {

@@ -106,7 +106,7 @@ TEST_CASE(
 
 TEST_CASE(
     "JIMWLK::getAlphas: running-coupling branch matches an independently "
-    "computed reference value, and is sensitive to nFlavors/c_jimwlk") {
+    "computed reference value, and is sensitive to nFlavors/jimwlkC") {
     const int N = 8;
     Parameters param;
     makeJimwlkTestParam(param, N);

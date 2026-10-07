@@ -191,8 +191,10 @@ double Init::computeEffectiveRapidity(Parameters *param) {
 
 void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
     const int N = param->lattice.size;
-    const double g2mu2 = param->collision.g2mu * param->collision.g2mu
-                         / param->coupling.g / param->coupling.g;
+    const double a = param->lattice.L / N;  // lattice spacing [fm]
+    // g^2 mu from GeV to lattice units
+    const double g2mu = param->collision.g2muGeV * a / hbarc;
+    const double g2mu2 = g2mu * g2mu / param->coupling.g / param->coupling.g;
     for (int pos = 0; pos < N * N; pos++) {
         lat->cells[pos]->setg2mu2A(g2mu2);
         lat->cells[pos]->setg2mu2B(g2mu2);

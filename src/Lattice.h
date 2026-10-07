@@ -7,10 +7,9 @@
 #include "Cell.h"
 #include "LatticeIndex.h"
 #include "Matrix.h"
+#include "NucleusRole.h"
 #include "Parameters.h"
 #include "PrettyOstream.h"
-
-enum class NucleusRole;
 
 /**
  * The transverse lattice: every fundamental SU(3) matrix field (stored

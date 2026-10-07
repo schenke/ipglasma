@@ -207,6 +207,7 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "outputTimes": "none",
         "writeWilsonLineSnapshot": 0,
         "useJIMWLK": 1 if use_jimwlk else 0,
+        "useFluctuatingX": 0 if use_jimwlk else 1,
         "useSeedList": 0,
         "useRandomSeed": 0,
         "jimwlkSaveSnapshots": 0,
@@ -517,7 +518,10 @@ def main():
             os.path.dirname(os.path.abspath(__file__)),
             "eccentricity_reference.json"),
         help="JSON file with a saved baseline eps2 distribution to "
-             "regression-check against")
+             "regression-check against, default is {0} corresponding to the case without JIMWLK".format(
+                 os.path.join(
+                     os.path.dirname(os.path.abspath(__file__)),
+                     "eccentricity_reference.json")))
     parser.add_argument("--save-reference", action="store_true",
                          help="save this run's eps2 distribution as the "
                               "new reference instead of comparing to it")

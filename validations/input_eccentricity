@@ -29,8 +29,9 @@ smearingWidth 0.6
 protonAnisotropy 0
 sqrtS 5020
 usePseudoRapidity 0
-rapidityA 0.
-rapidityB 0.
+rapidity 0.
+projectileX 0.0001
+targetX 0.0001
 useFluctuatingX 1
 xQsFactor 1
 useNucleus 1
@@ -91,12 +92,10 @@ writeWilsonLines 2
 wilsonLinePath ./
 writeTmunuBinary 1
 writeOutputsToHDF5 0
-useJIMWLK 1
+useJIMWLK 0
 jimwlkMu0 0.28
 jimwlkAlphaS 0
 jimwlkInitialX 0.01
-jimwlkXProjectile 0.0001
-jimwlkXTarget 0.0001
 jimwlkDs 0.005
 jimwlkLambdaQCD 0.040
 jimwlkC 0.2

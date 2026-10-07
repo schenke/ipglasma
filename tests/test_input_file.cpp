@@ -313,6 +313,12 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"jimwlkLambdaQCD", "0", "must be positive"},
              {"writeWilsonLines", "3", "must be one of 0, 1, 2"},
              {"readInitialWilsonLines", "3", "must be one of 0, 1, 2"},
+             {"sqrtS", "0", "must be positive"},
+             {"xQsFactor", "0", "must be positive"},
+             {"xQsFactor", "-1", "must be positive"},
+             {"projectileX", "0", "must be positive"},
+             {"targetX", "-1e-3", "must be positive"},
+             {"jimwlkInitialX", "0", "must be positive"},
          }) {
         CAPTURE(c.key);
         CAPTURE(c.value);
@@ -386,7 +392,7 @@ TEST_CASE(
     reread.writeInputParameters(rewritten);
     CHECK(rewritten.str() == written.str());
     // exact doubles, not rounded ones
-    CHECK(reread.jimwlk.xProjectile == param.jimwlk.xProjectile);
+    CHECK(reread.colorCharge.projectileX == param.colorCharge.projectileX);
     CHECK(reread.run.dtau == param.run.dtau);
 }
 
@@ -543,15 +549,44 @@ TEST_CASE(
 TEST_CASE(
     "Parameters::readInput: a removed or replaced pre-2.0 key gets a hint") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
-        readSourceFile("input"), "Rapidity 0\nNc 3\nwriteOutputs 2\n"));
+        readSourceFile("input"), "\nNc 3\nwriteOutputs 2\n"));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.size() == 3);
-    CHECK(anyContains(
-        errors,
-        "unknown parameter Rapidity (replaced by rapidityA and rapidityB)"));
+    CHECK(errors.size() == 2);
     CHECK(anyContains(errors, "unknown parameter Nc (removed: "));
     CHECK(anyContains(
         errors, "unknown parameter writeOutputs (replaced by writeHydro"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: the removed rapidityA/rapidityB and the renamed "
+    "jimwlkXProjectile/jimwlkXTarget point to their replacements") {
+    const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
+        readSourceFile("input"),
+        "rapidityA 0\nrapidityB 0\njimwlkXProjectile 1e-4\n"
+        "jimwlkXTarget 1e-4\n"));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.size() == 4);
+    CHECK(anyContains(
+        errors, "unknown parameter rapidityA (replaced by projectileX"));
+    CHECK(anyContains(
+        errors, "unknown parameter rapidityB (replaced by targetX"));
+    CHECK(anyContains(
+        errors,
+        "unknown parameter jimwlkXProjectile (renamed to projectileX)"));
+    CHECK(anyContains(
+        errors, "unknown parameter jimwlkXTarget (renamed to targetX)"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: an input with the old JIMWLK x key instead of "
+    "the new one is told it was renamed") {
+    const std::string text = exampleInputWith(
+        "targetX", "");  // drop targetX, give the old key instead
+    const std::vector<std::string> errors =
+        readErrors(insertBeforeEndOfFile(text, "jimwlkXTarget 1e-4\n"));
+    for (const std::string &error : errors) CAPTURE(error);
+    REQUIRE(errors.size() == 1);
+    CHECK(anyContains(errors, "jimwlkXTarget was renamed to targetX"));
 }
 
 TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {

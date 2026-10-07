@@ -80,7 +80,7 @@ class WilsonLineIO {
      * `param->run.MPISize`, `param->run.eventsPerRank`,
      * `param->wilsonLines.wilsonLinePath`,
      * `param->wilsonLines.writeWilsonLines` and (binary format only)
-     * `param->colorCharge.rapidityA`/`param->colorCharge.rapidityB` are used.
+     * `param->colorCharge.rapidity` are used.
      * \param[in] nucleus Which of \c U (Projectile) / \c U2 (Target) to
      * write.
      * \param[in] x If non-negative, included in the generated file name
@@ -97,24 +97,6 @@ class WilsonLineIO {
      */
     void write(
         Lattice *lat, Parameters *param, NucleusRole nucleus, double x = -1);
-    /**
-     * The \f$x\f$ in the names of a nucleus' initial Wilson-line files,
-     * which Init::setV() writes and read() reads: `jimwlkInitialX` with
-     * JIMWLK, none (`-1`) with `useFluctuatingX 1`, and otherwise
-     * \f$0.01\,e^{-y}\f$ with \f$y\f$ = `rapidityA` or `rapidityB`.
-     * \param[in] param Simulation parameters.
-     * \param[in] nucleus Which nucleus.
-     * \return The \f$x\f$, or `-1` for none.
-     */
-    static double initialX(Parameters *param, NucleusRole nucleus);
-    /**
-     * The \f$x\f$ in the names of the Wilson-line files read():
-     * `readWilsonLinesX` if it is set (positive), otherwise initialX().
-     * \param[in] param Simulation parameters.
-     * \param[in] nucleus Which nucleus.
-     * \return The \f$x\f$, or `-1` for none.
-     */
-    static double xToRead(Parameters *param, NucleusRole nucleus);
     /**
      * Generates the name of a nucleus' geometry file, which
      * writeGeometry() writes and readGeometry() reads:
@@ -159,10 +141,11 @@ class WilsonLineIO {
         Lattice *lat, Parameters *param, NucleusRole nucleus);
     /**
      * Reads both nuclei's Wilson lines from disk, from the files a run
-     * with the same parameters writes (fileName() with xToRead()), in text
-     * or binary format depending on \p format. The fields are placed as
-     * written, centered at the origin; the impact parameter is applied
-     * later, by Init::shiftFieldsWithImpactParameter().
+     * with the same parameters writes (fileName() with
+     * Parameters::xBeforeJimwlk()), in text or binary format depending on \p
+     * format. The fields are placed as written, centered at the origin; the
+     * impact parameter is applied later, by
+     * Init::shiftFieldsWithImpactParameter().
      * \param[in,out] lat Lattice whose `U`/`U2` are set.
      * \param[in] param Simulation parameters.
      * \param[in] format `1` for plain text, `2` for binary; exits with

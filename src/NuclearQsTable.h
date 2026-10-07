@@ -9,9 +9,10 @@
 #include "PrettyOstream.h"
 
 /**
- * The tabulated saturation scale \f$Q_s^2(T_p, y)\f$ of a nucleus as a
- * function of the summed nucleon thickness \f$T_p\f$ and the rapidity
- * \f$y\f$ (the file `nucleusQsTableFileName`, from IP-Sat).
+ * The tabulated saturation scale \f$Q_s^2(T_p, x)\f$ of a nucleus as a
+ * function of the summed nucleon thickness \f$T_p\f$ and Bjorken \f$x\f$
+ * (the file `nucleusQsTableFileName`, from IP-Sat), tabulated in the
+ * rapidity \f$y = \ln(0.01/x)\f$.
  * read() loads it, qs2() interpolates it.
  *
  * File format: one line per point, `y T_p Qs^2`, for nT_ values of
@@ -29,14 +30,16 @@ class NuclearQsTable {
     /**
      * Bilinearly interpolates the table.
      * \param[in] T Nuclear thickness \f$T_p\f$ to interpolate at.
-     * \param[in] y Rapidity to interpolate at; exits with an error if
-     * negative, and is clamped to the maximal tabulated rapidity 10.75 if
-     * above it (with a warning the first time).
+     * \param[in] x Bjorken \f$x\f$ to interpolate at, at the rapidity
+     * \f$y = \ln(0.01/x)\f$; exits with an error if not in
+     * \f$0 < x \le 0.01\f$, and \f$y\f$ is clamped to the maximal
+     * tabulated rapidity 10.75 if above it (with a warning the first
+     * time).
      * \return Interpolated \f$Q_s^2\f$; `0` if \p T is below the
      * tabulated range, clamped to the maximal tabulated \f$T_p\f$ (with
      * a warning) if above it.
      */
-    double qs2(double T, double y) const;
+    double qs2(double T, double x) const;
 
   private:
     /// Number of tabulated rapidities.
@@ -52,7 +55,7 @@ class NuclearQsTable {
     double T_[nT_];
     /// Log sink for progress/error messages.
     PrettyOstream messager_;
-    /// Whether qs2() has already warned about a rapidity above the table
+    /// Whether qs2() has already warned about an x below the table
     /// (it is called for every cell, from several threads).
     mutable std::atomic<bool> warnedAboveYMax_ {false};
 };

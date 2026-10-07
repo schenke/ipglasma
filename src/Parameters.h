@@ -8,6 +8,7 @@
 #include <string>
 #include <vector>
 
+#include "NucleusRole.h"
 #include "PrettyOstream.h"
 
 class InputFile;
@@ -264,30 +265,29 @@ struct ColorChargeParameters {
     int minimumQs2ST = 0;
     /// Longitudinal "resolution" (see Lappi, Eur. Phys. J. C55, 285).
     int Ny = 0;
-    /// Rapidity used to pick Bjorken \f$x\f$ from IP-Sat for the
-    /// projectile.
-    double rapidityA = 0.;
-    /// Same as \c rapidityA, for the target.
-    double rapidityB = 0.;
-    /// Whether `rapidityA`/`rapidityB` hold pseudorapidity instead
-    /// of rapidity (`1`), applying the corresponding Jacobian.
+    /// Bjorken \f$x\f$ of the projectile (nucleus A): \f$Q_s^2\f$ is
+    /// evaluated at it with `useJIMWLK 0` and `useFluctuatingX 0`, and
+    /// JIMWLK evolves the projectile to it.
+    double projectileX = 0.;
+    /// Same as \c projectileX, for the target (nucleus B).
+    double targetX = 0.;
+    /// Rapidity at which the gluon and hadron spectra are computed; with
+    /// `useFluctuatingX 1` also the \f$y\f$ in
+    /// \f$x = \beta Q_s e^{\pm y}/\sqrt{s}\f$.
+    double rapidity = 0.;
+    /// Whether `rapidity` holds pseudorapidity instead of rapidity
+    /// (`1`), applying the corresponding Jacobian.
     bool usePseudoRapidity = false;
     /// Mass term [GeV] in the Jacobian converting rapidity \f$y\f$ to
     /// pseudorapidity \f$\eta\f$.
     double jacobianMass = 0.;
     /// Whether Bjorken \f$x\f$ should fluctuate as the local \f$Q_s\f$
-    /// (`1`, \f$x = Q_s\beta/\sqrt{s}\f$) or always use the input
-    /// file's rapidity value (`0`).
+    /// (`1`, \f$x = Q_s\beta/\sqrt{s}\f$) or be \c projectileX /
+    /// \c targetX (`0`); `useJIMWLK 1` requires `0`.
     bool useFluctuatingX = false;
     /// Factor \f$\beta\f$ in \f$x = Q_s\beta/\sqrt{s}\f$; only used
     /// when \c useFluctuatingX is set.
     double xQsFactor = 0.;
-
-    /**
-     * Returns the mean of the projectile's and target's rapidity.
-     * \return \f$(\text{rapidityA} + \text{rapidityB})/2\f$.
-     */
-    double rapidity() const { return (rapidityA + rapidityB) / 2.; }
 };
 
 /// Fixed and running coupling.
@@ -411,7 +411,7 @@ struct WilsonLineParameters {
     int readInitialWilsonLines = 0;
     /// Bjorken \f$x\f$ in the names of the Wilson-line files to read with
     /// \c readInitialWilsonLines (input `readWilsonLinesX`); `0` reads
-    /// those of the initial condition (WilsonLineIO::initialX()). JIMWLK
+    /// those of the initial condition (Parameters::initialX()). JIMWLK
     /// evolves read Wilson lines from this \f$x\f$.
     double readX = 0.;
 };
@@ -444,12 +444,10 @@ struct JimwlkParameters {
     /// coupling, `0.0005` with fixed coupling).
     double Ds = 0.;
     /// Bjorken \f$x\f$ at the initial condition of the JIMWLK
-    /// evolution.
+    /// evolution, at which \f$Q_s^2\f$ of both nuclei is evaluated. The
+    /// nuclei are evolved to ColorChargeParameters::projectileX and
+    /// ColorChargeParameters::targetX.
     double initialX = 0.;
-    /// Bjorken \f$x\f$ the projectile (nucleus A) is evolved to.
-    double xProjectile = 0.;
-    /// Bjorken \f$x\f$ the target (nucleus B) is evolved to.
-    double xTarget = 0.;
     /// Whether to save Wilson-line snapshots at the \f$x\f$ values in
     /// \c jimwlkXSnapshotList during JIMWLK evolution.
     bool saveSnapshots = false;
@@ -631,5 +629,25 @@ class Parameters {
      * \return One message per failed check; empty if all pass.
      */
     std::vector<std::string> validationErrors() const;
+    /**
+     * The Bjorken \f$x\f$ of a nucleus' initial condition, at which its
+     * \f$Q_s^2\f$ is evaluated and which names its initial Wilson-line
+     * files: `jimwlkInitialX` with JIMWLK, none (`-1`) with a fluctuating
+     * \f$x\f$ (`useFluctuatingX 1`), and otherwise `projectileX` or
+     * `targetX`.
+     * \param[in] role Which nucleus.
+     * \return The \f$x\f$, or `-1` for none.
+     */
+    double initialX(NucleusRole role) const;
+    /**
+     * The Bjorken \f$x\f$ of a nucleus' Wilson lines before the JIMWLK
+     * evolution (if any), which also names the Wilson-line files that are
+     * read: `readWilsonLinesX` for Wilson lines read at that \f$x\f$
+     * (`readInitialWilsonLines` 1 or 2 and a positive `readWilsonLinesX`),
+     * otherwise initialX().
+     * \param[in] role Which nucleus.
+     * \return The \f$x\f$, or `-1` for none.
+     */
+    double xBeforeJimwlk(NucleusRole role) const;
 };
 #endif  // SRC_PARAMETERS_H_

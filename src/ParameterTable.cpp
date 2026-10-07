@@ -446,7 +446,8 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check(even()),  // the FFTs assume even lattice dimensions
         param("L", &P::lattice, &LatticeParameters::L).check(positive()),
         param("Ny", &P::colorCharge, &ColorChargeParameters::Ny),
-        param("sqrtS", &P::collision, &CollisionParameters::sqrtS),
+        param("sqrtS", &P::collision, &CollisionParameters::sqrtS)
+            .check(positive()),
         param("g", &P::coupling, &CouplingParameters::g),
         param("g2mu", &P::collision, &CollisionParameters::g2mu),
         param("maxTime", &P::evolution, &EvolutionParameters::maxTime)
@@ -621,8 +622,12 @@ const std::vector<ParameterSpec> &parameterTable() {
             &ColorChargeParameters::nucleusQsTableFileName),
 
         // rapidity and x
-        param("rapidityA", &P::colorCharge, &ColorChargeParameters::rapidityA),
-        param("rapidityB", &P::colorCharge, &ColorChargeParameters::rapidityB),
+        param(
+            "projectileX", &P::colorCharge, &ColorChargeParameters::projectileX)
+            .check(positive()),
+        param("targetX", &P::colorCharge, &ColorChargeParameters::targetX)
+            .check(positive()),
+        param("rapidity", &P::colorCharge, &ColorChargeParameters::rapidity),
         param(
             "usePseudoRapidity", &P::colorCharge,
             &ColorChargeParameters::usePseudoRapidity),
@@ -632,7 +637,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "useFluctuatingX", &P::colorCharge,
             &ColorChargeParameters::useFluctuatingX),
-        param("xQsFactor", &P::colorCharge, &ColorChargeParameters::xQsFactor),
+        param("xQsFactor", &P::colorCharge, &ColorChargeParameters::xQsFactor)
+            .check(positive()),
 
         // running coupling
         param(
@@ -754,9 +760,8 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check(nonNegative()),
         // divisor of the step count and under a square root in the step
         param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds).check(positive()),
-        param("jimwlkInitialX", &P::jimwlk, &JimwlkParameters::initialX),
-        param("jimwlkXProjectile", &P::jimwlk, &JimwlkParameters::xProjectile),
-        param("jimwlkXTarget", &P::jimwlk, &JimwlkParameters::xTarget),
+        param("jimwlkInitialX", &P::jimwlk, &JimwlkParameters::initialX)
+            .check(positive()),
         param(
             "jimwlkSaveSnapshots", &P::jimwlk,
             &JimwlkParameters::saveSnapshots),
@@ -797,8 +802,6 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"UVdamp", "UVDamp"},
         {"QsmuRatio", "QsMuRatio"},
         {"NucleusQsTableFileName", "nucleusQsTableFileName"},
-        {"RapidityA", "rapidityA"},
-        {"RapidityB", "rapidityB"},
         {"Jacobianm", "jacobianMass"},
         {"useFluctuatingx", "useFluctuatingX"},
         {"xFromThisFactorTimesQs", "xQsFactor"},
@@ -814,8 +817,10 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"alphas_jimwlk", "jimwlkAlphaS"},
         {"Ds_jimwlk", "jimwlkDs"},
         {"jimwlk_ic_x", "jimwlkInitialX"},
-        {"x_projectile_jimwlk", "jimwlkXProjectile"},
-        {"x_target_jimwlk", "jimwlkXTarget"},
+        {"x_projectile_jimwlk", "projectileX"},
+        {"x_target_jimwlk", "targetX"},
+        {"jimwlkXProjectile", "projectileX"},
+        {"jimwlkXTarget", "targetX"},
         {"saveSnapshots", "jimwlkSaveSnapshots"},
         {"xSnapshotList", "jimwlkXSnapshotList"},
         {"useTimeForSeed", "useRandomSeed"},
@@ -833,7 +838,17 @@ const std::map<std::string, std::string> &replacedKeys() {
     static const std::map<std::string, std::string> replaced = {
         {"useConstituentQuarkProton",
          "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
-        {"Rapidity", "replaced by rapidityA and rapidityB"},
+        {"Rapidity",
+         "replaced by projectileX and targetX (the x of the nuclei) and "
+         "rapidity (the rapidity of the spectra)"},
+        {"rapidityA",
+         "replaced by projectileX (the x of the projectile) and rapidity "
+         "(the rapidity of the spectra)"},
+        {"rapidityB",
+         "replaced by targetX (the x of the target) and rapidity (the "
+         "rapidity of the spectra)"},
+        {"RapidityA", "replaced by projectileX and rapidity"},
+        {"RapidityB", "replaced by targetX and rapidity"},
         {"writeOutputs",
          "replaced by writeHydro, writeJazma, writeTmunu, outputTimes, "
          "writeHadronSpectrum and writeWilsonLineSnapshot"},

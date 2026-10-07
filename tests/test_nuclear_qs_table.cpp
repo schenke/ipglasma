@@ -1,30 +1,19 @@
+#include <cmath>
 #include <cstdio>
 #include <fstream>
 #include <string>
 
 #include "NuclearQsTable.h"
 #include "doctest.h"
+#include "test_helpers.h"
 
 namespace {
-// A table with Qs^2 = 2 T + 3 y, which bilinear interpolation reproduces
-// exactly: 240 values T = 0.5 + 0.1 iT (outer) times 44 rapidities
-// y = 0.25 iy (inner), one "y T Qs^2" line each.
-std::string writeLinearTable() {
-    const std::string fileName = "ipglasma_test_qs_table.in";
-    std::ofstream out(fileName);
-    for (int iT = 0; iT < 240; ++iT) {
-        for (int iy = 0; iy < 44; ++iy) {
-            const double T = 0.5 + 0.1 * iT;
-            const double y = 0.25 * iy;
-            out << y << " " << T << " " << 2. * T + 3. * y << "\n";
-        }
-    }
-    return fileName;
-}
+// The Bjorken x of the tabulated rapidity y.
+double xAt(double y) { return 0.01 * std::exp(-y); }
 }  // namespace
 
 TEST_CASE("NuclearQsTable interpolates bilinearly inside the table") {
-    const std::string fileName = writeLinearTable();
+    const std::string fileName = writeLinearQsTable();
     NuclearQsTable table;
     table.read(fileName);
     std::remove(fileName.c_str());
@@ -33,25 +22,25 @@ TEST_CASE("NuclearQsTable interpolates bilinearly inside the table") {
         for (double y : {0., 0.1, 4.6, 10.5}) {
             CAPTURE(T);
             CAPTURE(y);
-            CHECK(table.qs2(T, y) == doctest::Approx(2. * T + 3. * y));
+            CHECK(table.qs2(T, xAt(y)) == doctest::Approx(2. * T + 3. * y));
         }
     }
 }
 
 TEST_CASE(
     "NuclearQsTable gives 0 below the tabulated T_p and clamps above it") {
-    const std::string fileName = writeLinearTable();
+    const std::string fileName = writeLinearQsTable();
     NuclearQsTable table;
     table.read(fileName);
     std::remove(fileName.c_str());
 
-    CHECK(table.qs2(0.4, 2.0) == 0.);
+    CHECK(table.qs2(0.4, xAt(2.0)) == 0.);
     const double Tmax = 0.5 + 0.1 * 239;
-    CHECK(table.qs2(100., 2.1) == doctest::Approx(2. * Tmax + 3. * 2.1));
+    CHECK(table.qs2(100., xAt(2.1)) == doctest::Approx(2. * Tmax + 3. * 2.1));
 }
 
 TEST_CASE("NuclearQsTable stays inside the table at its upper edges") {
-    const std::string fileName = writeLinearTable();
+    const std::string fileName = writeLinearQsTable();
     NuclearQsTable table;
     table.read(fileName);
     std::remove(fileName.c_str());
@@ -63,15 +52,15 @@ TEST_CASE("NuclearQsTable stays inside the table at its upper edges") {
         for (double y : {0., 10.6, ymax}) {
             CAPTURE(T);
             CAPTURE(y);
-            CHECK(table.qs2(T, y) == doctest::Approx(2. * T + 3. * y));
+            CHECK(table.qs2(T, xAt(y)) == doctest::Approx(2. * T + 3. * y));
         }
     }
 }
 
 TEST_CASE(
-    "NuclearQsTable clamps a rapidity above the table to the largest "
-    "tabulated one") {
-    const std::string fileName = writeLinearTable();
+    "NuclearQsTable clamps an x below the table (a rapidity above it) to the "
+    "smallest tabulated one") {
+    const std::string fileName = writeLinearQsTable();
     NuclearQsTable table;
     table.read(fileName);
     std::remove(fileName.c_str());
@@ -80,8 +69,8 @@ TEST_CASE(
         for (double y : {10.8, 11.0, 13.5}) {
             CAPTURE(T);
             CAPTURE(y);
-            CHECK(table.qs2(T, y) == table.qs2(T, 10.75));
+            CHECK(table.qs2(T, xAt(y)) == table.qs2(T, xAt(10.75)));
         }
     }
-    CHECK(table.qs2(0.73, 12.) == doctest::Approx(2. * 0.73 + 3. * 10.75));
+    CHECK(table.qs2(0.73, xAt(12.)) == doctest::Approx(2. * 0.73 + 3. * 10.75));
 }

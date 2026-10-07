@@ -226,9 +226,9 @@ double computeMultiplicityBinWeight(
     if (!param->colorCharge.usePseudoRapidity) {
         return base;
     }
-    return base * cosh(param->colorCharge.rapidity())
+    return base * cosh(param->colorCharge.rapidity)
            / (sqrt(
-               pow(cosh(param->colorCharge.rapidity()), 2.)
+               pow(cosh(param->colorCharge.rapidity), 2.)
                + m * m
                      / (((ik + 0.5) * dkt / a * hbarc)
                         * ((ik + 0.5) * dkt / a * hbarc))));
@@ -420,14 +420,14 @@ int GluonMultiplicity::compute(
     } else if (param->colorCharge.usePseudoRapidity) {
         m = param->colorCharge.jacobianMass;                           // in GeV
         P = 0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
-        dNdeta *= cosh(param->colorCharge.rapidity())
-                  / (sqrt(
-                      pow(cosh(param->colorCharge.rapidity()), 2.)
-                      + m * m / (P * P)));
-        dEdeta *= cosh(param->colorCharge.rapidity())
-                  / (sqrt(
-                      pow(cosh(param->colorCharge.rapidity()), 2.)
-                      + m * m / (P * P)));
+        dNdeta *=
+            cosh(param->colorCharge.rapidity)
+            / (sqrt(
+                pow(cosh(param->colorCharge.rapidity), 2.) + m * m / (P * P)));
+        dEdeta *=
+            cosh(param->colorCharge.rapidity)
+            / (sqrt(
+                pow(cosh(param->colorCharge.rapidity), 2.) + m * m / (P * P)));
 
         if (param->run.MPIRank == 0) {
             messager_ << "[GluonMultiplicity::compute]: dN/deta 1 = " << dNdeta
@@ -537,17 +537,17 @@ void GluonMultiplicity::hadronizeAndWrite(
             } else {
                 zintegrand[iz] =
                     1. / (z * z) * Ng * 2.
-                    * (kkp(1, 1, z, kt) * cosh(param->colorCharge.rapidity())
+                    * (kkp(1, 1, z, kt) * cosh(param->colorCharge.rapidity)
                            / (sqrt(
-                               pow(cosh(param->colorCharge.rapidity()), 2.)
+                               pow(cosh(param->colorCharge.rapidity), 2.)
                                + m_pion * m_pion / (mypt * mypt)))
-                       + kkp(2, 1, z, kt) * cosh(param->colorCharge.rapidity())
+                       + kkp(2, 1, z, kt) * cosh(param->colorCharge.rapidity)
                              / (sqrt(
-                                 pow(cosh(param->colorCharge.rapidity()), 2.)
+                                 pow(cosh(param->colorCharge.rapidity), 2.)
                                  + m_kaon * m_kaon / (mypt * mypt)))
-                       + kkp(4, 1, z, kt) * cosh(param->colorCharge.rapidity())
+                       + kkp(4, 1, z, kt) * cosh(param->colorCharge.rapidity)
                              / (sqrt(
-                                 pow(cosh(param->colorCharge.rapidity()), 2.)
+                                 pow(cosh(param->colorCharge.rapidity), 2.)
                                  + m_proton * m_proton / (mypt * mypt))));
             }
         }
@@ -753,16 +753,16 @@ void GluonMultiplicity::readNkt(Parameters *param) {
         } else {
             dNdeta2 +=
                 nIn[ik] * (ik + 0.5) * dkt * dkt * 2. * M_PI
-                * cosh(param->colorCharge.rapidity())
+                * cosh(param->colorCharge.rapidity)
                 / (sqrt(
-                    pow(cosh(param->colorCharge.rapidity()), 2.)
+                    pow(cosh(param->colorCharge.rapidity), 2.)
                     + m * m / (((ik + 0.5) * dkt) * ((ik + 0.5) * dkt))));
         }
     }
 
     dNdeta *=
-        cosh(param->colorCharge.rapidity())
-        / (sqrt(pow(cosh(param->colorCharge.rapidity()), 2.) + m * m / P / P));
+        cosh(param->colorCharge.rapidity)
+        / (sqrt(pow(cosh(param->colorCharge.rapidity), 2.) + m * m / P / P));
 
     ofstream foutNN("NpartdNdy-mod.dat", std::ios::out);
     foutNN << Npart << " " << dNdeta << " " << dNdeta2 << " "

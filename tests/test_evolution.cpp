@@ -22,8 +22,8 @@ void makeEvolutionTestParam(Parameters &param, int size) {
     param.event.eventId = 0;
     param.random.seed = 0;
     param.run.MPISize = 1;
-    param.colorCharge.rapidityA = 0.0;
-    param.colorCharge.rapidityB = 0.0;
+    param.colorCharge.projectileX = 0.01;
+    param.colorCharge.targetX = 0.01;
     param.coupling.g = 1.0;
     param.run.dtau = 0.1;
     param.coupling.runningCoupling =

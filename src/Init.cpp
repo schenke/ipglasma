@@ -26,11 +26,10 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
     nucleusB_ = std::move(nuclei.target);
 }
 
-// Q_s as a function of \sum T_p and y (new in this version of the code -
-// v1.2 and up)
 double Init::computeFluctuatingXG2mu2(
     Parameters *param, double a, double rapidity, double Tp, double qsmuRatio,
     double ySign) {
+    // Q_s as a function of \sum T_p and y
     const double exponent = 5.6;  // see 1212.2974 Eq. (17)
     double Qs = 1.;
     double xVal = 0.;
@@ -41,14 +40,14 @@ double Init::computeFluctuatingXG2mu2(
     // iterative loops here to determine the fluctuating Y
     while (std::abs(Ydeviation) > 0.001) {
         if (localrapidity >= 0) {
-            Qs = sqrt(qsTable_.qs2(Tp, localrapidity));
+            Qs = sqrt(qsTable_.qs2(Tp, 0.01 * exp(-localrapidity)));
         } else {
             xVal = Qs * param->colorCharge.xQsFactor / param->collision.sqrtS
                    * exp(ySign * yIn);
             if (xVal == 0)
                 Qs = 0.;
             else
-                Qs = sqrt(qsTable_.qs2(Tp, 0.))
+                Qs = sqrt(qsTable_.qs2(Tp, 0.01))
                      * sqrt(
                          pow((1 - xVal) / (1 - 0.01), exponent)
                          * pow((0.01 / xVal), 0.2));
@@ -78,33 +77,38 @@ double Init::computeFluctuatingXG2mu2(
     return g2mu2;
 }
 
-// set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
-// Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
 void Init::computeCellColorCharge(
-    Lattice *lat, Parameters *param, int ipos, double a, double rapidityA,
-    double rapidityB) {
+    // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
+    // Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
+    Lattice *lat, Parameters *param, int ipos, double a, double rapidity) {
     if (param->colorCharge.useFluctuatingX) {  // Local Qs dependent x
         lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
-            param, a, rapidityA, lat->cells[ipos]->getTpA(),
+            param, a, rapidity, lat->cells[ipos]->getTpA(),
             param->colorCharge.QsMuRatio, 1.));
         lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
-            param, a, rapidityB, lat->cells[ipos]->getTpB(),
+            param, a, rapidity, lat->cells[ipos]->getTpB(),
             param->colorCharge.QsMuRatio, -1.));
-    } else {  // Fixed x
+    } else {  // Fixed x: jimwlkInitialX with JIMWLK, else projectileX/targetX
         // nucleus A
         lat->cells[ipos]->setg2mu2A(
-            qsTable_.qs2(lat->cells[ipos]->getTpA(), rapidityA)
+            qsTable_.qs2(
+                lat->cells[ipos]->getTpA(),
+                param->initialX(NucleusRole::Projectile))
             / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
             * a / hbarc / hbarc / param->coupling.g
             / param->coupling.g);  // lattice units? check
 
         // nucleus B
         lat->cells[ipos]->setg2mu2B(
-            qsTable_.qs2(lat->cells[ipos]->getTpB(), rapidityB)
+            qsTable_.qs2(
+                lat->cells[ipos]->getTpB(),
+                param->initialX(NucleusRole::Target))
             / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
             * a / hbarc / hbarc / param->coupling.g / param->coupling.g);
     }
 }
+
+void Init::readQsTable(const std::string &fileName) { qsTable_.read(fileName); }
 
 void Init::setColorChargeDensity(
     Lattice *lat, Parameters *param, Random *random, Glauber *glauber) {
@@ -114,10 +118,6 @@ void Init::setColorChargeDensity(
 
     const int N = param->lattice.size;
     const double a = param->lattice.L / N;  // lattice spacing in fm
-
-    const Rapidities rapidities = computeEffectiveRapidities(param);
-    const double rapidityA = rapidities.projectile;
-    const double rapidityB = rapidities.target;
 
     double nucleiInAverage =
         static_cast<double>(param->collision.nucleiToAverage);
@@ -131,6 +131,19 @@ void Init::setColorChargeDensity(
     for (int ipos = 0; ipos < N * N; ipos++) {
         lat->cells[ipos]->setg2mu2A(0.);
         lat->cells[ipos]->setg2mu2B(0.);
+    }
+
+    // the rapidity the fluctuating-x iteration starts from
+    double rapidity = 0.;
+    if (param->colorCharge.useFluctuatingX) {
+        rapidity = computeEffectiveRapidity(param);
+    } else {
+        messager_ << "[Init::setColorChargeDensity]: Q_s^2 of the projectile "
+                     "at x = "
+                  << param->initialX(NucleusRole::Projectile)
+                  << ", of the target at x = "
+                  << param->initialX(NucleusRole::Target);
+        messager_.flush("info");
     }
 
     sampleNucleonAnisotropyAngles(param, random);
@@ -147,48 +160,35 @@ void Init::setColorChargeDensity(
 // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
 #pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
-        computeCellColorCharge(lat, param, ipos, a, rapidityA, rapidityB);
+        computeCellColorCharge(lat, param, ipos, a, rapidity);
     }
     messager_.info(
         "[Init::setColorChargeDensity]: Color charge densities for nucleus A "
         "and B set. ");
 }
 
-Rapidities Init::computeEffectiveRapidities(Parameters *param) {
-    if (!param->colorCharge.usePseudoRapidity) {
-        return {param->colorCharge.rapidityA, param->colorCharge.rapidityB};
-    }
+double Init::computeEffectiveRapidity(Parameters *param) {
+    const double input = param->colorCharge.rapidity;
+    if (!param->colorCharge.usePseudoRapidity) return input;
     // when using pseudorapidity as input convert to rapidity here.
     // later include Jacobian in multiplicity and energy
     messager_ << "[Init::setColorChargeDensity]: Using pseudorapidity "
-              << param->colorCharge.rapidityA << ", "
-              << param->colorCharge.rapidityB;
+              << input;
     messager_.flush("info");
     double m = param->colorCharge.jacobianMass;  // in GeV
     double P =
         0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
-    const double rapidityA =
+    const double rapidity =
         0.5
         * log(
-            sqrt(pow(cosh(param->colorCharge.rapidityA), 2.) + m * m / (P * P))
-            + sinh(param->colorCharge.rapidityA)
-                  / (sqrt(
-                         pow(cosh(param->colorCharge.rapidityA), 2.)
-                         + m * m / (P * P))
-                     - sinh(param->colorCharge.rapidityA)));
-    const double rapidityB =
-        0.5
-        * log(
-            sqrt(pow(cosh(param->colorCharge.rapidityB), 2.) + m * m / (P * P))
-            + sinh(param->colorCharge.rapidityB)
-                  / (sqrt(
-                         pow(cosh(param->colorCharge.rapidityB), 2.)
-                         + m * m / (P * P))
-                     - sinh(param->colorCharge.rapidityB)));
+            sqrt(pow(cosh(input), 2.) + m * m / (P * P))
+            + sinh(input)
+                  / (sqrt(pow(cosh(input), 2.) + m * m / (P * P))
+                     - sinh(input)));
     messager_ << "[Init::setColorChargeDensity]: Corresponds to rapidity "
-              << rapidityA << ", " << rapidityB;
+              << rapidity;
     messager_.flush("info");
-    return {rapidityA, rapidityB};
+    return rapidity;
 }
 
 void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
@@ -536,10 +536,10 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         WilsonLineIO io;
         io.write(
             lat, param, NucleusRole::Projectile,
-            WilsonLineIO::initialX(param, NucleusRole::Projectile));
+            param->initialX(NucleusRole::Projectile));
         io.write(
             lat, param, NucleusRole::Target,
-            WilsonLineIO::initialX(param, NucleusRole::Target));
+            param->initialX(NucleusRole::Target));
     }
     writeGeometry(lat, param);
 
@@ -571,7 +571,7 @@ void Init::init(
         param->event.phiRP = 0.;
         param->event.success = 1;
     } else {
-        qsTable_.read(param->colorCharge.nucleusQsTableFileName);
+        readQsTable(param->colorCharge.nucleusQsTableFileName);
     }
 
     // The configuration files are only used with nucleonPositionsFromFile;

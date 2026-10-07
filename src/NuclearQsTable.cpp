@@ -53,24 +53,25 @@ void NuclearQsTable::read(const std::string &fileName) {
     }
 }
 
-double NuclearQsTable::qs2(double T, double y) const {
+double NuclearQsTable::qs2(double T, double x) const {
     double value, fracy, fracT, QsYdown, QsYup;
     int posy, check = 0;
     fracy = 0.;
 
-    // Negative y only occurs with a fixed x, which the input validation
+    // x > 0.01 only occurs with a fixed x, which the input validation
     // rejects (Parameters::validationErrors()); also catches NaN.
-    if (!(y >= 0.)) {
+    if (!(x > 0. && x <= 0.01)) {
         // qs2() is called from inside an omp parallel for loop
         // (Init::setColorChargeDensity), so use a fresh, stack-local
         // instance rather than sharing messager_, which is not thread-safe.
         PrettyOstream localMessager;
-        localMessager << "[NuclearQsTable::qs2]: y=" << y
-                      << " is below the tabulated range (0 <= y <= "
-                      << (nY_ - 1) * deltaY_ << "). Exiting.";
+        localMessager << "[NuclearQsTable::qs2]: x=" << x
+                      << " is outside the tabulated range (0 < x <= 0.01). "
+                         "Exiting.";
         localMessager.flush("error");
         exit(1);
     }
+    double y = std::log(0.01 / x);
     // Above the largest tabulated rapidity (dilute cells with a fluctuating
     // x), use the last tabulated rapidity, as for T above the table.
     const double yMax = (nY_ - 1) * deltaY_;
@@ -78,9 +79,10 @@ double NuclearQsTable::qs2(double T, double y) const {
         if (!warnedAboveYMax_.exchange(true)) {
             // Local instance for the same omp thread-safety reason as above.
             PrettyOstream localMessager;
-            localMessager << "[NuclearQsTable::qs2]: y=" << y
-                          << " exceeds the tabulated range (max y=" << yMax
-                          << "); clamping to the maximal tabulated y (further "
+            localMessager << "[NuclearQsTable::qs2]: x=" << x << " (y=" << y
+                          << ") is below the tabulated range (min x="
+                          << 0.01 * std::exp(-yMax) << ", max y=" << yMax
+                          << "); clamping to the minimal tabulated x (further "
                              "occurrences are not reported).";
             localMessager.flush("warning");
         }

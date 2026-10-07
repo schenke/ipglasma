@@ -106,6 +106,21 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
     }
 }
 
+double Parameters::initialX(NucleusRole role) const {
+    if (jimwlk.enabled) return jimwlk.initialX;
+    // the initial condition does not correspond to a fixed x
+    if (colorCharge.useFluctuatingX) return -1.;
+    return (role == NucleusRole::Projectile) ? colorCharge.projectileX
+                                             : colorCharge.targetX;
+}
+
+double Parameters::xBeforeJimwlk(NucleusRole role) const {
+    if (wilsonLines.readInitialWilsonLines != 0 && wilsonLines.readX > 0.) {
+        return wilsonLines.readX;
+    }
+    return initialX(role);
+}
+
 std::vector<std::string> Parameters::validationErrors() const {
     // Checks of a single value are part of the input parameter table (see
     // ParameterTable.cpp) and run while reading; these combine several.
@@ -172,28 +187,47 @@ std::vector<std::string> Parameters::validationErrors() const {
     // JIMWLK evolves read Wilson lines from readWilsonLinesX to smaller x
     if (jimwlk.enabled && wilsonLines.readInitialWilsonLines != 0
         && wilsonLines.readX > 0.
-        && (wilsonLines.readX < jimwlk.xProjectile
-            || wilsonLines.readX < jimwlk.xTarget)) {
+        && (wilsonLines.readX < colorCharge.projectileX
+            || wilsonLines.readX < colorCharge.targetX)) {
         std::ostringstream message;
         message << "readWilsonLinesX (" << wilsonLines.readX
-                << ") must not be smaller than jimwlkXProjectile ("
-                << jimwlk.xProjectile << ") and jimwlkXTarget ("
-                << jimwlk.xTarget
+                << ") must not be smaller than projectileX ("
+                << colorCharge.projectileX << ") and targetX ("
+                << colorCharge.targetX
                 << "): JIMWLK evolves the read Wilson lines from there";
         fail(message);
     }
 
-    // with a fixed x, Q_s^2 is looked up at the input rapidities, and the
-    // nuclear Q_s table starts at y = 0 (a pseudorapidity keeps its sign)
+    // with a fixed x, Q_s^2 is looked up at y = ln(0.01/x), and the nuclear
+    // Q_s table starts at y = 0
     const bool samplesColorCharges =
         collision.useNucleus && wilsonLines.readInitialWilsonLines == 0;
-    if (samplesColorCharges && !colorCharge.useFluctuatingX
-        && (colorCharge.rapidityA < 0. || colorCharge.rapidityB < 0.)) {
+    if (samplesColorCharges && jimwlk.enabled && jimwlk.initialX > 0.01) {
         std::ostringstream message;
-        message << "rapidityA (" << colorCharge.rapidityA << ") and rapidityB ("
-                << colorCharge.rapidityB
-                << ") must not be negative with useFluctuatingX = 0; the "
-                   "nuclear Q_s table starts at y = 0";
+        message << "jimwlkInitialX (" << jimwlk.initialX
+                << ") must not be larger than 0.01; the nuclear Q_s table "
+                   "starts at x = 0.01";
+        fail(message);
+    }
+    if (samplesColorCharges && !jimwlk.enabled && !colorCharge.useFluctuatingX
+        && (colorCharge.projectileX > 0.01 || colorCharge.targetX > 0.01)) {
+        std::ostringstream message;
+        message << "projectileX (" << colorCharge.projectileX
+                << ") and targetX (" << colorCharge.targetX
+                << ") must not be larger than 0.01 with useFluctuatingX = 0; "
+                   "the nuclear Q_s table starts at x = 0.01";
+        fail(message);
+    }
+
+    // JIMWLK and fluctuating x are mutually exclusive:
+    // JIMWLK evolves the initial condition to the fixed x of the nuclei,
+    // while fluctuating x computes a local x from the local Q_s
+    if (jimwlk.enabled && colorCharge.useFluctuatingX) {
+        std::ostringstream message;
+        message << "useJIMWLK = 1 and useFluctuatingX = 1 are mutually "
+                   "exclusive: JIMWLK evolves the initial condition to the "
+                   "fixed x of the nuclei, while fluctuating x computes a "
+                   "local x from the local Q_s";
         fail(message);
     }
 

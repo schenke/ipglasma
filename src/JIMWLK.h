@@ -205,13 +205,6 @@ class JIMWLK {
      */
     void evolutionStep(NucleusRole nucleus);
     /**
-     * The Bjorken \f$x\f$ the evolution starts at: `readWilsonLinesX` for
-     * Wilson lines read at that \f$x\f$, otherwise `jimwlkInitialX`.
-     * \param[in] param Simulation parameters.
-     * \return The starting \f$x\f$.
-     */
-    static double startX(const Parameters &param);
-    /**
      * Finds the evolution step at which to save each JIMWLK snapshot:
      * after \f$k\f$ steps the Wilson lines are at
      * \f$x_k = x_0 e^{-k\,\delta}\f$, and each requested \f$x\f$ is saved

@@ -79,7 +79,7 @@ files themselves.
 3. With JIMWLK:
    1. the Wilson-line snapshots at the x values of `jimwlkXSnapshotList`
       (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
-   2. the final Wilson lines at `jimwlkXProjectile`/`jimwlkXTarget`
+   2. the final Wilson lines at `projectileX`/`targetX`
       (`writeWilsonLines` > 0).
 4. `mode 1` with `useNucleus 1` (sampled nuclei, or nuclei read with their
    Wilson lines), for each impact parameter tried, as switched on:
@@ -138,7 +138,7 @@ draws a new posterior set.
 
 - **Name.**
   - `_x_<x>` gives Bjorken x in scientific notation with 5 decimals. Only
-    the initial Wilson lines with `useFluctuatingX 1` and `useJIMWLK 0` have
+    the initial Wilson lines with `useFluctuatingX 1` (no JIMWLK) have
     no fixed x and leave it out; JIMWLK snapshots and final lines always
     have it.
   - `<n> = 2 (seed · N + <id>) + iA`, where seed is the input parameter
@@ -149,7 +149,7 @@ draws a new posterior set.
     2·seed + 1 and 2·seed + 2.
   - Text files end in `.txt`; binary files have no extension.
 - **When.**
-  - The initial Wilson lines: without JIMWLK at x = 0.01·exp(−`rapidityA`/`B`)
+  - The initial Wilson lines: without JIMWLK at x = `projectileX`/`targetX`
     (no x with `useFluctuatingX 1`), with JIMWLK at `jimwlkInitialX` (and
     only with `jimwlkSaveSnapshots 1`).
   - JIMWLK snapshots, at the step closest to each value of
@@ -179,7 +179,7 @@ The matrix elements are row-major and written with 15 significant digits.
 | 4 | `int32` | N_c = 3 |
 | 8 | `double` | `L` [fm] |
 | 8 | `double` | `a` [fm] |
-| 8 | `double` | `rapidityA` (projectile) or `rapidityB` (target) |
+| 8 | `double` | `rapidity` |
 | N² × 9 × 16 | `double` pairs | (Re, Im) of each matrix element, sites `ix` outer and `iy` inner, elements row-major |
 
 ## Wilson-line geometry
@@ -226,7 +226,7 @@ impact-parameter shift.
 - **Metadata:** repeats the format name (`ipglasma-initial-wilson-lines`),
   version, dtype, shape and axis order, and adds `fields` (`VA`, `VB`),
   `complex_part`, `native_site_index`, `event_id`, `N`, `Nc`, `L_fm`, `a_fm`
-  and `rapidity` (the mean of `rapidityA` and `rapidityB`).
+  and `rapidity` (the input `rapidity`).
 
 ## Participants and binary collisions
 

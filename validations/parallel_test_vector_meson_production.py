@@ -88,10 +88,10 @@ def generate_temp_input(source_input_file="input_vm_proton", seed=0, x_pom="0.00
         for line in lines:
             if line.lstrip().startswith("seed"):
                 f.write(f"seed {seed}\n")
-            elif line.lstrip().startswith("jimwlkXProjectile"):
-                f.write(f"jimwlkXProjectile {x_pom}\n")
-            elif line.lstrip().startswith("jimwlkXTarget"):
-                f.write(f"jimwlkXTarget {x_pom}\n")
+            elif line.lstrip().startswith("projectileX"):
+                f.write(f"projectileX {x_pom}\n")
+            elif line.lstrip().startswith("targetX"):
+                f.write(f"targetX {x_pom}\n")
             elif line.lstrip().startswith("nucleusQsTableFileName") and qs_table_path:
                 f.write(f"nucleusQsTableFileName {qs_table_path}\n")
             elif line.lstrip().startswith("nuclearConfigurationsPath"):

@@ -47,7 +47,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 ### Run control
 - **mode**: `1` samples the collision, runs the classical Yang-Mills evolution and writes the outputs. Any other value stops after the Wilson lines of the two nuclei are built (and evolved with JIMWLK, see `useJIMWLK`); with `writeWilsonLines` they are written to disk
 - **maxTime**: proper time $\tau$ in fm/c at which the classical Yang-Mills evolution stops
-- **inverseQsForMaxTime**: `1` stops the evolution at $\tau = 1/\langle Q_s \rangle$ instead of `maxTime`, with $\langle Q_s \rangle$ the larger of the two nuclei's $Q_s$ averaged over the overlap region (see `runWithQs`). Not possible with `useNucleus 0`, which does not compute $\langle Q_s \rangle$
+- **inverseQsForMaxTime**: `1` stops the evolution at $\tau = 1/\langle Q_s \rangle$ instead of `maxTime`, with $\langle Q_s \rangle$ the larger of the two nuclei's $Q_s$ averaged over the overlap region (see `runWithQs`); with `useJIMWLK 1` that of the initial condition, before the JIMWLK evolution. Not possible with `useNucleus 0`, which does not compute $\langle Q_s \rangle$
 
 ### Random seed
 - **seed**: random seed; MPI rank $r$ uses `seed` $+ 1000 r$. It also enters the names of the Wilson-line files (see `writeWilsonLines`), also with `useRandomSeed 1` or `useSeedList 1`
@@ -147,7 +147,7 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 
 ### Coupling
 - **g**: coupling constant $g$ of the classical Yang-Mills fields; with fixed coupling, $\alpha_s = g^2/(4\pi)$
-- **runningCoupling**: `0` for the fixed coupling. `1` rescales the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities by $g^2/(4\pi\alpha_s(Q))$, with $\alpha_s(Q) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (Q/\Lambda_\mathrm{QCD})^{2/c}]}$, $\beta_0 = (11 N_c - 2 N_f)/3$ and $Q$ = `runningCouplingQsFactor` times the $Q_s$ chosen by `runWithQs` and `runWithLocalQs`. All of them use the same factor in each cell, except that the gluon multiplicity uses $k_T$ with `runWithKt 1`. Needs `useNucleus 1` and `LambdaQCD` < `mu0`
+- **runningCoupling**: `0` for the fixed coupling. `1` rescales the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities by $g^2/(4\pi\alpha_s(Q))$, with $\alpha_s(Q) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (Q/\Lambda_\mathrm{QCD})^{2/c}]}$, $\beta_0 = (11 N_c - 2 N_f)/3$ and $Q$ = `runningCouplingQsFactor` times the $Q_s$ chosen by `runWithQs` and `runWithLocalQs`. All of them use the same factor in each cell, except that the gluon multiplicity uses $k_T$ with `runWithKt 1`. With `useJIMWLK 1`, $Q_s$ (averaged or local) is that of the initial condition, computed from the color-charge densities before the JIMWLK evolution, not of the evolved Wilson lines. Needs `useNucleus 1` and `LambdaQCD` < `mu0`
 - **mu0**: $\mu_0$ in GeV, keeps $\alpha_s$ finite for $Q \to 0$
 - **c**: how sharply $\alpha_s$ changes over from the $\mu_0$ to the $Q$ regime; must be positive
 - **LambdaQCD** (optional, default `0.2`): $\Lambda_\mathrm{QCD}$ in GeV

@@ -7,6 +7,7 @@
 #include "Lattice.h"
 #include "Parameters.h"
 #include "PrettyOstream.h"
+#include "RunningCoupling.h"
 
 /**
  * Extracts the local fluid four-velocity \f$u^\mu\f$, energy density
@@ -105,8 +106,9 @@ class MyEigen {
      * \param[in] L Physical lattice size [fm].
      * \param[in] a Lattice spacing [fm].
      * \param[in] dtau Evolution time step [lattice units].
-     * \param[in] gfactor Running-coupling rescaling factor (`1` if
-     * running coupling is disabled).
+     * \param[in] coupling Running-coupling factor of each lattice cell
+     * (`1` if running coupling is disabled), interpolated to the output
+     * grid like the fields.
      * \param[in] hx Output grid size in \f$x\f$.
      * \param[in] hy Output grid size in \f$y\f$.
      * \param[in] heta Output grid size in \f$\eta\f$.
@@ -122,8 +124,9 @@ class MyEigen {
      */
     double writeHydroText(
         Lattice *lat, Parameters *param, int it, bool finalFlag, bool tmunuOnly,
-        int N, double L, double a, double dtau, double gfactor, int hx, int hy,
-        int heta, double hL, double deta, double ha, double tau0);
+        int N, double L, double a, double dtau, const CouplingFactor &coupling,
+        int hx, int hy, int heta, double hL, double deta, double ha,
+        double tau0);
 
     /**
      * Writes the raw/binary Tmunu output (`Tmunu-t*.dat` or `*.ipgt`):
@@ -139,7 +142,8 @@ class MyEigen {
      * \param[in] L Physical lattice size [fm].
      * \param[in] a Lattice spacing [fm].
      * \param[in] dtau Evolution time step [lattice units].
-     * \param[in] gfactor Running-coupling rescaling factor.
+     * \param[in] coupling Running-coupling factor of each lattice cell,
+     * interpolated to the output grid like the fields.
      * \param[in] hx Output grid size in \f$x\f$.
      * \param[in] hy Output grid size in \f$y\f$.
      * \param[in] heta Output grid size in \f$\eta\f$.
@@ -150,8 +154,8 @@ class MyEigen {
      */
     void writeRawTmunu(
         Lattice *lat, Parameters *param, int it, int N, double L, double a,
-        double dtau, double gfactor, int hx, int hy, int heta, double hL,
-        double deta, double ha, double tau0);
+        double dtau, const CouplingFactor &coupling, int hx, int hy, int heta,
+        double hL, double deta, double ha, double tau0);
 
     /**
      * Writes the Jazma output (`Jazma-Hydro-t*.dat`): per-cell

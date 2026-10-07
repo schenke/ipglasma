@@ -48,16 +48,40 @@ double computeRunningCouplingGfactor(
             g, muZero, c, lambdaQCD, nFlavors,
             param->coupling.runningCouplingQsFactor * Qs);
     } else {
-        double averageQs = 0.;
-        if (param->coupling.runWithQs == 0)
-            averageQs = param->event.averageQsmin;
-        else if (param->coupling.runWithQs == 1)
-            averageQs = param->event.averageQsAvg;
-        else if (param->coupling.runWithQs == 2)
-            averageQs = param->event.averageQs;
-
         return computeRunningCouplingGfactorFromScale(
             g, muZero, c, lambdaQCD, nFlavors,
-            param->coupling.runningCouplingQsFactor * averageQs);
+            param->coupling.runningCouplingQsFactor * eventAverageQs(param));
     }
+}
+
+double eventAverageQs(const Parameters *param) {
+    if (param->coupling.runWithQs == 0) return param->event.averageQsmin;
+    if (param->coupling.runWithQs == 1) return param->event.averageQsAvg;
+    return param->event.averageQs;
+}
+
+double eventRunningCouplingGfactor(const Parameters *param) {
+    if (!param->coupling.runningCoupling) return 1.;
+    return computeRunningCouplingGfactorFromScale(
+        param->coupling.g, param->coupling.mu0, param->coupling.c,
+        param->coupling.LambdaQCD, param->coupling.nFlavors,
+        param->coupling.runningCouplingQsFactor * eventAverageQs(param));
+}
+
+CouplingFactor latticeCouplingFactor(Lattice *lat, Parameters *param) {
+    CouplingFactor factor;
+    factor.uniform = eventRunningCouplingGfactor(param);
+    if (!param->coupling.runningCoupling || !param->coupling.runWithLocalQs)
+        return factor;
+
+    const int N = param->lattice.size;
+    const double a = param->lattice.L / N;
+    factor.perCell.resize(static_cast<std::size_t>(N) * N);
+#pragma omp parallel for
+    for (int pos = 0; pos < N * N; pos++) {
+        factor.perCell[pos] = computeRunningCouplingGfactor(
+            lat, param, pos, N, a, param->coupling.g, param->coupling.c,
+            param->coupling.mu0);
+    }
+    return factor;
 }

@@ -473,12 +473,7 @@ int GluonMultiplicity::compute(
                << " "
                << "N/A"
                << " " << dNdetaCut << " " << dEdetaCut << " " << dNdetaCut2
-               << " " << dEdetaCut2 << " "
-               << computeRunningCouplingGfactorFromScale(
-                      g, muZero, c, param->coupling.LambdaQCD,
-                      param->coupling.nFlavors,
-                      param->coupling.runningCouplingQsFactor
-                          * param->event.averageQs)
+               << " " << dEdetaCut2 << " " << eventRunningCouplingGfactor(param)
                << endl;
         foutNN.close();
         writeTarget(

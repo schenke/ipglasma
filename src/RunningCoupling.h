@@ -2,6 +2,7 @@
 #define SRC_RUNNINGCOUPLING_H_
 
 #include <cmath>
+#include <vector>
 
 #include "PhysConst.h"
 
@@ -91,5 +92,47 @@ inline double computeRunningCouplingGfactorFromScale(
 double computeRunningCouplingGfactor(
     Lattice *lat, Parameters *param, int pos, int N, double a, double g,
     double c, double muZero);
+
+/**
+ * The event-averaged saturation scale that sets the running coupling.
+ * \param[in] param Simulation parameters; `param->coupling.runWithQs`
+ * selects the average over the overlap region of the smaller (`0`), the
+ * mean (`1`) or the larger (`2`) of the two nuclei's \f$Q_s\f$.
+ * \return That \f$\langle Q_s\rangle\f$ [GeV].
+ */
+double eventAverageQs(const Parameters *param);
+
+/**
+ * The running-coupling factor \f$g^2/(4\pi\alpha_s)\f$ of the event,
+ * with \f$\alpha_s\f$ at `param->coupling.runningCouplingQsFactor`
+ * times eventAverageQs().
+ * \param[in] param Simulation parameters.
+ * \return The factor; `1` if running coupling is disabled.
+ */
+double eventRunningCouplingGfactor(const Parameters *param);
+
+/**
+ * The factor computeRunningCouplingGfactor() gives in each lattice
+ * cell, computed once for all cells: one value, unless \f$\alpha_s\f$
+ * runs with the local \f$Q_s\f$.
+ */
+struct CouplingFactor {
+    /// The factor in every cell, used when \ref perCell is empty.
+    double uniform = 1.;
+    /// The factor of each cell, indexed by its position, with
+    /// `runningCoupling 1` and `runWithLocalQs 1`; empty otherwise.
+    std::vector<double> perCell;
+};
+
+/**
+ * Computes the running-coupling factor of every lattice cell, the one
+ * the gluon spectrum and the eccentricity weights use.
+ * \param[in] lat Lattice to read \f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$
+ * from (only with `param->coupling.runWithLocalQs`).
+ * \param[in] param Simulation parameters.
+ * \return The factor per cell with `runningCoupling 1` and
+ * `runWithLocalQs 1`, otherwise the uniform eventRunningCouplingGfactor().
+ */
+CouplingFactor latticeCouplingFactor(Lattice *lat, Parameters *param);
 
 #endif  // SRC_RUNNINGCOUPLING_H_

@@ -352,9 +352,8 @@ TEST_CASE(
     const std::vector<std::string> errors = param.validationErrors();
     REQUIRE(errors.size() == 1);
     CHECK(
-        errors[0].find(
-            "useJIMWLK = 1 and useFluctuatingX = 1 are mutually "
-            "exclusive")
+        errors[0].find("useJIMWLK = 1 and useFluctuatingX = 1 are mutually "
+                       "exclusive")
         != std::string::npos);
     param.jimwlk.enabled = 0;
     CHECK(param.validationErrors().empty());

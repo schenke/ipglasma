@@ -414,9 +414,8 @@ TEST_CASE(
         io.readGeometry(&lat2, &param, NucleusRole::Projectile);
     const NucleusGeometry target =
         io.readGeometry(&lat2, &param, NucleusRole::Target);
-    std::remove(
-        WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile)
-            .c_str());
+    std::remove(WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile)
+                    .c_str());
     std::remove(
         WilsonLineIO::geometryFileName(&param, NucleusRole::Target).c_str());
 

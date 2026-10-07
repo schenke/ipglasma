@@ -159,11 +159,12 @@ TEST_CASE(
 
 TEST_CASE(
     "Init::setConstantColorChargeDensity: flat background sets g2mu2A=g2mu2B="
-    "(g2mu/g)^2 everywhere") {
+    "(g2mu/g)^2 everywhere, with g2mu = g2muGeV in lattice units") {
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
-    param.collision.g2mu = 6.0;
+    // a = 1 fm, so this is g2mu = 6 in lattice units
+    param.collision.g2muGeV = 6.0 * PhysConst::hbarc;
     param.coupling.g = 2.0;
     Lattice lat(&param, N);
 

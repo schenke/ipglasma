@@ -303,6 +303,15 @@ bool wsDeformParamsSet(const Parameters &p) {
     return p.nucleus.useInputWSParams;
 }
 /**
+ * Condition for the constant color-charge density.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useNucleus` is 0.
+ */
+bool constantColorCharge(const Parameters &p) {
+    return !p.collision.useNucleus;
+}
+
+/**
  * Condition for the JIMWLK snapshot list.
  * \param[in] p The parameters read so far.
  * \return Whether `jimwlkSaveSnapshots` is set.
@@ -465,7 +474,6 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("sqrtS", &P::collision, &CollisionParameters::sqrtS)
             .check(positive()),
         param("g", &P::coupling, &CouplingParameters::g),
-        param("g2mu", &P::collision, &CollisionParameters::g2mu),
         param("maxTime", &P::evolution, &EvolutionParameters::maxTime)
             .check(nonNegative()),
         param(
@@ -490,6 +498,9 @@ const std::vector<ParameterSpec> &parameterTable() {
             "rotateReactionPlane", &P::collision,
             &CollisionParameters::rotateReactionPlane),
         param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
+        param("g2muGeV", &P::collision, &CollisionParameters::g2muGeV)
+            .onlyIf(constantColorCharge)
+            .check(positive()),
         param(
             "useSmoothNucleus", &P::nucleus,
             &NucleusParameters::useSmoothNucleus),
@@ -867,7 +878,10 @@ const std::map<std::string, std::string> &replacedKeys() {
         {"writeEvolution", "removed: it had no effect"},
         {"readMultFromFile",
          "removed: no version of the code writes the files it read"},
-        {"useGaussian", "removed: useNucleus 0 always uses a constant g2mu"},
+        {"useGaussian", "removed: useNucleus 0 always uses a constant g2muGeV"},
+        {"g2mu",
+         "replaced by g2muGeV, in GeV instead of lattice units: g2muGeV = "
+         "g2mu * 0.19733 / (L/size)"},
     };
     return replaced;
 }

@@ -70,9 +70,9 @@ struct CollisionParameters {
     /// Whether to use nuclei with finite geometry (`1`) or a constant
     /// \f$g^2\mu\f$ distribution over the lattice (`0`).
     bool useNucleus = false;
-    /// \f$g^2\mu\f$ [lattice units], used for the constant
-    /// (`useNucleus=0`) color-charge-density mode.
-    double g2mu = 0.;
+    /// \f$g^2\mu\f$ [GeV] of the constant color-charge density
+    /// (`useNucleus 0`); only read then.
+    double g2muGeV = 0.;
     /// If `0`, don't demand a given \f$N_{\text{part}}\f$; otherwise
     /// resample the impact parameter, keeping the nucleon positions, until
     /// the event has this \f$N_{\text{part}}\f$.

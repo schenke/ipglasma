@@ -846,7 +846,7 @@ const std::map<std::string, std::string> &replacedKeys() {
          "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
         {"Rapidity",
          "replaced by projectileX and targetX (the x of the nuclei; "
-         "Rapidity y was  setting x = 0.01 exp(-y)) and by rapidity which is "
+         "Rapidity y set x = 0.01 exp(-y)) and by rapidity, which is "
          "the rapidity of "
          "the spectra"},
         {"rapidityA",

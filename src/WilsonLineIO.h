@@ -53,7 +53,7 @@ class WilsonLineIO {
      * names.
      * \param[in] param Simulation parameters;
      * `param->wilsonLines.wilsonLinePath`, `param->event.eventId`,
-     * `param->random.seed`, `param->run.MPISize`,
+     * `param->random.fileSeed()`, `param->run.MPISize`,
      * `param->run.eventsPerRank` and (when \p format is negative)
      * `param->wilsonLines.writeWilsonLines` are used.
      * \param[in] x If non-negative, embedded in the file name
@@ -76,7 +76,7 @@ class WilsonLineIO {
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice holding the Wilson lines.
      * \param[in] param Simulation parameters; `param->lattice.size`,
-     * `param->lattice.L`, `param->event.eventId`, `param->random.seed`,
+     * `param->lattice.L`, `param->event.eventId`, `param->random.fileSeed()`,
      * `param->run.MPISize`, `param->run.eventsPerRank`,
      * `param->wilsonLines.wilsonLinePath`,
      * and `param->wilsonLines.writeWilsonLines` are used.

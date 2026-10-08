@@ -271,7 +271,7 @@ TEST_CASE(
     Parameters param;
     REQUIRE(
         param.readInput(inputFromText(exampleInputWith("mu0", "0.7"))).empty());
-    CHECK(param.coupling.mu0 != 0.7);
+    CHECK(param.coupling.mu0 == CouplingParameters {}.mu0);
     std::ostringstream used;
     param.writeInputParameters(used);
     CHECK(used.str().find("\nmu0 ") == std::string::npos);
@@ -357,6 +357,7 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"projectileX", "0", "must be positive"},
              {"targetX", "-1e-3", "must be positive"},
              {"jimwlkInitialX", "0", "must be positive"},
+             {"seed", "-2", "must be at least -1"},
          }) {
         CAPTURE(c.key);
         CAPTURE(c.value);

@@ -25,10 +25,11 @@ std::string readSourceFile(const std::string &relativePath) {
     return buffer.str();
 }
 
-// The shipped example input, with `key`'s line replaced by `key value`
-// (or removed if value is empty).
-std::string exampleInputWith(const std::string &key, const std::string &value) {
-    std::istringstream in(readSourceFile("input"));
+// `text` with `key`'s line replaced by `key value` (or removed if value
+// is empty).
+std::string inputWith(
+    const std::string &text, const std::string &key, const std::string &value) {
+    std::istringstream in(text);
     std::string line, result;
     bool found = false;
     while (std::getline(in, line)) {
@@ -44,6 +45,12 @@ std::string exampleInputWith(const std::string &key, const std::string &value) {
     }
     REQUIRE(found);
     return result;
+}
+
+// The shipped example input, with `key`'s line replaced by `key value`
+// (or removed if value is empty).
+std::string exampleInputWith(const std::string &key, const std::string &value) {
+    return inputWith(readSourceFile("input"), key, value);
 }
 
 // Inserts extra lines before the EndOfFile line of an input text.
@@ -245,9 +252,39 @@ TEST_CASE("Parameters::readInput: unknown keys are errors, with a suggestion") {
 
 TEST_CASE("Parameters::readInput: required keys must be given") {
     const std::vector<std::string> errors =
-        readErrors(exampleInputWith("mu0", ""));
+        readErrors(exampleInputWith("sigmaNN", ""));
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "test: sigmaNN is required but not given");
+}
+
+TEST_CASE(
+    "Parameters::readInput: a conditional key is only required, and only "
+    "read, when its setting is on") {
+    // the example input has runningCoupling 0
+    CHECK(readErrors(exampleInputWith("mu0", "")).empty());
+    const std::vector<std::string> errors = readErrors(
+        inputWith(exampleInputWith("mu0", ""), "runningCoupling", "1"));
     REQUIRE(errors.size() == 1);
     CHECK(errors[0] == "test: mu0 is required but not given");
+
+    // given while unused, it is accepted, ignored and not written out
+    Parameters param;
+    REQUIRE(
+        param.readInput(inputFromText(exampleInputWith("mu0", "0.7"))).empty());
+    CHECK(param.coupling.mu0 != 0.7);
+    std::ostringstream used;
+    param.writeInputParameters(used);
+    CHECK(used.str().find("\nmu0 ") == std::string::npos);
+
+    // the JIMWLK parameters are not needed without JIMWLK
+    std::string text = inputWith(
+        exampleInputWith("useJIMWLK", "0"), "jimwlkSaveSnapshots", "");
+    for (const char *key :
+         {"jimwlkMu0", "jimwlkLambdaQCD", "jimwlkMass", "jimwlkAlphaS",
+          "jimwlkDs", "jimwlkInitialX", "jimwlkXSnapshotList"}) {
+        text = inputWith(text, key, "");
+    }
+    CHECK(readErrors(text).empty());
 }
 
 TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
@@ -273,7 +310,8 @@ TEST_CASE("Parameters::readInput: values must have the parameter's type") {
         readErrors(exampleInputWith("useJIMWLK", "2")),
         "useJIMWLK '2' is not 0 or 1"));
     CHECK(anyContains(
-        readErrors(exampleInputWith("runWithKt", "2")),
+        readErrors(inputWith(
+            exampleInputWith("runWithKt", "2"), "runningCoupling", "1")),
         "runWithKt '2' is not 0 or 1"));
     CHECK(anyContains(
         readErrors(exampleInputWith("size", "256.0")),
@@ -322,8 +360,9 @@ TEST_CASE("Parameters::readInput: per-value checks") {
          }) {
         CAPTURE(c.key);
         CAPTURE(c.value);
-        const std::vector<std::string> errors =
-            readErrors(exampleInputWith(c.key, c.value));
+        // with running coupling, so its parameters are read
+        const std::vector<std::string> errors = readErrors(inputWith(
+            exampleInputWith(c.key, c.value), "runningCoupling", "1"));
         REQUIRE(errors.size() == 1);
         CHECK(anyContains(errors, std::string(c.key) + " " + c.value));
         CHECK(anyContains(errors, c.message));

@@ -114,7 +114,7 @@ HotSpotNucleon::HotSpotNucleon(const Parameters &param)
       BGqVar_(param.subnucleon.BGqVar),
       dqMin_(param.subnucleon.dqMin),
       omega_(param.subnucleon.omega),
-      NqBase_(param.subnucleon.NqBase),
+      NqBase_(param.subnucleon.Nq),
       NqFluc_(param.subnucleon.NqFluc),
       shiftOrigin_(param.subnucleon.shiftConstituentQuarkProtonOrigin),
       smearQs_(param.subnucleon.smearQs),

@@ -45,7 +45,7 @@ void makeHotSpotParam(Parameters &param) {
     param.subnucleon.BGqVar = 0.;
     param.subnucleon.dqMin = 0.;
     param.subnucleon.omega = 1.;
-    param.subnucleon.NqBase = 3.;
+    param.subnucleon.Nq = 3.;
     param.subnucleon.NqFluc = 0.;
     param.subnucleon.shiftConstituentQuarkProtonOrigin = true;
     param.subnucleon.smearQs = false;
@@ -90,10 +90,10 @@ TEST_CASE(
     }
 }
 
-TEST_CASE("HotSpotNucleon: a fractional NqBase gives the right mean") {
+TEST_CASE("HotSpotNucleon: a fractional Nq gives the right mean") {
     Parameters param;
     makeHotSpotParam(param);
-    param.subnucleon.NqBase = 2.5;
+    param.subnucleon.Nq = 2.5;
     const HotSpotNucleon model(param);
     Random random;
     random.init_genrand64(11ULL);
@@ -235,7 +235,7 @@ TEST_CASE(
         param.subnucleon.BGqVar = 0.1;
         param.subnucleon.dqMin = 0.2;
         param.subnucleon.omega = omega;
-        param.subnucleon.NqBase = 2.5;
+        param.subnucleon.Nq = 2.5;
         param.subnucleon.NqFluc = 0.5;
         param.subnucleon.smearQs = true;
         param.subnucleon.smearingWidth = 0.5;
@@ -404,7 +404,7 @@ TEST_CASE(
         makeHotSpotParam(param);
         param.subnucleon.nucleonModel = "strings";
         param.subnucleon.omega = omega;
-        param.subnucleon.NqBase = 5.;  // not used: always three hot spots
+        param.subnucleon.Nq = 5.;  // not used: always three hot spots
         const StringyNucleon model(param);
         Random random;
         random.init_genrand64(31ULL);

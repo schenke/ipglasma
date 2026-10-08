@@ -467,8 +467,8 @@ void writeparams(Parameters *param) {
               << param->event.subNucleonParamSet << "\n#   m "
               << param->subnucleon.m << ", BG " << param->subnucleon.BG
               << ", BGq " << param->subnucleon.BGq << ", smearingWidth "
-              << param->subnucleon.smearingWidth << ", NqBase "
-              << param->subnucleon.NqBase << ", QsMuRatio "
+              << param->subnucleon.smearingWidth << ", Nq "
+              << param->subnucleon.Nq << ", QsMuRatio "
               << param->colorCharge.QsMuRatio << ", dqMin "
               << param->subnucleon.dqMin << "\n";
     }

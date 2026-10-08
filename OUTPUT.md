@@ -121,7 +121,7 @@ information:
 
 - a header with the event id and the date;
 - with a posterior parameter set (`subNucleonParamType` > 0), the set that
-  was used and its values of `m`, `BG`, `BGq`, `smearingWidth`, `NqBase`,
+  was used and its values of `m`, `BG`, `BGq`, `smearingWidth`, `Nq`,
   `QsMuRatio` and `dqMin`;
 - `# Random seed used on rank <rank>: <seed>`;
 - with `runEvolution 1` and `useNucleus 1`, once an impact parameter is accepted, a

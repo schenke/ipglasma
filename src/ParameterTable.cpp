@@ -701,7 +701,7 @@ const std::vector<ParameterSpec> &parameterTable() {
             "nucleonModel", &P::subnucleon, &SubnucleonParameters::nucleonModel)
             .check(oneOf<std::string>({"gaussian", "hotspots", "strings"})),
         // a posterior parameter set replaces m, BG, BGq, smearingWidth,
-        // NqBase, QsMuRatio and dqMin every event, so those are only read
+        // Nq, QsMuRatio and dqMin every event, so those are only read
         // without one
         param(
             "subNucleonParamType", &P::subnucleon,
@@ -1191,7 +1191,6 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
         || nucleus.polarizationTarget != 0) {
         nucleus.nucleonPositionsFromFile = true;
     }
-    subnucleon.NqBase = subnucleon.Nq;
     // the posterior sets are fits of hot-spot nucleons; validationErrors()
     // reports any other model, so don't require the table for it
     if (subnucleon.subNucleonParamType > 0

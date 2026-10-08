@@ -49,7 +49,7 @@ std::string Parameters::loadPosteriorParameterSets(const int itype) {
     if (itype == 1) {
         fileName = "tables/posterior.csv";
         table = &posteriorParamSets_;
-        columns = 7;  // m, BG, BGq, smearingWidth, NqBase, QsMuRatio, dqMin
+        columns = 7;  // m, BG, BGq, smearingWidth, Nq, QsMuRatio, dqMin
     } else if (itype == 2 || itype == 4) {
         fileName = (itype == 2) ? "tables/posterior_Nq3.csv"
                                 : "tables/posterior5020_Nq3.csv";
@@ -87,7 +87,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         subnucleon.BG = posteriorParamSets_[iset][1];
         subnucleon.BGq = posteriorParamSets_[iset][2];
         subnucleon.smearingWidth = posteriorParamSets_[iset][3];
-        subnucleon.NqBase = posteriorParamSets_[iset][4];
+        subnucleon.Nq = posteriorParamSets_[iset][4];
         colorCharge.QsMuRatio = posteriorParamSets_[iset][5];
         subnucleon.dqMin = posteriorParamSets_[iset][6];
     } else if (itype == 2 || itype == 4) {
@@ -102,7 +102,7 @@ void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
         subnucleon.BG = posteriorParamSetsNq3_[iset][1];
         subnucleon.BGq = posteriorParamSetsNq3_[iset][2];
         subnucleon.smearingWidth = posteriorParamSetsNq3_[iset][3];
-        subnucleon.NqBase = 3.;
+        subnucleon.Nq = 3.;
         colorCharge.QsMuRatio = posteriorParamSetsNq3_[iset][4];
         subnucleon.dqMin = posteriorParamSetsNq3_[iset][5];
     }

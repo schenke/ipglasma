@@ -648,6 +648,18 @@ TEST_CASE(
         errors, "unknown parameter rapidityB (replaced by targetX"));
 }
 
+TEST_CASE("Parameters::readInput: minimumQs2ST is a non-negative real number") {
+    Parameters param;
+    REQUIRE(
+        param.readInput(inputFromText(exampleInputWith("minimumQs2ST", "12.5")))
+            .empty());
+    CHECK(param.colorCharge.minimumQs2ST == 12.5);
+    const std::vector<std::string> errors =
+        readErrors(exampleInputWith("minimumQs2ST", "-1"));
+    REQUIRE(errors.size() == 1);
+    CHECK(anyContains(errors, "minimumQs2ST -1: must not be negative"));
+}
+
 TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {
     Parameters param;
     REQUIRE(

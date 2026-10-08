@@ -110,7 +110,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **sampleBFromLinearDistribution**: `1` samples $b$ with a probability density $\propto b$ (uniform in the transverse plane, as for minimum-bias events), `0` uniformly in $b$
 - **rotateReactionPlane**: `1` points the impact parameter in a uniformly random direction (reaction-plane angle $\phi_{RP}$ in $[0, 2\pi)$), `0` along $x$
 - **useFixedNpart**: if not `0`, the impact parameter and reaction-plane angle are resampled, keeping the nucleon positions, until the event has exactly this number of participants; the value must be reachable for the sampled nuclei
-- **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this (integer) value. $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area. `0` for no trigger
+- **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area. `0` for no trigger
 
 ### Nucleon positions
 - **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the Woods-Saxon distribution (see below)

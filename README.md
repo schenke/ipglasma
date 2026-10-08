@@ -10,7 +10,7 @@ References
 
 
 ## Compile
-To compile IP-Glasma, run `./compile_IPGlasma.sh` in the repository root. It formats the source code with `clang-format` (if installed), builds the code with CMake in the directory `build/`, which it empties first and deletes afterwards, and installs the executable `ipglasma` in the repository root. `./compile_IPGlasma.sh noMPI` builds it without MPI.
+To compile IP-Glasma, run `./compile_IPGlasma.sh`. It formats the source code with `clang-format` (if installed), builds the code with CMake in the directory `build/` of the repository, which it empties first and deletes afterwards, and installs the executable `ipglasma` in the repository root. If the build fails, it stops and keeps `build/`. `./compile_IPGlasma.sh noMPI` builds the code without MPI.
 
 Dependencies
 * a C++17 compiler and CMake

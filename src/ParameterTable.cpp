@@ -660,7 +660,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp),
         param(
             "minimumQs2ST", &P::colorCharge,
-            &ColorChargeParameters::minimumQs2ST),
+            &ColorChargeParameters::minimumQs2ST)
+            .check(nonNegative()),
         param(
             "nucleusQsTableFileName", &P::colorCharge,
             &ColorChargeParameters::nucleusQsTableFileName),

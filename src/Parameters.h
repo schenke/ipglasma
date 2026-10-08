@@ -265,7 +265,7 @@ struct ColorChargeParameters {
     /// Resample the impact parameter, keeping the nuclei, until
     /// \f$Q_{s,\min}^2 S_T >\f$ this value (used to trigger on
     /// high-multiplicity events).
-    int minimumQs2ST = 0;
+    double minimumQs2ST = 0.;
     /// Longitudinal "resolution" (see Lappi, Eur. Phys. J. C55, 285).
     int Ny = 0;
     /// Bjorken \f$x\f$ of the projectile (nucleus A): \f$Q_s^2\f$ is

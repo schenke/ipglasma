@@ -611,9 +611,9 @@ TEST_CASE(
     "Parameters::readInput: a removed or replaced pre-2.0 key gets a hint") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
         readSourceFile("input"),
-        "\nNc 3\nwriteOutputs 2\nuseGaussian 0\ng2mu 0.1\n"));
+        "\nNc 3\nwriteOutputs 2\nuseGaussian 0\ng2mu 0.1\nmode 1\n"));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.size() == 4);
+    CHECK(errors.size() == 5);
     CHECK(anyContains(errors, "unknown parameter Nc (removed: "));
     CHECK(anyContains(
         errors, "unknown parameter writeOutputs (replaced by writeHydro"));
@@ -623,6 +623,10 @@ TEST_CASE(
         "constant g2muGeV)"));
     CHECK(anyContains(
         errors, "unknown parameter g2mu (replaced by g2muGeV, in GeV"));
+    CHECK(anyContains(
+        errors,
+        "unknown parameter mode (replaced by runEvolution: 1 for mode "
+        "1, 0 for any other mode)"));
 }
 
 TEST_CASE(

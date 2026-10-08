@@ -40,7 +40,8 @@ unsigned long long fileNumber(Parameters *param, NucleusRole nucleus) {
     const unsigned long long eventsPerRun =
         static_cast<unsigned long long>(param->run.eventsPerRank)
         * param->run.MPISize;
-    return 2 * (param->random.seed * eventsPerRun + param->event.eventId) + iA;
+    return 2 * (param->random.fileSeed() * eventsPerRun + param->event.eventId)
+           + iA;
 }
 
 /**

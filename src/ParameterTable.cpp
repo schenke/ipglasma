@@ -97,8 +97,7 @@ template <typename T>
 std::string typeName() {
     if constexpr (std::is_same_v<T, bool>) return "0 or 1";
     if constexpr (std::is_same_v<T, int>) return "an integer";
-    if constexpr (std::is_same_v<T, unsigned long long>)
-        return "a non-negative integer";
+    if constexpr (std::is_same_v<T, long long>) return "an integer";
     if constexpr (std::is_same_v<T, double>) return "a number";
     if constexpr (std::is_same_v<T, std::vector<double>>)
         return "a comma-separated list of numbers, or none";
@@ -271,6 +270,24 @@ Check<T> oneOf(std::initializer_list<T> allowed, const char *note = "") {
             message << (i == 0 ? "" : ", ") << values[i];
         }
         message << note;
+        return message.str();
+    };
+}
+
+/**
+ * Check that a value is at least \p low.
+ * \tparam T Type of the value.
+ * \param[in] low Smallest allowed value.
+ * \param[in] note Appended to the error message, e.g. to explain the
+ * bound.
+ * \return The check.
+ */
+template <typename T>
+Check<T> atLeast(T low, const char *note = "") {
+    return [low, note = std::string(note)](const T &v) {
+        if (v >= low) return std::string();
+        std::ostringstream message;
+        message << "must be at least " << low << note;
         return message.str();
     };
 }
@@ -482,9 +499,9 @@ const std::vector<ParameterSpec> &parameterTable() {
             &EvolutionParameters::inverseQsForMaxTime),
 
         // random seed
-        param("seed", &P::random, &RandomParameters::seed),
+        param("seed", &P::random, &RandomParameters::seed)
+            .check(atLeast(-1LL, " (-1 draws a random seed)")),
         param("useSeedList", &P::random, &RandomParameters::useSeedList),
-        param("useRandomSeed", &P::random, &RandomParameters::useRandomSeed),
 
         // collision system and geometry
         param("projectile", &P::collision, &CollisionParameters::projectile),
@@ -840,7 +857,6 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"runWithThisFactorTimesQs", "runningCouplingQsFactor"},
         {"runWithkt", "runWithKt"},
         {"detaOutput", "dEtaOutput"},
-        {"useTimeForSeed", "useRandomSeed"},
         {"writeInitialWilsonLines", "writeWilsonLines"},
     };
     return renamed;
@@ -879,6 +895,8 @@ const std::map<std::string, std::string> &replacedKeys() {
         {"writeEvolution", "removed: it had no effect"},
         {"readMultFromFile",
          "removed: no version of the code writes the files it read"},
+        {"useRandomSeed", "replaced by seed -1, which draws a random seed"},
+        {"useTimeForSeed", "replaced by seed -1, which draws a random seed"},
         {"mode",
          "replaced by runEvolution: 1 for mode 1, 0 for any other mode"},
         {"useGaussian", "removed: useNucleus 0 always uses a constant g2muGeV"},

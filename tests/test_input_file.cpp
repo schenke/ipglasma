@@ -144,10 +144,12 @@ TEST_CASE("parseValue: integers must be written as integers") {
     }
     CHECK(i == 5);  // unchanged by the failed parses
 
-    unsigned long long u = 0;
-    CHECK(parseValue("18446744073709551615", u));
-    CHECK(u == 18446744073709551615ULL);
-    CHECK_FALSE(parseValue("-1", u));
+    long long l = 0;
+    CHECK(parseValue("9223372036854775807", l));
+    CHECK(l == 9223372036854775807LL);
+    CHECK(parseValue("-1", l));
+    CHECK(l == -1);
+    CHECK_FALSE(parseValue("9223372036854775808", l));
 }
 
 TEST_CASE("parseValue: flags must be 0 or 1") {
@@ -590,7 +592,6 @@ TEST_CASE(
     const std::vector<std::pair<std::string, std::string>> renames = {
         {"maxTime", "maxtime"},
         {"dMin", "d_min"},
-        {"useRandomSeed", "useTimeForSeed"},
         {"writeWilsonLines", "writeInitialWilsonLines"}};
     while (std::getline(in, line)) {
         for (const auto &[newKey, oldKey] : renames) {
@@ -611,9 +612,10 @@ TEST_CASE(
     "Parameters::readInput: a removed or replaced pre-2.0 key gets a hint") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
         readSourceFile("input"),
-        "\nNc 3\nwriteOutputs 2\nuseGaussian 0\ng2mu 0.1\nmode 1\n"));
+        "\nNc 3\nwriteOutputs 2\nuseGaussian 0\ng2mu 0.1\nmode "
+        "1\nuseRandomSeed 0\n"));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.size() == 5);
+    CHECK(errors.size() == 6);
     CHECK(anyContains(errors, "unknown parameter Nc (removed: "));
     CHECK(anyContains(
         errors, "unknown parameter writeOutputs (replaced by writeHydro"));
@@ -627,6 +629,10 @@ TEST_CASE(
         errors,
         "unknown parameter mode (replaced by runEvolution: 1 for mode "
         "1, 0 for any other mode)"));
+    CHECK(anyContains(
+        errors,
+        "unknown parameter useRandomSeed (replaced by seed -1, which draws a "
+        "random seed)"));
 }
 
 TEST_CASE(

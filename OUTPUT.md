@@ -135,7 +135,7 @@ information:
 
 Running the file again gives the same parameters, but not the same event:
 the random numbers also depend on the MPI rank and on the event's position
-in the run, `useRandomSeed 1` draws a new seed, and `subNucleonParamSet -1`
+in the run, `seed -1` draws a new seed, and `subNucleonParamSet -1`
 draws a new posterior set.
 
 ## Wilson lines
@@ -148,7 +148,7 @@ draws a new posterior set.
     no fixed x and leave it out; JIMWLK snapshots and final lines always
     have it.
   - `<n> = 2 (seed · N + <id>) + iA`, where seed is the input parameter
-    `seed` (also with `useRandomSeed 1` or `useSeedList 1`), N is the number
+    `seed` (`0` for `seed -1`, and also with `useSeedList 1`), N is the number
     of events of the run (events per rank times MPI ranks) and `iA` is 1 for
     the projectile and 2 for the target. So no two files of a run, nor of runs with different
     seeds and the same N, have the same number; one event on one rank gives

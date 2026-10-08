@@ -107,7 +107,7 @@ bool parseValue(const std::string &text, int &out) {
     return parseInteger(text, out);
 }
 
-bool parseValue(const std::string &text, unsigned long long &out) {
+bool parseValue(const std::string &text, long long &out) {
     return parseInteger(text, out);
 }
 

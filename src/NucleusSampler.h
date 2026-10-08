@@ -3,6 +3,7 @@
 #ifndef SRC_NUCLEUSSAMPLER_H_
 #define SRC_NUCLEUSSAMPLER_H_
 
+#include <string>
 #include <vector>
 
 #include "Glauber.h"
@@ -26,6 +27,28 @@ struct RadiusAndCosTheta {
     /// \f$\cos\theta\f$.
     double cosTheta;
 };
+
+/**
+ * The configuration file `nucleonPositionsFromFile 1` reads for a
+ * nucleus other than the deuteron.
+ * \param[in] nucleusA Mass number.
+ * \param[in] lightNucleusOption The input `lightNucleusOption`; only
+ * matters for \f$A\f$ = 3, 12, 16, 20 and 40.
+ * \return The file name, without the directory; empty if there is no
+ * file for this mass number or the option does not exist for it.
+ */
+std::string configurationFileName(int nucleusA, int lightNucleusOption);
+
+/**
+ * Checks that `lightNucleusOption` selects a configuration file of a
+ * nucleus (with `nucleonPositionsFromFile 1`).
+ * \param[in] nucleusA Mass number.
+ * \param[in] lightNucleusOption The input `lightNucleusOption`.
+ * \return "" if the option exists for \p nucleusA, or if the nucleus has
+ * only one or no configuration file; otherwise a message listing the
+ * allowed values.
+ */
+std::string lightNucleusOptionError(int nucleusA, int lightNucleusOption);
 
 /**
  * Samples the nucleon positions of the projectile and the target: from

@@ -121,7 +121,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - $A = 16$ (O): `0` VMC, `1` alpha clusters, `2`/`3` clustered/uniform PGCM, `4`/`5` NLEFT with positive/negative weights
   - $A = 20$ (Ne): `0` or `2` clustered PGCM, `3` uniform PGCM, `4`/`5` NLEFT with positive/negative weights
   - $A = 40$: `0` VMC, `4` NLEFT (Ar files, also used for Ca)
-  - d, ⁴He, Ne22, Au and Pb have one file each (for the deuteron see `polarizationProjectileJz`); other values select the default file
+  - d, ⁴He, Ne22, Au and Pb have one file each (for the deuteron see `polarizationProjectileJz`) and ignore this parameter. For the species above, a value that is not listed is rejected at startup
 - **polarizationProjectile** and **polarizationTarget**: orientation of the nucleus, applied after its nucleon positions are sampled or read
   - 0: random orientation
   - 1: longitudinal: the nucleus' $z$ axis (the symmetry axis of a deformed Woods-Saxon nucleus) stays along the beam, with a random rotation about it

@@ -407,3 +407,33 @@ TEST_CASE(
     std::remove(polpm1.c_str());
     std::remove(dir.c_str());
 }
+
+TEST_CASE(
+    "configurationFileName and lightNucleusOptionError: the files by mass "
+    "number and lightNucleusOption") {
+    // species with several files
+    CHECK(configurationFileName(3, 1) == "triton.bin.in");
+    CHECK(
+        configurationFileName(16, 4)
+        == "O16_NLEFT_dmin0.5fm_positiveweights.bin.in");
+    CHECK(configurationFileName(20, 0) == configurationFileName(20, 2));
+    CHECK(configurationFileName(40, 4) == "Ar40_NLEFT.bin.in");
+    for (const auto &[nucleusA, option] :
+         std::vector<std::pair<int, int>> {{3, 0}, {16, 5}, {20, 3}, {40, 0}}) {
+        CAPTURE(nucleusA);
+        CAPTURE(option);
+        CHECK(lightNucleusOptionError(nucleusA, option).empty());
+    }
+    // options without a file are rejected
+    CHECK(configurationFileName(40, 5).empty());
+    CHECK(configurationFileName(20, 1).empty());
+    const std::string error = lightNucleusOptionError(40, 5);
+    CHECK(error.find("A = 40") != std::string::npos);
+    CHECK(error.find("allowed values: 0 4") != std::string::npos);
+    CHECK_FALSE(lightNucleusOptionError(12, 2).empty());
+    // species with one file, or none, ignore the option
+    CHECK(configurationFileName(208, 5) == "Pb208.bin.in");
+    CHECK(lightNucleusOptionError(208, 5).empty());
+    CHECK(lightNucleusOptionError(1, 3).empty());
+    CHECK(configurationFileName(63, 0).empty());
+}

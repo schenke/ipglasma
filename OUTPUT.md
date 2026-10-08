@@ -513,7 +513,7 @@ on.
 - **`<prefix>Phi-<n>.txt`, `<prefix>Pi-<n>.txt`**
   (`Lattice::writeSU3Matrices()`): φ and π in the Wilson-line text format,
   with `<n>` = `<id>` + 2·seed·nRanks for φ and `<id>` + (2·seed + 1)·nRanks
-  for π (not the Wilson-line numbering).
+  for π, with seed 0 for `seed -1` (not the Wilson-line numbering).
 - **`NpartdNdy-mod.dat`** (`GluonMultiplicity::readNkt()`): reads
   `multiplicity<id>.dat` and `NpartdNdy<id>.dat` (names no version of the
   program writes), converts dN/dy to dN/dη with the `jacobianMass`/`sqrtS`

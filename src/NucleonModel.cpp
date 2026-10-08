@@ -47,7 +47,7 @@ std::vector<double> sampleQsNormalization(
     if (smear) {
         // introduce a log-normal distribution for Qs normalization
         // dividing by exp(0.5 sigma^2) to ensure the mean is 1
-        // the varirance in this case is exp(sigma) - 1 for the log-normal
+        // the variance in this case is exp(sigma^2) - 1 for the log-normal
         // distribution
         for (int iq = 0; iq < Nq; iq++) {
             gauss_array[iq] =

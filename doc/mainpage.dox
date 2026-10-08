@@ -3,7 +3,8 @@
 
 This is the full developer reference for IP-Glasma: every class, function,
 and member variable in `src/`, plus the top-level project documentation
-(README, CONTRIBUTING, CHANGELOG) reproduced as browsable pages below.
+(README, OUTPUT, CONTRIBUTING, CHANGELOG) reproduced as browsable pages
+below.
 Classes are listed alphabetically (see the "Classes" tab) rather than
 grouped by physics topic.
 
@@ -23,7 +24,7 @@ grouped by physics topic.
    profiles.
 -# \ref Init -- build the two nuclei's Wilson lines: \ref NucleusSampler
    samples the nucleon positions, \ref NucleonModel the transverse
-   structure of each nucleon (Gaussian or hot spots), \ref NuclearQsTable
+   structure of each nucleon (Gaussian, hot spots or strings), \ref NuclearQsTable
    turns the summed thickness into color-charge densities, and the Wilson
    lines are built from the sampled color charges (or read with
    \ref WilsonLineIO, which also writes them).
@@ -62,5 +63,6 @@ grouped by physics topic.
 \note CI automatically checks that every class/function/member stays
 documented (`.github/workflows/doxygen.yml`), but there is no automated
 step that builds and publishes this generated HTML anywhere; see
-CONTRIBUTING.md for how to build it locally with `make doc`.
+CONTRIBUTING.md for how to build it locally
+(`cmake --build . --target doc`).
 */

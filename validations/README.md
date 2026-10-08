@@ -26,8 +26,9 @@ simultaneously.
    ```bash
    ./compile_IPGlasma.sh
    ```
-   (dependencies: CMake, FFTW). The scripts locate the binary via
-   `--ipglasma-path` (default varies per script — see below), expecting it at
+   (dependencies: CMake, FFTW and GSL, see the main README). The scripts
+   locate the binary via `--ipglasma-path` (default `.` for the eccentricity
+   script and `..` for the vector-meson script), expecting it at
    `<ipglasma-path>/ipglasma`.
 2. For `parallel_test_vector_meson_production.py` only: build
    [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
@@ -92,8 +93,12 @@ python3 parallel_test_vector_meson_production.py \
 
 Useful flags:
 - `--input-template FILE` — IP-Glasma input file to use as a template
-  (default `input_vm_proton`); the lattice `nucleusQsTableFileName` is read
-  from this file rather than hardcoded.
+  (default `input_vm_proton`); the Q_s table (`nucleusQsTableFileName`) is
+  taken from this file rather than hardcoded.
+- `--xpom X` — Bjorken x the Wilson lines are evolved to, written to the
+  input as `projectileX` and `targetX` (default 0.001705).
+- `--max-workers N` — number of events to run in parallel (default: the
+  number of logical CPUs).
 - `--plot-only` — skip the simulation and only regenerate the comparison
   plot from data files already in `--datadir`.
 - `--keep-logs` — keep per-seed log files instead of deleting them.
@@ -118,21 +123,29 @@ color-field (Tr V(x)) plots for a couple of representative events.
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=6000M
 
+# Each event runs single-threaded; the workers run the events in parallel
 export OMP_NUM_THREADS=1
+
+# Place and bind threads to single cores
+# Comment the following lines if binding is not desired
 export OMP_PLACES=cores
 export OMP_PROC_BIND=spread
 module add python-data gsl fftw
 
-python3 parallel_test_vector_meson_production.py \
+taskset -pc $$
+
+# Run the program
+python3 parallel_test_vector_meson_production.py --slurm \
     --max-workers "${SLURM_NTASKS:-1}" \
     --datadir /path/to/datadir \
     --maxevents 1500 \
     --subnucleondiffraction-path /path/to/subnucleondiffraction \
-    --ipglasma-path /path/to/ipglasma_upstream
+    --ipglasma-path /path/to/ipglasma
 ```
 
 Before submitting, edit the placeholders (`--account`, `--datadir`,
-`--subnucleondiffraction-path`, `--ipglasma-path`) and adjust
+`--subnucleondiffraction-path`, `--ipglasma-path`, and the `module add`
+line for your cluster) and adjust
 `--ntasks`/`--maxevents`/`--time` to the scale of the run. Submit with:
 
 ```bash
@@ -146,9 +159,8 @@ Notes:
 - Both scripts accept a `--slurm` flag that wraps each
   `ipglasma`/`subnucleondiffraction` invocation with
   `srun --ntasks=1 --cpus-per-task=1`, which can help binding/placement on
-  some clusters. `runvalidation.sh` above does not pass it (each worker just
-  calls the binaries directly) — add `--slurm` to the `python3` invocation if
-  your cluster needs `srun` per task.
+  some clusters. `runvalidation.sh` above passes it; remove `--slurm` from the
+  `python3` invocation if your cluster runs the binaries directly.
 - The same pattern (a batch script that calls the script with
   `--max-workers "${SLURM_NTASKS:-1}"`) works for
   `parallel_test_eccentricity.py`; just swap the python invocation, e.g.:

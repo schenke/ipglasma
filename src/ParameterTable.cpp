@@ -447,7 +447,7 @@ bool eccentricitiesComputed(const Parameters &p) {
 }
 
 /**
- * Condition for the output times.
+ * Condition for the output times and the output grid.
  * \param[in] p The parameters read so far.
  * \return Whether a hydro, Jazma or T^{mu nu} output is switched on.
  */

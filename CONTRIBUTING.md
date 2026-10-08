@@ -9,11 +9,17 @@
    `param("size", &P::lattice, &LatticeParameters::size).check(even())`, with
    `.optional("<default>")` if the key may be omitted, `.onlyIf(...)` if it is
    only read in some configurations, and `.check(...)` for its valid range.
-   Checks that combine several parameters go into
-   `Parameters::validationErrors()`.
+   The parameters are read in the order of the table, so an `.onlyIf()`
+   condition can only use parameters listed before it. Checks that combine
+   several parameters go into `Parameters::validationErrors()`.
+3. Document it in the input-parameter list of the README, with "read with …"
+   if it has an `.onlyIf()` condition, and add a CHANGELOG entry.
 
 Reading, the unknown-key check and the `usedParameters` output all follow
-from the table; nothing else needs to change.
+from the table; nothing else in the code needs to change. When you rename or
+remove a key, add the old key to `renamedKeys()` or `replacedKeys()` in
+`src/ParameterTable.cpp`, so that an old input file gets a hint instead of
+only "unknown parameter".
 
 ## Changing an output file
 
@@ -127,18 +133,16 @@ leading `*`:
 - Document every enum (what it selects/represents) and every enumerator
   individually, the same way as a struct and its member variables --
   don't leave an enum with only a plain `//` comment or no per-value
-  docs (a gap this pass initially left on `IntegrandId`/`NucleusRole`
-  in Glauber.h, added before this rule was; caught by the user).
+  docs.
 
 ### Example
 
 ```cpp
 /**
- * Local \f$g^2\mu_A^2\f$ color-charge-density-squared value for the
- * projectile (nucleus A) at this site, sampled during initialization.
+ * Returns the projectile's (nucleus A) local \f$g^2\mu_A^2\f$ value.
  *
- * Feeds the classical color source and the local running-coupling/
- * saturation-scale determination in Evolution.cpp.
+ * Used to sample the classical color source and to set the local
+ * running coupling (RunningCoupling.cpp).
  * \return The stored \f$g^2\mu_A^2\f$ value [lattice units].
  */
 double getg2mu2A() const { return g2mu2A_; }

@@ -16,10 +16,6 @@ esac
 # work in the repository root, wherever the script is called from
 cd "$(dirname "$0")"
 
-# format the code base; a clang-format that cannot format it does not stop
-# the build
-bash formatCode.sh || echo "formatting failed, continuing without it" >&2
-
 mkdir -p build
 cd build
 rm -fr ./*

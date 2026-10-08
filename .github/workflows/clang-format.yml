@@ -5,7 +5,7 @@ name: Apply clang-format
 # this repository, so this only takes effect for PRs opened from a branch
 # here -- PRs from a fork skip this job entirely (GitHub Actions has no
 # way to push to someone else's fork with the default token); those still
-# need clang-format applied locally (./formatCode.sh) before merging.
+# need clang-format applied locally before merging (see CONTRIBUTING.md).
 on:
   pull_request:
 
@@ -38,10 +38,10 @@ jobs:
         run: pip install --quiet clang-format==19.1.7
 
       - name: Run clang-format
-        # Run the formatter directly instead of the PR-controlled
-        # formatCode.sh: this step has a contents:write token, and a
-        # same-repo PR could otherwise replace that tracked script with
-        # arbitrary commands to use or exfiltrate it.
+        # Run the formatter directly, never a script from the PR's checkout:
+        # this step has a contents:write token, and a same-repo PR could
+        # replace such a tracked script with arbitrary commands to use or
+        # exfiltrate it.
         # tests/third_party is a vendored copy of doctest.h, not our code.
         run: |
           find src tests utilities \( -iname '*.h' -o -iname '*.cpp' \) \

@@ -4,6 +4,10 @@
 # Usage: ./compile_IPGlasma.sh [noMPI|KNL]
 set -euo pipefail
 
+if (( $# > 1 )); then
+    echo "Usage: $0 [noMPI|KNL]" >&2
+    exit 1
+fi
 Flag=${1:-}
 case "$Flag" in
     "" | noMPI | KNL) ;;

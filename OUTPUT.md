@@ -58,14 +58,14 @@ files themselves.
 | `WilsonLine[_x_<x>]_<n>[.txt]` | Wilson lines | `writeWilsonLines 1` or `2` | text or binary |
 | `WilsonLineGeometry_<n>` | Wilson-line geometry | `writeWilsonLines 1` or `2`, `writeWilsonLineGeometry 1` (default), `useNucleus 1` | binary with JSON header |
 | `initialWilsonLines<id>.ipgw` | Initial Wilson lines snapshot | `writeWilsonLineSnapshot 1`, color charges sampled | binary with JSON header |
-| `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `mode 1`, `useNucleus 1`, `useSmoothNucleus 0`, `writeNpartList 1`, `writeNcollList 1` | text |
-| `NgluonEstimators<id>.dat` | Gluon number estimators | `mode 1`, `useNucleus 1`, `writeNgluonEstimators 1` | text |
-| `Tmunu-t<tau>-<id>.ipgt` / `.dat` | Energy-momentum tensor | `mode 1`, `writeTmunu 1` | binary or text |
-| `epsilon-u-Hydro-t<tau>-<id>.dat`, `epsilon-u-Hydro-TauHydro-<id>.dat` | Hydro initial conditions | `mode 1`, `writeHydro 1` | text |
-| `Jazma-Hydro-t<tau>-<id>.dat` | Jazma energy density | `mode 1`, `writeJazma 1` | text |
-| `eccentricities<id>.dat` | Eccentricities | `mode 1`, `computeEccentricities 1` | text, appended |
-| `NpartdNdy-t<tau>-<id>.dat` | Multiplicity summary | `mode 1`, `computeGluonMultiplicity 1` | text |
-| `gluonMultiplicity<id>.json` | Gluon spectrum | `mode 1`, `computeGluonMultiplicity 1` | JSON |
+| `NpartList<id>.dat`, `NcollList<id>.dat` | Participants and binary collisions | `runEvolution 1`, `useNucleus 1`, `useSmoothNucleus 0`, `writeNpartList 1`, `writeNcollList 1` | text |
+| `NgluonEstimators<id>.dat` | Gluon number estimators | `runEvolution 1`, `useNucleus 1`, `writeNgluonEstimators 1` | text |
+| `Tmunu-t<tau>-<id>.ipgt` / `.dat` | Energy-momentum tensor | `runEvolution 1`, `writeTmunu 1` | binary or text |
+| `epsilon-u-Hydro-t<tau>-<id>.dat`, `epsilon-u-Hydro-TauHydro-<id>.dat` | Hydro initial conditions | `runEvolution 1`, `writeHydro 1` | text |
+| `Jazma-Hydro-t<tau>-<id>.dat` | Jazma energy density | `runEvolution 1`, `writeJazma 1` | text |
+| `eccentricities<id>.dat` | Eccentricities | `runEvolution 1`, `computeEccentricities 1` | text, appended |
+| `NpartdNdy-t<tau>-<id>.dat` | Multiplicity summary | `runEvolution 1`, `computeGluonMultiplicity 1` | text |
+| `gluonMultiplicity<id>.json` | Gluon spectrum | `runEvolution 1`, `computeGluonMultiplicity 1` | JSON |
 | `multiplicityHadrons<id>.dat` | Hadron spectrum | as above and `writeHadronSpectrum 1` | text |
 | `RESULTS_rank<rank>.h5`, `RESULTS.h5` | HDF5 collection | `writeOutputsToHDF5 1` | HDF5 |
 | `ipglasma_fftw_wisdom.dat` | Diagnostic files | built with `-DIPGLASMA_DETERMINISTIC_FFT=ON` | FFTW wisdom |
@@ -87,19 +87,19 @@ files themselves.
       (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
    2. the final Wilson lines at `projectileX`/`targetX`
       (`writeWilsonLines` > 0).
-4. `mode 1` with `useNucleus 1` (sampled nuclei, or nuclei read with their
+4. `runEvolution 1` with `useNucleus 1` (sampled nuclei, or nuclei read with their
    Wilson lines), for each impact parameter tried, as switched on:
    `NcollList<id>.dat`, then `NpartList<id>.dat`, then, once an impact
    parameter is accepted, its collision geometry is appended to
    `usedParameters<id>.dat`, then `NgluonEstimators<id>.dat` (not for a try
    rejected by `useFixedNpart` or for lack of overlap). Each try overwrites
    the files of the previous one.
-5. `mode 1`, during the evolution: the hydro, T^μν and Jazma files that are
+5. `runEvolution 1`, during the evolution: the hydro, T^μν and Jazma files that are
    switched on, in this order, at each of the `outputTimes` and at the final
    time. Each output time is rounded down to a time step; times below one
    time step or not before the final step are skipped, and times that round
    to the same step are written once.
-6. `mode 1`, after the final time: `eccentricities<id>.dat`
+6. `runEvolution 1`, after the final time: `eccentricities<id>.dat`
    (`computeEccentricities 1`), then, with `computeGluonMultiplicity 1`,
    `multiplicityHadrons<id>.dat` (`writeHadronSpectrum 1`),
    `NpartdNdy-t<tau>-<id>.dat` and `gluonMultiplicity<id>.json`.
@@ -124,7 +124,7 @@ information:
   was used and its values of `m`, `BG`, `BGq`, `smearingWidth`, `NqBase`,
   `QsMuRatio` and `dqMin`;
 - `# Random seed used on rank <rank>: <seed>`;
-- with `mode 1` and `useNucleus 1`, once an impact parameter is accepted, a
+- with `runEvolution 1` and `useNucleus 1`, once an impact parameter is accepted, a
   block starting with `# Collision geometry of this event:`:
   - `b` [fm], `phiRP`, `Npart` and `Ncoll`;
   - with running coupling, the event-averaged Q_s [GeV] selected by
@@ -214,7 +214,7 @@ Little-endian by definition:
 ## Initial Wilson lines snapshot
 
 `initialWilsonLines<id>.ipgw` (`WilsonLineIO::writeTrainingData()`), with
-`writeWilsonLineSnapshot 1`, in any `mode`, but not when the Wilson lines are
+`writeWilsonLineSnapshot 1`, with any `runEvolution`, but not when the Wilson lines are
 read from file (`readInitialWilsonLines` 1 or 2). It holds both nuclei's
 Wilson lines right after they are built, before JIMWLK and the
 impact-parameter shift.
@@ -240,7 +240,7 @@ impact-parameter shift.
 
 `NpartList<id>.dat` and `NcollList<id>.dat`
 (`CollisionGeometry::determineNpartAndNcoll()`, `computeNcollList()`), with
-`writeNpartList 1` and `writeNcollList 1` (the default), in `mode 1` with
+`writeNpartList 1` and `writeNcollList 1` (the default), in `runEvolution 1` with
 `useNucleus 1` (also for nuclei read with their Wilson lines). They are not
 written with `useSmoothNucleus 1`. Positions are in fm, in the frame
 of the collision: the projectile is centred at +b/2 and the target at −b/2
@@ -267,7 +267,7 @@ x, y [fm] of the two colliding nucleons.
 ## Gluon number estimators
 
 `NgluonEstimators<id>.dat` (`CollisionGeometry::writeNgluonEstimatorsFile()`),
-with `writeNgluonEstimators 1` (the default), in `mode 1` with
+with `writeNgluonEstimators 1` (the default), in `runEvolution 1` with
 `useNucleus 1`, also with `useSmoothNucleus 1`. One header line (`#`) and one
 line of four numbers:
 

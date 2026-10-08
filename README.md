@@ -45,7 +45,7 @@ The input file has one `key value` pair per line:
 Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, `useRandomSeed 1` draws a new seed, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
 
 ### Run control
-- **mode**: `1` samples the collision, runs the classical Yang-Mills evolution and writes the outputs. Any other value stops after the Wilson lines of the two nuclei are built (and evolved with JIMWLK, see `useJIMWLK`); with `writeWilsonLines` they are written to disk
+- **runEvolution**: `1` samples the collision, runs the classical Yang-Mills evolution and writes the outputs. `0` stops after the Wilson lines of the two nuclei are built (and evolved with JIMWLK, see `useJIMWLK`); with `writeWilsonLines` they are written to disk
 - **maxTime**: proper time $\tau$ in fm/c at which the classical Yang-Mills evolution stops
 - **inverseQsForMaxTime**: `1` stops the evolution at $\tau = 1/\langle Q_s \rangle$ instead of `maxTime`, with $\langle Q_s \rangle$ the larger of the two nuclei's $Q_s$ averaged over the overlap region (see `runWithQs`); with `useJIMWLK 1` that of the initial condition, before the JIMWLK evolution. Not possible with `useNucleus 0`, which does not compute $\langle Q_s \rangle$
 
@@ -157,7 +157,7 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 
 
 ### Output
-The files themselves (names, order, layout, columns and units) are described in [OUTPUT.md](OUTPUT.md). Every output has its own switch, except `usedParameters<event>.dat`, which is always written (`NpartdNdy-t*` and `gluonMultiplicity*.json` share `computeGluonMultiplicity`). The hydro, Jazma and $T^{\mu\nu}$ files, the multiplicity, the eccentricities and the collision-geometry files (`NpartList`, `NcollList`, `NgluonEstimators`) are only written in `mode 1`, the collision-geometry files and the Wilson-line geometry files only with `useNucleus 1`.
+The files themselves (names, order, layout, columns and units) are described in [OUTPUT.md](OUTPUT.md). Every output has its own switch, except `usedParameters<event>.dat`, which is always written (`NpartdNdy-t*` and `gluonMultiplicity*.json` share `computeGluonMultiplicity`). The hydro, Jazma and $T^{\mu\nu}$ files, the multiplicity, the eccentricities and the collision-geometry files (`NpartList`, `NcollList`, `NgluonEstimators`) are only written with `runEvolution 1`, the collision-geometry files and the Wilson-line geometry files only with `useNucleus 1`.
 
  - **writeHydro**: `1` writes the initial condition for hydrodynamic simulations, $\epsilon$, $u^\mu$ and $\pi^{\mu\nu}$ (`epsilon-u-Hydro-*.dat`), at the final time and at `outputTimes`
  - **writeJazma**: `1` writes the energy density of the Jazma model (`Jazma-Hydro-*.dat`), at the final time and at `outputTimes`
@@ -171,7 +171,7 @@ The files themselves (names, order, layout, columns and units) are described in 
  - **computeEccentricities**: at the final time, compute the eccentricities of the energy density (`eccentricities<id>.dat`)
  - **eccentricityCutoff** (optional, default `0`, read with `computeEccentricities 1`): energy density in GeV/fm$^3$ below which a cell is left out of the eccentricities
  - **writeNpartList**, **writeNcollList** and **writeNgluonEstimators** (optional, default `1`): write the positions of the nucleons and whether they collided (`NpartList<id>.dat`), the binary collisions (`NcollList<id>.dat`) and the gluon-number estimators (`NgluonEstimators<id>.dat`)
- - **writeWilsonLineSnapshot** (optional, default `0`): `1` writes the initial Wilson lines of both nuclei as one binary file with a JSON header (`initialWilsonLines<id>.ipgw`) when they are built, in any `mode` (not with `readInitialWilsonLines` 1 or 2)
+ - **writeWilsonLineSnapshot** (optional, default `0`): `1` writes the initial Wilson lines of both nuclei as one binary file with a JSON header (`initialWilsonLines<id>.ipgw`) when they are built, with any `runEvolution` (not with `readInitialWilsonLines` 1 or 2)
  - **writeOutputsToHDF5**: this parameter decides whether to collect output files into an HDF5 file
    - 0: no
    - 1: yes; after each event, its `usedParameters`, `NpartList`, `NcollList` and `NpartdNdy-t*` files, the hydro files at `outputTimes` and the text $T^{\mu\nu}$ files are moved into `RESULTS_rank<rank>.h5` (the originals are deleted), and at the end of the run these are merged into `RESULTS.h5`. The other files stay on disk, and so does a per-rank file that cannot be merged. Needs `python3` with `h5py` and `numpy` (it calls `utilities/combine_events_into_hdf5.py` of the source tree, so the run can start in any directory)

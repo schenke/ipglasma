@@ -261,7 +261,7 @@ int main(int argc, char *argv[]) {
                 }
             }
 
-            if (param->evolution.mode == 1) {
+            if (param->evolution.runEvolution) {
                 while (param->event.success == 0) {
                     // sample collision impact parameter
                     // and compute Npart, Ncoll,etc, and check if there was a

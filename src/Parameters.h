@@ -23,10 +23,10 @@ struct LatticeParameters {
 
 /// Classical Yang-Mills evolution.
 struct EvolutionParameters {
-    /// Run mode: `1` samples the collision and runs the classical
-    /// Yang-Mills evolution; any other value stops after the Wilson lines
-    /// of the two nuclei are built (and evolved with JIMWLK).
-    int mode = 0;
+    /// Whether to sample the collision and run the classical Yang-Mills
+    /// evolution (`1`), or to stop after the Wilson lines of the two
+    /// nuclei are built (and evolved with JIMWLK) (`0`).
+    bool runEvolution = false;
     /// Maximal evolution time [fm/c].
     double maxTime = 0.;
     /// Whether to use \f$1/Q_s\f$ as the maximal evolution time (`1`)

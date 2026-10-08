@@ -465,7 +465,8 @@ using P = Parameters;
 const std::vector<ParameterSpec> &parameterTable() {
     static const std::vector<ParameterSpec> table = {
         // general setup
-        param("mode", &P::evolution, &EvolutionParameters::mode),
+        param(
+            "runEvolution", &P::evolution, &EvolutionParameters::runEvolution),
         param("size", &P::lattice, &LatticeParameters::size)
             .check(positive<int>())
             .check(even()),  // the FFTs assume even lattice dimensions
@@ -878,6 +879,8 @@ const std::map<std::string, std::string> &replacedKeys() {
         {"writeEvolution", "removed: it had no effect"},
         {"readMultFromFile",
          "removed: no version of the code writes the files it read"},
+        {"mode",
+         "replaced by runEvolution: 1 for mode 1, 0 for any other mode"},
         {"useGaussian", "removed: useNucleus 0 always uses a constant g2muGeV"},
         {"g2mu",
          "replaced by g2muGeV, in GeV instead of lattice units: g2muGeV = "

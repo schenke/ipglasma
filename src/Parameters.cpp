@@ -210,6 +210,13 @@ std::vector<std::string> Parameters::validationErrors() const {
     // Q_s table starts at y = 0
     const bool samplesColorCharges =
         collision.useNucleus && wilsonLines.readInitialWilsonLines == 0;
+    if (collision.useNucleus && collision.bMin > collision.bMax) {
+        std::ostringstream message;
+        message << "bMin (" << collision.bMin
+                << ") must not be larger than bMax (" << collision.bMax << ")";
+        fail(message);
+    }
+
     // lightNucleusOption must select a configuration file of both nuclei
     // when they are read (a polarization already set
     // nucleonPositionsFromFile)

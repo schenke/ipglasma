@@ -380,6 +380,22 @@ TEST_CASE(
     CHECK(param.xBeforeJimwlk(NucleusRole::Projectile) == 0.01);
 }
 
+TEST_CASE("Parameters::validationErrors: bMin must not be larger than bMax") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.collision.bMin = 3.;
+    param.collision.bMax = 2.;
+    const std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0] == "bMin (3) must not be larger than bMax (2)");
+    param.collision.bMax = 3.;
+    CHECK(param.validationErrors().empty());
+    // b is not sampled without nuclei
+    param.collision.bMax = 2.;
+    param.collision.useNucleus = false;
+    CHECK(param.validationErrors().empty());
+}
+
 TEST_CASE(
     "Parameters::validationErrors: lightNucleusOption must select a "
     "configuration file when the files are read") {

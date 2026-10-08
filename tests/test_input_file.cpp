@@ -910,6 +910,41 @@ TEST_CASE(
     CHECK(readErrors(exampleInputWith("BGq", "0.091")).empty());
 }
 
+TEST_CASE(
+    "Parameters::readInput: rejects values that would hang the run or "
+    "divide by zero") {
+    struct Case {
+        const char *key;
+        const char *value;
+        const char *error;
+    };
+    for (const Case &c :
+         {Case {"sigmaNN", "0", "sigmaNN 0: must be positive"},
+          Case {
+              "useFixedNpart", "-1", "useFixedNpart -1: must not be negative"},
+          Case {"Ny", "0", "Ny 0: must be positive"},
+          Case {"g", "0", "g 0: must be positive"},
+          Case {"QsMuRatio", "0", "QsMuRatio 0: must be positive"},
+          Case {"UVDamp", "-0.1", "UVDamp -0.1: must not be negative"},
+          Case {"bMin", "-1", "bMin -1: must not be negative"},
+          Case {"radiusWS", "0", "radiusWS 0: must be positive"},
+          Case {"diffusenessWS", "0", "diffusenessWS 0: must be positive"},
+          Case {"LOutput", "0", "LOutput 0: must be positive"},
+          Case {"sizeOutput", "0", "sizeOutput 0: must be positive"},
+          Case {"etaSizeOutput", "0", "etaSizeOutput 0: must be positive"}}) {
+        CAPTURE(c.key);
+        CAPTURE(c.value);
+        // with input Woods-Saxon parameters and a field output, so those
+        // parameters are read
+        const std::vector<std::string> errors = readErrors(inputWith(
+            inputWith(
+                exampleInputWith(c.key, c.value), "useInputWSParams", "1"),
+            "writeHydro", "1"));
+        REQUIRE(errors.size() == 1);
+        CHECK(anyContains(errors, c.error));
+    }
+}
+
 TEST_CASE("Parameters::readInput: protonAnisotropy must be larger than -1") {
     const std::string gaussian = exampleInputWith("nucleonModel", "gaussian");
     auto withAnisotropy = [&gaussian](const std::string &value) {

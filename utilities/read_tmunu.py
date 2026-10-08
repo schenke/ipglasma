@@ -6,10 +6,10 @@ IP-Glasma at the end of (or during) the classical Yang-Mills evolution.
 IP-Glasma writes one file per requested proper time tau, named
 
     Tmunu-t{tau_fm}-{event_id}.ipgt   (binary, default when writeTmunuBinary=1)
-    Tmunu-t{tau_fm}-{event_id}.dat    (legacy text format)
+    Tmunu-t{tau_fm}-{event_id}.dat    (text, with writeTmunuBinary=0)
 
-in the directory the run was launched from. See src/MyEigen.cpp for the
-writer. This module provides pure-Python/numpy readers for both formats
+in the directory the run was launched from. OUTPUT.md describes both
+formats; the writer is MyEigen::writeRawTmunu() in src/MyEigen.cpp. This module provides pure-Python/numpy readers for both formats
 plus small convenience functions to pull out the energy density (the T00
 component) as a 2D grid.
 
@@ -27,7 +27,7 @@ Binary format ("IPGTMU01"):
     rest      shape[0]*shape[1]*10 little-endian float32 values, row-major
               in [y][x][component] order.
 
-Text format (legacy):
+Text format:
     header line starting with '#', containing "key= value" tokens
     (etamax=, xmax=, ymax=, deta=, dx=, dy=, ...)
     one row per grid point: "ix iy T00 Txx Tyy tau2_Tetaeta neg_T0x neg_T0y
@@ -121,7 +121,7 @@ def _parse_text_header(header_line):
 
 
 def read_tmunu_text(path):
-    """Read a legacy text Tmunu-t*.dat snapshot.
+    """Read a text Tmunu-t*.dat snapshot.
 
     Returns (array, meta) with the same layout as read_tmunu_binary:
     array has shape (ny, nx, 10).

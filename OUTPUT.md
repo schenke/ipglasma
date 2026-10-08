@@ -472,7 +472,8 @@ or copied, or one with a group that `RESULTS.h5` already holds, is kept (and
 the program warns), and the groups already copied from it are removed again,
 so a later run can merge it. The script needs `python3` with `h5py` and `numpy`; the program calls
 it from the source tree (`utilities/combine_events_into_hdf5.py`), so the run
-can start in any directory.
+can start in any directory. `utilities/fetch_IPGlasma_event_from_hdf5_database.py`
+writes the hydro or text T^μν file of one event back out of `RESULTS.h5`.
 
 ## Diagnostic files
 

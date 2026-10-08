@@ -57,7 +57,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **size**: controls the size of the lattice that is `size`$^2$.
   - Recommended to be of the form $2^n$
 - **L**: the total physical extent of the lattice (in fm)
-- **Ny**: number of longitudinal layers of color charges per nucleus: each Wilson line is a product of `Ny` factors, each sampled with the color-charge density $g^2\mu^2/N_y$ (T. Lappi, Eur. Phys. J. C 55 (2008) 285)
+- **Ny**: number of longitudinal layers of color charges per nucleus, at least 1: each Wilson line is a product of `Ny` factors, each sampled with the color-charge density $g^2\mu^2/N_y$ (T. Lappi, Eur. Phys. J. C 55 (2008) 285)
 
 ### Initial state
 - **useNucleus**
@@ -69,7 +69,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - See `src/Glauber.cpp` for all supported nuclei and details
 - **sqrtS** (read with `useFluctuatingX 1` or `usePseudoRapidity 1`): center-of-mass energy per nucleon pair $\sqrt{s}$ in GeV. It enters Bjorken $x$ with `useFluctuatingX 1` (see `xQsFactor`) and the pseudorapidity Jacobian (see `usePseudoRapidity`); it does not set `sigmaNN`
 - **m**: infrared regulator in GeV
-- **UVDamp**: UV damping length in GeV$^{-1}$: the propagator $1/(k^2+m^2)$ that gives the gauge field of the color charges is multiplied by $e^{-|k|\,\mathrm{UVDamp}}$. Only applied with `m` $\neq 0$; `0` for no damping
+- **UVDamp**: UV damping length in GeV$^{-1}$, not negative: the propagator $1/(k^2+m^2)$ that gives the gauge field of the color charges is multiplied by $e^{-|k|\,\mathrm{UVDamp}}$. Only applied with `m` $\neq 0$; `0` for no damping
 - **BG**: nucleon width in GeV$^{-2}$. With `nucleonModel gaussian` the nucleon's thickness is $T \sim e^{-b^2/(2B_G)}$; with `hotspots` and `strings` it is the width of the hot-spot position distribution (see `omega`)
 - **nucleonModel**: transverse structure of a nucleon
   - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)
@@ -90,7 +90,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **shiftConstituentQuarkProtonOrigin** (`hotspots`, `strings`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations: the thickness of each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`) is multiplied by a log-normal factor $e^{X}/e^{\sigma^2/2}$ with mean 1, where $X$ is Gaussian with width $\sigma$ = `smearingWidth`
 - **smearingWidth** (read with `smearQs 1`): width $\sigma$ of the saturation scale fluctuations (see `smearQs`), parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
-- **QsMuRatio**: ratio $Q_s/(g^2\mu)$, the same for both nuclei: a cell's color-charge density is $g^2\mu = Q_s/$`QsMuRatio`, with $Q_s$ from `nucleusQsTableFileName`
+- **QsMuRatio**: ratio $Q_s/(g^2\mu)$, positive, the same for both nuclei: a cell's color-charge density is $g^2\mu = Q_s/$`QsMuRatio`, with $Q_s$ from `nucleusQsTableFileName`
 - **nucleusQsTableFileName**: file with the table of $Q_s^2$ as a function of the summed nucleon thickness $T_p$ and rapidity $y$ (e.g. `qs2Adj_vs_Tp_vs_Y_240.in` in the repository root), relative to the working directory; read with `useNucleus 1`
 - **projectileX** and **targetX**: Bjorken $x$ of the projectile and of the target. Without JIMWLK and with `useFluctuatingX 0`, $Q_s^2$ of each nucleus is read from the nuclear $Q_s$ table at $y = \ln(0.01/x)$, so both must not be larger than 0.01 (the table covers $0 \le y \le 10.75$, larger values use $Q_s$ at $y = 10.75$). With `useJIMWLK 1`, the nuclei are evolved from `jimwlkInitialX` (or from `readWilsonLinesX` for read Wilson lines) to these $x$, which must then not be larger than it. Only read with `useFluctuatingX 0`
 - **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition; must be `0` with `useJIMWLK 1`, where $Q_s^2$ is evaluated at the fixed $x$ = `jimwlkInitialX`
@@ -102,14 +102,14 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **jacobianMass** (read with `usePseudoRapidity 1`): mass in GeV in the rapidity-pseudorapidity Jacobian
 
 ### Collision geometry
-- **sigmaNN**: inelastic nucleon-nucleon cross section in mb, used to decide which nucleons collide
+- **sigmaNN**: inelastic nucleon-nucleon cross section in mb, positive, used to decide which nucleons collide
 - **gaussianWounding** (read with `useNucleus 1`): how it is decided whether two nucleons collide
   - 0: hard sphere, they collide if their transverse distance $d$ is below $\sqrt{\sigma_{NN}/\pi}$
   - 1: they collide with the probability $p(d) = G\, e^{-G \pi d^2/\sigma_{NN}}$, $G = 0.92$, the Gaussian wounding profile of GLISSANDO (Eq. (13) of [arXiv:0710.5731](https://arxiv.org/abs/0710.5731)); its value of $G$ is taken from analyses of pp scattering at ISR energies (U. Amaldi and K. R. Schubert, Nucl. Phys. B 166 (1980) 301) and from A. Białas and A. Bzdak, Acta Phys. Polon. B 38 (2007) 159. Both profiles integrate to $\sigma_{NN}$
-- **bMin** and **bMax** (read with `useNucleus 1`): range of the impact parameter $b$ in fm (with `useNucleus 0`, $b = 0$)
+- **bMin** and **bMax** (read with `useNucleus 1`): range of the impact parameter $b$ in fm, $0 \le$ `bMin` $\le$ `bMax`
 - **sampleBFromLinearDistribution** (read with `useNucleus 1`): `1` samples $b$ with a probability density $\propto b$ (uniform in the transverse plane, as for minimum-bias events), `0` uniformly in $b$
 - **rotateReactionPlane** (read with `useNucleus 1`): `1` points the impact parameter in a uniformly random direction (reaction-plane angle $\phi_{RP}$ in $[0, 2\pi)$), `0` along $x$
-- **useFixedNpart** (read with `useNucleus 1`): if not `0`, the impact parameter and reaction-plane angle are resampled, keeping the nucleon positions, until the event has exactly this number of participants; the value must be reachable for the sampled nuclei
+- **useFixedNpart** (read with `useNucleus 1`): not negative; if not `0`, the impact parameter and reaction-plane angle are resampled, keeping the nucleon positions, until the event has exactly this number of participants; the value must be reachable for the sampled nuclei
 - **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area. `0` for no trigger
 
 ### Nucleon positions
@@ -134,8 +134,8 @@ Each event writes the values of all input parameters it used to `usedParameters<
 Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) Woods-Saxon distribution with diffuseness $a$ and radius $R(\theta, \phi) = R [1 + \beta_2 (\cos\gamma\, Y_{20} + \sin\gamma\, Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. `src/Glauber.cpp` has the built-in parameters of each species. Deformed by default are Au, O, Ar, Cu, U ($\beta_2 = 0.28$, $\beta_4 = 0.093$), Ru and Xe ($\beta_2 = 0.162$, $\beta_4 = -0.003$); the deformations of O and Xe are from FRDM(2012) ([arXiv:1508.06294](https://arxiv.org/abs/1508.06294)), the other parameters have no recorded source.
 
 - **useInputWSParams**: `1` replaces the built-in `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp` of both nuclei by the input values, which are only read with `1`. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
-- **radiusWS**: radius $R$ in fm
-- **diffusenessWS**: diffuseness $a$ in fm
+- **radiusWS**: radius $R$ in fm, positive
+- **diffusenessWS**: diffuseness $a$ in fm, positive
 - **beta2**, **beta3** and **beta4**: deformation parameters $\beta_2$, $\beta_3$ and $\beta_4$
 - **gamma**: triaxiality angle $\gamma$ in radians
 - **deltaRnp** and **deltaAnp**: neutron skin: neutrons are sampled with radius $R$ + `deltaRnp` and diffuseness $a$ + `deltaAnp` (in fm); both are 0 without `useInputWSParams 1`
@@ -143,7 +143,7 @@ Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) W
 - **dMin**: minimum distance in fm between two nucleons of a Woods-Saxon nucleus, also read with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it, since their density depends on every angle (use `forceDMin 1` for them). `0` for no minimum distance
 
 ### Coupling
-- **g**: coupling constant $g$ of the classical Yang-Mills fields; with fixed coupling, $\alpha_s = g^2/(4\pi)$
+- **g**: coupling constant $g$ of the classical Yang-Mills fields, positive; with fixed coupling, $\alpha_s = g^2/(4\pi)$
 - **runningCoupling**: `0` for the fixed coupling. `1` rescales the energy density and $T^{\mu\nu}$ output, the gluon multiplicity and the eccentricities by $g^2/(4\pi\alpha_s(Q))$, with $\alpha_s(Q) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (Q/\Lambda_\mathrm{QCD})^{2/c}]}$, $\beta_0 = (11 N_c - 2 N_f)/3$ and $Q$ = `runningCouplingQsFactor` times the $Q_s$ chosen by `runWithQs` and `runWithLocalQs`. All of them use the same factor in each cell, except that the gluon multiplicity uses $k_T$ with `runWithKt 1`. With `useJIMWLK 1`, $Q_s$ (averaged or local) is that of the initial condition, computed from the color-charge densities before the JIMWLK evolution, not of the evolved Wilson lines. Needs `useNucleus 1` and `LambdaQCD` < `mu0`
 - **mu0** (read with `runningCoupling 1`): $\mu_0$ in GeV, keeps $\alpha_s$ finite for $Q \to 0$
 - **c** (read with `runningCoupling 1`): how sharply $\alpha_s$ changes over from the $\mu_0$ to the $Q$ regime; must be positive
@@ -163,8 +163,8 @@ The files themselves (names, order, layout, columns and units) are described in 
  - **writeTmunu**: `1` writes $T^{\mu\nu}$, e.g. for effective kinetic theory (KoMPoST) simulations (`Tmunu-*`), at the final time and at `outputTimes`
  - **writeTmunuBinary** (optional, default `1`, read with `writeTmunu 1`): $T^{\mu\nu}$ in binary (`.ipgt`, `1`) or text (`.dat`, `0`) format
  - **outputTimes** (optional, default `none`, read with `writeHydro`, `writeJazma` or `writeTmunu` 1): comma-separated proper times in fm/c (no spaces), e.g. `0.1,0.2,0.3,0.4`, at which these files are also written before the final time; `none` for only the final time. Each time is rounded down to a time step and must be smaller than `maxTime`; with `inverseQsForMaxTime 1`, times that are not before the final time are skipped
- - **sizeOutput**, **LOutput** (read with `writeHydro`, `writeJazma` or `writeTmunu` 1): number of grid points per direction and side length [fm] of the transverse output grid the fields are interpolated to
- - **etaSizeOutput**, **dEtaOutput** (read with `writeHydro`, `writeJazma` or `writeTmunu` 1): number of points and spacing of the (boost-invariant) $\eta$ grid in the hydro and Jazma files; the $T^{\mu\nu}$ files hold one $\eta$ slice and only record them in their header
+ - **sizeOutput**, **LOutput** (read with `writeHydro`, `writeJazma` or `writeTmunu` 1): number of grid points per direction and side length [fm] of the transverse output grid the fields are interpolated to, both positive
+ - **etaSizeOutput**, **dEtaOutput** (read with `writeHydro`, `writeJazma` or `writeTmunu` 1): number of points (at least 1) and spacing of the (boost-invariant) $\eta$ grid in the hydro and Jazma files; the $T^{\mu\nu}$ files hold one $\eta$ slice and only record them in their header
  - **computeGluonMultiplicity**: at the final time, measure the gluon spectrum and multiplicity (files `NpartdNdy-t*` and `gluonMultiplicity*.json`)
  - **writeHadronSpectrum** (optional, default `0`, read with `computeGluonMultiplicity 1`): `1` also writes the hadron spectrum from fragmenting the gluon spectrum (`multiplicityHadrons<id>.dat`)
  - **computeEccentricities**: at the final time, compute the eccentricities of the energy density (`eccentricities<id>.dat`)

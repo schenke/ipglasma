@@ -579,8 +579,11 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check(positive<int>())
             .check(even()),  // the FFTs assume even lattice dimensions
         param("L", &P::lattice, &LatticeParameters::L).check(positive()),
-        param("Ny", &P::colorCharge, &ColorChargeParameters::Ny),
-        param("g", &P::coupling, &CouplingParameters::g),
+        // divisor of the color-charge density of each layer
+        param("Ny", &P::colorCharge, &ColorChargeParameters::Ny)
+            .check(positive<int>()),
+        // the color-charge densities are divided by g^2
+        param("g", &P::coupling, &CouplingParameters::g).check(positive()),
         param("maxTime", &P::evolution, &EvolutionParameters::maxTime)
             .check(nonNegative()),
         param(
@@ -595,10 +598,14 @@ const std::vector<ParameterSpec> &parameterTable() {
         // collision system and geometry
         param("projectile", &P::collision, &CollisionParameters::projectile),
         param("target", &P::collision, &CollisionParameters::target),
-        param("sigmaNN", &P::collision, &CollisionParameters::sigmaNN),
+        // without a cross section no nucleons collide, and the impact
+        // parameter would be resampled forever
+        param("sigmaNN", &P::collision, &CollisionParameters::sigmaNN)
+            .check(positive()),
         param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
         param("bMin", &P::collision, &CollisionParameters::bMin)
-            .onlyIf(nucleiCollide),
+            .onlyIf(nucleiCollide)
+            .check(nonNegative()),
         param("bMax", &P::collision, &CollisionParameters::bMax)
             .onlyIf(nucleiCollide),
         param(
@@ -617,7 +624,8 @@ const std::vector<ParameterSpec> &parameterTable() {
             &NucleusParameters::useSmoothNucleus),
         param(
             "useFixedNpart", &P::collision, &CollisionParameters::useFixedNpart)
-            .onlyIf(nucleiCollide),
+            .onlyIf(nucleiCollide)
+            .check(nonNegative<int>()),
         param(
             "nucleiToAverage", &P::collision,
             &CollisionParameters::nucleiToAverage)
@@ -666,9 +674,11 @@ const std::vector<ParameterSpec> &parameterTable() {
             "useInputWSParams", &P::nucleus,
             &NucleusParameters::useInputWSParams),
         param("radiusWS", &P::nucleus, &NucleusParameters::radiusWS)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .check(positive()),
         param("diffusenessWS", &P::nucleus, &NucleusParameters::diffusenessWS)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .check(positive()),
         param("beta2", &P::nucleus, &NucleusParameters::beta2)
             .onlyIf(wsDeformParamsSet),
         param("beta3", &P::nucleus, &NucleusParameters::beta3)
@@ -747,15 +757,19 @@ const std::vector<ParameterSpec> &parameterTable() {
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
             &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)
             .onlyIf(hotSpotSubstructure),
+        // g^2 mu = Q_s / QsMuRatio
         param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio)
-            .onlyIf(inputParameters),
+            .onlyIf(inputParameters)
+            .check(positive()),
         param("smearQs", &P::subnucleon, &SubnucleonParameters::smearQs),
         param(
             "smearingWidth", &P::subnucleon,
             &SubnucleonParameters::smearingWidth)
             .onlyIf(smearingWidthFromInput)
             .check(nonNegative()),
-        param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp),
+        // a negative damping length would amplify the UV
+        param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp)
+            .check(nonNegative()),
         param(
             "minimumQs2ST", &P::colorCharge,
             &ColorChargeParameters::minimumQs2ST)
@@ -874,11 +888,14 @@ const std::vector<ParameterSpec> &parameterTable() {
             "writeOutputsToHDF5", &P::output,
             &OutputParameters::writeOutputsToHDF5),
         param("LOutput", &P::output, &OutputParameters::LOutput)
-            .onlyIf(fieldOutputWritten),
+            .onlyIf(fieldOutputWritten)
+            .check(positive()),
         param("sizeOutput", &P::output, &OutputParameters::sizeOutput)
-            .onlyIf(fieldOutputWritten),
+            .onlyIf(fieldOutputWritten)
+            .check(positive<int>()),
         param("etaSizeOutput", &P::output, &OutputParameters::etaSizeOutput)
-            .onlyIf(fieldOutputWritten),
+            .onlyIf(fieldOutputWritten)
+            .check(positive<int>()),
         param("dEtaOutput", &P::output, &OutputParameters::dEtaOutput)
             .onlyIf(fieldOutputWritten),
 

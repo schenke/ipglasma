@@ -29,6 +29,23 @@ file or change the content or layout of one, update its section there in the
 same change, and point to it from the Doxygen comment of the function that
 writes it.
 
+## Code formatting
+
+The code in `src/`, `tests/` and `utilities/` is formatted with clang-format
+19, the version the GitHub Actions workflow uses (e.g.
+`pip install clang-format==19.1.7`; older versions cannot read
+`.clang-format`). To format it, run from the repository root:
+
+```
+find src tests utilities \( -iname '*.h' -o -iname '*.cpp' \) -not -path '*/third_party/*' | xargs clang-format -i -style=file
+```
+
+For a pull request from a branch of this repository,
+`.github/workflows/clang-format.yml` runs the same command and pushes a
+`style: apply clang-format` commit if anything changed; pull that commit
+before you continue working on the branch. Pull requests from forks are not
+formatted automatically, so format them before opening the pull request.
+
 ## Code documentation
 
 IP-Glasma uses [Doxygen](https://www.doxygen.nl/)-style documentation,

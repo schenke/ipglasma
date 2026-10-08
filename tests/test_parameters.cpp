@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 
+#include "Glauber.h"
 #include "Parameters.h"
 #include "doctest.h"
 
@@ -377,4 +378,40 @@ TEST_CASE(
     param.jimwlk.enabled = true;
     param.jimwlk.initialX = 0.01;
     CHECK(param.xBeforeJimwlk(NucleusRole::Projectile) == 0.01);
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: lightNucleusOption must select a "
+    "configuration file when the files are read") {
+    CHECK(speciesMassNumber("Ar") == 40);
+    CHECK(speciesMassNumber("p") == 1);
+    CHECK(speciesMassNumber("Xx") == 0);
+
+    Parameters param;
+    makeValidBaseline(param);
+    param.collision.projectile = "Ar";
+    param.collision.target = "Pb";
+    param.nucleus.nucleonPositionsFromFile = true;
+    param.nucleus.lightNucleusOption = 5;
+    std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0]
+          == "projectile: lightNucleusOption 5 has no configuration file for "
+             "A = 40; allowed values: 0 4");
+
+    // the same species on both sides is reported once
+    param.collision.target = "Ar";
+    errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(errors[0].rfind("projectile and target: ", 0) == 0);
+
+    // an option that exists, or files that are not read, are fine
+    param.nucleus.lightNucleusOption = 4;
+    CHECK(param.validationErrors().empty());
+    param.nucleus.lightNucleusOption = 5;
+    param.wilsonLines.readInitialWilsonLines = 2;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readInitialWilsonLines = 0;
+    param.nucleus.nucleonPositionsFromFile = false;
+    CHECK(param.validationErrors().empty());
 }

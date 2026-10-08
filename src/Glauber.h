@@ -163,6 +163,14 @@ struct Data {
 };
 
 /**
+ * The mass number of a species in the built-in table of
+ * Glauber::findNucleusData().
+ * \param[in] name Species name, e.g. `Pb` or `p`.
+ * \return Its mass number, or `0` for an unknown name.
+ */
+int speciesMassNumber(const std::string &name);
+
+/**
  * Glauber-model nuclear geometry: resolves a nucleus name to its
  * Woods-Saxon/density-profile parameters, provides the corresponding
  * thickness and overlap functions (\f$T_A\f$, \f$T_{AB}\f$), and

@@ -86,6 +86,13 @@ const NucleusTemplate kNucleusTemplates[] = {
 
 }  // namespace
 
+int speciesMassNumber(const std::string &name) {
+    for (const auto &candidate : kNucleusTemplates) {
+        if (name == candidate.name) return candidate.A;
+    }
+    return 0;
+}
+
 void Glauber::findNucleusData(
     Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,
     double a_WS, double beta2, double beta3, double beta4, double gamma,

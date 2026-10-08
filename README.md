@@ -67,7 +67,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **projectile** and **target**: specify nuclei
   - Typical values: `p`, `Pb`, `Au`
   - See `src/Glauber.cpp` for all supported nuclei and details
-- **sqrtS**: center-of-mass energy per nucleon pair $\sqrt{s}$ in GeV. It enters Bjorken $x$ with `useFluctuatingX 1` (see `xQsFactor`) and the pseudorapidity Jacobian (see `usePseudoRapidity`); it does not set `sigmaNN`
+- **sqrtS** (read with `useFluctuatingX 1` or `usePseudoRapidity 1`): center-of-mass energy per nucleon pair $\sqrt{s}$ in GeV. It enters Bjorken $x$ with `useFluctuatingX 1` (see `xQsFactor`) and the pseudorapidity Jacobian (see `usePseudoRapidity`); it does not set `sigmaNN`
 - **m**: infrared regulator in GeV
 - **UVDamp**: UV damping length in GeV$^{-1}$: the propagator $1/(k^2+m^2)$ that gives the gauge field of the color charges is multiplied by $e^{-|k|\,\mathrm{UVDamp}}$. Only applied with `m` $\neq 0$; `0` for no damping
 - **BG**: nucleon width in GeV$^{-2}$. With `nucleonModel gaussian` the nucleon's thickness is $T \sim e^{-b^2/(2B_G)}$; with `hotspots` and `strings` it is the width of the hot-spot position distribution (see `omega`)
@@ -89,7 +89,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **NqFluc** (`hotspots`): mean of a Poisson-distributed number of additional hot spots per nucleon; `0` for no fluctuation. Every nucleon has at least one hot spot
 - **shiftConstituentQuarkProtonOrigin** (`hotspots`, `strings`): whether to shift the center-of-mass to origin (1) or not (0) after sampling the hot spot positions
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations: the thickness of each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`) is multiplied by a log-normal factor $e^{X}/e^{\sigma^2/2}$ with mean 1, where $X$ is Gaussian with width $\sigma$ = `smearingWidth`
-- **smearingWidth**: width $\sigma$ of the saturation scale fluctuations (see `smearQs`), parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
+- **smearingWidth** (read with `smearQs 1`): width $\sigma$ of the saturation scale fluctuations (see `smearQs`), parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
 - **QsMuRatio**: ratio $Q_s/(g^2\mu)$, the same for both nuclei: a cell's color-charge density is $g^2\mu = Q_s/$`QsMuRatio`, with $Q_s$ from `nucleusQsTableFileName`
 - **nucleusQsTableFileName**: file with the table of $Q_s^2$ as a function of the summed nucleon thickness $T_p$ and rapidity $y$ (e.g. `qs2Adj_vs_Tp_vs_Y_240.in` in the repository root), relative to the working directory; read with `useNucleus 1`
 - **projectileX** and **targetX**: Bjorken $x$ of the projectile and of the target. Without JIMWLK and with `useFluctuatingX 0`, $Q_s^2$ of each nucleus is read from the nuclear $Q_s$ table at $y = \ln(0.01/x)$, so both must not be larger than 0.01 (the table covers $0 \le y \le 10.75$, larger values use $Q_s$ at $y = 10.75$). With `useJIMWLK 1`, the nuclei are evolved from `jimwlkInitialX` (or from `readWilsonLinesX` for read Wilson lines) to these $x$, which must then not be larger than it. Only read with `useFluctuatingX 0`

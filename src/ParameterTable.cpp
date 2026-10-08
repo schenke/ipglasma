@@ -367,6 +367,16 @@ bool pseudoRapidityUsed(const Parameters &p) {
 }
 
 /**
+ * Condition for \f$\sqrt{s}\f$, which enters the fluctuating \f$x\f$
+ * and the pseudorapidity Jacobian.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useFluctuatingX` or `usePseudoRapidity` is set.
+ */
+bool sqrtSUsed(const Parameters &p) {
+    return p.colorCharge.useFluctuatingX || p.colorCharge.usePseudoRapidity;
+}
+
+/**
  * Condition for the running-coupling parameters.
  * \param[in] p The parameters read so far.
  * \return Whether `runningCoupling` is set.
@@ -514,6 +524,16 @@ bool inputParameters(const Parameters &p) {
 }
 
 /**
+ * Condition for the width of the Q_s fluctuations.
+ * \param[in] p The parameters read so far.
+ * \return Whether `smearQs` is set and no posterior set replaces the
+ * width.
+ */
+bool smearingWidthFromInput(const Parameters &p) {
+    return inputParameters(p) && p.subnucleon.smearQs;
+}
+
+/**
  * Condition for the parameters of a posterior parameter set.
  * \param[in] p The parameters read so far.
  * \return Whether `subNucleonParamType` selects a posterior set.
@@ -560,8 +580,6 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check(even()),  // the FFTs assume even lattice dimensions
         param("L", &P::lattice, &LatticeParameters::L).check(positive()),
         param("Ny", &P::colorCharge, &ColorChargeParameters::Ny),
-        param("sqrtS", &P::collision, &CollisionParameters::sqrtS)
-            .check(positive()),
         param("g", &P::coupling, &CouplingParameters::g),
         param("maxTime", &P::evolution, &EvolutionParameters::maxTime)
             .check(nonNegative()),
@@ -735,7 +753,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "smearingWidth", &P::subnucleon,
             &SubnucleonParameters::smearingWidth)
-            .onlyIf(inputParameters)
+            .onlyIf(smearingWidthFromInput)
             .check(nonNegative()),
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp),
         param(
@@ -758,6 +776,9 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "useFluctuatingX", &P::colorCharge,
             &ColorChargeParameters::useFluctuatingX),
+        param("sqrtS", &P::collision, &CollisionParameters::sqrtS)
+            .onlyIf(sqrtSUsed)
+            .check(positive()),
         param(
             "projectileX", &P::colorCharge, &ColorChargeParameters::projectileX)
             .onlyIf(fixedX)

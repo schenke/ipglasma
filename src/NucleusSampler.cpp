@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdlib>
 #include <fstream>
+#include <map>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -14,6 +16,74 @@
 #include "PhysConst.h"
 
 using PhysConst::isClose;
+
+namespace {
+
+/**
+ * The configuration files of the species that have several, by mass
+ * number and `lightNucleusOption`.
+ * \return The table.
+ */
+const std::map<int, std::map<int, std::string>> &optionFiles() {
+    static const std::map<int, std::map<int, std::string>> files = {
+        {3, {{0, "He3.bin.in"}, {1, "triton.bin.in"}}},
+        {12, {{0, "C12_VMC.bin.in"}, {1, "C12_alphaCluster.bin.in"}}},
+        {16,
+         {{0, "O16_VMC.bin.in"},
+          {1, "O16_alphaCluster.bin.in"},
+          {2, "O16_PGCM_clustered_dmin0.bin.in"},
+          {3, "O16_PGCM_uniform_dmin0.bin.in"},
+          {4, "O16_NLEFT_dmin0.5fm_positiveweights.bin.in"},
+          {5, "O16_NLEFT_dmin0.5fm_negativeweights.bin.in"}}},
+        {20,
+         {{0, "Ne20_PGCM_clustered_dmin0.bin.in"},
+          {2, "Ne20_PGCM_clustered_dmin0.bin.in"},
+          {3, "Ne20_PGCM_uniform_dmin0.bin.in"},
+          {4, "Ne20_NLEFT_dmin0.5fm_positiveweights.bin.in"},
+          {5, "Ne20_NLEFT_dmin0.5fm_negativeweights.bin.in"}}},
+        {40, {{0, "Ar40_VMC.bin.in"}, {4, "Ar40_NLEFT.bin.in"}}},
+    };
+    return files;
+}
+
+/**
+ * The configuration files of the species that have one, by mass number.
+ * \return The table.
+ */
+const std::map<int, std::string> &singleFiles() {
+    static const std::map<int, std::string> files = {
+        {4, "He4.bin.in"},
+        {22, "Ne22_NLEFT.bin.in"},
+        {197, "Au197.bin.in"},
+        {208, "Pb208.bin.in"},
+    };
+    return files;
+}
+
+}  // namespace
+
+std::string configurationFileName(int nucleusA, int lightNucleusOption) {
+    const auto single = singleFiles().find(nucleusA);
+    if (single != singleFiles().end()) return single->second;
+    const auto options = optionFiles().find(nucleusA);
+    if (options == optionFiles().end()) return "";
+    const auto file = options->second.find(lightNucleusOption);
+    return (file != options->second.end()) ? file->second : "";
+}
+
+std::string lightNucleusOptionError(int nucleusA, int lightNucleusOption) {
+    const auto options = optionFiles().find(nucleusA);
+    if (options == optionFiles().end()
+        || options->second.count(lightNucleusOption) > 0) {
+        return "";
+    }
+    std::ostringstream message;
+    message << "lightNucleusOption " << lightNucleusOption
+            << " has no configuration file for A = " << nucleusA
+            << "; allowed values:";
+    for (const auto &[option, file] : options->second) message << " " << option;
+    return message.str();
+}
 
 void NucleusSampler::readConfigurations(
     Parameters *param, Glauber *glauber, Random *random) {
@@ -184,47 +254,16 @@ std::vector<std::vector<float>> NucleusSampler::readConfigurationFile(
                 fileName = "DeuteronPolpm1Configs.bin.in";
             }
         }
-    } else if (nucleusA == 3) {
-        fileName = "He3.bin.in";
-        if (lightNucleusOption == 1) fileName = "triton.bin.in";
-    } else if (nucleusA == 4) {
-        fileName = "He4.bin.in";
-    } else if (nucleusA == 12) {
-        fileName = "C12_VMC.bin.in";
-        if (lightNucleusOption == 1) fileName = "C12_alphaCluster.bin.in";
-    } else if (nucleusA == 16) {
-        fileName = "O16_VMC.bin.in";
-        if (lightNucleusOption == 1) {
-            fileName = "O16_alphaCluster.bin.in";
-        } else if (lightNucleusOption == 2) {
-            fileName = "O16_PGCM_clustered_dmin0.bin.in";
-        } else if (lightNucleusOption == 3) {
-            fileName = "O16_PGCM_uniform_dmin0.bin.in";
-        } else if (lightNucleusOption == 4) {
-            fileName = "O16_NLEFT_dmin0.5fm_positiveweights.bin.in";
-        } else if (lightNucleusOption == 5) {
-            fileName = "O16_NLEFT_dmin0.5fm_negativeweights.bin.in";
-        }
-    } else if (nucleusA == 20) {
-        fileName = "Ne20_PGCM_clustered_dmin0.bin.in";
-        if (lightNucleusOption == 3) {
-            fileName = "Ne20_PGCM_uniform_dmin0.bin.in";
-        } else if (lightNucleusOption == 4) {
-            fileName = "Ne20_NLEFT_dmin0.5fm_positiveweights.bin.in";
-        } else if (lightNucleusOption == 5) {
-            fileName = "Ne20_NLEFT_dmin0.5fm_negativeweights.bin.in";
-        }
-    } else if (nucleusA == 22) {
-        fileName = "Ne22_NLEFT.bin.in";
-    } else if (nucleusA == 40) {
-        fileName = "Ar40_VMC.bin.in";
-        if (lightNucleusOption == 4) fileName = "Ar40_NLEFT.bin.in";
-    } else if (nucleusA == 197) {
-        fileName = "Au197.bin.in";
-    } else if (nucleusA == 208) {
-        fileName = "Pb208.bin.in";
     } else {
-        readFlag = false;
+        const std::string error =
+            lightNucleusOptionError(nucleusA, lightNucleusOption);
+        if (!error.empty()) {
+            messager_ << "[NucleusSampler::readConfigurationFile]: " << error;
+            messager_.flush("error");
+            exit(1);
+        }
+        fileName = configurationFileName(nucleusA, lightNucleusOption);
+        readFlag = !fileName.empty();
     }
 
     if (!readFlag) return nucleonPosArr;

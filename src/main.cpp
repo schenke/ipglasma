@@ -10,6 +10,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifndef DISABLEMPI
@@ -25,6 +26,7 @@
 #include "JIMWLK.h"
 #include "Lattice.h"
 #include "Matrix.h"
+#include "NucleusSampler.h"
 #include "Parameters.h"
 #include "PrettyOstream.h"
 #include "Random.h"
@@ -217,6 +219,21 @@ int main(int argc, char *argv[]) {
                 param->nucleus.gamma, param->nucleus.forceDMin,
                 param->nucleus.dMin, param->nucleus.deltaRnp,
                 param->nucleus.deltaAnp, 100);
+        }
+        if (param->nucleus.nucleonPositionsFromFile) {
+            bool optionOk = true;
+            const std::pair<const char *, int> nuclei[] = {
+                {"projectile", glauber.nucleusA1()},
+                {"target", glauber.nucleusA2()}};
+            for (const auto &[role, nucleusA] : nuclei) {
+                const std::string error = lightNucleusOptionError(
+                    nucleusA, param->nucleus.lightNucleusOption);
+                if (error.empty()) continue;
+                messager << "[main::main]: " << role << ": " << error;
+                messager.flush("error");
+                optionOk = false;
+            }
+            if (!optionOk) exit(1);
         }
 
         // initialize evolution object

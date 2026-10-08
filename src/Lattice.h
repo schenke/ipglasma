@@ -150,8 +150,8 @@ class Lattice {
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] fileprefix Prefix prepended to both output file names.
      * \param[in] param Simulation parameters; `param->lattice.size`,
-     * `param->event.eventId`, `param->random.seed` and `param->run.MPISize` are
-     * used.
+     * `param->event.eventId`, `param->random.fileSeed()` and
+     * `param->run.MPISize` are used.
      */
     void writeSU3Matrices(std::string fileprefix, Parameters *param);
     /// Site index one step in \f$-x\f$ and one step in \f$+y\f$,

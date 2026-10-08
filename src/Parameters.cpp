@@ -10,6 +10,8 @@
 #include <string>
 #include <vector>
 
+#include "Glauber.h"
+#include "NucleusSampler.h"
 #include "PhysConst.h"
 
 std::string Parameters::loadPosteriorParameterSetsFromFile(
@@ -208,6 +210,32 @@ std::vector<std::string> Parameters::validationErrors() const {
     // Q_s table starts at y = 0
     const bool samplesColorCharges =
         collision.useNucleus && wilsonLines.readInitialWilsonLines == 0;
+    // lightNucleusOption must select a configuration file of both nuclei
+    // when they are read (a polarization already set
+    // nucleonPositionsFromFile)
+    if (samplesColorCharges && nucleus.nucleonPositionsFromFile) {
+        const std::string projectileError = lightNucleusOptionError(
+            speciesMassNumber(collision.projectile),
+            nucleus.lightNucleusOption);
+        const std::string targetError = lightNucleusOptionError(
+            speciesMassNumber(collision.target), nucleus.lightNucleusOption);
+        std::ostringstream message;
+        if (!projectileError.empty() && projectileError == targetError) {
+            message << "projectile and target: " << projectileError;
+            fail(message);
+        } else {
+            if (!projectileError.empty()) {
+                message << "projectile: " << projectileError;
+                fail(message);
+                message.str("");
+            }
+            if (!targetError.empty()) {
+                message << "target: " << targetError;
+                fail(message);
+            }
+        }
+    }
+
     if (samplesColorCharges && jimwlk.enabled && jimwlk.initialX > 0.01) {
         std::ostringstream message;
         message << "jimwlkInitialX (" << jimwlk.initialX

@@ -203,7 +203,7 @@ class HotSpotNucleon : public NucleonModel {
   public:
     /**
      * \param[in] param Simulation parameters (`BG`, `BGq`, `BGqVar`,
-     * `dqMin`, `omega`, `NqBase`, `NqFluc`,
+     * `dqMin`, `omega`, `Nq`, `NqFluc`,
      * `shiftConstituentQuarkProtonOrigin`, `smearQs`, `smearingWidth`).
      */
     explicit HotSpotNucleon(const Parameters &param);

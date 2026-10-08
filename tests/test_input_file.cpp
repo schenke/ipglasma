@@ -223,9 +223,7 @@ TEST_CASE("Parameters::readInput: reads values and sets derived ones") {
     CHECK(param.collision.projectile == "Pb");
     CHECK(param.jimwlk.xSnapshotList.size() == 5);
     CHECK(param.jimwlk.enabled == true);
-    // derived: NqBase from Nq, dtau ~0.1 with
-    // maxTime a whole number of steps
-    CHECK(param.subnucleon.NqBase == param.subnucleon.Nq);
+    // derived: dtau ~0.1 with maxTime a whole number of steps
     const double a = param.lattice.L / param.lattice.size;
     const double steps = param.evolution.maxTime / (a * param.run.dtau);
     CHECK(steps == doctest::Approx(static_cast<int>(steps + 0.5)));
@@ -708,12 +706,11 @@ TEST_CASE("Parameters::readInput: minimumQs2ST is a non-negative real number") {
     CHECK(anyContains(errors, "minimumQs2ST -1: must not be negative"));
 }
 
-TEST_CASE("Parameters::readInput: a fractional Nq sets a fractional NqBase") {
+TEST_CASE("Parameters::readInput: Nq can be fractional") {
     Parameters param;
     REQUIRE(
         param.readInput(inputFromText(exampleInputWith("Nq", "2.5"))).empty());
     CHECK(param.subnucleon.Nq == 2.5);
-    CHECK(param.subnucleon.NqBase == 2.5);
 }
 
 TEST_CASE("Parameters::readInput: rejects a maxTime needing too many steps") {

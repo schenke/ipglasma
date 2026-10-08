@@ -164,7 +164,7 @@ struct NucleusParameters {
 
 /// Nucleon substructure (constituent quarks) and its Bayesian-posterior
 /// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,
-/// NqBase, QsMuRatio and dqMin are overwritten from the posterior set every
+/// Nq, QsMuRatio and dqMin are overwritten from the posterior set every
 /// event.
 struct SubnucleonParameters {
     /// Infrared mass regulator [GeV] cutting off the Coulomb tail;
@@ -208,15 +208,12 @@ struct SubnucleonParameters {
     /// projection of the `1` case.
     double omega = 0.;
     /// Mean number of hot spots (constituent quarks) per nucleon for
-    /// `nucleonModel hotspots`, at least 1 (`strings` always has 3). Sets
-    /// NqBase: each nucleon gets floor(NqBase) hot spots, one more with
-    /// probability equal to the fractional part, plus a Poisson fluctuation of
-    /// mean NqFluc.
+    /// `nucleonModel hotspots`, at least 1 (`strings` always has 3), before
+    /// the NqFluc fluctuation: each nucleon gets floor(Nq) hot spots, one
+    /// more with probability equal to the fractional part, plus a Poisson
+    /// fluctuation of mean NqFluc. A posterior parameter set overwrites it
+    /// (see setParamsWithPosteriorParameterSet()).
     double Nq = 0.;
-    /// Mean number of hot spots before the NqFluc fluctuation: Nq, or the
-    /// value of a posterior parameter set (see
-    /// setParamsWithPosteriorParameterSet()).
-    double NqBase = 0.;
     /// Mean of a Poisson-distributed number of additional hot spots per
     /// nucleon (`nucleonModel hotspots`).
     double NqFluc = 0.;
@@ -530,7 +527,7 @@ class Parameters {
     PrettyOstream messager_;
 
     /// Loaded rows of `tables/posterior.csv` (variable \f$N_q\f$),
-    /// each `{m, BG, BGq, smearingWidth, NqBase, QsmuRatio, dq_min}`.
+    /// each `{m, BG, BGq, smearingWidth, Nq, QsmuRatio, dq_min}`.
     std::vector<std::vector<float>> posteriorParamSets_;
 
     /// Loaded rows of `tables/posterior_Nq3.csv` or
@@ -552,7 +549,7 @@ class Parameters {
     NucleusParameters nucleus;
     /// Nucleon substructure (constituent quarks) and its Bayesian-posterior
     /// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,
-    /// NqBase, QsMuRatio and dqMin are overwritten from the posterior set every
+    /// Nq, QsMuRatio and dqMin are overwritten from the posterior set every
     /// event.
     SubnucleonParameters subnucleon;
     /// Saturation scale, color charges and rapidity/x of the nuclei.
@@ -596,11 +593,11 @@ class Parameters {
     /**
      * Applies one row of a loaded posterior-fit table to this
      * instance's
-     * `subnucleon.m`/`subnucleon.BG`/`subnucleon.BGq`/`subnucleon.smearingWidth`/`subnucleon.NqBase`/\c
+     * `subnucleon.m`/`subnucleon.BG`/`subnucleon.BGq`/`subnucleon.smearingWidth`/`subnucleon.Nq`/\c
      * colorCharge.QsMuRatio/\c subnucleon.dqMin.
      * \param[in] itype `1` uses \c posteriorParamSets_ (also sets \c
-     * subnucleon.NqBase from the table); `2` or `4` use \c
-     * posteriorParamSetsNq3_ (fixing \c subnucleon.NqBase to `3`); any other
+     * subnucleon.Nq from the table); `2` or `4` use \c
+     * posteriorParamSetsNq3_ (fixing \c subnucleon.Nq to `3`); any other
      * value is a no-op.
      * \param[in] iset Row index, taken modulo the selected table's row
      * count.
@@ -611,7 +608,7 @@ class Parameters {
      * Sets every input parameter from \p input, using the parameter
      * table in ParameterTable.cpp: parses and checks each value, applies
      * the defaults of optional parameters, and then sets the derived
-     * values (time step, NqBase, posterior parameter sets). Nothing
+     * values (time step, posterior parameter sets). Nothing
      * derived is set if there are errors.
      * \param[in] input The parsed input file.
      * \return Every problem found (including those from reading the

@@ -285,6 +285,12 @@ TEST_CASE(
         text = inputWith(text, key, "");
     }
     CHECK(readErrors(text).empty());
+
+    // sqrtS is only needed with fluctuating x or pseudorapidity, and
+    // smearingWidth only with smearQs 1 (both off in the example input)
+    CHECK(readErrors(
+              inputWith(exampleInputWith("sqrtS", ""), "smearingWidth", ""))
+              .empty());
 }
 
 TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
@@ -361,9 +367,11 @@ TEST_CASE("Parameters::readInput: per-value checks") {
          }) {
         CAPTURE(c.key);
         CAPTURE(c.value);
-        // with running coupling, so its parameters are read
+        // with running coupling and pseudorapidity, so their parameters
+        // (and sqrtS) are read
         const std::vector<std::string> errors = readErrors(inputWith(
-            exampleInputWith(c.key, c.value), "runningCoupling", "1"));
+            inputWith(exampleInputWith(c.key, c.value), "runningCoupling", "1"),
+            "usePseudoRapidity", "1"));
         REQUIRE(errors.size() == 1);
         CHECK(anyContains(errors, std::string(c.key) + " " + c.value));
         CHECK(anyContains(errors, c.message));
@@ -893,8 +901,11 @@ TEST_CASE(
               "smearingWidth -0.5: must not be negative"}}) {
         CAPTURE(c.key);
         CAPTURE(c.value);
-        CHECK(
-            anyContains(readErrors(exampleInputWith(c.key, c.value)), c.error));
+        // with smearQs 1, so smearingWidth is read
+        CHECK(anyContains(
+            readErrors(
+                inputWith(exampleInputWith(c.key, c.value), "smearQs", "1")),
+            c.error));
     }
     CHECK(readErrors(exampleInputWith("BGq", "0.091")).empty());
 }

@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """
      This script combines pre-generated IP-Glasma events into a hdf5 database.
 """
@@ -19,12 +19,12 @@ def print_help():
 def collect_one_IPGlasma_event(results_path, event_id, hf, deleteFlag=False):
     """This function collects one IPGlasma event"""
     file_name = "usedParameters{0}.dat".format(event_id)
-    if not path.exists(file_name):
-        print("Error: can not find file : {}".format(file_name))
-        exit(1)
+    parafilename = path.join(results_path, file_name)
+    if not path.exists(parafilename):
+        print("Error: can not find file : {}".format(parafilename))
+        sys.exit(1)
 
     gtemp = hf.create_group("event-{0}".format(event_id))
-    parafilename = path.join(results_path, file_name)
     parafile  = open(parafilename)
     for iline, rawline in enumerate(parafile.readlines()):
         paraline = rawline.strip('\n')
@@ -102,8 +102,6 @@ def collect_one_IPGlasma_event(results_path, event_id, hf, deleteFlag=False):
         filename = filepath.split("/")[-1]
         dtemp    = np.loadtxt(filepath)
         dtemp    = np.nan_to_num(dtemp)
-        x_size   = abs(dtemp[0, 1])*2.
-        y_size   = abs(dtemp[0, 2])*2.
         data_cut = dtemp[:, 2:]
         dset     = gtemp.create_dataset("{0}".format(filename),
                                         data=data_cut,
@@ -116,8 +114,10 @@ def collect_one_IPGlasma_event(results_path, event_id, hf, deleteFlag=False):
         dy = float(tmp[14])
         nx = int(tmp[6])
         ny = int(tmp[8])
-        dset.attrs.create("x_size", x_size)
-        dset.attrs.create("y_size", y_size)
+        # the columns are ix, iy and the components, so the grid size
+        # comes from the header
+        dset.attrs.create("x_size", nx*dx)
+        dset.attrs.create("y_size", ny*dy)
         dset.attrs.create("dx", dx)
         dset.attrs.create("dy", dy)
         dset.attrs.create("nx", nx)
@@ -232,7 +232,7 @@ def collect_one_event_to_h5database(results_folder, event_id, database_name,
 
 
 def main():
-    """This is the main funciton"""
+    """This is the main function"""
     parser = argparse.ArgumentParser(
             description='\U0000269B IPGlasma Output Collector',
             formatter_class=argparse.ArgumentDefaultsHelpFormatter)

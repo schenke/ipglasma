@@ -106,11 +106,12 @@ struct NucleusParameters {
     /// nucleonPositionsFromFile is `1`).
     std::string nuclearConfigurationsPath;
     /// Which configuration file to use for light nuclei with
-    /// nucleonPositionsFromFile (see NucleusSampler::readConfigurationFile()):
-    /// `0` the default (variational Monte Carlo; clustered PGCM for Ne20), `1`
-    /// alpha clusters (C, O) or triton (A = 3), `2`/`3` clustered/uniform PGCM
-    /// (O, Ne), `4`/`5` NLEFT with positive/negative weights (O, Ne; `4` also
-    /// for Ar).
+    /// nucleonPositionsFromFile (see configurationFileName()): `0` the default
+    /// (variational Monte Carlo; clustered PGCM for Ne20), `1` alpha clusters
+    /// (C, O) or triton (A = 3), `2`/`3` clustered/uniform PGCM (O, Ne),
+    /// `4`/`5` NLEFT with positive/negative weights (O, Ne; `4` also for Ar). A
+    /// value without a file for the projectile or target is rejected by
+    /// validationErrors().
     int lightNucleusOption = 0;
     /// Projectile polarization: `0` unpolarized, `1` longitudinally
     /// polarized, `2` transversely polarized.
@@ -323,8 +324,9 @@ struct CouplingParameters {
     /// runWithQs's max/average/min choice. Applies to the field outputs,
     /// the gluon spectrum and the eccentricity weights alike.
     bool runWithLocalQs = false;
-    /// Whether \f$\alpha_s\f$ should run with \f$k_T\f$ (`1`) instead;
-    /// overrides any \c runWithQs-based running if set.
+    /// Whether \f$\alpha_s\f$ of the gluon multiplicity should run with
+    /// \f$k_T\f$ (`1`) instead of \f$Q_s\f$; the other outputs keep the
+    /// \c runWithQs-based running.
     bool runWithKt = false;
 };
 
@@ -369,11 +371,14 @@ struct OutputParameters {
     /// into `RESULTS_rank<rank>.h5` and merge these into `RESULTS.h5` at the
     /// end of the run (`1`), see utilities/combine_events_into_hdf5.py.
     bool writeOutputsToHDF5 = false;
-    /// Physical lattice size for the output grid [fm].
+    /// Side length of the transverse output grid [fm].
     double LOutput = 0.;
-    /// Lattice side length for hydro/Tmunu output; must be `<= size`.
+    /// Number of points per direction of the transverse output grid, to
+    /// which the hydro, Jazma and \f$T^{\mu\nu}\f$ files are interpolated
+    /// (independent of \c size).
     int sizeOutput = 0;
-    /// Lattice side length in rapidity for the output data.
+    /// Number of \f$\eta\f$ points of the output grid; the fields are boost
+    /// invariant, so all slices are identical.
     int etaSizeOutput = 0;
     /// Output-grid step size in rapidity.
     double dEtaOutput = 0.;

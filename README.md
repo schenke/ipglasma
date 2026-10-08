@@ -10,11 +10,15 @@ References
 
 
 ## Compile
-To compile IP-Glasma, run `./compile_IPGlasma.sh`
+To compile IP-Glasma, run `./compile_IPGlasma.sh` in the repository root. It formats the source code with `clang-format` (if installed), builds the code with CMake in the directory `build/`, which it empties first and deletes afterwards, and installs the executable `ipglasma` in the repository root. `./compile_IPGlasma.sh noMPI` builds it without MPI.
+
 Dependencies
-* CMake
-* FFTW
+* a C++17 compiler and CMake
+* FFTW 3
 * GSL
+* optional: MPI (used if CMake finds it) and OpenMP (not with Apple Clang)
+
+The code can also be built with CMake directly, e.g. `cmake -B build` and `cmake --build build`; the executable is then `build/src/ipglasma`.
 
 ### Reproducible runs
 By default, FFTW picks its FFT algorithms by timing them when the program starts, so two runs with the same seed can differ by floating-point rounding (around 1e-14). For bit-identical output, build with
@@ -33,14 +37,22 @@ ctest --test-dir build --output-on-failure
 ```
 It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`).
 
+## Running
+```
+./ipglasma [input file] [events per rank]
+mpirun -np <ranks> ./ipglasma [input file] [events per rank]
+```
+The input file defaults to `input`, and the number of events per MPI rank to 1; with MPI, the run generates ranks × events per rank events. The number of events per rank also enters the names of the Wilson-line files. File names in the input file (e.g. `nucleusQsTableFileName`) are relative to the working directory, and the output files are written there, apart from the Wilson-line files (see `wilsonLinePath` and [OUTPUT.md](OUTPUT.md)).
+
 
 ## Input parameters
-The input file is given as the first command line argument (default: `input`). The optional second argument is the number of events each MPI rank generates (default: 1); it also enters the names of the Wilson-line files. Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
+Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
 
 The input file has one `key value` pair per line:
 - `#` starts a comment that runs to the end of the line, and blank lines are ignored.
 - A line with only `EndOfFile` ends the input; everything after it is ignored. It is optional.
 - Unknown keys, keys given twice, missing required keys and malformed values (e.g. `256.0` for an integer) are errors. All problems are reported at once before the run stops.
+- A parameter marked "read with …" below is only read, and only required, when that setting is on. Otherwise it can be left out, and if it is given, it is ignored.
 
 Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, `seed -1` draws a new seed, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
 
@@ -91,7 +103,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **smearQs**: enable (1) or disable (0) saturation scale fluctuations: the thickness of each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`) is multiplied by a log-normal factor $e^{X}/e^{\sigma^2/2}$ with mean 1, where $X$ is Gaussian with width $\sigma$ = `smearingWidth`
 - **smearingWidth** (read with `smearQs 1`): width $\sigma$ of the saturation scale fluctuations (see `smearQs`), parameter $\sigma$ in Eq. (23) of [arXiv:1607.01711](https://arxiv.org/pdf/1607.01711)
 - **QsMuRatio**: ratio $Q_s/(g^2\mu)$, positive, the same for both nuclei: a cell's color-charge density is $g^2\mu = Q_s/$`QsMuRatio`, with $Q_s$ from `nucleusQsTableFileName`
-- **nucleusQsTableFileName**: file with the table of $Q_s^2$ as a function of the summed nucleon thickness $T_p$ and rapidity $y$ (e.g. `qs2Adj_vs_Tp_vs_Y_240.in` in the repository root), relative to the working directory; read with `useNucleus 1`
+- **nucleusQsTableFileName**: file with the table of $Q_s^2$ as a function of the summed nucleon thickness $T_p$ and rapidity $y$ (e.g. `qs2Adj_vs_Tp_vs_Y_240.in` in the repository root), relative to the working directory; the file is only read with `useNucleus 1`
 - **projectileX** and **targetX**: Bjorken $x$ of the projectile and of the target. Without JIMWLK and with `useFluctuatingX 0`, $Q_s^2$ of each nucleus is read from the nuclear $Q_s$ table at $y = \ln(0.01/x)$, so both must not be larger than 0.01 (the table covers $0 \le y \le 10.75$, larger values use $Q_s$ at $y = 10.75$). With `useJIMWLK 1`, the nuclei are evolved from `jimwlkInitialX` (or from `readWilsonLinesX` for read Wilson lines) to these $x$, which must then not be larger than it. Only read with `useFluctuatingX 0`
 - **useFluctuatingX**: controls how to determine Bjorken-$x$ when generating the initial condition; must be `0` with `useJIMWLK 1`, where $Q_s^2$ is evaluated at the fixed $x$ = `jimwlkInitialX`
   - 1: Dynamically determined $b_\perp$ dependent $x$, see `xQsFactor`
@@ -110,11 +122,11 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **sampleBFromLinearDistribution** (read with `useNucleus 1`): `1` samples $b$ with a probability density $\propto b$ (uniform in the transverse plane, as for minimum-bias events), `0` uniformly in $b$
 - **rotateReactionPlane** (read with `useNucleus 1`): `1` points the impact parameter in a uniformly random direction (reaction-plane angle $\phi_{RP}$ in $[0, 2\pi)$), `0` along $x$
 - **useFixedNpart** (read with `useNucleus 1`): not negative; if not `0`, the impact parameter and reaction-plane angle are resampled, keeping the nucleon positions, until the event has exactly this number of participants; the value must be reachable for the sampled nuclei
-- **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area. `0` for no trigger
+- **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area
 
 ### Nucleon positions
 - **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the Woods-Saxon distribution (see below)
-- **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`, read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): directory of the configuration files; `nucleusConfigurations/download_nucleusTables.sh` downloads them
+- **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`, read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): directory of the configuration files; running `download_nucleusTables.sh` inside `nucleusConfigurations/` downloads them there
 - **lightNucleusOption** (read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): which configuration file `nucleonPositionsFromFile 1` uses. The file is chosen by the mass number $A$:
   - $A = 3$: `0` ³He, `1` triton
   - $A = 12$ (C): `0` variational Monte Carlo (VMC), `1` alpha clusters
@@ -178,7 +190,7 @@ The files themselves (names, order, layout, columns and units) are described in 
    - 0: do not save Wilson lines
    - 1: save in text format
    - 2: save in binary format (faster I/O, smaller file size)
- - **wilsonLinePath** (optional, default `./`, read with `writeWilsonLines` or `readInitialWilsonLines` 1 or 2): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). Defaults to `./`. When Wilson lines are written, the directory must already exist, otherwise the run fails at startup.
+ - **wilsonLinePath** (optional, default `./`, read with `writeWilsonLines` or `readInitialWilsonLines` 1 or 2): directory used both when writing Wilson lines (`writeWilsonLines` is 1 or 2) and when reading them back in (`readInitialWilsonLines` is 1 or 2). When Wilson lines are written, the directory must already exist, otherwise the run fails at startup.
  - **writeWilsonLineGeometry** (optional, default `1`, read with `writeWilsonLines` 1 or 2): `1` writes the geometry files `WilsonLineGeometry_<n>` with the Wilson lines (about 12% of their size). Reading the Wilson lines back with `readInitialWilsonLines` and `useNucleus 1` needs them; runs that only produce Wilson lines for other codes, e.g. for vector-meson production, can set `0`
  - **readInitialWilsonLines**: `0` samples the color charges and builds the Wilson lines; `1` (text) or `2` (binary) instead reads the Wilson lines of both nuclei from `wilsonLinePath`, under the names a run with the same `seed`, number of events and MPI ranks writes, at the x of `readWilsonLinesX`. With `useNucleus 1` it also reads their geometry files, so the collision is treated like one of sampled nuclei: the impact parameter is sampled with the same collision criterion, and $N_\text{part}$, $N_\text{coll}$, $\langle Q_s \rangle$ and all outputs are computed as usual. The geometry files must match the run's `size`, `L`, `g`, `projectile` and `target`; `QsMuRatio` is taken from them, since the color-charge densities were built with it. A run that reads the Wilson lines with the parameters of the run that wrote them, and with a fixed impact parameter and reaction plane and `gaussianWounding 0`, reproduces that run's outputs
  - **readWilsonLinesX** (optional, default `0`, read with `readInitialWilsonLines` 1 or 2): Bjorken $x$ in the names of the Wilson-line files to read, e.g. the final $x$ of a JIMWLK evolution or a snapshot's $x$; both nuclei are read at this $x$. `0` reads the initial Wilson lines, at x = `jimwlkInitialX` with `useJIMWLK 1`, no x with `useFluctuatingX 1`, and `projectileX`/`targetX` otherwise. With `useJIMWLK 1`, the read Wilson lines are evolved from this $x$ (which must then not be smaller than `projectileX` and `targetX`)

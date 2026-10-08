@@ -327,13 +327,24 @@ bool wsDeformParamsSet(const Parameters &p) {
 bool nucleiCollide(const Parameters &p) { return p.collision.useNucleus; }
 
 /**
+ * Condition for sampling the nucleon positions of both nuclei, which reading
+ * the Wilson lines from file skips.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useNucleus` is 1 and `readInitialWilsonLines` is 0.
+ */
+bool nucleonsSampled(const Parameters &p) {
+    return p.collision.useNucleus && p.wilsonLines.readInitialWilsonLines == 0;
+}
+
+/**
  * Condition for the configuration files: they are read with
- * `nucleonPositionsFromFile 1`, which a polarized nucleus also implies.
+ * `nucleonPositionsFromFile 1`, which a polarized nucleus also implies, when
+ * the nucleon positions are sampled.
  * \param[in] p The parameters read so far.
  * \return Whether configuration files can be read.
  */
 bool configurationFilesRead(const Parameters &p) {
-    return p.collision.useNucleus
+    return nucleonsSampled(p)
            && (p.nucleus.nucleonPositionsFromFile
                || p.nucleus.polarizationProjectile != 0
                || p.nucleus.polarizationTarget != 0);
@@ -342,19 +353,19 @@ bool configurationFilesRead(const Parameters &p) {
 /**
  * Condition for the deuteron's \f$J_z\f$ of the projectile.
  * \param[in] p The parameters read so far.
- * \return Whether the projectile is polarized.
+ * \return Whether the projectile is polarized and its nucleons are sampled.
  */
 bool projectilePolarized(const Parameters &p) {
-    return p.collision.useNucleus && p.nucleus.polarizationProjectile != 0;
+    return nucleonsSampled(p) && p.nucleus.polarizationProjectile != 0;
 }
 
 /**
  * Condition for the deuteron's \f$J_z\f$ of the target.
  * \param[in] p The parameters read so far.
- * \return Whether the target is polarized.
+ * \return Whether the target is polarized and its nucleons are sampled.
  */
 bool targetPolarized(const Parameters &p) {
-    return p.collision.useNucleus && p.nucleus.polarizationTarget != 0;
+    return nucleonsSampled(p) && p.nucleus.polarizationTarget != 0;
 }
 
 /**
@@ -603,6 +614,12 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("sigmaNN", &P::collision, &CollisionParameters::sigmaNN)
             .check(positive()),
         param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
+        // before the nucleon positions, which are only sampled (and their
+        // configuration files read) when the Wilson lines are not read
+        param(
+            "readInitialWilsonLines", &P::wilsonLines,
+            &WilsonLineParameters::readInitialWilsonLines)
+            .check(oneOf({0, 1, 2}, " (0: sample, 1: text, 2: binary)")),
         param("bMin", &P::collision, &CollisionParameters::bMin)
             .onlyIf(nucleiCollide)
             .check(nonNegative()),
@@ -909,10 +926,6 @@ const std::vector<ParameterSpec> &parameterTable() {
             &WilsonLineParameters::writeGeometry)
             .onlyIf(wilsonLinesWritten)
             .optional("1"),
-        param(
-            "readInitialWilsonLines", &P::wilsonLines,
-            &WilsonLineParameters::readInitialWilsonLines)
-            .check(oneOf({0, 1, 2}, " (0: sample, 1: text, 2: binary)")),
         param(
             "wilsonLinePath", &P::wilsonLines,
             &WilsonLineParameters::wilsonLinePath)

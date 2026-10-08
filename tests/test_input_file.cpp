@@ -289,6 +289,24 @@ TEST_CASE(
     CHECK(readErrors(
               inputWith(exampleInputWith("sqrtS", ""), "smearingWidth", ""))
               .empty());
+
+    // the configuration files are only read when the nucleons are sampled,
+    // not when the Wilson lines are read from file
+    const std::string fromFiles = inputWith(
+        inputWith(
+            exampleInputWith("nucleonPositionsFromFile", "1"),
+            "lightNucleusOption", ""),
+        "nuclearConfigurationsPath", "");
+    CHECK(anyContains(
+        readErrors(fromFiles), "lightNucleusOption is required but not given"));
+    Parameters reading;
+    REQUIRE(reading
+                .readInput(inputFromText(
+                    inputWith(fromFiles, "readInitialWilsonLines", "2")))
+                .empty());
+    std::ostringstream readingUsed;
+    reading.writeInputParameters(readingUsed);
+    CHECK(readingUsed.str().find("lightNucleusOption") == std::string::npos);
 }
 
 TEST_CASE("Parameters::readInput: optional keys fall back to their default") {

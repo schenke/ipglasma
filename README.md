@@ -114,8 +114,8 @@ Each event writes the values of all input parameters it used to `usedParameters<
 
 ### Nucleon positions
 - **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the Woods-Saxon distribution (see below)
-- **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`, read with `useNucleus 1` and `nucleonPositionsFromFile 1` or a nonzero polarization): directory of the configuration files; `nucleusConfigurations/download_nucleusTables.sh` downloads them
-- **lightNucleusOption** (read with `useNucleus 1` and `nucleonPositionsFromFile 1` or a nonzero polarization): which configuration file `nucleonPositionsFromFile 1` uses. The file is chosen by the mass number $A$:
+- **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`, read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): directory of the configuration files; `nucleusConfigurations/download_nucleusTables.sh` downloads them
+- **lightNucleusOption** (read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): which configuration file `nucleonPositionsFromFile 1` uses. The file is chosen by the mass number $A$:
   - $A = 3$: `0` ³He, `1` triton
   - $A = 12$ (C): `0` variational Monte Carlo (VMC), `1` alpha clusters
   - $A = 16$ (O): `0` VMC, `1` alpha clusters, `2`/`3` clustered/uniform PGCM, `4`/`5` NLEFT with positive/negative weights
@@ -126,7 +126,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - 0: random orientation
   - 1: longitudinal: the nucleus' $z$ axis (the symmetry axis of a deformed Woods-Saxon nucleus) stays along the beam, with a random rotation about it
   - 2: transverse: the $z$ axis is turned to the $+y$ direction
-- **polarizationProjectileJz** and **polarizationTargetJz** (read with a nonzero `polarizationProjectile` or `polarizationTarget`, respectively): for a deuteron read from file (`nucleonPositionsFromFile 1`), $|J_z| = 1$ (any value within $10^{-8}$ of 1) uses the $J_z = \pm 1$ configurations and any other value the $J_z = 0$ ones. With polarization `0` they are not used: each event takes $J_z = 0$ with probability 1/3 and $J_z = \pm 1$ otherwise
+- **polarizationProjectileJz** and **polarizationTargetJz** (read with `useNucleus 1`, `readInitialWilsonLines 0`, and a nonzero `polarizationProjectile` or `polarizationTarget`, respectively): for a deuteron read from file (`nucleonPositionsFromFile 1`), $|J_z| = 1$ (any value within $10^{-8}$ of 1) uses the $J_z = \pm 1$ configurations and any other value the $J_z = 0$ ones. With polarization `0` they are not used: each event takes $J_z = 0$ with probability 1/3 and $J_z = \pm 1$ otherwise
 - **useSmoothNucleus**: test option: `1` replaces the nucleons by the smooth Woods-Saxon thickness of each nucleus (without deformation, nucleons or hot spots); $N_\text{part}$ and $N_\text{coll}$ are set to 2, and the `NpartList`/`NcollList` files are not written
 - **nucleiToAverage**: number $n$ of nuclei to average over, at least 1, `1` for normal runs. With $n > 1$, $n$ projectile and $n$ target nuclei are sampled (or read from file) and oriented independently, and every nucleon's thickness is divided by $n$, which gives a smoother thickness. $N_\text{part}$, $N_\text{coll}$ and the `NpartList`/`NcollList` files then count the nucleons of all $n$ nuclei, colliding every projectile with every target nucleon, so they are roughly $n N_\text{part}$ and $n^2 N_\text{coll}$; `useFixedNpart` refers to these totals. Not allowed for collisions with a proton
 

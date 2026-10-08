@@ -1,13 +1,28 @@
-#/usr/bin/env bash
+#!/usr/bin/env bash
+# Builds IP-Glasma with CMake in build/ and installs the executable ipglasma
+# in the repository root.
+# Usage: ./compile_IPGlasma.sh [noMPI|KNL]
+set -euo pipefail
 
-Flag=$1
+Flag=${1:-}
+case "$Flag" in
+    "" | noMPI | KNL) ;;
+    *)
+        echo "Unknown option '$Flag'. Usage: $0 [noMPI|KNL]" >&2
+        exit 1
+        ;;
+esac
 
-# format the code base
-bash formatCode.sh
+# work in the repository root, wherever the script is called from
+cd "$(dirname "$0")"
+
+# format the code base; a clang-format that cannot format it does not stop
+# the build
+bash formatCode.sh || echo "formatting failed, continuing without it" >&2
 
 mkdir -p build
 cd build
-rm -fr *
+rm -fr ./*
 if [ "$Flag" == "KNL" ]; then
     CXX=mpiicpc cmake .. -DKNL=ON
 elif [ "$Flag" == "noMPI" ]; then

@@ -104,6 +104,7 @@ The changes since b36b2a9, the last commit on the default branch (`main`, former
 * Fix a memory leak in the matrix logarithm (`Matrix::logmPade`), which leaked a GSL integration table on every call.
 * Fix a race on MPI runs with `writeOutputsToHDF5 1` where rank 0 merged and deleted the per-rank HDF5 files while other ranks were still writing their last event.
 * Fix the HDF5 collection (`writeOutputsToHDF5 1`): the per-rank files were merged into `RESULTS.h5` with `h5copy` and deleted even when that failed (e.g. without `h5copy` installed), losing every collected event; they are now copied with `h5py`, and a file that cannot be merged is kept. The script also failed with NumPy 2 (`np.string_`), and was only found when the run started in the repository root.
+* Fix `compile_IPGlasma.sh`: its first line lacked the `!` of `#!/usr/bin/env bash`, so it could run in a shell other than bash, where `noMPI` was ignored; it went on after a failed `cmake` or `make` and then deleted `build/` with the error output; and if `cd build` had failed, `rm -fr *` would have deleted the files of the repository. It now stops at the first error and keeps `build/`, rejects an unknown option, works from any directory, and continues if `clang-format` cannot format the code.
 
 ### Removed
 * Remove the input parameter `readMultFromFile`: its post-processing mode read `multiplicity<id>.dat` and `NpartdNdy<id>.dat`, which no version of the code writes under these names. `GluonMultiplicity::readNkt()` is kept for such files.

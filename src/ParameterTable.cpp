@@ -320,6 +320,77 @@ bool wsDeformParamsSet(const Parameters &p) {
     return p.nucleus.useInputWSParams;
 }
 /**
+ * Condition for the impact parameter and the wounded nucleons.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useNucleus` is 1.
+ */
+bool nucleiCollide(const Parameters &p) { return p.collision.useNucleus; }
+
+/**
+ * Condition for the configuration files: they are read with
+ * `nucleonPositionsFromFile 1`, which a polarized nucleus also implies.
+ * \param[in] p The parameters read so far.
+ * \return Whether configuration files can be read.
+ */
+bool configurationFilesRead(const Parameters &p) {
+    return p.collision.useNucleus
+           && (p.nucleus.nucleonPositionsFromFile
+               || p.nucleus.polarizationProjectile != 0
+               || p.nucleus.polarizationTarget != 0);
+}
+
+/**
+ * Condition for the deuteron's \f$J_z\f$ of the projectile.
+ * \param[in] p The parameters read so far.
+ * \return Whether the projectile is polarized.
+ */
+bool projectilePolarized(const Parameters &p) {
+    return p.collision.useNucleus && p.nucleus.polarizationProjectile != 0;
+}
+
+/**
+ * Condition for the deuteron's \f$J_z\f$ of the target.
+ * \param[in] p The parameters read so far.
+ * \return Whether the target is polarized.
+ */
+bool targetPolarized(const Parameters &p) {
+    return p.collision.useNucleus && p.nucleus.polarizationTarget != 0;
+}
+
+/**
+ * Condition for the Jacobian mass of the pseudorapidity conversion.
+ * \param[in] p The parameters read so far.
+ * \return Whether `usePseudoRapidity` is set.
+ */
+bool pseudoRapidityUsed(const Parameters &p) {
+    return p.colorCharge.usePseudoRapidity;
+}
+
+/**
+ * Condition for the running-coupling parameters.
+ * \param[in] p The parameters read so far.
+ * \return Whether `runningCoupling` is set.
+ */
+bool couplingRuns(const Parameters &p) { return p.coupling.runningCoupling; }
+
+/**
+ * Condition for the directory of the Wilson-line files.
+ * \param[in] p The parameters read so far.
+ * \return Whether Wilson lines are written or read.
+ */
+bool wilsonLinesWrittenOrRead(const Parameters &p) {
+    return p.wilsonLines.writeWilsonLines != 0
+           || p.wilsonLines.readInitialWilsonLines != 0;
+}
+
+/**
+ * Condition for the JIMWLK parameters.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useJIMWLK` is set.
+ */
+bool jimwlkEnabled(const Parameters &p) { return p.jimwlk.enabled; }
+
+/**
  * Condition for the constant color-charge density.
  * \param[in] p The parameters read so far.
  * \return Whether `useNucleus` is 0.
@@ -507,15 +578,19 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("projectile", &P::collision, &CollisionParameters::projectile),
         param("target", &P::collision, &CollisionParameters::target),
         param("sigmaNN", &P::collision, &CollisionParameters::sigmaNN),
-        param("bMin", &P::collision, &CollisionParameters::bMin),
-        param("bMax", &P::collision, &CollisionParameters::bMax),
+        param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
+        param("bMin", &P::collision, &CollisionParameters::bMin)
+            .onlyIf(nucleiCollide),
+        param("bMax", &P::collision, &CollisionParameters::bMax)
+            .onlyIf(nucleiCollide),
         param(
             "sampleBFromLinearDistribution", &P::collision,
-            &CollisionParameters::sampleBFromLinearDistribution),
+            &CollisionParameters::sampleBFromLinearDistribution)
+            .onlyIf(nucleiCollide),
         param(
             "rotateReactionPlane", &P::collision,
-            &CollisionParameters::rotateReactionPlane),
-        param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
+            &CollisionParameters::rotateReactionPlane)
+            .onlyIf(nucleiCollide),
         param("g2muGeV", &P::collision, &CollisionParameters::g2muGeV)
             .onlyIf(constantColorCharge)
             .check(positive()),
@@ -523,27 +598,21 @@ const std::vector<ParameterSpec> &parameterTable() {
             "useSmoothNucleus", &P::nucleus,
             &NucleusParameters::useSmoothNucleus),
         param(
-            "useFixedNpart", &P::collision,
-            &CollisionParameters::useFixedNpart),
+            "useFixedNpart", &P::collision, &CollisionParameters::useFixedNpart)
+            .onlyIf(nucleiCollide),
         param(
             "nucleiToAverage", &P::collision,
             &CollisionParameters::nucleiToAverage)
             .check(positive<int>()),
         param(
             "gaussianWounding", &P::collision,
-            &CollisionParameters::gaussianWounding),
+            &CollisionParameters::gaussianWounding)
+            .onlyIf(nucleiCollide),
 
         // nucleon positions
         param(
             "nucleonPositionsFromFile", &P::nucleus,
             &NucleusParameters::nucleonPositionsFromFile),
-        param(
-            "nuclearConfigurationsPath", &P::nucleus,
-            &NucleusParameters::nuclearConfigurationsPath)
-            .optional("./nucleusConfigurations"),
-        param(
-            "lightNucleusOption", &P::nucleus,
-            &NucleusParameters::lightNucleusOption),
         param(
             "polarizationProjectile", &P::nucleus,
             &NucleusParameters::polarizationProjectile)
@@ -558,10 +627,21 @@ const std::vector<ParameterSpec> &parameterTable() {
                 " (0: random orientation, 1: longitudinal, 2: transverse)")),
         param(
             "polarizationProjectileJz", &P::nucleus,
-            &NucleusParameters::polarizationProjectileJz),
+            &NucleusParameters::polarizationProjectileJz)
+            .onlyIf(projectilePolarized),
         param(
             "polarizationTargetJz", &P::nucleus,
-            &NucleusParameters::polarizationTargetJz),
+            &NucleusParameters::polarizationTargetJz)
+            .onlyIf(targetPolarized),
+        param(
+            "nuclearConfigurationsPath", &P::nucleus,
+            &NucleusParameters::nuclearConfigurationsPath)
+            .onlyIf(configurationFilesRead)
+            .optional("./nucleusConfigurations"),
+        param(
+            "lightNucleusOption", &P::nucleus,
+            &NucleusParameters::lightNucleusOption)
+            .onlyIf(configurationFilesRead),
 
         // Woods-Saxon deformation
         param(
@@ -673,7 +753,8 @@ const std::vector<ParameterSpec> &parameterTable() {
             &ColorChargeParameters::usePseudoRapidity),
         param(
             "jacobianMass", &P::colorCharge,
-            &ColorChargeParameters::jacobianMass),
+            &ColorChargeParameters::jacobianMass)
+            .onlyIf(pseudoRapidityUsed),
         param(
             "useFluctuatingX", &P::colorCharge,
             &ColorChargeParameters::useFluctuatingX),
@@ -692,8 +773,11 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "runningCoupling", &P::coupling,
             &CouplingParameters::runningCoupling),
-        param("mu0", &P::coupling, &CouplingParameters::mu0),
-        param("c", &P::coupling, &CouplingParameters::c).check(positive()),
+        param("mu0", &P::coupling, &CouplingParameters::mu0)
+            .onlyIf(couplingRuns),
+        param("c", &P::coupling, &CouplingParameters::c)
+            .onlyIf(couplingRuns)
+            .check(positive()),
         param("nFlavors", &P::coupling, &CouplingParameters::nFlavors)
             .optional("3")
             .check(inRange(
@@ -701,17 +785,21 @@ const std::vector<ParameterSpec> &parameterTable() {
                 " (the one-loop beta-function coefficient 11*Nc - "
                 "2*nFlavors must be positive)")),
         param("LambdaQCD", &P::coupling, &CouplingParameters::LambdaQCD)
+            .onlyIf(couplingRuns)
             .optional("0.2")
             .check(positive()),
         param("runWithQs", &P::coupling, &CouplingParameters::runWithQs)
+            .onlyIf(couplingRuns)
             .check(oneOf({0, 1, 2}, " (0: min, 1: average, 2: max Qs)")),
         param(
             "runningCouplingQsFactor", &P::coupling,
-            &CouplingParameters::runningCouplingQsFactor),
+            &CouplingParameters::runningCouplingQsFactor)
+            .onlyIf(couplingRuns),
         param(
-            "runWithLocalQs", &P::coupling,
-            &CouplingParameters::runWithLocalQs),
-        param("runWithKt", &P::coupling, &CouplingParameters::runWithKt),
+            "runWithLocalQs", &P::coupling, &CouplingParameters::runWithLocalQs)
+            .onlyIf(couplingRuns),
+        param("runWithKt", &P::coupling, &CouplingParameters::runWithKt)
+            .onlyIf(couplingRuns),
 
         // observables
         param(
@@ -764,20 +852,20 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "writeOutputsToHDF5", &P::output,
             &OutputParameters::writeOutputsToHDF5),
-        param("LOutput", &P::output, &OutputParameters::LOutput),
-        param("sizeOutput", &P::output, &OutputParameters::sizeOutput),
-        param("etaSizeOutput", &P::output, &OutputParameters::etaSizeOutput),
-        param("dEtaOutput", &P::output, &OutputParameters::dEtaOutput),
+        param("LOutput", &P::output, &OutputParameters::LOutput)
+            .onlyIf(fieldOutputWritten),
+        param("sizeOutput", &P::output, &OutputParameters::sizeOutput)
+            .onlyIf(fieldOutputWritten),
+        param("etaSizeOutput", &P::output, &OutputParameters::etaSizeOutput)
+            .onlyIf(fieldOutputWritten),
+        param("dEtaOutput", &P::output, &OutputParameters::dEtaOutput)
+            .onlyIf(fieldOutputWritten),
 
         // Wilson lines
         param(
             "writeWilsonLines", &P::wilsonLines,
             &WilsonLineParameters::writeWilsonLines)
             .check(oneOf({0, 1, 2}, " (0: none, 1: text, 2: binary)")),
-        param(
-            "wilsonLinePath", &P::wilsonLines,
-            &WilsonLineParameters::wilsonLinePath)
-            .optional("./"),
         param(
             "writeWilsonLineGeometry", &P::wilsonLines,
             &WilsonLineParameters::writeGeometry)
@@ -787,6 +875,11 @@ const std::vector<ParameterSpec> &parameterTable() {
             "readInitialWilsonLines", &P::wilsonLines,
             &WilsonLineParameters::readInitialWilsonLines)
             .check(oneOf({0, 1, 2}, " (0: sample, 1: text, 2: binary)")),
+        param(
+            "wilsonLinePath", &P::wilsonLines,
+            &WilsonLineParameters::wilsonLinePath)
+            .onlyIf(wilsonLinesWrittenOrRead)
+            .optional("./"),
         param("readWilsonLinesX", &P::wilsonLines, &WilsonLineParameters::readX)
             .onlyIf(wilsonLinesRead)
             .optional("0")
@@ -794,25 +887,33 @@ const std::vector<ParameterSpec> &parameterTable() {
 
         // JIMWLK
         param("useJIMWLK", &P::jimwlk, &JimwlkParameters::enabled),
-        param("jimwlkMu0", &P::jimwlk, &JimwlkParameters::mu0),
+        param("jimwlkMu0", &P::jimwlk, &JimwlkParameters::mu0)
+            .onlyIf(jimwlkEnabled),
         param(
             "jimwlkLambdaQCD", &P::jimwlk,
             &JimwlkParameters::LambdaQCD)
+            .onlyIf(jimwlkEnabled)
             .check(positive()),  // in GeV
         param("jimwlkC", &P::jimwlk, &JimwlkParameters::c)
+            .onlyIf(jimwlkEnabled)
             .optional("0.2")
             .check(positive()),
-        param("jimwlkMass", &P::jimwlk, &JimwlkParameters::mass),
+        param("jimwlkMass", &P::jimwlk, &JimwlkParameters::mass)
+            .onlyIf(jimwlkEnabled),
         // 0 selects the running coupling, > 0 a fixed coupling
         param("jimwlkAlphaS", &P::jimwlk, &JimwlkParameters::alphaS)
+            .onlyIf(jimwlkEnabled)
             .check(nonNegative()),
         // divisor of the step count and under a square root in the step
-        param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds).check(positive()),
+        param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds)
+            .onlyIf(jimwlkEnabled)
+            .check(positive()),
         param("jimwlkInitialX", &P::jimwlk, &JimwlkParameters::initialX)
+            .onlyIf(jimwlkEnabled)
             .check(positive()),
         param(
-            "jimwlkSaveSnapshots", &P::jimwlk,
-            &JimwlkParameters::saveSnapshots),
+            "jimwlkSaveSnapshots", &P::jimwlk, &JimwlkParameters::saveSnapshots)
+            .onlyIf(jimwlkEnabled),
         param(
             "jimwlkXSnapshotList", &P::jimwlk, &JimwlkParameters::xSnapshotList)
             .onlyIf(saveSnapshotsSet),

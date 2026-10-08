@@ -36,16 +36,23 @@ struct EvolutionParameters {
 
 /// Random-number seeding.
 struct RandomParameters {
-    /// Random seed; MPI rank \f$r\f$ uses `seed + 1000 r` unless \c
-    /// useRandomSeed or \c useSeedList is set. Also part of the
-    /// Wilson-line file names (see WilsonLineIO::fileName()).
-    unsigned long long int seed = 0;
+    /// Random seed; MPI rank \f$r\f$ uses `seed + 1000 r`, unless \c
+    /// useSeedList is set. `-1` draws the seed from `std::random_device`
+    /// (and rank \f$r\f$ adds \f$1000 r\f$). Also part of the
+    /// Wilson-line file names (see fileSeed()).
+    long long seed = 0;
     /// Whether to read one random seed per MPI rank from the file
-    /// `seedList` (`1`); overrides \c seed and \c useRandomSeed.
+    /// `seedList` (`1`); overrides \c seed.
     bool useSeedList = false;
-    /// Whether to draw the random seed from `std::random_device` (`1`)
-    /// instead of using \c seed (`0`).
-    bool useRandomSeed = false;
+
+    /**
+     * The seed in the Wilson-line file names: \c seed, or `0` for a
+     * random seed (`seed -1`).
+     * \return The seed for the file names.
+     */
+    unsigned long long fileSeed() const {
+        return seed < 0 ? 0ULL : static_cast<unsigned long long>(seed);
+    }
 };
 
 /// Collision system, impact parameter and nucleon wounding.

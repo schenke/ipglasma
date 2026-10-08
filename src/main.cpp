@@ -98,17 +98,17 @@ int main(int argc, char *argv[]) {
     Random *random = &randomStorage;
     unsigned long long int rnum;
     if (!param->random.useSeedList) {
-        if (param->random.useRandomSeed) {
+        if (param->random.seed < 0) {
             std::random_device ran_dev;
             rnum = ran_dev();
         } else {
-            rnum = param->random.seed;
+            rnum = static_cast<unsigned long long>(param->random.seed);
             messager << "[main::main]: Random seed = " << rnum + (rank * 1000)
                      << " - entered directly +rank*1000.";
             messager.flush("info");
         }
         param->run.randomSeed = rnum + rank * 1000;
-        if (param->random.useRandomSeed) {
+        if (param->random.seed < 0) {
             messager << "[main::main]: Random seed = " << param->run.randomSeed;
             messager.flush("info");
         }
@@ -456,7 +456,7 @@ void writeparams(Parameters *param) {
              "reproduce this event:\n"
              "# the random numbers also depend on the MPI rank and the "
              "event's position in\n"
-             "# the run (and are drawn anew with useRandomSeed 1), and "
+             "# the run (and are drawn anew with seed -1), and "
              "subNucleonParamSet -1\n"
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);

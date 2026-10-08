@@ -93,13 +93,14 @@ void Lattice::writeSU3Matrices(std::string fileprefix, Parameters *param) {
     std::stringstream strVOne_name;
     strVOne_name << fileprefix << "Phi-"
                  << param->event.eventId
-                        + 2 * param->random.seed * param->run.MPISize
+                        + 2 * param->random.fileSeed() * param->run.MPISize
                  << ".txt";
 
     std::stringstream strVTwo_name;
     strVTwo_name << fileprefix << "Pi-"
                  << param->event.eventId
-                        + (1 + 2 * param->random.seed) * param->run.MPISize
+                        + (1 + 2 * param->random.fileSeed())
+                              * param->run.MPISize
                  << ".txt";
 
     writeMatrixArrayText(strVOne_name.str(), Uy2, N);

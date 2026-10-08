@@ -108,13 +108,13 @@ bool parseValue(const std::string &text, bool &out);
  */
 bool parseValue(const std::string &text, int &out);
 /**
- * Converts a non-negative integer value (no decimal point or exponent).
+ * Converts a 64-bit integer value (no decimal point or exponent).
  * \param[in] text The value as written in the input.
  * \param[out] out Set to the value on success.
  * \return Whether all of \p text is an integer in the range of
- * `unsigned long long`.
+ * `long long`.
  */
-bool parseValue(const std::string &text, unsigned long long &out);
+bool parseValue(const std::string &text, long long &out);
 /**
  * Converts a floating-point value.
  * \param[in] text The value as written in the input.

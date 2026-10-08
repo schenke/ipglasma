@@ -209,7 +209,6 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "useJIMWLK": 1 if use_jimwlk else 0,
         "useFluctuatingX": 0 if use_jimwlk else 1,
         "useSeedList": 0,
-        "useRandomSeed": 0,
         "jimwlkSaveSnapshots": 0,
     }
     if L is not None:

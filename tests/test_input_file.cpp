@@ -865,6 +865,15 @@ TEST_CASE(
     CHECK(errors.empty());
     CHECK(param.validationErrors().empty());
 
+    // BGqVar and NqFluc are not part of the posterior sets: 0, not read
+    Parameters fluctuating;
+    REQUIRE(fluctuating
+                .readInput(inputFromText(inputWith(
+                    inputWith(text, "BGqVar", "0.2"), "NqFluc", "1.5")))
+                .empty());
+    CHECK(fluctuating.subnucleon.BGqVar == 0.);
+    CHECK(fluctuating.subnucleon.NqFluc == 0.);
+
     // the replaced keys are accepted and ignored when present
     Parameters withReplacedKeys;
     const std::vector<std::string> replacedErrors = withReplacedKeys.readInput(

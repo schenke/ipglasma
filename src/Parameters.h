@@ -380,11 +380,6 @@ struct OutputParameters {
     /// which the hydro, Jazma and \f$T^{\mu\nu}\f$ files are interpolated
     /// (independent of \c size).
     int sizeOutput = 0;
-    /// Number of \f$\eta\f$ points of the output grid; the fields are boost
-    /// invariant, so all slices are identical.
-    int etaSizeOutput = 0;
-    /// Output-grid step size in rapidity.
-    double dEtaOutput = 0.;
 
     /**
      * Returns whether a field output is switched on.

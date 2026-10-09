@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+// This file is part of IP-Glasma; the license text is in LICENSE.
+
 // Checks the output-file layouts described in OUTPUT.md, so the document and
 // the writers cannot drift apart unnoticed.
 

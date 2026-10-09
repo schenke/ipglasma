@@ -1,3 +1,7 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+// This file is part of IP-Glasma; the license text is in LICENSE.
+
 // Helpers shared by several unit test files.
 
 #ifndef TESTS_TEST_HELPERS_H_

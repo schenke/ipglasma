@@ -1,0 +1,20 @@
+IP-Glasma authors
+=================
+
+The copyright of IP-Glasma is held by the people listed below, the
+"IP-Glasma authors" named in the header of each source file. The code is
+licensed under the GNU General Public License, version 3 or later; the
+license text is in LICENSE. The git history records the individual
+contributions to the code; Prithwish Tribedy contributed the nuclear Q_s
+table qs2Adj_vs_Tp_vs_Y_*.in.
+
+Heikki Mäntysaari
+Hendrik Roch
+Bjoern Schenke
+Chun Shen
+Prithwish Tribedy
+Wenbin Zhao
+
+Files from other projects keep their own copyright and license notices:
+the Mersenne Twister generator in src/Random.cpp, the doctest framework in
+tests/third_party/doctest.h and CMakeModules/FindFFTW.cmake.

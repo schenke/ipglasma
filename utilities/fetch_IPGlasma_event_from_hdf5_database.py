@@ -1,4 +1,8 @@
 #! /usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+# This file is part of IP-Glasma; the license text is in LICENSE.
+
 """
      This script fetches an individual IP-Glasma event from the hdf5 database
      written with writeOutputsToHDF5 1 (see OUTPUT.md). It writes the hydro

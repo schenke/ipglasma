@@ -29,6 +29,22 @@ file or change the content or layout of one, update its section there in the
 same change, and point to it from the Doxygen comment of the function that
 writes it.
 
+## License headers and authors
+
+IP-Glasma is licensed under the GNU General Public License, version 3 or
+later (see `LICENSE`). Every C++, Python and shell file of the project starts
+with the header (with `#` instead of `//` in scripts, after the `#!` line)
+
+```cpp
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+// This file is part of IP-Glasma; the license text is in LICENSE.
+```
+
+Start a new file with this header, and add yourself to `AUTHORS` with your
+first contribution. Code taken from another project keeps its own copyright
+and license notice; list it at the end of `AUTHORS`.
+
 ## Code formatting
 
 The code in `src/`, `tests/` and `utilities/` is formatted with clang-format

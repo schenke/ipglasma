@@ -192,7 +192,8 @@ struct SubnucleonParameters {
     /// must be larger than 0.09 GeV\f$^{-2}\f$.
     double BGq = 0.;
     /// Variance [GeV\f$^{-4}\f$] of the hot-spot width from nucleon to
-    /// nucleon (see BGq); not part of the posterior parameter sets.
+    /// nucleon (see BGq); not part of the posterior parameter sets, so 0
+    /// with one.
     double BGqVar = 0.;
     /// Minimum distance [fm] between the hot spots of a nucleon, in 3D
     /// for `omega 1` and in the transverse plane otherwise; best effort
@@ -217,7 +218,8 @@ struct SubnucleonParameters {
     /// (see setParamsWithPosteriorParameterSet()).
     double Nq = 0.;
     /// Mean of a Poisson-distributed number of additional hot spots per
-    /// nucleon (`nucleonModel hotspots`).
+    /// nucleon (`nucleonModel hotspots`); not part of the posterior parameter
+    /// sets, so 0 with one.
     double NqFluc = 0.;
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).

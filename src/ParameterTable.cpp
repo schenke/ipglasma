@@ -753,8 +753,9 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check([](const double &v) {
                 return v > 0.09 ? "" : "must be larger than 0.09 (GeV^-2)";
             }),
+        // not part of the posterior sets, so 0 with one, as in their fits
         param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
-            .onlyIf(hotSpotSubstructure)
+            .onlyIf(hotSpotsFromInput)
             .check(nonNegative()),
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
             .onlyIf(hotSpotsFromInput)
@@ -769,7 +770,7 @@ const std::vector<ParameterSpec> &parameterTable() {
                 return v >= 1. ? "" : "must be at least 1";
             }),
         param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc)
-            .onlyIf(hotSpotNucleons),
+            .onlyIf(numberOfHotSpotsFromInput),
         param(
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
             &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)

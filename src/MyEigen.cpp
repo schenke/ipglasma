@@ -1107,9 +1107,11 @@ void MyEigen::flowVelocity4DImpl(
 
     int hx = param->output.sizeOutput;
     int hy = hx;
-    int heta = param->output.etaSizeOutput;
+    // the fields are boost invariant: one eta slice (the headers still
+    // record etamax= 1 and deta= 0 for MUSIC)
+    const int heta = 1;
     double hL = param->output.LOutput;
-    double deta = param->output.dEtaOutput;
+    const double deta = 0.;
     // the running-coupling factor of the gluon spectrum and the
     // eccentricity weights (issue #55)
     const CouplingFactor coupling = latticeCouplingFactor(lat, param);

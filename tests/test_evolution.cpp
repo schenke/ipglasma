@@ -63,8 +63,6 @@ TEST_CASE(
         // an empty output grid: the hydro file has only its header
         param.output.sizeOutput = 0;
         param.output.LOutput = param.lattice.L;
-        param.output.etaSizeOutput = 0;
-        param.output.dEtaOutput = 0.;
         Lattice lat(&param, N);
 
         const double a = param.lattice.L / N;

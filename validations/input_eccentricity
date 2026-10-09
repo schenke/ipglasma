@@ -78,8 +78,6 @@ inverseQsForMaxTime 0
 maxTime 0.5
 LOutput 30
 sizeOutput 512
-etaSizeOutput 1
-dEtaOutput 0
 writeHydro 0
 writeJazma 0
 writeTmunu 1

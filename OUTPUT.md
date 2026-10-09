@@ -30,8 +30,8 @@ files themselves.
   - `sizeOutput` × `sizeOutput` points with spacing
     `dx = LOutput/sizeOutput`;
   - point `(ix, iy)` sits at `x = -LOutput/2 + dx*ix` (same for y);
-  - `etaSizeOutput` copies in η with spacing `dEtaOutput`, centred on η = 0.
-    The fields are boost invariant, so all η slices are identical.
+  - one η slice at η = 0, since the fields are boost invariant; the headers
+    record it as `etamax= 1` and `deta= 0`, the format MUSIC reads.
 - **Running coupling.** With `runningCoupling 1`, the hydro and T^μν outputs
   are multiplied by the factor g²/(4π α_s) of the gluon spectrum and the
   eccentricities, with α_s evaluated at `runningCouplingQsFactor` × the Q_s
@@ -318,12 +318,11 @@ Points outside the lattice, or with T^ττ below 10⁻¹⁶ GeV/fm³, get
 - **Metadata:** `format` (`ipglasma-tmunu`), `version`, `dtype`, `shape`,
   `axis_order`, `components`, `tau_fm`, `eta_points`, `deta`, `dx_fm`,
   `dy_fm` and `event_id`.
-- The file holds one η slice; `eta_points` and `deta` describe the intended
-  η grid.
+- The file holds one η slice: `eta_points` is 1 and `deta` 0.
 - `utilities/read_tmunu.py` reads both formats.
 
 **Text format** (`.dat`):
-- One header line: `# dummy 1 etamax= <etaSizeOutput> xmax= <sizeOutput> ymax= <sizeOutput> deta= <dEtaOutput> dx= <dx> dy= <dx>`.
+- One header line: `# dummy 1 etamax= 1 xmax= <sizeOutput> ymax= <sizeOutput> deta= 0 dx= <dx> dy= <dx>`.
 - Then one line per grid point, `iy` outer and `ix` inner, with a blank line
   after each `iy`. Each line has 12 columns: `ix iy` and the ten components.
 
@@ -335,7 +334,7 @@ with `writeHydro 1`. Energy density, flow
 velocity and shear-stress tensor after Landau matching, in the format read by
 MUSIC.
 
-- **Header line:** `# dummy 1 etamax= <etaSizeOutput> xmax= <sizeOutput> ymax= <sizeOutput> deta= <dEtaOutput> dx= <dx> dy= <dx> tau= <tau>`.
+- **Header line:** `# dummy 1 etamax= 1 xmax= <sizeOutput> ymax= <sizeOutput> deta= 0 dx= <dx> dy= <dx> tau= <tau>`.
 - **Order:** one line per grid point, η outer, then x, then y, with a blank
   line after each η slice.
 - **Columns (18):**

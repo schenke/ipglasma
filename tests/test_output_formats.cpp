@@ -40,8 +40,6 @@ void makeOutputTestParam(Parameters &param) {
     param.coupling.runningCoupling = false;  // no running-coupling factor
     param.output.sizeOutput = gridPoints;
     param.output.LOutput = gridPoints;
-    param.output.etaSizeOutput = 1;
-    param.output.dEtaOutput = 0.1;
     param.output.computeGluonMultiplicity = false;
 }
 
@@ -173,7 +171,7 @@ TEST_CASE(
         tokens(table.header)
         == std::vector<std::string> {
             "#", "dummy", "1", "etamax=", "1", "xmax=", "6", "ymax=", "6",
-            "deta=", "0.1", "dx=", "1", "dy=", "1"});
+            "deta=", "0", "dx=", "1", "dy=", "1"});
     REQUIRE(table.rows.size() == gridPoints * gridPoints);
     CHECK(table.blankLines == gridPoints);
     for (const auto &row : table.rows) CHECK(row.size() == 12);

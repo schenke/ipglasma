@@ -724,6 +724,17 @@ TEST_CASE("Parameters::readInput: minimumQs2ST is a non-negative real number") {
     CHECK(anyContains(errors, "minimumQs2ST -1: must not be negative"));
 }
 
+TEST_CASE("Parameters::readInput: the removed eta grid gets a hint") {
+    const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
+        readSourceFile("input"), "etaSizeOutput 1\ndEtaOutput 0\n"));
+    REQUIRE(errors.size() == 2);
+    CHECK(anyContains(
+        errors,
+        "unknown parameter etaSizeOutput (removed: the fields are boost "
+        "invariant"));
+    CHECK(anyContains(errors, "unknown parameter dEtaOutput (removed:"));
+}
+
 TEST_CASE("Parameters::readInput: Nq can be fractional") {
     Parameters param;
     REQUIRE(
@@ -954,8 +965,7 @@ TEST_CASE(
           Case {"radiusWS", "0", "radiusWS 0: must be positive"},
           Case {"diffusenessWS", "0", "diffusenessWS 0: must be positive"},
           Case {"LOutput", "0", "LOutput 0: must be positive"},
-          Case {"sizeOutput", "0", "sizeOutput 0: must be positive"},
-          Case {"etaSizeOutput", "0", "etaSizeOutput 0: must be positive"}}) {
+          Case {"sizeOutput", "0", "sizeOutput 0: must be positive"}}) {
         CAPTURE(c.key);
         CAPTURE(c.value);
         // with input Woods-Saxon parameters and a field output, so those

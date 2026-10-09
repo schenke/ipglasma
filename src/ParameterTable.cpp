@@ -911,11 +911,6 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("sizeOutput", &P::output, &OutputParameters::sizeOutput)
             .onlyIf(fieldOutputWritten)
             .check(positive<int>()),
-        param("etaSizeOutput", &P::output, &OutputParameters::etaSizeOutput)
-            .onlyIf(fieldOutputWritten)
-            .check(positive<int>()),
-        param("dEtaOutput", &P::output, &OutputParameters::dEtaOutput)
-            .onlyIf(fieldOutputWritten),
 
         // Wilson lines
         param(
@@ -1010,7 +1005,6 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"runWith0Min1Avg2MaxQs", "runWithQs"},
         {"runWithThisFactorTimesQs", "runningCouplingQsFactor"},
         {"runWithkt", "runWithKt"},
-        {"detaOutput", "dEtaOutput"},
         {"writeInitialWilsonLines", "writeWilsonLines"},
     };
     return renamed;
@@ -1057,6 +1051,15 @@ const std::map<std::string, std::string> &replacedKeys() {
         {"g2mu",
          "replaced by g2muGeV, in GeV instead of lattice units: g2muGeV = "
          "g2mu * 0.19733 / (L/size)"},
+        {"etaSizeOutput",
+         "removed: the fields are boost invariant, so the outputs hold one "
+         "eta slice"},
+        {"dEtaOutput",
+         "removed: the fields are boost invariant, so the outputs hold one "
+         "eta slice"},
+        {"detaOutput",
+         "removed: the fields are boost invariant, so the outputs hold one "
+         "eta slice"},
     };
     return replaced;
 }

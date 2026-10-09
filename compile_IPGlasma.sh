@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+# This file is part of IP-Glasma; the license text is in LICENSE.
+
 # Builds IP-Glasma with CMake in build/ and installs the executable ipglasma
 # in the repository root.
 # Usage: ./compile_IPGlasma.sh [noMPI|KNL]

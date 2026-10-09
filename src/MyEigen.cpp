@@ -1,5 +1,7 @@
-// MyEigen.cpp is part of the IP-Glasma solver.
-// Copyright (C) 2012 Bjoern Schenke.
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+// This file is part of IP-Glasma; the license text is in LICENSE.
+
 #include "MyEigen.h"
 
 #include <cstdint>

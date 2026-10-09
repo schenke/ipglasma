@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+# This file is part of IP-Glasma; the license text is in LICENSE.
+
 """
 Energy-density-weighted spatial eccentricities epsilon_n, computed
 directly from a 2D energy density grid (e.g. the T00 component of an

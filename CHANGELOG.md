@@ -54,6 +54,7 @@ The changes since b36b2a9, the last commit on the default branch (`main`, former
 * Add profiling and fingerprint output of the initialization and evolution, switched on with the environment variables `IPGLASMA_PROFILE` and `IPGLASMA_FINGERPRINT` (see `OUTPUT.md`).
 * Add the validation scripts in `validations/`: the coherent and incoherent J/ψ cross section from IP-Glasma, JIMWLK and subnucleondiffraction, compared to arXiv:2207.03712, and a regression check of the ε₂ distribution.
 * Add a `doctest` unit test suite under `tests/` (built with `-Dunittest=ON`), which covers the matrix algebra, random numbers, input reading, nucleus and nucleon sampling, collision geometry, Wilson-line files, forward light cone, energy-momentum tensor, multiplicity and eccentricities.
+* Add the `AUTHORS` file and start every C++, Python and shell file with an SPDX license header (GPL-3.0-or-later) and a copyright line referring to `AUTHORS`, instead of the old notices that named a single author.
 * Add GitHub Actions workflows that build the code and run the unit tests on Ubuntu and macOS, with and without MPI (`build.yml`, `tests.yml`), check the Doxygen documentation (`doxygen.yml`), and apply `clang-format` to pull requests from branches of this repository (`clang-format.yml`).
 
 ### Changed

@@ -172,12 +172,14 @@ int speciesMassNumber(const std::string &name);
 
 /**
  * Whether the nucleons of a species can be sampled from its built-in
- * density profile (NucleusSampler::generate()): protons and deuterons
- * always, heavier species if their profile has a nonzero width. He3 and
- * He4 have none and are only read from configuration files.
+ * density profile (NucleusSampler::generate()), or its smooth thickness
+ * computed from it. Protons and deuterons have their own sampling
+ * (NucleusSampler), and the heavier species a profile with a nonzero
+ * width, except He3 and He4: their table entry has none, so they need
+ * configuration files or input Woods-Saxon parameters.
  * \param[in] name Species name, e.g. `Pb` or `He4`.
- * \return Whether the species has a profile; `true` for an unknown name
- * (reported elsewhere).
+ * \return `false` only for He3 and He4; `true` for every other species,
+ * also for an unknown name (reported elsewhere).
  */
 bool speciesHasDensityProfile(const std::string &name);
 

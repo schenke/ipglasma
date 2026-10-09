@@ -12,7 +12,7 @@
    The parameters are read in the order of the table, so an `.onlyIf()`
    condition can only use parameters listed before it. Checks that combine
    several parameters go into `Parameters::validationErrors()`.
-3. Document it in the input-parameter list of the README, with "read with …"
+3. Document it in the input-parameter list of the README, with "only used with …"
    if it has an `.onlyIf()` condition, and add a CHANGELOG entry.
 
 Reading, the unknown-key check and the `usedParameters` output all follow

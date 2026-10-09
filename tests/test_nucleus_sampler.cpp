@@ -494,7 +494,7 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "NucleusSampler::sampleRadius draws a Woods-Saxon radius exactly as the "
+    "NucleusSampler::sampleRadius draws a Woods-Saxon radius as the "
     "Woods-Saxon-only sampler did") {
     const double R = 6.62, a = 0.546;
     Random random1, random2;
@@ -507,7 +507,13 @@ TEST_CASE(
             r = (R + 10. * a) * pow(random2.genrand64_real3(), 1.0 / 3.0);
         } while (random2.genrand64_real3()
                  > NucleusSampler::fermiDistribution(r, R, a));
-        CHECK(NucleusSampler::sampleRadius(&random1, {3, R, a, 0.}) == r);
+        // same random numbers, same radius; compared to 1e-12 instead of
+        // exactly, since a compiler may contract R + 10 a into a fused
+        // multiply-add in one place and not in the other (as Apple clang
+        // does on arm64), which changes the last bit
+        CHECK(
+            NucleusSampler::sampleRadius(&random1, {3, R, a, 0.})
+            == doctest::Approx(r).epsilon(1e-12));
     }
 }
 

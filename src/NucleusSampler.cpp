@@ -313,8 +313,25 @@ std::vector<ReturnValue> NucleusSampler::generate(
     const double beta3 = data.beta3;
     const double beta4 = data.beta4;
     const double gamma = data.gamma;
-    if (isClose(beta2, 0.) && isClose(beta4, 0.) && isClose(beta3, 0.)
-        && isClose(gamma, 0.)) {
+    // Parameters::validationErrors() rejects species without a profile
+    if (data.densityFunc < 1 || data.densityFunc > 3 || !(data.a_WS > 0.)) {
+        messager_ << "[NucleusSampler::generate]: " << data.name
+                  << " has no density profile to sample its nucleons from; "
+                     "use nucleonPositionsFromFile 1 or useInputWSParams 1";
+        messager_.flush("error");
+        exit(1);
+    }
+    const bool deformed =
+        !(isClose(beta2, 0.) && isClose(beta4, 0.) && isClose(beta3, 0.)
+          && isClose(gamma, 0.));
+    if (deformed && (data.densityFunc != 3 || data.w_WS > 0.)) {
+        messager_ << "[NucleusSampler::generate]: " << data.name
+                  << " is deformed, which needs the 3-parameter Fermi "
+                     "profile with w <= 0";
+        messager_.flush("error");
+        exit(1);
+    }
+    if (!deformed) {
         return generateWoodsSaxon(random, data);
     } else {
         if (data.forceDminFlag) {
@@ -339,14 +356,18 @@ std::vector<ReturnValue> NucleusSampler::generateWoodsSaxon(
     const double d_min = data.d_min;
     const double dR_np = data.dR_np;
     const double da_np = data.da_np;
+    // the species' own radial profile; the neutron skin shifts R and a
+    const RadialDensity protonDensity {data.densityFunc, R_WS, a_WS, data.w_WS};
+    const RadialDensity neutronDensity {
+        data.densityFunc, R_WS + dR_np, a_WS + da_np, data.w_WS};
     std::vector<double> r_array(A, 0.);
     std::vector<int> idx_array(A, 0);
     for (int i = 0; i < Z; i++) {
-        r_array[i] = sampleRFromWoodsSaxon(random, a_WS, R_WS);
+        r_array[i] = sampleRadius(random, protonDensity);
         idx_array[i] = i;
     }
     for (int i = Z; i < A; i++) {
-        r_array[i] = sampleRFromWoodsSaxon(random, a_WS + da_np, R_WS + dR_np);
+        r_array[i] = sampleRadius(random, neutronDensity);
         idx_array[i] = i;
     }
     std::stable_sort(
@@ -424,7 +445,7 @@ std::vector<ReturnValue> NucleusSampler::generateDeformedWoodsSaxon(
     for (int i = 0; i < Z; i++) {
         const RadiusAndCosTheta position =
             sampleRAndCosthetaFromDeformedWoodsSaxon(
-                random, a_WS, R_WS, beta2, beta3, beta4);
+                random, a_WS, R_WS, data.w_WS, beta2, beta3, beta4);
         r_array[i] = position.r;
         costheta_array[i] = position.cosTheta;
         idx_array[i] = i;
@@ -432,7 +453,8 @@ std::vector<ReturnValue> NucleusSampler::generateDeformedWoodsSaxon(
     for (int i = Z; i < A; i++) {
         const RadiusAndCosTheta position =
             sampleRAndCosthetaFromDeformedWoodsSaxon(
-                random, a_WS + da_np, R_WS + dR_np, beta2, beta3, beta4);
+                random, a_WS + da_np, R_WS + dR_np, data.w_WS, beta2, beta3,
+                beta4);
         r_array[i] = position.r;
         costheta_array[i] = position.cosTheta;
         idx_array[i] = i;
@@ -542,7 +564,7 @@ std::vector<ReturnValue> NucleusSampler::generateDeformedWoodsSaxonForceDmin(
                     * (1.0 + beta2 * (cos(gamma) * y20 + sin(gamma) * y22)
                        + beta3 * y30 + beta4 * y40);
             } while (random->genrand64_real3()
-                     > fermiDistribution(r, R_WS_theta, a_WS_i));
+                     > threeParameterFermi(r, R_WS_theta, a_WS_i, data.w_WS));
             double sintheta = sqrt(1. - costheta * costheta);
             x_i = r * sintheta * cos(phi);
             y_i = r * sintheta * sin(phi);
@@ -622,7 +644,7 @@ std::vector<ReturnValue> NucleusSampler::generateTriaxialWoodsSaxon(
                          * (1.0 + beta2 * (cos(gamma) * y20 + sin(gamma) * y22)
                             + beta3 * y30 + beta4 * y40);
         } while (random->genrand64_real3()
-                 > fermiDistribution(r, R_WS_theta, a_WS_i));
+                 > threeParameterFermi(r, R_WS_theta, a_WS_i, data.w_WS));
         double sintheta = sqrt(1. - costheta * costheta);
         x_array[i] = r * sintheta * cos(phi);
         y_array[i] = r * sintheta * sin(phi);
@@ -648,19 +670,49 @@ std::vector<ReturnValue> NucleusSampler::generateTriaxialWoodsSaxon(
     return nucleus;
 }
 
-double NucleusSampler::sampleRFromWoodsSaxon(
-    Random *random, double a_WS, double R_WS) {
-    double rmaxCut = R_WS + 10. * a_WS;
+double RadialDensity::operator()(double r) const {
+    double f = 0.;
+    if (profile == 1) {
+        f = (1. + w * r * r / (a * a)) * exp(-r * r / (a * a));
+    } else if (profile == 2) {
+        f = (1. + w * r * r / (R * R)) / (1. + exp((r * r - R * R) / (a * a)));
+    } else {
+        f = (1. + w * r * r / (R * R)) / (1. + exp((r - R) / a));
+    }
+    return std::max(0., f);
+}
+
+double RadialDensity::rMax() const {
+    if (profile == 1) return sqrt(20.) * a;
+    if (profile == 2) return sqrt(R * R + 20. * a * a);
+    return R + 10. * a;
+}
+
+double RadialDensity::bound() const {
+    if (w <= 0.) return 1.;
+    if (profile == 1) {
+        // (1 + w x) exp(-x), x = r^2/a^2, peaks at x = 1 - 1/w for w > 1
+        return (w > 1.) ? w * exp(-(1. - 1. / w)) : 1.;
+    }
+    // the denominator is at least 1, the numerator largest at rMax()
+    const double rm = rMax();
+    return 1. + w * rm * rm / (R * R);
+}
+
+double NucleusSampler::sampleRadius(
+    Random *random, const RadialDensity &density) {
+    const double rmaxCut = density.rMax();
+    const double bound = density.bound();
     double r = 0.;
     do {
         r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);
-    } while (random->genrand64_real3() > fermiDistribution(r, R_WS, a_WS));
+    } while (random->genrand64_real3() > density(r) / bound);
     return (r);
 }
 
 RadiusAndCosTheta NucleusSampler::sampleRAndCosthetaFromDeformedWoodsSaxon(
-    Random *random, double a_WS, double R_WS, double beta2, double beta3,
-    double beta4) {
+    Random *random, double a_WS, double R_WS, double w_WS, double beta2,
+    double beta3, double beta4) {
     double r = 0.;
     double costheta = 0.;
     double rmaxCut = R_WS + 10. * a_WS;
@@ -673,13 +725,20 @@ RadiusAndCosTheta NucleusSampler::sampleRAndCosthetaFromDeformedWoodsSaxon(
         auto y40 = sphericalHarmonics(4, costheta);
         R_WS_theta = R_WS * (1.0 + beta2 * y20 + beta3 * y30 + beta4 * y40);
     } while (random->genrand64_real3()
-             > fermiDistribution(r, R_WS_theta, a_WS));
+             > threeParameterFermi(r, R_WS_theta, a_WS, w_WS));
     return {r, costheta};
 }
 
 double NucleusSampler::fermiDistribution(double r, double R_WS, double a_WS) {
     double f = 1. / (1. + exp((r - R_WS) / a_WS));
     return (f);
+}
+
+double NucleusSampler::threeParameterFermi(
+    double r, double R_WS, double a_WS, double w_WS) {
+    return std::max(
+        0.,
+        (1. + w_WS * r * r / (R_WS * R_WS)) * fermiDistribution(r, R_WS, a_WS));
 }
 
 double NucleusSampler::sphericalHarmonics(int l, double ct) {

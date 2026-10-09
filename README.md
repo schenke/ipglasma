@@ -125,7 +125,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area
 
 ### Nucleon positions
-- **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the Woods-Saxon distribution (see below)
+- **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the density profile of their species (see [Nuclear density profiles](#nuclear-density-profiles))
 - **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`, read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): directory of the configuration files; running `download_nucleusTables.sh` inside `nucleusConfigurations/` downloads them there
 - **lightNucleusOption** (read with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): which configuration file `nucleonPositionsFromFile 1` uses. The file is chosen by the mass number $A$:
   - $A = 3$: `0` ³He, `1` triton
@@ -139,20 +139,40 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - 1: longitudinal: the nucleus' $z$ axis (the symmetry axis of a deformed Woods-Saxon nucleus) stays along the beam, with a random rotation about it
   - 2: transverse: the $z$ axis is turned to the $+y$ direction
 - **polarizationProjectileJz** and **polarizationTargetJz** (read with `useNucleus 1`, `readInitialWilsonLines 0`, and a nonzero `polarizationProjectile` or `polarizationTarget`, respectively): for a deuteron read from file (`nucleonPositionsFromFile 1`), $|J_z| = 1$ (any value within $10^{-8}$ of 1) uses the $J_z = \pm 1$ configurations and any other value the $J_z = 0$ ones. With polarization `0` they are not used: each event takes $J_z = 0$ with probability 1/3 and $J_z = \pm 1$ otherwise
-- **useSmoothNucleus**: test option: `1` replaces the nucleons by the smooth Woods-Saxon thickness of each nucleus (without deformation, nucleons or hot spots); $N_\text{part}$ and $N_\text{coll}$ are set to 2, and the `NpartList`/`NcollList` files are not written
+- **useSmoothNucleus**: test option: `1` replaces the nucleons by the smooth thickness of each nucleus' density profile (without deformation, nucleons or hot spots); $N_\text{part}$ and $N_\text{coll}$ are set to 2, and the `NpartList`/`NcollList` files are not written
 - **nucleiToAverage**: number $n$ of nuclei to average over, at least 1, `1` for normal runs. With $n > 1$, $n$ projectile and $n$ target nuclei are sampled (or read from file) and oriented independently, and every nucleon's thickness is divided by $n$, which gives a smoother thickness. $N_\text{part}$, $N_\text{coll}$ and the `NpartList`/`NcollList` files then count the nucleons of all $n$ nuclei, colliding every projectile with every target nucleon, so they are roughly $n N_\text{part}$ and $n^2 N_\text{coll}$; `useFixedNpart` refers to these totals. Not allowed for collisions with a proton
 
-### Woods-Saxon distribution
-Without configuration files, nuclei with $A > 2$ are sampled from a (deformed) Woods-Saxon distribution with diffuseness $a$ and radius $R(\theta, \phi) = R [1 + \beta_2 (\cos\gamma\, Y_{20} + \sin\gamma\, Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. `src/Glauber.cpp` has the built-in parameters of each species. Deformed by default are Au, O, Ar, Cu, U ($\beta_2 = 0.28$, $\beta_4 = 0.093$), Ru and Xe ($\beta_2 = 0.162$, $\beta_4 = -0.003$); the deformations of O and Xe are from FRDM(2012) ([arXiv:1508.06294](https://arxiv.org/abs/1508.06294)), the other parameters have no recorded source.
+### Nuclear density profiles
+Without configuration files, the nucleons of a nucleus with $A > 2$ are sampled from the radial density profile of its species, the profile the nuclear thickness integrals use too. `src/Glauber.cpp` has the built-in profile and parameters of each species:
 
-- **useInputWSParams**: `1` replaces the built-in `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp` of both nuclei by the input values, which are only read with `1`. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
+| Profile | $\rho(r) \propto$ | Species |
+|---|---|---|
+| 3-parameter Fermi, a Woods-Saxon for $w = 0$ | $(1 + w r^2/R^2) / (1 + e^{(r-R)/a})$ | O and Ca ($w \neq 0$); Ne, Ne22, Al, Ar, Fe, Cu, Ru, Zr, Xe, W, Pt, Au, Pb, U ($w = 0$) |
+| 3-parameter Gauss | $(1 + w r^2/R^2) / (1 + e^{(r^2-R^2)/a^2})$ | S |
+| harmonic oscillator | $(1 + w r^2/a^2) e^{-r^2/a^2}$ | C |
+
+He3 and He4 have no built-in profile, so they need configuration files (`nucleonPositionsFromFile 1`) or Woods-Saxon parameters from the input (`useInputWSParams 1`). A deformed nucleus is sampled from the 3-parameter Fermi profile with the angle-dependent radius $R(\theta, \phi) = R [1 + \beta_2 (\cos(\gamma) Y_{20} + \sin(\gamma) Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. These species are deformed by default (all with $\beta_3 = \gamma = 0$):
+
+| Species | $\beta_2$ | $\beta_4$ |
+|---|---|---|
+| O | −0.01 | −0.122 |
+| Ar | 0.1668 | 0.00695 |
+| Cu | 0.162 | 0.006 |
+| Ru | 0.158 | 0 |
+| Xe | 0.162 | −0.003 |
+| Au | −0.13 | −0.03 |
+| U | 0.28 | 0.093 |
+
+The deformations of O and Xe are from FRDM(2012) ([arXiv:1508.06294](https://arxiv.org/abs/1508.06294)); the other parameters have no recorded source.
+
+- **useInputWSParams**: `1` makes both nuclei Woods-Saxon nuclei (3-parameter Fermi with $w = 0$, whatever their built-in profile) with the input values of `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp`, which are only read with `1`, instead of the built-in ones. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
 - **radiusWS**: radius $R$ in fm, positive
 - **diffusenessWS**: diffuseness $a$ in fm, positive
 - **beta2**, **beta3** and **beta4**: deformation parameters $\beta_2$, $\beta_3$ and $\beta_4$
 - **gamma**: triaxiality angle $\gamma$ in radians
 - **deltaRnp** and **deltaAnp**: neutron skin: neutrons are sampled with radius $R$ + `deltaRnp` and diffuseness $a$ + `deltaAnp` (in fm); both are 0 without `useInputWSParams 1`
 - **forceDMin**: `1` enforces `dMin` strictly for deformed nuclei: a nucleon's position is redrawn until it is at least `dMin` away from all others. `0` keeps `dMin` on a best-effort basis (see `dMin`)
-- **dMin**: minimum distance in fm between two nucleons of a Woods-Saxon nucleus, also read with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it, since their density depends on every angle (use `forceDMin 1` for them). `0` for no minimum distance
+- **dMin**: minimum distance in fm between two nucleons of a nucleus sampled from its density profile, also read with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it, since their density depends on every angle (use `forceDMin 1` for them). `0` for no minimum distance
 
 ### Coupling
 - **g**: coupling constant $g$ of the classical Yang-Mills fields, positive; with fixed coupling, $\alpha_s = g^2/(4\pi)$

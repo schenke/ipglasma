@@ -96,8 +96,8 @@ struct CollisionParameters {
     bool gaussianWounding = false;
 };
 
-/// Nucleon positions: configuration files, polarization and the (deformed)
-/// Woods-Saxon distribution.
+/// Nucleon positions: configuration files, polarization and the nuclear
+/// density profiles.
 struct NucleusParameters {
     /// Whether to sample nucleon positions (`0`) or read them from a
     /// file (`1`).
@@ -124,13 +124,14 @@ struct NucleusParameters {
     double polarizationProjectileJz = 0.;
     /// Target's \f$J_z\f$ polarization.
     double polarizationTargetJz = 0.;
-    /// Whether to use a smooth Woods-Saxon distribution for a heavy
-    /// nucleus (`1`) instead of sampling discrete nucleons.
+    /// Whether to use the smooth thickness of each nucleus' density profile
+    /// (`1`) instead of sampling discrete nucleons.
     bool useSmoothNucleus = false;
-    /// Whether `radiusWS`/`diffusenessWS`/`beta2`/`beta3`/`beta4`/\c
-    /// gamma override a nucleus species' built-in deformation
-    /// parameters. A nucleus whose deformation parameters are all within
-    /// PhysConst::inputTolerance of 0 is sampled as spherical.
+    /// Whether both nuclei are Woods-Saxon nuclei with the input
+    /// `radiusWS`/`diffusenessWS`/`beta2`/`beta3`/`beta4`/\c gamma instead
+    /// of their species' built-in profile and parameters. A nucleus whose
+    /// deformation parameters are all within PhysConst::inputTolerance of 0
+    /// is sampled as spherical.
     bool useInputWSParams = false;
     /// Woods-Saxon half-density radius [fm] override.
     double radiusWS = 0.;
@@ -549,8 +550,8 @@ class Parameters {
     RandomParameters random;
     /// Collision system, impact parameter and nucleon wounding.
     CollisionParameters collision;
-    /// Nucleon positions: configuration files, polarization and the (deformed)
-    /// Woods-Saxon distribution.
+    /// Nucleon positions: configuration files, polarization and the nuclear
+    /// density profiles.
     NucleusParameters nucleus;
     /// Nucleon substructure (constituent quarks) and its Bayesian-posterior
     /// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,

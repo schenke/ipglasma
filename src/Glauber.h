@@ -171,6 +171,17 @@ struct Data {
 int speciesMassNumber(const std::string &name);
 
 /**
+ * Whether the nucleons of a species can be sampled from its built-in
+ * density profile (NucleusSampler::generate()): protons and deuterons
+ * always, heavier species if their profile has a nonzero width. He3 and
+ * He4 have none and are only read from configuration files.
+ * \param[in] name Species name, e.g. `Pb` or `He4`.
+ * \return Whether the species has a profile; `true` for an unknown name
+ * (reported elsewhere).
+ */
+bool speciesHasDensityProfile(const std::string &name);
+
+/**
  * Glauber-model nuclear geometry: resolves a nucleus name to its
  * Woods-Saxon/density-profile parameters, provides the corresponding
  * thickness and overlap functions (\f$T_A\f$, \f$T_{AB}\f$), and
@@ -259,7 +270,9 @@ class Glauber {
      * Glauber.cpp's \c kNucleusTemplates table).
      * \param[in] setWSDeformParams If `true`, `R_WS`/`a_WS`/\p
      * beta2/`beta3`/`beta4`/`gamma` override the species' built-in
-     * values instead of being ignored.
+     * values instead of being ignored, and the nucleus gets a Woods-Saxon
+     * profile (3-parameter Fermi with \f$w = 0\f$) whatever its built-in
+     * profile is.
      * \param[in] R_WS Woods-Saxon half-density radius override [fm],
      * used only if \p setWSDeformParams.
      * \param[in] a_WS Woods-Saxon surface diffuseness override [fm],

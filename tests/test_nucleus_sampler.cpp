@@ -22,7 +22,21 @@ Nucleus makeNucleus(int A, int Z) {
     data.R_WS = 1.1 * std::cbrt(static_cast<double>(A));
     data.a_WS = 0.5;
     data.d_min = 0.9;
+    data.densityFunc = 3;  // Woods-Saxon (3-parameter Fermi with w = 0)
     return data;
+}
+
+// <r^2> of a radial density, by integrating r^4 rho / r^2 rho
+double meanRSquared(const RadialDensity &density) {
+    const int n = 200000;
+    const double dr = density.rMax() / n;
+    double num = 0., den = 0.;
+    for (int i = 0; i < n; i++) {
+        const double r = (i + 0.5) * dr;
+        num += r * r * r * r * density(r);
+        den += r * r * density(r);
+    }
+    return num / den;
 }
 
 int countProtons(const std::vector<ReturnValue> &nucleus) {
@@ -436,4 +450,85 @@ TEST_CASE(
     CHECK(lightNucleusOptionError(208, 5).empty());
     CHECK(lightNucleusOptionError(1, 3).empty());
     CHECK(configurationFileName(63, 0).empty());
+}
+
+TEST_CASE(
+    "RadialDensity: the bound covers each profile up to rMax, and the "
+    "sampled radii reproduce its <r^2>") {
+    // the parameters of the species in Glauber's table (C, S, O, Ca), and a
+    // 3-parameter Fermi with w > 0
+    struct Case {
+        const char *name;
+        RadialDensity density;
+    };
+    for (const Case &c :
+         {Case {"C (harmonic oscillator)", {1, 2.44, 1.635, 1.403}},
+          Case {"S (3-parameter Gauss)", {2, 2.54, 2.191, 0.16}},
+          Case {"O (3-parameter Fermi)", {3, 2.608, 0.513, -0.051}},
+          Case {"Ca (3-parameter Fermi)", {3, 3.766, 0.586, -0.161}},
+          Case {"3-parameter Fermi, w > 0", {3, 3., 0.5, 0.3}}}) {
+        CAPTURE(c.name);
+        const RadialDensity &d = c.density;
+        for (int i = 0; i <= 1000; i++) {
+            const double r = d.rMax() * i / 1000.;
+            CHECK(d(r) >= 0.);
+            CHECK(d(r) <= d.bound() * (1. + 1e-12));
+        }
+        Random random;
+        random.init_genrand64(5);
+        const int samples = 100000;
+        double sum = 0.;
+        for (int i = 0; i < samples; i++) {
+            const double r = NucleusSampler::sampleRadius(&random, d);
+            sum += r * r;
+        }
+        CHECK(sum / samples == doctest::Approx(meanRSquared(d)).epsilon(0.01));
+    }
+    // C and S had about 2.6 times their size with the Woods-Saxon formula
+    CHECK(
+        std::sqrt(meanRSquared({1, 2.44, 1.635, 1.403}))
+        == doctest::Approx(2.41).epsilon(0.01));
+    CHECK(
+        std::sqrt(meanRSquared({2, 2.54, 2.191, 0.16}))
+        == doctest::Approx(3.24).epsilon(0.01));
+}
+
+TEST_CASE(
+    "NucleusSampler::sampleRadius draws a Woods-Saxon radius exactly as the "
+    "Woods-Saxon-only sampler did") {
+    const double R = 6.62, a = 0.546;
+    Random random1, random2;
+    random1.init_genrand64(3);
+    random2.init_genrand64(3);
+    for (int i = 0; i < 1000; i++) {
+        // the algorithm before other profiles were supported
+        double r = 0.;
+        do {
+            r = (R + 10. * a) * pow(random2.genrand64_real3(), 1.0 / 3.0);
+        } while (random2.genrand64_real3()
+                 > NucleusSampler::fermiDistribution(r, R, a));
+        CHECK(NucleusSampler::sampleRadius(&random1, {3, R, a, 0.}) == r);
+    }
+}
+
+TEST_CASE(
+    "Glauber::findNucleusData: input Woods-Saxon parameters make the nucleus "
+    "a Woods-Saxon nucleus") {
+    Glauber glauber;
+    Nucleus carbon {};
+    glauber.findNucleusData(
+        &carbon, "C", false, 0., 0., 0., 0., 0., 0., false, 0., 0., 0.);
+    CHECK(carbon.densityFunc == 1);
+    CHECK(carbon.w_WS == 1.403);
+    glauber.findNucleusData(
+        &carbon, "C", true, 2.5, 0.5, 0., 0., 0., 0., false, 0., 0., 0.);
+    CHECK(carbon.densityFunc == 3);
+    CHECK(carbon.w_WS == 0.);
+    CHECK(carbon.R_WS == 2.5);
+
+    CHECK_FALSE(speciesHasDensityProfile("He4"));
+    CHECK_FALSE(speciesHasDensityProfile("He3"));
+    CHECK(speciesHasDensityProfile("C"));
+    CHECK(speciesHasDensityProfile("d"));
+    CHECK(speciesHasDensityProfile("p"));
 }

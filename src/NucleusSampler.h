@@ -29,6 +29,47 @@ struct RadiusAndCosTheta {
 };
 
 /**
+ * Radial nucleon density of an undeformed nucleus: the profile of its
+ * species in Glauber's table, which the thickness integrals use too.
+ */
+struct RadialDensity {
+    /// Profile, Glauber's density-function code: `1` harmonic oscillator,
+    /// `2` 3-parameter Gauss, `3` 3-parameter Fermi (Woods-Saxon for
+    /// \f$w = 0\f$).
+    int profile = 3;
+    /// Radius \f$R\f$ [fm] (not used by the harmonic oscillator).
+    double R = 0.;
+    /// Diffuseness or width \f$a\f$ [fm].
+    double a = 0.;
+    /// Coefficient \f$w\f$ of the \f$r^2\f$ term [dimensionless].
+    double w = 0.;
+
+    /**
+     * Evaluates the unnormalized density: \f$(1 + w r^2/a^2)
+     * e^{-r^2/a^2}\f$ (harmonic oscillator), \f$(1 + w r^2/R^2) /
+     * (1 + e^{(r^2 - R^2)/a^2})\f$ (3-parameter Gauss) or \f$(1 + w
+     * r^2/R^2) / (1 + e^{(r - R)/a})\f$ (3-parameter Fermi), and 0 where
+     * this would be negative.
+     * \param[in] r Radius [fm].
+     * \return The density, 1 at the center for \f$w = 0\f$.
+     */
+    double operator()(double r) const;
+    /**
+     * Radius beyond which the density is neglected: \f$R + 10a\f$ (3-parameter
+     * Fermi), \f$\sqrt{R^2 + 20a^2}\f$ (3-parameter Gauss) or
+     * \f$\sqrt{20}\,a\f$ (harmonic oscillator).
+     * \return The radius [fm].
+     */
+    double rMax() const;
+    /**
+     * Upper bound of operator()() for \f$0 \le r \le\f$ rMax(), used for
+     * rejection sampling; 1 unless \f$w\f$ makes the density larger.
+     * \return The bound.
+     */
+    double bound() const;
+};
+
+/**
  * The configuration file `nucleonPositionsFromFile 1` reads for a
  * nucleus other than the deuteron.
  * \param[in] nucleusA Mass number.
@@ -52,7 +93,8 @@ std::string lightNucleusOptionError(int nucleusA, int lightNucleusOption);
 
 /**
  * Samples the nucleon positions of the projectile and the target: from
- * (possibly deformed) Woods-Saxon distributions, or by drawing one of the
+ * the (possibly deformed) density profile of each species, or by drawing
+ * one of the
  * pre-tabulated configurations of light nuclei and Au/Pb
  * (`nucleonPositionsFromFile`), followed by the global rotation
  * selected by the nucleus' polarization. Both nuclei are centered at the
@@ -73,7 +115,7 @@ class NucleusSampler {
         Parameters *param, Glauber *glauber, Random *random);
     /**
      * Samples this event's nucleon positions of both nuclei (from the
-     * loaded configurations or from Woods-Saxon distributions, depending
+     * loaded configurations or from the species' density profiles, depending
      * on `param->nucleus.nucleonPositionsFromFile`) and applies each
      * nucleus' global polarization rotation (applyPolarizationRotation()).
      * With `param->collision.nucleiToAverage` \f$n > 1\f$, \f$n\f$
@@ -162,22 +204,26 @@ class NucleusSampler {
      * generateWoodsSaxon() if none are, otherwise
      * generateDeformedWoodsSaxonForceDmin() if `forceDminFlag` is set,
      * else generateTriaxialWoodsSaxon() for \f$\gamma\neq0\f$ and
-     * generateDeformedWoodsSaxon() for \f$\gamma=0\f$.
+     * generateDeformedWoodsSaxon() for \f$\gamma=0\f$. Exits with an
+     * error for a species without a density profile (He3, He4), and for a
+     * deformed nucleus whose profile is not a 3-parameter Fermi with
+     * \f$w \le 0\f$.
      * \param[in,out] random Random-number source.
-     * \param[in] data The nucleus' species and (deformed) Woods-Saxon
-     * parameters.
+     * \param[in] data The nucleus' species, density profile and
+     * deformation.
      * \return The generated nucleons.
      */
     std::vector<ReturnValue> generate(Random *random, const Nucleus &data);
     /**
-     * Generates an undeformed (spherically symmetric) Woods-Saxon
-     * nucleon configuration: samples each nucleon's radius via
-     * sampleRFromWoodsSaxon() (neutrons with radius and diffuseness
-     * shifted by `dR_np`/`da_np`), then places them at random angles
-     * subject to a best-effort (up to 100 retries) minimum-distance
+     * Generates an undeformed (spherically symmetric) nucleon
+     * configuration from the species' radial density profile (despite the
+     * name, also harmonic oscillator and 3-parameter Gauss): samples each
+     * nucleon's radius via sampleRadius() (neutrons with radius and
+     * diffuseness shifted by `dR_np`/`da_np`), then places them at random
+     * angles subject to a best-effort (up to 100 retries) minimum-distance
      * `d_min` rejection, and recenters the result.
      * \param[in,out] random Random-number source.
-     * \param[in] data The nucleus' species and Woods-Saxon parameters.
+     * \param[in] data The nucleus' species and density profile.
      * \return The generated nucleons.
      */
     std::vector<ReturnValue> generateWoodsSaxon(
@@ -226,38 +272,39 @@ class NucleusSampler {
     std::vector<ReturnValue> generateTriaxialWoodsSaxon(
         Random *random, const Nucleus &data);
     /**
-     * Samples one nucleon's radius from an undeformed Woods-Saxon
-     * distribution via rejection sampling: draws \f$r\f$ with density
-     * \f$\propto r^2\f$ (the correct 3D volume-element weighting, via
-     * the cube root of a uniform draw) up to a generous cutoff, and
-     * accepts it with probability given by fermiDistribution().
+     * Samples one nucleon's radius from the radial density of an
+     * undeformed nucleus via rejection sampling: draws \f$r\f$ with
+     * density \f$\propto r^2\f$ (the 3D volume element, via the cube root
+     * of a uniform draw) up to RadialDensity::rMax(), and accepts it with
+     * probability RadialDensity::operator()() / RadialDensity::bound().
+     * For a Woods-Saxon density this is the same algorithm, with the same
+     * random numbers, as before the other profiles were supported.
      * \param[in,out] random Random-number source.
-     * \param[in] a_WS Surface diffuseness [fm].
-     * \param[in] R_WS Half-density radius [fm].
+     * \param[in] density The radial density to sample from.
      * \return The sampled radius [fm].
      */
-    static double sampleRFromWoodsSaxon(
-        Random *random, double a_WS, double R_WS);
+    static double sampleRadius(Random *random, const RadialDensity &density);
     /**
      * Samples one nucleon's radius and polar angle jointly from an
      * axially symmetric (\f$\gamma=0\f$) deformed Woods-Saxon
      * distribution: draws \f$r\f$ with density \f$\propto r^2\f$ (via
-     * the cube root of a uniform draw, as in sampleRFromWoodsSaxon())
+     * the cube root of a uniform draw, as in sampleRadius())
      * up to a generous cutoff, \f$\cos\theta\f$ uniformly, and accepts
-     * the pair with probability given by fermiDistribution() evaluated
+     * the pair with probability given by threeParameterFermi() evaluated
      * at the angle-dependent surface radius \f$R(\theta) =
      * R_{WS}(1+\beta_2 Y_{20}+\beta_3 Y_{30}+\beta_4 Y_{40})\f$.
      * \param[in,out] random Random-number source.
      * \param[in] a_WS Surface diffuseness [fm].
      * \param[in] R_WS Half-density radius [fm].
+     * \param[in] w_WS Coefficient of the \f$r^2\f$ term (not positive).
      * \param[in] beta2 Quadrupole deformation.
      * \param[in] beta3 Octupole deformation.
      * \param[in] beta4 Hexadecapole deformation.
      * \return The sampled radius and \f$\cos\theta\f$.
      */
     static RadiusAndCosTheta sampleRAndCosthetaFromDeformedWoodsSaxon(
-        Random *random, double a_WS, double R_WS, double beta2, double beta3,
-        double beta4);
+        Random *random, double a_WS, double R_WS, double w_WS, double beta2,
+        double beta3, double beta4);
     /**
      * Evaluates the Woods-Saxon (Fermi) density profile.
      * \param[in] r Radius [fm].
@@ -266,6 +313,19 @@ class NucleusSampler {
      * \return \f$1/(1+\exp((r-R_{WS})/a_{WS}))\f$.
      */
     static double fermiDistribution(double r, double R_WS, double a_WS);
+    /**
+     * Evaluates the 3-parameter Fermi density profile, the deformed
+     * nuclei's profile with the angle-dependent radius.
+     * \param[in] r Radius [fm].
+     * \param[in] R_WS Half-density radius [fm].
+     * \param[in] a_WS Surface diffuseness [fm].
+     * \param[in] w_WS Coefficient of the \f$r^2\f$ term; must not be
+     * positive, so that the result is at most 1.
+     * \return \f$(1 + w r^2/R^2)/(1+\exp((r-R)/a))\f$, and 0 where this
+     * would be negative; fermiDistribution() for \f$w = 0\f$.
+     */
+    static double threeParameterFermi(
+        double r, double R_WS, double a_WS, double w_WS);
     /**
      * Evaluates the axially symmetric (\f$m=0\f$) real spherical
      * harmonic \f$Y_{l0}(\theta)\f$ for \f$l=2\f$, `3`, or `4`.

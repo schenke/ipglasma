@@ -8,6 +8,7 @@
 #include <iostream>
 #include <sstream>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "Glauber.h"
@@ -210,6 +211,34 @@ std::vector<std::string> Parameters::validationErrors() const {
     // Q_s table starts at y = 0
     const bool samplesColorCharges =
         collision.useNucleus && wilsonLines.readInitialWilsonLines == 0;
+    // nucleons sampled from the built-in density profile need one (He3 and
+    // He4 have none); a polarization already set nucleonPositionsFromFile
+    if (samplesColorCharges && !nucleus.nucleonPositionsFromFile
+        && !nucleus.useInputWSParams) {
+        const bool projectileOk =
+            speciesHasDensityProfile(collision.projectile);
+        const bool targetOk = speciesHasDensityProfile(collision.target);
+        if (!projectileOk || !targetOk) {
+            std::ostringstream message;
+            if (!projectileOk && !targetOk
+                && collision.projectile == collision.target) {
+                message << "projectile and target " << collision.projectile;
+            } else if (!projectileOk && !targetOk) {
+                message << "projectile " << collision.projectile
+                        << " and target " << collision.target;
+            } else {
+                message << (projectileOk ? "target " : "projectile ")
+                        << (projectileOk ? collision.target
+                                         : collision.projectile);
+            }
+            message << " ha" << (projectileOk || targetOk ? "s" : "ve")
+                    << " no built-in density profile to sample the nucleons "
+                       "from: use nucleonPositionsFromFile 1 (configuration "
+                       "files) or useInputWSParams 1";
+            fail(message);
+        }
+    }
+
     if (collision.useNucleus && collision.bMin > collision.bMax) {
         std::ostringstream message;
         message << "bMin (" << collision.bMin

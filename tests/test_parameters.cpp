@@ -380,6 +380,36 @@ TEST_CASE(
     CHECK(param.xBeforeJimwlk(NucleusRole::Projectile) == 0.01);
 }
 
+TEST_CASE(
+    "Parameters::validationErrors: He3 and He4 need configuration files or "
+    "input Woods-Saxon parameters") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.collision.projectile = "He4";
+    param.collision.target = "Pb";
+    std::vector<std::string> errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].rfind("projectile He4 has no built-in density profile", 0)
+        == 0);
+    param.collision.target = "He4";
+    errors = param.validationErrors();
+    REQUIRE(errors.size() == 1);
+    CHECK(
+        errors[0].rfind(
+            "projectile and target He4 have no built-in density profile", 0)
+        == 0);
+    param.nucleus.nucleonPositionsFromFile = true;
+    CHECK(param.validationErrors().empty());
+    param.nucleus.nucleonPositionsFromFile = false;
+    param.nucleus.useInputWSParams = true;
+    CHECK(param.validationErrors().empty());
+    // Wilson lines read from file take the nucleons from the geometry files
+    param.nucleus.useInputWSParams = false;
+    param.wilsonLines.readInitialWilsonLines = 2;
+    CHECK(param.validationErrors().empty());
+}
+
 TEST_CASE("Parameters::validationErrors: bMin must not be larger than bMax") {
     Parameters param;
     makeValidBaseline(param);

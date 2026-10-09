@@ -93,6 +93,15 @@ int speciesMassNumber(const std::string &name) {
     return 0;
 }
 
+bool speciesHasDensityProfile(const std::string &name) {
+    for (const auto &candidate : kNucleusTemplates) {
+        if (name == candidate.name) {
+            return candidate.A <= 2 || candidate.a_WS > 0.;
+        }
+    }
+    return true;
+}
+
 void Glauber::findNucleusData(
     Nucleus *nucleus, string name, bool setWSDeformParams, double R_WS,
     double a_WS, double beta2, double beta3, double beta4, double gamma,
@@ -136,6 +145,12 @@ void Glauber::findNucleusData(
     nucleus->da_np = 0.;
 
     if (setWSDeformParams) {
+        // the input describes a Woods-Saxon nucleus, whatever the species'
+        // built-in profile is
+        nucleus->anumFunc = 3;
+        nucleus->anumFuncIntegrand = 3;
+        nucleus->densityFunc = 3;
+        nucleus->w_WS = 0.;
         nucleus->R_WS = R_WS;
         nucleus->a_WS = a_WS;
         nucleus->beta2 = beta2;

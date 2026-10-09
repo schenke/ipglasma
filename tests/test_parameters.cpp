@@ -410,6 +410,33 @@ TEST_CASE(
     CHECK(param.validationErrors().empty());
 }
 
+TEST_CASE(
+    "Parameters::validationErrors: a smooth He3 or He4 nucleus needs input "
+    "Woods-Saxon parameters, also with configuration files") {
+    Parameters param;
+    makeValidBaseline(param);
+    param.collision.projectile = "He4";
+    param.collision.target = "Pb";
+    param.nucleus.useSmoothNucleus = true;
+    // the smooth thickness comes from the profile, not from the nucleons
+    for (const bool fromFile : {false, true}) {
+        CAPTURE(fromFile);
+        param.nucleus.nucleonPositionsFromFile = fromFile;
+        const std::vector<std::string> errors = param.validationErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(
+            errors[0]
+            == "projectile He4 has no built-in density profile for the "
+               "smooth nucleus (useSmoothNucleus 1): use useInputWSParams 1");
+    }
+    param.nucleus.useInputWSParams = true;
+    CHECK(param.validationErrors().empty());
+    // species with a profile are fine as smooth nuclei
+    param.nucleus.useInputWSParams = false;
+    param.collision.projectile = "d";
+    CHECK(param.validationErrors().empty());
+}
+
 TEST_CASE("Parameters::validationErrors: bMin must not be larger than bMax") {
     Parameters param;
     makeValidBaseline(param);

@@ -272,7 +272,8 @@ class Glauber {
      * beta2/`beta3`/`beta4`/`gamma` override the species' built-in
      * values instead of being ignored, and the nucleus gets a Woods-Saxon
      * profile (3-parameter Fermi with \f$w = 0\f$) whatever its built-in
-     * profile is.
+     * profile is. The proton and the deuteron (A <= 2) keep their built-in
+     * description.
      * \param[in] R_WS Woods-Saxon half-density radius override [fm],
      * used only if \p setWSDeformParams.
      * \param[in] a_WS Woods-Saxon surface diffuseness override [fm],

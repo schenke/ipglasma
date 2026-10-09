@@ -151,7 +151,7 @@ Without configuration files, the nucleons of a nucleus with $A > 2$ are sampled 
 | 3-parameter Gauss | $(1 + w r^2/R^2) / (1 + e^{(r^2-R^2)/a^2})$ | S |
 | harmonic oscillator | $(1 + w r^2/a^2) e^{-r^2/a^2}$ | C |
 
-He3 and He4 have no built-in profile, so they need configuration files (`nucleonPositionsFromFile 1`) or Woods-Saxon parameters from the input (`useInputWSParams 1`). A deformed nucleus is sampled from the 3-parameter Fermi profile with the angle-dependent radius $R(\theta, \phi) = R [1 + \beta_2 (\cos(\gamma) Y_{20} + \sin(\gamma) Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. These species are deformed by default (all with $\beta_3 = \gamma = 0$):
+He3 and He4 have no built-in profile, so they need configuration files (`nucleonPositionsFromFile 1`) or Woods-Saxon parameters from the input (`useInputWSParams 1`); a smooth He3 or He4 nucleus (`useSmoothNucleus 1`) needs the input parameters. A deformed nucleus is sampled from the 3-parameter Fermi profile with the angle-dependent radius $R(\theta, \phi) = R [1 + \beta_2 (\cos(\gamma) Y_{20} + \sin(\gamma) Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. These species are deformed by default (all with $\beta_3 = \gamma = 0$):
 
 | Species | $\beta_2$ | $\beta_4$ |
 |---|---|---|
@@ -165,7 +165,7 @@ He3 and He4 have no built-in profile, so they need configuration files (`nucleon
 
 The deformations of O and Xe are from FRDM(2012) ([arXiv:1508.06294](https://arxiv.org/abs/1508.06294)); the other parameters have no recorded source.
 
-- **useInputWSParams**: `1` makes both nuclei Woods-Saxon nuclei (3-parameter Fermi with $w = 0$, whatever their built-in profile) with the input values of `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp`, which are only used with `1`, instead of the built-in ones. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
+- **useInputWSParams**: `1` makes both nuclei with A > 2 Woods-Saxon nuclei (3-parameter Fermi with $w = 0$, whatever their built-in profile) with the input values of `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp`, which are only used with `1`, instead of the built-in ones. The proton and the deuteron keep their own description, so e.g. d+Au can use the input parameters for Au. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
 - **radiusWS**: radius $R$ in fm, positive
 - **diffusenessWS**: diffuseness $a$ in fm, positive
 - **beta2**, **beta3** and **beta4**: deformation parameters $\beta_2$, $\beta_3$ and $\beta_4$

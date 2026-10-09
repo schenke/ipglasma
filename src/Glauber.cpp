@@ -144,9 +144,11 @@ void Glauber::findNucleusData(
     nucleus->dR_np = 0.;
     nucleus->da_np = 0.;
 
-    if (setWSDeformParams) {
-        // the input describes a Woods-Saxon nucleus, whatever the species'
-        // built-in profile is
+    // the input describes a Woods-Saxon nucleus, whatever the species'
+    // built-in profile is; the proton and the deuteron keep their own
+    // description (a nucleon at the origin, the Hulthen wave function), so
+    // that e.g. d+Au with the input parameters of Au keeps its deuteron
+    if (setWSDeformParams && tmpl->A > 2) {
         nucleus->anumFunc = 3;
         nucleus->anumFuncIntegrand = 3;
         nucleus->densityFunc = 3;

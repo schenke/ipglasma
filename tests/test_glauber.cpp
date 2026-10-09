@@ -74,6 +74,44 @@ TEST_CASE("Glauber::findNucleusData: setWSDeformParams overrides beta2/R_WS") {
     CHECK(nucleus.beta2 == doctest::Approx(0.11));
 }
 
+TEST_CASE(
+    "Glauber::findNucleusData: setWSDeformParams makes nuclei with A > 2 "
+    "Woods-Saxon nuclei and keeps the proton and the deuteron") {
+    Glauber glauber;
+    struct Case {
+        const char *name;
+        bool overridden;
+    };
+    for (const Case &c :
+         {Case {"p", false}, Case {"d", false}, Case {"He4", true},
+          Case {"C", true}}) {
+        CAPTURE(c.name);
+        Nucleus builtIn {};
+        glauber.findNucleusData(
+            &builtIn, c.name, /*setWSDeformParams=*/false, 0., 0., 0., 0., 0.,
+            0., /*forceDminFlag=*/false, 0., 0., 0.);
+        Nucleus nucleus {};
+        glauber.findNucleusData(
+            &nucleus, c.name, /*setWSDeformParams=*/true, 6.6, 0.55, 0.1, 0.,
+            0., 0., /*forceDminFlag=*/false, 0., 0.1, 0.);
+        if (c.overridden) {
+            CHECK(nucleus.densityFunc == 3);
+            CHECK(nucleus.R_WS == doctest::Approx(6.6));
+            CHECK(nucleus.a_WS == doctest::Approx(0.55));
+            CHECK(nucleus.w_WS == 0.);
+            CHECK(nucleus.beta2 == doctest::Approx(0.1));
+            CHECK(nucleus.dR_np == doctest::Approx(0.1));
+        } else {
+            CHECK(nucleus.densityFunc == builtIn.densityFunc);
+            CHECK(nucleus.R_WS == builtIn.R_WS);
+            CHECK(nucleus.a_WS == builtIn.a_WS);
+            CHECK(nucleus.w_WS == builtIn.w_WS);
+            CHECK(nucleus.beta2 == builtIn.beta2);
+            CHECK(nucleus.dR_np == 0.);
+        }
+    }
+}
+
 namespace {
 // calcRho() solves for nucleus.rho_WS such that the corresponding anum*()
 // normalization integral equals nucleus.A exactly (that is its whole

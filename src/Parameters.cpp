@@ -212,8 +212,11 @@ std::vector<std::string> Parameters::validationErrors() const {
     const bool samplesColorCharges =
         collision.useNucleus && wilsonLines.readInitialWilsonLines == 0;
     // nucleons sampled from the built-in density profile need one (He3 and
-    // He4 have none); a polarization already set nucleonPositionsFromFile
-    if (samplesColorCharges && !nucleus.nucleonPositionsFromFile
+    // He4 have none); a polarization already set nucleonPositionsFromFile.
+    // A smooth nucleus takes its thickness from the profile even when the
+    // nucleons are read from configuration files.
+    if (samplesColorCharges
+        && (!nucleus.nucleonPositionsFromFile || nucleus.useSmoothNucleus)
         && !nucleus.useInputWSParams) {
         const bool projectileOk =
             speciesHasDensityProfile(collision.projectile);
@@ -231,10 +234,16 @@ std::vector<std::string> Parameters::validationErrors() const {
                         << (projectileOk ? collision.target
                                          : collision.projectile);
             }
-            message << " ha" << (projectileOk || targetOk ? "s" : "ve")
-                    << " no built-in density profile to sample the nucleons "
-                       "from: use nucleonPositionsFromFile 1 (configuration "
-                       "files) or useInputWSParams 1";
+            message << " ha" << (projectileOk || targetOk ? "s" : "ve");
+            if (nucleus.useSmoothNucleus) {
+                message << " no built-in density profile for the smooth "
+                           "nucleus (useSmoothNucleus 1): use "
+                           "useInputWSParams 1";
+            } else {
+                message << " no built-in density profile to sample the "
+                           "nucleons from: use nucleonPositionsFromFile 1 "
+                           "(configuration files) or useInputWSParams 1";
+            }
             fail(message);
         }
     }

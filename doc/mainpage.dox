@@ -61,8 +61,8 @@ grouped by physics topic.
   GluonMultiplicity::compute().
 
 \note CI automatically checks that every class/function/member stays
-documented (`.github/workflows/doxygen.yml`), but there is no automated
-step that builds and publishes this generated HTML anywhere; see
-CONTRIBUTING.md for how to build it locally
-(`cmake --build . --target doc`).
+documented (`.github/workflows/doxygen.yml`), and every push to `main`
+publishes this documentation at https://schenke.github.io/ipglasma/
+(`.github/workflows/pages.yml`); see CONTRIBUTING.md for how to build it
+locally (`cmake --build . --target doc`).
 */

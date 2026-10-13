@@ -2,8 +2,7 @@ name: Documentation completeness
 
 # Builds the developer-reference Doxygen documentation and fails if any
 # class/function/member is undocumented (see doc/CMakeLists.txt's
-# undocumented_test target). Does not publish/host the generated HTML
-# anywhere -- see CONTRIBUTING.md.
+# undocumented_test target). Publishing the HTML is done by pages.yml.
 
 on:
   push:

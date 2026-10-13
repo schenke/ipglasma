@@ -59,6 +59,11 @@ INPUT                  = doc/mainpage.dox \
                           src
 STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@
 FILE_PATTERNS          = *.h *.cpp *.dox *.md
+# GitHub's $...$ math in the Markdown pages becomes Doxygen's \f$...\f$
+FILTER_PATTERNS        = *.md=@PROJECT_SOURCE_DIR@/doc/markdown_math_filter.py
+# heading anchors like GitHub's, so README links such as
+# (#nuclear-density-profiles) work in both
+MARKDOWN_ID_STYLE      = GITHUB
 RECURSIVE              = NO
 USE_MDFILE_AS_MAINPAGE =
 EXCLUDE_PATTERNS       =

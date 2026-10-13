@@ -77,8 +77,19 @@ cmake --build . --target undocumented_count  # just counts them
 `.github/workflows/doxygen.yml` runs `undocumented_test` on every push/PR
 to `devel`/`main`, so a newly-added undocumented class/function/member
 fails CI; run it locally first (see above) to catch this before pushing.
-There is currently no hosted/published copy of the generated documentation
-itself -- that's a separate, later step.
+`.github/workflows/pages.yml` builds the `doc` target on every push to
+`main` and publishes it with GitHub Pages at
+https://schenke.github.io/ipglasma/, so the published documentation is
+that of the released code. It can also be started by hand from the
+Actions tab ("Publish documentation", "Run workflow"). Publishing needs
+GitHub Pages to be enabled once by a repository admin (Settings -> Pages
+-> Source: "GitHub Actions").
+
+Inline math in the Markdown pages (README, OUTPUT, ...) is written as
+`$...$`, which GitHub renders; `doc/markdown_math_filter.py` turns it into
+Doxygen's `\f$...\f$` when the documentation is built. GitHub only renders
+it if the opening `$` does not directly follow a letter or a hyphen, so
+write units as plain text (`GeV⁻²`, not `GeV$^{-2}$`).
 
 ### Comment style
 

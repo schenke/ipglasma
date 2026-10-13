@@ -1,0 +1,62 @@
+name: Publish documentation
+
+# Builds the Doxygen documentation (the `doc` CMake target: README,
+# OUTPUT, CONTRIBUTING and CHANGELOG as pages, and every class and
+# function) and publishes it with GitHub Pages at
+# https://schenke.github.io/ipglasma/. It documents the released code, so
+# it runs on every push to main; it can also be started by hand from the
+# Actions tab (e.g. after Pages was enabled).
+#
+# Needs GitHub Pages to be enabled once by a repository admin: Settings ->
+# Pages -> Build and deployment -> Source: "GitHub Actions". Until then
+# the deploy job fails; the build job does not depend on it.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# the deploy job publishes to Pages with an OIDC token; nothing is
+# written to the repository
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# one deployment at a time; a newer push replaces a queued one, but a
+# deployment in progress is completed
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y doxygen graphviz libfftw3-dev libgsl-dev
+
+      - name: Configure
+        run: cmake -B build -DdisableMPI=ON
+
+      - name: Build the documentation
+        run: cmake --build build --target doc
+
+      - name: Upload the HTML
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: build/doc/html
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Publish to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

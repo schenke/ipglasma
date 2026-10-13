@@ -21,6 +21,8 @@ authors:
     given-names: Hendrik
   - family-names: Shen
     given-names: Chun
+  - family-names: Tribedy
+    given-names: Prithwish
   - family-names: Zhao
     given-names: Wenbin
 repository-code: "https://github.com/schenke/ipglasma"

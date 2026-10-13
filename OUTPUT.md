@@ -74,7 +74,15 @@ files themselves.
 ## Order within an event
 
 1. `usedParameters<id>.dat`: the input parameters and the random seed.
-2. With sampled color charges, after the Wilson lines are built:
+2. `runEvolution 1` with `useNucleus 1`, before the Wilson lines are built
+   (for nuclei read with their Wilson lines, after reading them), for each
+   collision tried (see Collision geometry in the README), as switched on:
+   `NcollList<id>.dat`, then `NpartList<id>.dat`; then, for a try with
+   wounded nucleons (N_part ≥ 2, and `useFixedNpart` if set) and an overlap
+   region, its collision geometry is appended to `usedParameters<id>.dat` if
+   it is accepted, then `NgluonEstimators<id>.dat`. Each try overwrites the
+   files of the previous one.
+3. With sampled color charges, after the Wilson lines are built:
    1. `initialWilsonLines<id>.ipgw` (`writeWilsonLineSnapshot 1`);
    2. the initial Wilson lines (`writeWilsonLines` > 0, and without JIMWLK or
       with `jimwlkSaveSnapshots 1`);
@@ -82,18 +90,11 @@ files themselves.
       `writeWilsonLineGeometry 1`, `useNucleus 1`). A run that reads Wilson
       lines does not write them again: they have the same names as the files
       it read.
-3. With JIMWLK:
+4. With JIMWLK:
    1. the Wilson-line snapshots at the x values of `jimwlkXSnapshotList`
       (`jimwlkSaveSnapshots 1`), each at the evolution step closest to it;
    2. the final Wilson lines at `projectileX`/`targetX`
       (`writeWilsonLines` > 0).
-4. `runEvolution 1` with `useNucleus 1` (sampled nuclei, or nuclei read with their
-   Wilson lines), for each impact parameter tried, as switched on:
-   `NcollList<id>.dat`, then `NpartList<id>.dat`, then, once an impact
-   parameter is accepted, its collision geometry is appended to
-   `usedParameters<id>.dat`, then `NgluonEstimators<id>.dat` (not for a try
-   rejected by `useFixedNpart` or for lack of overlap). Each try overwrites
-   the files of the previous one.
 5. `runEvolution 1`, during the evolution: the hydro, T^μν and Jazma files that are
    switched on, in this order, at each of the `outputTimes` and at the final
    time. Each output time is rounded down to a time step; times below one

@@ -266,13 +266,8 @@ int main(int argc, char *argv[]) {
             }
 
             if (param->evolution.runEvolution) {
-                while (param->event.success == 0) {
-                    // sample collision impact parameter
-                    // and compute Npart, Ncoll,etc, and check if there was a
-                    // collision
-                    init.sampleImpactParameter(param);
-                    init.computeCollisionGeometryQuantities(&lat, param);
-                }
+                // init.init() accepted the collision (impact parameter,
+                // Npart, Ncoll, ...) before building the Wilson lines
                 init.shiftFieldsWithImpactParameter(&lat, param);
                 ForwardLightCone(&group).initialize(&lat, param);
                 messager.info("[main::main]: Start CYM evolution");

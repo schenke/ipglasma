@@ -82,8 +82,8 @@ struct CollisionParameters {
     /// (`useNucleus 0`); only read then.
     double g2muGeV = 0.;
     /// If `0`, don't demand a given \f$N_{\text{part}}\f$; otherwise
-    /// resample the impact parameter, keeping the nucleon positions, until
-    /// the event has this \f$N_{\text{part}}\f$.
+    /// redraw the collision (Init::sampleCollision()) until the event has
+    /// this \f$N_{\text{part}}\f$.
     int useFixedNpart = 0;
     /// Number of nuclei to average over, for a smoother thickness
     /// distribution: NucleusSampler::sample() samples this many nuclei of
@@ -264,7 +264,7 @@ struct ColorChargeParameters {
     /// File name of the table giving \f$Q_s^2\f$ as a function of
     /// rapidity \f$Y\f$ and \f$Q_s^2(Y=0)\f$.
     std::string nucleusQsTableFileName;
-    /// Resample the impact parameter, keeping the nuclei, until
+    /// Redraw the collision (Init::sampleCollision()) until
     /// \f$Q_{s,\min}^2 S_T >\f$ this value (used to trigger on
     /// high-multiplicity events).
     double minimumQs2ST = 0.;

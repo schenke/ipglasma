@@ -29,7 +29,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
 double Init::computeFluctuatingXG2mu2(
     Parameters *param, double a, double rapidity, double Tp, double qsmuRatio,
-    double ySign) {
+    double ySign, bool &converged) {
     // Q_s as a function of \sum T_p and y
     const double exponent = 5.6;  // see 1212.2974 Eq. (17)
     double Qs = 1.;
@@ -38,8 +38,10 @@ double Init::computeFluctuatingXG2mu2(
     double localrapidity = rapidity;
     double yIn = rapidity;
     double Ydeviation = 10000;
+    const int maxIterations = 1000;
+    int iterations = 0;
     // iterative loops here to determine the fluctuating Y
-    while (std::abs(Ydeviation) > 0.001) {
+    while (std::abs(Ydeviation) > 0.001 && iterations++ < maxIterations) {
         if (localrapidity >= 0) {
             Qs = sqrt(qsTable_.qs2(Tp, 0.01 * exp(-localrapidity)));
         } else {
@@ -72,23 +74,26 @@ double Init::computeFluctuatingXG2mu2(
                        / param->collision.sqrtS * exp(ySign * yIn)));
         }
     }
+    converged = std::abs(Ydeviation) <= 0.001;
     if (g2mu2 != g2mu2) {
         g2mu2 = 0.;
     }
     return g2mu2;
 }
 
-void Init::computeCellColorCharge(
+bool Init::computeCellColorCharge(
     // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
     // Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
     Lattice *lat, Parameters *param, int ipos, double a, double rapidity) {
     if (param->colorCharge.useFluctuatingX) {  // Local Qs dependent x
+        bool convergedA = false, convergedB = false;
         lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
             param, a, rapidity, lat->cells[ipos]->getTpA(),
-            param->colorCharge.QsMuRatio, 1.));
+            param->colorCharge.QsMuRatio, 1., convergedA));
         lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
             param, a, rapidity, lat->cells[ipos]->getTpB(),
-            param->colorCharge.QsMuRatio, -1.));
+            param->colorCharge.QsMuRatio, -1., convergedB));
+        return convergedA && convergedB;
     } else {  // Fixed x: jimwlkInitialX with JIMWLK, else projectileX/targetX
         // nucleus A
         lat->cells[ipos]->setg2mu2A(
@@ -107,6 +112,7 @@ void Init::computeCellColorCharge(
             / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
             * a / hbarc / hbarc / param->coupling.g / param->coupling.g);
     }
+    return true;
 }
 
 void Init::readQsTable(const std::string &fileName) { qsTable_.read(fileName); }
@@ -158,10 +164,21 @@ void Init::setColorChargeDensity(
         computeThicknessFromNucleons(lat, param, nucleiInAverage);
     }
 
-// get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
-#pragma omp parallel for
+    // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
+    int notConverged = 0;
+#pragma omp parallel for reduction(+ : notConverged)
     for (int ipos = 0; ipos < N * N; ipos++) {
-        computeCellColorCharge(lat, param, ipos, a, rapidity);
+        if (!computeCellColorCharge(lat, param, ipos, a, rapidity)) {
+            notConverged++;
+        }
+    }
+    if (notConverged > 0) {
+        messager_ << "[Init::setColorChargeDensity]: the fluctuating-x "
+                     "iteration (useFluctuatingX 1) did not converge in "
+                     "1000 steps in "
+                  << notConverged << " cells. Exiting.";
+        messager_.flush("error");
+        exit(1);
     }
     messager_.info(
         "[Init::setColorChargeDensity]: Color charge densities for nucleus A "
@@ -519,12 +536,46 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     messager_.flush("info");
 }
 
-void Init::sampleImpactParameter(Parameters *param) {
-    collisionGeometry_.sampleImpactParameter(param, random_ptr_);
-}
-
-void Init::computeCollisionGeometryQuantities(Lattice *lat, Parameters *param) {
-    collisionGeometry_.computeQuantities(lat, param, random_ptr_);
+bool Init::sampleCollision(
+    Lattice *lat, Parameters *param, Random *random, Glauber *glauber,
+    bool resampleNuclei, int maxConfigurations, int maxLatticeRejections) {
+    int latticeRejections = 0;
+    for (int attempt = 1; attempt <= maxConfigurations; attempt++) {
+        param->event.success = 0;
+        if (resampleNuclei) sampleTA(param, random, glauber);
+        collisionGeometry_.sampleImpactParameter(param, random);
+        // the wounded nucleons only need the nucleon positions: reject
+        // configurations without a collision before the lattice work
+        const WoundedNucleons wounded =
+            collisionGeometry_.determineNpartAndNcoll(param, random);
+        if (!wounded.accepted || wounded.Npart < 2) continue;
+        if (resampleNuclei) setColorChargeDensity(lat, param, random, glauber);
+        collisionGeometry_.computeLatticeQuantities(lat, param, wounded);
+        if (param->event.success) {
+            messager_ << "[Init::sampleCollision]: collision accepted after "
+                      << attempt << " attempts.";
+            messager_.flush("info");
+            return true;
+        }
+        if (++latticeRejections >= maxLatticeRejections) {
+            messager_ << "[Init::sampleCollision]: " << latticeRejections
+                      << " of " << attempt
+                      << " attempts had wounded nucleons but were rejected "
+                         "on the lattice (no overlap region, no physical "
+                         "Q_s, or Q_s,min^2 S_T below minimumQs2ST = "
+                      << param->colorCharge.minimumQs2ST
+                      << "); check bMin, bMax and minimumQs2ST.";
+            messager_.flush("error");
+            return false;
+        }
+    }
+    messager_ << "[Init::sampleCollision]: no collision accepted in "
+              << maxConfigurations
+              << " attempts; check bMin and bMax (whether the nuclei can "
+                 "overlap), useFixedNpart (whether it can be reached) and "
+                 "minimumQs2ST.";
+    messager_.flush("error");
+    return false;
 }
 
 void Init::init(
@@ -552,23 +603,43 @@ void Init::init(
         nucleusSampler_.readConfigurations(param, glauber, random);
     }
 
+    // a collision is needed for the evolution; without it the Wilson lines
+    // of the two nuclei are independent
+    const bool collide =
+        param->collision.useNucleus && param->evolution.runEvolution;
     if (init_method == InitializationMethod::ReadWlineBinary
         or init_method == InitializationMethod::ReadWlineText) {
         // to read Wilson lines from file, with their nuclei's geometry so
-        // that main's collision-geometry loop treats them like sampled ones
+        // that they are collided like sampled ones
         WilsonLineIO().read(
             lat, param,
             (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
         // (the geometry files are not written again: a run that writes the
         // Wilson lines it read, e.g. after JIMWLK, uses the same names)
         if (param->collision.useNucleus) readGeometry(lat, param);
+        // the nuclei are given: only the impact parameter can be redrawn
+        if (collide
+            && !sampleCollision(
+                lat, param, random, glauber, /*resampleNuclei=*/false)) {
+            exit(1);
+        }
     } else {
         // to generate your own Wilson lines
-        if (param->collision.useNucleus) {
-            // populate the lists nucleusA_ and nucleusB_ with position data
-            sampleTA(param, random, glauber);
+        if (collide) {
+            // draw the nuclei together with the impact parameter until they
+            // collide, before building their Wilson lines
+            if (!sampleCollision(
+                    lat, param, random, glauber, /*resampleNuclei=*/true)) {
+                exit(1);
+            }
+        } else {
+            if (param->collision.useNucleus) {
+                // populate the lists nucleusA_ and nucleusB_ with position
+                // data
+                sampleTA(param, random, glauber);
+            }
+            setColorChargeDensity(lat, param, random, glauber);
         }
-        setColorChargeDensity(lat, param, random, glauber);
         // sample color charges and find Wilson lines V_A and V_B
         setV(lat, param, random);
     }

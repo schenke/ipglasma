@@ -97,16 +97,19 @@ void CollisionGeometry::sampleImpactParameter(
 
 void CollisionGeometry::computeQuantities(
     Lattice *lat, Parameters *param, Random *random) {
+    const WoundedNucleons wounded = determineNpartAndNcoll(param, random);
+    if (!wounded.accepted) return;
+    computeLatticeQuantities(lat, param, wounded);
+}
+
+void CollisionGeometry::computeLatticeQuantities(
+    Lattice *lat, Parameters *param, const WoundedNucleons &wounded) {
     const double L = param->lattice.L;
     const int N = param->lattice.size;
     const double a = L / N;  // lattice spacing in fm
     const double b = param->event.b;
     const double phiRP = param->event.phiRP;
 
-    // Determine Npart, Ncoll only during the first stage, as in the 2nd
-    // stage nuclei are shifted to b=0.
-    const WoundedNucleons wounded = determineNpartAndNcoll(param, random);
-    if (!wounded.accepted) return;
     const int Npart = wounded.Npart;
     const int Ncoll = wounded.Ncoll;
 

@@ -379,7 +379,7 @@ running-coupling factor), over cells with ε at least `eccentricityCutoff`
 | Column | Content |
 |---|---|
 | 1 | τ [fm/c] |
-| 2–13 | ε_n, Ψ_n for n = 1…6 (ε_1, Ψ_1, ε_2, Ψ_2, …); ε_n = \|⟨r^m e^{inφ}⟩\| / ⟨r^m⟩ with m = 3 for n = 1 and m = n otherwise |
+| 2–13 | ε_n, Ψ_n for n = 1…6 (ε_1, Ψ_1, ε_2, Ψ_2, …), defined by ε_n e^{inΨ_n} = −⟨r^m e^{inφ}⟩ / ⟨r^m⟩ with m = 3 for n = 1 and m = n otherwise; the participant-plane angle Ψ_n is in [0, 2π/n) [rad] |
 | 14 | energy-density cutoff `eccentricityCutoff` [GeV/fm³] |
 | 15 | √⟨r²⟩ [fm] |
 | 16, 17 | largest x and y offset from the centroid, along the row and column through it, where the weight exceeds the cutoff [fm] |

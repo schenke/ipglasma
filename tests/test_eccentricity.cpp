@@ -32,6 +32,25 @@ void makeEccentricityTestParam(Parameters &param, int size) {
     param.run.dtau = 0.1;
     param.coupling.runningCoupling = false;  // gfactor == 1 everywhere
 }
+
+// The distance of the angles a and b of harmonic n, which are only defined
+// modulo 2 pi / n [rad].
+double angleDistance(int n, double a, double b) {
+    return std::abs(std::remainder(n * (a - b), 2. * M_PI)) / n;
+}
+
+// Reads the epsilon_n and Psi_n (n = 1...6) of the first line of
+// eccentricities0.dat into eps[n] and psi[n], and removes the file.
+void readEccentricities(double eps[7], double psi[7]) {
+    std::ifstream in("eccentricities0.dat");
+    REQUIRE(in.good());
+    double tau;
+    in >> tau;
+    for (int n = 1; n <= 6; n++) in >> eps[n] >> psi[n];
+    REQUIRE(in.good());
+    in.close();
+    std::remove("eccentricities0.dat");
+}
 }  // namespace
 
 TEST_CASE(
@@ -73,7 +92,13 @@ TEST_CASE(
     CHECK(tau == doctest::Approx(it * a * param.run.dtau));
     const double sx2 = sigmaX * sigmaX, sy2 = sigmaY * sigmaY;
     CHECK(eps[2] == doctest::Approx((sy2 - sx2) / (sx2 + sy2)).epsilon(1e-4));
-    CHECK(psi[2] == doctest::Approx(M_PI / 2.));
+    // epsilon_2 e^{2 i Psi_2} = -<r^2 e^{2 i phi}> / <r^2> is positive, so the
+    // participant plane is the short axis x
+    CHECK(angleDistance(2, psi[2], 0.) < 1e-6);
+    for (int n = 1; n <= 6; n++) {
+        CHECK(psi[n] >= 0.);
+        CHECK(psi[n] < 2. * M_PI / n);
+    }
     CHECK(eps[1] < 1e-6);
     CHECK(eps[3] < 1e-6);
     CHECK(eps[5] < 1e-6);
@@ -150,6 +175,76 @@ TEST_CASE(
 
     std::remove("anisotropy0.dat");
     std::remove("eccentricities0.dat");
+}
+
+TEST_CASE(
+    "Eccentricity::participantPlaneAngle gives Psi_n in [0, 2 pi/n) for "
+    "moments in all four quadrants") {
+    // epsilon_n e^{i n Psi_n} = -<r^m e^{i n phi}> / <r^m>: the moments of a
+    // given Psi_n are -R (sin n Psi_n, cos n Psi_n)
+    for (int n = 1; n <= 6; n++) {
+        for (const double nPsi : {0.3, 2.0, 3.5, 5.5}) {
+            const double psi = nPsi / n;
+            const double R = 0.37;
+            CAPTURE(n);
+            CAPTURE(nPsi);
+            CHECK(
+                Eccentricity::participantPlaneAngle(
+                    n, -R * std::sin(nPsi), -R * std::cos(nPsi))
+                == doctest::Approx(psi).epsilon(1e-12));
+        }
+        // atan2(+0, -1) = pi and atan2(-0, -1) = -pi both give Psi_n = 0
+        CHECK(Eccentricity::participantPlaneAngle(n, 0., -1.) == 0.);
+        CHECK(Eccentricity::participantPlaneAngle(n, -0., -1.) == 0.);
+        CHECK(
+            Eccentricity::participantPlaneAngle(n, 0., 1.)
+            == doctest::Approx(M_PI / n));
+    }
+}
+
+TEST_CASE(
+    "Eccentricity::compute: a Gaussian modulated by 1 - A cos(n (phi - "
+    "Psi)) has epsilon_n = A/2 and Psi_n = Psi, for either sign of cos(n "
+    "Psi)") {
+    const int N = 48;
+    Parameters param;
+    makeEccentricityTestParam(param, N);
+    param.lattice.L = 24.;  // a = 0.5 fm
+    const double a = param.lattice.L / N;
+    const double sigma = 1.5, A = 0.5;
+    Lattice lat(&param, N);
+    for (int n = 2; n <= 6; n++) {
+        // cos(n Psi) > 0, and cos(n Psi) < 0 with sin(n Psi) > 0 and < 0;
+        // the old atan(sin/cos) was off by pi/n in the last two
+        for (const double nPsi : {0.7, 2.5, 4.0}) {
+            const double psiIn = nPsi / n;
+            for (int ix = 0; ix < N; ++ix) {
+                for (int iy = 0; iy < N; ++iy) {
+                    const double x = -param.lattice.L / 2. + a * ix;
+                    const double y = -param.lattice.L / 2. + a * iy;
+                    const double phi = std::atan2(y, x);
+                    const int pos = lat.positionFromXY(ix, iy);
+                    lat.cells[pos]->setEpsilon(
+                        std::exp(-(x * x + y * y) / (2. * sigma * sigma))
+                        * (1. - A * std::cos(n * (phi - psiIn))));
+                    lat.cells[pos]->setutau(1.0);
+                }
+            }
+            std::remove("eccentricities0.dat");
+            Eccentricity::compute(
+                &lat, &param, /*it=*/3, /*cutoff=*/0.0, /*doAniso=*/0);
+            double eps[7], psi[7];
+            readEccentricities(eps, psi);
+            CAPTURE(n);
+            CAPTURE(nPsi);
+            // the modulation jumps at r = 0, so the lattice sums are only
+            // accurate to a few 1e-4; the old error was pi/n
+            CHECK(eps[n] == doctest::Approx(A / 2.).epsilon(1e-3));
+            CHECK(angleDistance(n, psi[n], psiIn) < 1e-3);
+            CHECK(psi[n] >= 0.);
+            CHECK(psi[n] < 2. * M_PI / n);
+        }
+    }
 }
 
 TEST_CASE(

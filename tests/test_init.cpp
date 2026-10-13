@@ -8,6 +8,8 @@
 #include <cstdlib>
 #include <fstream>
 #include <limits>
+#include <map>
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -15,10 +17,12 @@
 #include "CollisionGeometry.h"
 #include "Glauber.h"
 #include "Init.h"
+#include "InputFile.h"
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
 #include "PhysConst.h"
+#include "Random.h"
 #include "doctest.h"
 #include "test_helpers.h"
 
@@ -329,4 +333,165 @@ TEST_CASE(
     CHECK(shifted > 0);
     CHECK(shifted < central);
     CHECK(overlapCells(40.) == 0);
+}
+
+namespace {
+// Reads the shipped example input into param, with the values of the keys
+// in changes replaced.
+void readExampleInput(
+    Parameters &param, const std::map<std::string, std::string> &changes) {
+    std::ifstream file(std::string(IPGLASMA_SOURCE_DIR) + "/input");
+    REQUIRE(file.good());
+    std::string line, text;
+    while (std::getline(file, line)) {
+        std::istringstream tokens(line);
+        std::string key;
+        tokens >> key;
+        const auto change = changes.find(key);
+        text += (change == changes.end()) ? line : key + " " + change->second;
+        text += "\n";
+    }
+    std::istringstream in(text);
+    REQUIRE(param.readInput(InputFile(in, "test")).empty());
+}
+
+// The positions and proton flags (x y proton) of the nucleons in
+// NpartList0.dat, without the collided flag, which Gaussian wounding draws
+// at random.
+std::vector<std::string> nucleonLines() {
+    std::ifstream in("NpartList0.dat");
+    std::vector<std::string> lines;
+    for (std::string line; std::getline(in, line);) {
+        std::istringstream columns(line);
+        std::string x, y, proton;
+        if (columns >> x >> y >> proton) {
+            lines.push_back(x + " " + y + " " + proton);
+        }
+    }
+    return lines;
+}
+
+// A small lattice for colliding light nuclei with Init::sampleCollision().
+struct LightCollision {
+    Parameters param;
+    Glauber glauber;
+    Random random;
+
+    LightCollision(
+        const std::string &nucleus, double b, int fixedNpart,
+        bool writeNpartList) {
+        readExampleInput(
+            param, {{"projectile", nucleus},
+                    {"target", nucleus},
+                    {"size", "32"},
+                    {"L", "8"},
+                    {"bMin", std::to_string(b)},
+                    {"bMax", std::to_string(b)},
+                    {"rotateReactionPlane", "0"},
+                    {"useFixedNpart", std::to_string(fixedNpart)},
+                    {"writeNpartList", writeNpartList ? "1" : "0"},
+                    {"writeNcollList", "0"},
+                    {"writeNgluonEstimators", "0"}});
+        param.run.MPIRank = 0;
+        param.run.MPISize = 1;
+        param.event.eventId = 0;
+        glauber.initGlauber(
+            param.collision.sigmaNN, nucleus, nucleus, 0., false, 0., 0., 0.,
+            0., 0., 0., false, 0., 0., 0., 100);
+        random.init_genrand64(11);
+        random.gslRandomInit(11);
+    }
+};
+
+void removeCollisionFiles() {
+    std::remove("NpartList0.dat");
+    std::remove("usedParameters0.dat");
+}
+}  // namespace
+
+TEST_CASE(
+    "Init::sampleCollision accepts a central p+p collision on the first "
+    "attempt") {
+    LightCollision collision("p", /*b=*/0., /*fixedNpart=*/0, false);
+    Parameters &param = collision.param;
+    const int N = param.lattice.size;
+    int nn[2] = {N, N};
+    Init init(nn);
+    init.readQsTable(
+        std::string(IPGLASMA_SOURCE_DIR) + "/"
+        + param.colorCharge.nucleusQsTableFileName);
+    Lattice lat(&param, N);
+    CHECK(init.sampleCollision(
+        &lat, &param, &collision.random, &collision.glauber,
+        /*resampleNuclei=*/true, /*maxConfigurations=*/1,
+        /*maxLatticeRejections=*/1));
+    CHECK(param.event.success == 1);
+    CHECK(param.event.Npart == 2);
+    CHECK(param.event.b == 0.);
+    removeCollisionFiles();
+}
+
+TEST_CASE(
+    "Init::sampleCollision stops after the given numbers of attempts and of "
+    "lattice rejections") {
+    SUBCASE("p+p without overlap: every attempt is rejected on the lattice") {
+        // the protons are 7 fm apart, beyond twice the wounding distance
+        LightCollision collision("p", /*b=*/7., /*fixedNpart=*/0, false);
+        Parameters &param = collision.param;
+        const int N = param.lattice.size;
+        int nn[2] = {N, N};
+        Init init(nn);
+        init.readQsTable(
+            std::string(IPGLASMA_SOURCE_DIR) + "/"
+            + param.colorCharge.nucleusQsTableFileName);
+        Lattice lat(&param, N);
+        CHECK_FALSE(init.sampleCollision(
+            &lat, &param, &collision.random, &collision.glauber, true,
+            /*maxConfigurations=*/100, /*maxLatticeRejections=*/3));
+        CHECK(param.event.success == 0);
+    }
+    SUBCASE("an Npart that p+p cannot reach is rejected before the lattice") {
+        LightCollision collision("p", /*b=*/0., /*fixedNpart=*/3, false);
+        Parameters &param = collision.param;
+        const int N = param.lattice.size;
+        int nn[2] = {N, N};
+        Init init(nn);
+        init.readQsTable(
+            std::string(IPGLASMA_SOURCE_DIR) + "/"
+            + param.colorCharge.nucleusQsTableFileName);
+        Lattice lat(&param, N);
+        CHECK_FALSE(init.sampleCollision(
+            &lat, &param, &collision.random, &collision.glauber, true,
+            /*maxConfigurations=*/20, /*maxLatticeRejections=*/1));
+        CHECK(param.event.success == 0);
+    }
+    removeCollisionFiles();
+}
+
+TEST_CASE(
+    "Init::sampleCollision draws new nuclei for every attempt, or keeps "
+    "them for read Wilson lines") {
+    // d+d cannot have Npart = 5, so every attempt is rejected after writing
+    // the nucleon positions (at b = 0, unshifted) to NpartList0.dat
+    LightCollision collision("d", /*b=*/0., /*fixedNpart=*/5, true);
+    Parameters &param = collision.param;
+    const int N = param.lattice.size;
+    int nn[2] = {N, N};
+    Init init(nn);
+    Lattice lat(&param, N);
+    auto attempt = [&](bool resampleNuclei) {
+        CHECK_FALSE(init.sampleCollision(
+            &lat, &param, &collision.random, &collision.glauber, resampleNuclei,
+            /*maxConfigurations=*/1,
+            /*maxLatticeRejections=*/1));
+        return nucleonLines();
+    };
+    const std::vector<std::string> first = attempt(true);
+    REQUIRE(first.size() == 4);
+    const std::vector<std::string> redrawn = attempt(true);
+    CHECK(redrawn.size() == 4);
+    CHECK(redrawn != first);
+    const std::vector<std::string> kept = attempt(false);
+    CHECK(kept == redrawn);
+    removeCollisionFiles();
 }

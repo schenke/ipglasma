@@ -114,7 +114,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **nucleusQsTableFileName**: file with the table of $Q_s^2$ as a function of the summed nucleon thickness $T_p$ and rapidity $y$ (e.g. `qs2Adj_vs_Tp_vs_Y_240.in` in the repository root), relative to the working directory; the file is only read with `useNucleus 1`
 - **projectileX** and **targetX** (only used with `useFluctuatingX 0`): Bjorken $x$ of the projectile and of the target. Without JIMWLK and with `useFluctuatingX 0`, $Q_s^2$ of each nucleus is read from the nuclear $Q_s$ table at $y = \ln(0.01/x)$, so both must not be larger than 0.01 (the table covers $0 \le y \le 10.75$, larger values use $Q_s$ at $y = 10.75$). With `useJIMWLK 1`, the nuclei are evolved from `jimwlkInitialX` (or from `readWilsonLinesX` for read Wilson lines) to these $x$, which must then not be larger than it.
 - **useFluctuatingX**: controls how to determine Bjorken $x$ when generating the initial condition; must be `0` with `useJIMWLK 1`, where $Q_s^2$ is evaluated at the fixed $x$ = `jimwlkInitialX`
-  - 1: Dynamically determined $b_\perp$ dependent $x$, see `xQsFactor`
+  - 1: Dynamically determined $b_\perp$ dependent $x$, see `xQsFactor`; the run stops with an error if $x$ does not converge in 1000 iterations in a cell
   - 0: Fixed $x$, `projectileX` and `targetX`
 - **rapidity**: rapidity $y$ at which the gluon and hadron spectra are computed (`computeGluonMultiplicity`, `writeHadronSpectrum`). It does not set the $x$ of the nuclei, except with `useFluctuatingX 1` (see `xQsFactor`)
 - **xQsFactor** (only used with `useFluctuatingX 1`): the factor $\beta$ in $x = \beta Q_s e^{\pm y}/\sqrt{s}$ ($+$ for the projectile, $-$ for the target), with $y$ = `rapidity`. $x$ and the local $Q_s$ are solved for self-consistently in every cell; for $x > 0.01$ the table's $Q_s^2$ at $y = 0$ is extrapolated with the factor $[(1-x)/0.99]^{5.6} (0.01/x)^{0.2}$
@@ -122,6 +122,8 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **jacobianMass** (only used with `usePseudoRapidity 1`): mass in GeV in the rapidity-pseudorapidity Jacobian
 
 ### Collision geometry
+With `runEvolution 1` and `useNucleus 1`, the collision is drawn before the Wilson lines are built: the nuclei (nucleon positions and substructure), the impact parameter and the reaction-plane angle are drawn together until the nucleons collide ($N_\text{part} \ge 2$, and `useFixedNpart` if set) and the event passes the criteria on the lattice (an overlap region, `minimumQs2ST`). Every configuration of the nuclei thus enters with its probability to collide, as in a Monte Carlo Glauber sample. Nuclei read with their Wilson lines (`readInitialWilsonLines`) keep their configuration, and only the impact parameter and the angle are redrawn. The run stops with an error after 100000 attempts, or after 1000 attempts rejected by the criteria on the lattice, e.g. if `bMin` is beyond the range where the nuclei overlap.
+
 - **sigmaNN**: inelastic nucleon-nucleon cross section in mb, positive, used to decide which nucleons collide
 - **gaussianWounding** (only used with `useNucleus 1`): how it is decided whether two nucleons collide
   - 0: hard sphere, they collide if their transverse distance $d$ is below $\sqrt{\sigma_{NN}/\pi}$
@@ -129,8 +131,8 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **bMin** and **bMax** (only used with `useNucleus 1`): range of the impact parameter $b$ in fm, $0 \le$ `bMin` $\le$ `bMax`. The nuclei are shifted by whole lattice sites, so the sampled impact-parameter vector is rounded to the closest lattice vector, each component to a multiple of the lattice spacing $a$ = `L`/`size`. The collision geometry and the outputs use $b$ and $\phi_{RP}$ of that vector ($\phi_{RP} = 0$ if it is zero), so $b$ can lie up to $a/\sqrt{2}$ outside the range
 - **sampleBFromLinearDistribution** (only used with `useNucleus 1`): `1` samples $b$ with a probability density $\propto b$ (uniform in the transverse plane, as for minimum-bias events), `0` uniformly in $b$
 - **rotateReactionPlane** (only used with `useNucleus 1`): `1` points the impact parameter in a uniformly random direction (reaction-plane angle $\phi_{RP}$ with $0 \le \phi_{RP} < 2\pi$), `0` along $x$
-- **useFixedNpart** (only used with `useNucleus 1`): not negative; if not `0`, the impact parameter and reaction-plane angle are resampled, keeping the nucleon positions, until the event has exactly this number of participants; the value must be reachable for the sampled nuclei
-- **minimumQs2ST**: trigger on high-multiplicity events: the impact parameter is resampled, keeping the nuclei, until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area
+- **useFixedNpart** (only used with `useNucleus 1`): not negative; if not `0`, the collision is redrawn (see above) until the event has exactly this number of participants; the value must be reachable for the nuclei
+- **minimumQs2ST**: trigger on high-multiplicity events: the collision is redrawn (see the start of this section) until $Q_{s,\min}^2 S_T$ exceeds this value (a non-negative number; `0` for no trigger). $Q_{s,\min}^2 S_T$ is the sum over all lattice cells of the smaller of the two nuclei's $Q_s^2$ times the cell area
 
 ### Nucleon positions
 - **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron is sampled from the Hulthén wave function, and heavier nuclei from the density profile of their species (see [Nuclear density profiles](#nuclear-density-profiles))
@@ -179,7 +181,7 @@ The deformations of O and Xe are from FRDM(2012) ([arXiv:1508.06294](https://arx
 - **beta2**, **beta3** and **beta4**: deformation parameters $\beta_2$, $\beta_3$ and $\beta_4$
 - **gamma**: triaxiality angle $\gamma$ in radians
 - **deltaRnp** and **deltaAnp**: neutron skin: neutrons are sampled with radius $R$ + `deltaRnp` and diffuseness $a$ + `deltaAnp` (in fm); both are 0 without `useInputWSParams 1`
-- **forceDMin**: `1` enforces `dMin` strictly for deformed nuclei: a nucleon's position is redrawn until it is at least `dMin` away from all others. `0` keeps `dMin` on a best-effort basis (see `dMin`)
+- **forceDMin**: `1` enforces `dMin` strictly for deformed nuclei: a nucleon's position is redrawn until it is at least `dMin` away from all others; the run stops with an error if a nucleon cannot be placed in 10000 draws. `0` keeps `dMin` on a best-effort basis (see `dMin`)
 - **dMin**: minimum distance in fm between two nucleons of a nucleus sampled from its density profile, also used with `useInputWSParams 0`. Without `forceDMin` it is kept on a best-effort basis: a nucleon keeps its sampled radius and only its direction is redrawn, up to 100 times; triaxial nuclei ($\gamma \neq 0$) then ignore it, since their density depends on every angle (use `forceDMin 1` for them). `0` for no minimum distance
 
 ### Coupling

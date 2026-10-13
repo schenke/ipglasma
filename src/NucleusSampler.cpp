@@ -551,7 +551,22 @@ std::vector<ReturnValue> NucleusSampler::generateDeformedWoodsSaxonForceDmin(
         }
         bool reSampleFlag = false;
         double x_i, y_i, z_i;
+        // redraw the nucleon until it is at least d_min from all previous
+        // ones; stop if that seems impossible
+        const int maxDraws = 10000;
+        int draws = 0;
         do {
+            if (++draws > maxDraws) {
+                messager_ << "[NucleusSampler::"
+                             "generateDeformedWoodsSaxonForceDmin]: could not "
+                             "place nucleon "
+                          << i + 1 << " of " << A
+                          << " at least dMin = " << d_min
+                          << " fm from the others in " << maxDraws
+                          << " draws; reduce dMin. Exiting.";
+                messager_.flush("error");
+                exit(1);
+            }
             // sample the position of the nucleon i
             do {
                 r = rmaxCut * pow(random->genrand64_real3(), 1.0 / 3.0);

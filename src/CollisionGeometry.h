@@ -143,6 +143,20 @@ class CollisionGeometry {
      */
     void computeQuantities(Lattice *lat, Parameters *param, Random *random);
     /**
+     * The lattice part of computeQuantities(), for nucleons whose
+     * \f$N_{\text{part}}\f$ and \f$N_{\text{coll}}\f$ are already
+     * determined (determineNpartAndNcoll()): scans the overlap region,
+     * sets the average \f$Q_s\f$, \f$T_{pp}\f$ and \f$\alpha_s\f$, and
+     * accepts or rejects the event (`param->event.success`), as described
+     * there.
+     * \param[in] lat Lattice to read color-charge densities from.
+     * \param[in,out] param Simulation parameters.
+     * \param[in] wounded This event's \f$N_{\text{part}}\f$ and
+     * \f$N_{\text{coll}}\f$.
+     */
+    void computeLatticeQuantities(
+        Lattice *lat, Parameters *param, const WoundedNucleons &wounded);
+    /**
      * Determines \f$N_{\text{part}}\f$/\f$N_{\text{coll}}\f$ from the
      * nucleon positions, writes `NcollList*.dat`/`NpartList*.dat` (with
      * `param->output.writeNcollList`/`writeNpartList`, not with

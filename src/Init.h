@@ -109,8 +109,12 @@ class Init {
      * the Wilson lines and (with `useNucleus 1`) their nuclei's geometry
      * from disk (readGeometry()) or samples nucleon positions/color
      * charges and constructs them from scratch, depending on \p
-     * init_method. Either way, the impact parameter is sampled afterwards
-     * by main's collision-geometry loop.
+     * init_method. With `runEvolution 1` and `useNucleus 1`, the collision
+     * is accepted first (sampleCollision()): the sampled nuclei are drawn
+     * together with the impact parameter, before their Wilson lines are
+     * built; read nuclei keep their configuration and only the impact
+     * parameter is redrawn. Exits with an error if no collision is
+     * accepted within the limits of sampleCollision().
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.
      * \param[in] random Non-owning pointer to the shared Random
@@ -144,14 +148,39 @@ class Init {
      */
     void shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param);
     /**
-     * Samples this event's impact parameter and reaction-plane angle
-     * (CollisionGeometry::sampleImpactParameter()).
-     * \param[in,out] param Simulation parameters;
-     * `param->event.b`/`param->event.phiRP` store the length and angle of
-     * the lattice vector closest to the sampled impact parameter, by which
-     * the nuclei are separated.
+     * Draws collisions until one is accepted: each attempt samples the
+     * nuclei (sampleTA(), if \p resampleNuclei), the impact parameter and
+     * reaction-plane angle (CollisionGeometry::sampleImpactParameter()) and
+     * the wounded nucleons (CollisionGeometry::determineNpartAndNcoll());
+     * only an attempt with \f$N_{\text{part}} \ge 2\f$ (and the
+     * requested `useFixedNpart`) goes on to the color-charge densities
+     * (setColorChargeDensity(), if \p resampleNuclei) and the lattice
+     * criteria (CollisionGeometry::computeLatticeQuantities()). Every
+     * configuration thus enters with its probability to collide, as in a
+     * Monte Carlo Glauber sample.
+     * \param[in,out] lat Lattice whose color-charge densities and
+     * thicknesses are set (if \p resampleNuclei) and read.
+     * \param[in,out] param Simulation parameters; `param->event` holds the
+     * accepted collision, with `b`/`phiRP` of the lattice vector
+     * separating the nuclei (CollisionGeometry::sampleImpactParameter()).
+     * \param[in,out] random Random-number source.
+     * \param[in] glauber Configured Glauber instance (only used if \p
+     * resampleNuclei).
+     * \param[in] resampleNuclei `true` to draw new nuclei for every
+     * attempt, `false` to keep the nuclei and color-charge densities on
+     * \p lat (Wilson lines read from files).
+     * \param[in] maxConfigurations Largest number of attempts.
+     * \param[in] maxLatticeRejections Largest number of attempts that
+     * reach the lattice criteria and are rejected by them (each costs a
+     * scan of the lattice and, with \p resampleNuclei, new color-charge
+     * densities).
+     * \return `true` if a collision is accepted, `false` (after an error
+     * message naming the limit) if a limit is reached.
      */
-    void sampleImpactParameter(Parameters *param);
+    bool sampleCollision(
+        Lattice *lat, Parameters *param, Random *random, Glauber *glauber,
+        bool resampleNuclei, int maxConfigurations = 100000,
+        int maxLatticeRejections = 1000);
     /**
      * Samples this event's nucleon positions of both nuclei into
      * \c nucleusA_/\c nucleusB_ (NucleusSampler::sample()). Both nuclei
@@ -176,8 +205,10 @@ class Init {
      * fluctuating-\f$x\f$ iteration starts from (see
      * computeEffectiveRapidity()); not used with a fixed \f$x\f$, which
      * is Parameters::initialX().
+     * \return `false` if the fluctuating-\f$x\f$ iteration did not converge
+     * for one of the nuclei, `true` otherwise.
      */
-    void computeCellColorCharge(
+    bool computeCellColorCharge(
         Lattice *lat, Parameters *param, int ipos, double a, double rapidity);
     /**
      * computeCellColorCharge()'s `useFluctuatingX` iterative solve
@@ -185,7 +216,7 @@ class Init {
      * self-consistent local rapidity/\f$Q_s\f$ relation (following the
      * \f$x\f$-dependent \f$Q_s\f$ suppression of \cite Rezaeian:2012ji
      * Eq. (17)) until the rapidity estimate converges to within
-     * \f$10^{-3}\f$.
+     * \f$10^{-3}\f$, for at most 1000 steps.
      * \param[in] param Simulation parameters.
      * \param[in] a Lattice spacing [fm].
      * \param[in] rapidity Effective rapidity to start the iteration
@@ -195,12 +226,14 @@ class Init {
      * \param[in] ySign `+1` for nucleus A, `-1` for nucleus B -- the
      * only sign difference between the two originally-copy-pasted
      * solves.
+     * \param[out] converged `false` if the iteration did not converge in
+     * 1000 steps.
      * \return The converged \f$g^2\mu^2\f$ [lattice units] (`0` if the
      * iteration ever produces \f$Q_s=0\f$ or NaN).
      */
     double computeFluctuatingXG2mu2(
         Parameters *param, double a, double rapidity, double Tp,
-        double qsmuRatio, double ySign);
+        double qsmuRatio, double ySign, bool &converged);
     /**
      * Sets the color-charge density (\f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$)
      * over the whole lattice: either the constant-background case
@@ -291,13 +324,6 @@ class Init {
      */
     void computeThicknessFromNucleons(
         Lattice *lat, Parameters *param, double nucleiInAverage);
-    /**
-     * Computes this event's collision geometry and decides whether it is
-     * accepted (CollisionGeometry::computeQuantities()).
-     * \param[in] lat Lattice to read color-charge densities from.
-     * \param[in,out] param Simulation parameters.
-     */
-    void computeCollisionGeometryQuantities(Lattice *lat, Parameters *param);
     /**
      * Constructs both nuclei's Wilson lines by solving the classical
      * color-source Poisson problem in momentum space, one longitudinal

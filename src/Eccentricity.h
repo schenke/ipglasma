@@ -15,9 +15,29 @@
 namespace Eccentricity {
 
 /**
+ * The participant-plane angle \f$\Psi_n\f$ of the moments
+ * \f$\langle r^m \sin n\phi\rangle\f$ and
+ * \f$\langle r^m \cos n\phi\rangle\f$, defined by
+ * \f$\varepsilon_n e^{in\Psi_n} = -\langle r^m e^{in\phi}\rangle /
+ * \langle r^m\rangle\f$, i.e. \f$\Psi_n = [\operatorname{atan2}(
+ * \langle r^m \sin n\phi\rangle, \langle r^m \cos n\phi\rangle)
+ * + \pi]/n\f$, which holds for either sign of the cosine moment.
+ * \param[in] n Harmonic, at least 1.
+ * \param[in] sinMoment \f$\langle r^m \sin n\phi\rangle\f$ (any
+ * normalization).
+ * \param[in] cosMoment \f$\langle r^m \cos n\phi\rangle\f$ (the same
+ * normalization).
+ * \return \f$\Psi_n \in [0, 2\pi/n)\f$ [rad].
+ */
+double participantPlaneAngle(int n, double sinMoment, double cosMoment);
+
+/**
  * Computes the spatial eccentricities \f$\varepsilon_1,\ldots,
- * \varepsilon_6\f$ and their event-plane angles
- * \f$\Psi_1,\ldots,\Psi_6\f$ from the energy-density-weighted
+ * \varepsilon_6\f$ and their participant-plane angles
+ * \f$\Psi_n \in [0, 2\pi/n)\f$, defined by
+ * \f$\varepsilon_n e^{in\Psi_n} = -\langle r^m e^{in\phi}\rangle /
+ * \langle r^m\rangle\f$ (\f$m = 3\f$ for \f$n = 1\f$, \f$m = n\f$
+ * otherwise), from the energy-density-weighted
  * (running-coupling-corrected, `getEpsilon()*getutau()`-weighted,
  * cells below \p cutoff excluded) spatial moments, first recentering
  * on the energy-weighted centroid. If \p doAniso is `0`, appends one
@@ -32,7 +52,7 @@ namespace Eccentricity {
  * \p doAniso==1, `Txx`/`Txy`/`Tyy`/flow velocity) from.
  * \param[in] param Simulation parameters.
  * \param[in] it Current time step index, used for the output file's
- * time column and (on `it==1`) to store \f$\Psi\f$ in
+ * time column and (on `it==1`) to store \f$\Psi_2\f$ in
  * `param->event.psi`.
  * \param[in] cutoff Energy-density cutoff [GeV/fm\f$^3\f$] below which a
  * cell is excluded from the weighted averages (`eccentricityCutoff`).

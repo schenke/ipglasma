@@ -77,7 +77,15 @@ AnisotropyResult computeRotatedAnisotropy(Lattice *lat, int N, double Psi) {
     }
     return {num, den, num2, den2};
 }
+
 }  // namespace
+
+double Eccentricity::participantPlaneAngle(
+    int n, double sinMoment, double cosMoment) {
+    const double period = 2. * M_PI / n;
+    const double psi = (std::atan2(sinMoment, cosMoment) + M_PI) / n;
+    return psi < period ? psi : psi - period;
+}
 
 void Eccentricity::compute(
     Lattice *lat, Parameters *param, int it, double cutoff, int doAniso) {
@@ -269,12 +277,12 @@ void Eccentricity::compute(
     }
 
     // compute and print eccentricity and angles:
-    Psi1 = (atan(avsin1 / avcos1) + M_PI) / 1.;
-    Psi2 = (atan(avsin / avcos) + M_PI) / 2.;
-    Psi3 = (atan(avsin3 / avcos3) + M_PI) / 3.;
-    Psi4 = (atan(avsin4 / avcos4) + M_PI) / 4.;
-    Psi5 = (atan(avsin5 / avcos5) + M_PI) / 5.;
-    Psi6 = (atan(avsin6 / avcos6) + M_PI) / 6.;
+    Psi1 = Eccentricity::participantPlaneAngle(1, avsin1, avcos1);
+    Psi2 = Eccentricity::participantPlaneAngle(2, avsin, avcos);
+    Psi3 = Eccentricity::participantPlaneAngle(3, avsin3, avcos3);
+    Psi4 = Eccentricity::participantPlaneAngle(4, avsin4, avcos4);
+    Psi5 = Eccentricity::participantPlaneAngle(5, avsin5, avcos5);
+    Psi6 = Eccentricity::participantPlaneAngle(6, avsin6, avcos6);
     eccentricity1 = sqrt(avcos1 * avcos1 + avsin1 * avsin1) / avr1;
     eccentricity2 = sqrt(avcos * avcos + avsin * avsin) / avrSq;
     eccentricity3 = sqrt(avcos3 * avcos3 + avsin3 * avsin3) / avr3;

@@ -229,6 +229,57 @@ Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
 
 // matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
 // Q^a of generators t^a as argument. Dimension is Nc
+Matrix Matrix::expiHermitian(const Matrix &Q) {
+    const Matrix Q2 = Q * Q;
+    // c1 = tr(Q^2)/2, c0 = det Q (real for Hermitian Q)
+    double c1 = 0.;
+    for (int i = 0; i < 9; i++) c1 += std::norm(Q.e_[i]);
+    c1 *= 0.5;
+    const complex<double> I(0., 1.);
+    if (c1 < 1e-24) {
+        // |Q| < 1e-12: the next term, Q^3/6, is below 1e-36
+        return Matrix(1.) + I * Q - 0.5 * Q2;
+    }
+    const double c0 = Q.det().real();
+    const double c1Over3 = c1 / 3.;
+    const double c0max = 2. * c1Over3 * std::sqrt(c1Over3);
+    // evaluate for |c0|: theta in [0, pi/2], so 9u^2 - w^2 >= 2 c1
+    const double ratio = std::min(std::abs(c0) / c0max, 1.);
+    const double thetaOverThree = std::acos(ratio) / 3.;
+    const double u = std::sqrt(c1Over3) * std::cos(thetaOverThree);
+    const double w = std::sqrt(c1) * std::sin(thetaOverThree);
+    const double w2 = w * w;
+    // xi0 = sin(w)/w, expanded for small w
+    const double xi0 = (w <= 0.05)
+                           ? 1. - w2 / 6. * (1. - w2 / 20. * (1. - w2 / 42.))
+                           : std::sin(w) / w;
+    const double cosw = std::cos(w);
+    const complex<double> exp2iu(std::cos(2. * u), std::sin(2. * u));
+    const complex<double> expmiu(std::cos(u), -std::sin(u));
+    const double u2 = u * u;
+    const double den = 9. * u2 - w2;
+    complex<double> f0 =
+        ((u2 - w2) * exp2iu
+         + expmiu * (8. * u2 * cosw + 2. * I * u * (3. * u2 + w2) * xi0))
+        / den;
+    complex<double> f1 =
+        (2. * u * exp2iu - expmiu * (2. * u * cosw - I * (3. * u2 - w2) * xi0))
+        / den;
+    complex<double> f2 = (exp2iu - expmiu * (cosw + 3. * I * u * xi0)) / den;
+    if (c0 < 0.) {
+        // f_j(-c0) = (-1)^j f_j(c0)^*
+        f0 = std::conj(f0);
+        f1 = -std::conj(f1);
+        f2 = std::conj(f2);
+    }
+    Matrix result(noInit);
+    for (int i = 0; i < 9; i++) result.e_[i] = f1 * Q.e_[i] + f2 * Q2.e_[i];
+    result.e_[0] += f0;
+    result.e_[4] += f0;
+    result.e_[8] += f0;
+    return result;
+}
+
 void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
     double sqrt3 = sqrt(3.);
     complex<double> f0, f1, f2, iu, u0, ua[8];

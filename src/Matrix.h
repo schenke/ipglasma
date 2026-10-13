@@ -273,6 +273,22 @@ class Matrix {
      * identity-coefficient comes out numerically zero).
      */
     static Matrix fromAlgebraExponent(const std::vector<double> &Q);
+    /**
+     * Computes \f$\exp(iQ)\f$ exactly, for a traceless Hermitian
+     * \f$3\times3\f$ matrix \f$Q\f$, as \f$f_0 + f_1 Q + f_2 Q^2\f$
+     * with the Cayley-Hamilton coefficients of Morningstar and Peardon
+     * (Phys. Rev. D 69, 054501 (2004), Eqs. (23)-(33)). Unlike
+     * expmCoeff(), it is evaluated for \f$|\det Q|\f$, using
+     * \f$f_j(-c_0) = (-1)^j f_j^*(c_0)\f$, so the denominator
+     * \f$9u^2 - w^2 \ge \mathrm{tr}(Q^2)\f$ never vanishes, also for
+     * degenerate eigenvalues; \f$\sin(w)/w\f$ is expanded for small
+     * \f$w\f$, and a field with \f$\mathrm{tr}(Q^2)/2 < 10^{-24}\f$ uses
+     * the series \f$1 + iQ - Q^2/2\f$. The result is in SU(3) up to
+     * rounding.
+     * \param[in] Q Traceless Hermitian matrix.
+     * \return \f$\exp(iQ)\f$.
+     */
+    static Matrix expiHermitian(const Matrix &Q);
 
     /**
      * Computes this matrix's determinant via the explicit

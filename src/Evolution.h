@@ -85,9 +85,10 @@ class Evolution {
         const std::vector<double> &times, double stepLength, int itmax);
     /**
      * Leapfrog coordinate update for the transverse gauge links: rotates
-     * `Ux`/`Uy` by \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$ (a
-     * second-order Padé approximant of the exponential), using the
-     * electric fields `U`/`U2` as the generator. Runs
+     * `Ux`/`Uy` by the exact exponential
+     * \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,E)\f$ (Matrix::expiHermitian()),
+     * using the electric fields \f$E\f$ in `U`/`U2` as the generator, so
+     * the links stay in SU(3). Runs
      * `evolveUTeam` (an anonymous-namespace helper in Evolution.cpp)
      * inside its own `#pragma omp parallel` region.
      * \param[in,out] lat Lattice whose `Ux`/`Uy` are updated in place.

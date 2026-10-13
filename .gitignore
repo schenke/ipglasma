@@ -1,16 +1,30 @@
+# Build directories and the installed executable
+build/
+/ipglasma
+*.dylib
+
+# Outputs of runs (see OUTPUT.md)
 *.dat
 *.plt
+*.h5
+*.ipgt
+*.ipgw
+*.ipgf
+*.bin.in
+Tmunu
+test.out
+/WilsonLine_*
+/WilsonLineGeometry_*
+
+# Plots
 *.pdf
 *.png
+
+# Python
+__pycache__/
+*.pyc
+
+# Editors and operating systems
 *#
 *.pages
-src/.DS_Store
-src/ipglasma
-src/ipglasma.dSYM/
-src/obj/
-test.out
-ipglasma
-Tmunu
-*.dylib
 .DS_Store
-*.bin.in

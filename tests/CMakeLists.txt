@@ -44,7 +44,7 @@ target_include_directories(ipglasma_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     )
-target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS})
+target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS} ${OPENMP_LIBS})
 # lets tests read the shipped input files (input, validations/input_*)
 target_compile_definitions(ipglasma_tests PRIVATE
     IPGLASMA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

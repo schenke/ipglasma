@@ -20,6 +20,8 @@ Dependencies
 
 The code can also be built with CMake directly, e.g. `cmake -B build` and `cmake --build build`; the executable is then `build/src/ipglasma`.
 
+The build type is `Release` (`-O3`) unless another one is given with `-DCMAKE_BUILD_TYPE`, e.g. `Debug` (`-g`, no optimization) or `RelWithDebInfo` (`-O2 -g`). Further compiler flags can be added with `-DCMAKE_CXX_FLAGS`, e.g. `-DCMAKE_CXX_FLAGS=-march=native`. The code is built without fast math (`-Ofast`, `-ffast-math`), which would switch off its checks for NaN.
+
 ### Docker
 `docker/Dockerfile` builds an Ubuntu image with IP-Glasma compiled (with MPI) and the nucleus configurations downloaded, in `/home/ipglasma`, from the branch `main` of the GitHub repository (`--build-arg IPGLASMA_BRANCH=devel` for another branch); it also contains the files to run it with Singularity/Apptainer:
 ```

@@ -42,17 +42,21 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
     endif()
 endif()
 
+# OpenMP is linked as a target (OPENMP_LIBS), which adds its compile and
+# link flags
+set(OPENMP_LIBS "")
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
     message("Using Clang compiler without OpenMP parallelization... ")
 else ()
     find_package(OpenMP)
-    if (OpenMP_FOUND)
-        set(CMAKE_CXX_COMPILE_FLAGS ${CMAKE_CXX_COMPILE_FLAGS} ${OpenMP_CXX_FLAGS})
-        set(CMAKE_CXX_LINK_FLAGS ${CMAKE_CXX_LINK_FLAGS} ${OpenMP_EXE_LINKER_FLAGS})
+    if (OpenMP_CXX_FOUND)
+        set(OPENMP_LIBS OpenMP::OpenMP_CXX)
     endif ()
 endif()
 
-# default build type: Release
+# default build type: Release (-O3 -DNDEBUG); Debug (-g) and RelWithDebInfo
+# (-O2 -g -DNDEBUG) are the other common choices. The optimization level
+# only comes from the build type.
 if (NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE "Release")
 endif()
@@ -80,17 +84,17 @@ if (NOT disableMPI)
     endif()
 endif()
 
+# Compiler-specific flags are appended, so flags given with -DCMAKE_CXX_FLAGS
+# are kept. There is no -Ofast or -ffast-math: with them, std::isnan is
+# always false, which disables the NaN checks of the code.
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
     if (KNL)
-       set(CMAKE_CXX_FLAGS "-g -Wall -xMIC-AVX512 -std=c++17 -O3 -fopenmp -finline-functions -march=knl")
-       #set(CMAKE_CXX_FLAGS "-g -vecabi=cmdtarget -debug inline-debug-info -fimf-use-svml -xmic-avx512 -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fma -align -finline-functions -DNDEBUG")
+        string(APPEND CMAKE_CXX_FLAGS " -xMIC-AVX512 -march=knl -finline-functions")
     else ()
-        set(CMAKE_CXX_FLAGS "-g -ipo -qopt-report=5 -qopt-report-phase:vec -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -fimf-use-svml -fma -align -finline-functions -DNDEBUG")
+        string(APPEND CMAKE_CXX_FLAGS " -ipo -qopt-report=5 -qopt-report-phase:vec -fimf-use-svml -fma -align -finline-functions")
     endif ()
-elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-    set(CMAKE_CXX_FLAGS "-g -Ofast ${OpenMP_CXX_FLAGS} -std=c++17 -DNDEBUG")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "AppleClang")
-    set(CMAKE_CXX_FLAGS "-g -O3 -std=c++17  -stdlib=libc++ -DNDEBUG")
+    string(APPEND CMAKE_CXX_FLAGS " -stdlib=libc++")
 endif()
 
 string(APPEND CMAKE_CXX_FLAGS " -Wall -Wextra -Woverloaded-virtual -Wredundant-decls -Wshadow -Wundef -Wno-unused")
@@ -109,10 +113,7 @@ endif()
 # Pins FFTW plan selection via an on-disk wisdom cache (see FFT.h) so that
 # repeated runs with the same seed are bit-reproducible, at the cost of the
 # first run in a given directory measuring (rather than estimating) its FFT
-# plan. Off by default. Enable with -DIPGLASMA_DETERMINISTIC_FFT=ON; this is
-# a real CMake option (not a CMAKE_CXX_FLAGS string), because every branch
-# above already overwrites CMAKE_CXX_FLAGS wholesale, which would otherwise
-# silently discard a flag passed that way.
+# plan. Off by default. Enable with -DIPGLASMA_DETERMINISTIC_FFT=ON.
 option(IPGLASMA_DETERMINISTIC_FFT
     "Pin FFTW plan selection via an on-disk wisdom cache for bit-reproducible runs"
     OFF)

@@ -126,7 +126,9 @@ information:
 - `# Random seed used on rank <rank>: <seed>`;
 - with `runEvolution 1` and `useNucleus 1`, once an impact parameter is accepted, a
   block starting with `# Collision geometry of this event:`:
-  - `b` [fm], `phiRP`, `Npart` and `Ncoll`;
+  - `b` [fm], `phiRP`, `Npart` and `Ncoll`, where `b` and `phiRP` are
+    those of the lattice vector separating the nuclei (see `bMin` in the
+    README), as in all outputs;
   - with running coupling, the event-averaged Q_s [GeV] selected by
     `runWithQs` and α_s (0 with `runWithKt 1`); otherwise the fixed α_s;
   - with `readInitialWilsonLines` 1 or 2, `# QsMuRatio = <value> (from the
@@ -243,8 +245,10 @@ impact-parameter shift.
 `writeNpartList 1` and `writeNcollList 1` (the default), in `runEvolution 1` with
 `useNucleus 1` (also for nuclei read with their Wilson lines). They are not
 written with `useSmoothNucleus 1`. Positions are in fm, in the frame
-of the collision: the projectile is centred at +b/2 and the target at −b/2
-along the reaction plane. Two nucleons collide if their transverse distance
+of the collision: the projectile and the target are shifted by whole lattice
+sites, by about +b/2 and −b/2 along the reaction plane, so that they are
+separated by the impact parameter b reported in the outputs (the lattice
+vector closest to the sampled one, see `bMin` in the README). Two nucleons collide if their transverse distance
 is below √(σ_NN/π) (`gaussianWounding 0`) or with the Gaussian probability
 of GLISSANDO (`gaussianWounding 1`, see the README). With `nucleiToAverage`
 n > 1 the lists hold the nucleons of all n nuclei of each kind, first those

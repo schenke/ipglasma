@@ -130,10 +130,12 @@ class Init {
      */
     void readQsTable(const std::string &fileName);
     /**
-     * Shifts the projectile's and target's Wilson-line fields by
-     * \f$\mp b/2\f$ along the impact-parameter direction so they sit at
-     * their correct separated positions on the shared lattice, filling
-     * with the identity outside the lattice bounds.
+     * Shifts the projectile's and target's Wilson-line fields by whole
+     * lattice sites, CollisionGeometry::latticeShifts() (about
+     * \f$\pm b/2\f$ along the impact-parameter direction), so they sit at
+     * their separated positions on the shared lattice, filling with the
+     * identity where a field is shifted in from outside the lattice. With
+     * \f$b = 0\f$ the fields are unchanged.
      * \param[in,out] lat Lattice whose `U`/`U2` fields are shifted in
      * place.
      * \param[in] param Simulation parameters;

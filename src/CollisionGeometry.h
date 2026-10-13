@@ -53,6 +53,23 @@ struct OverlapSums {
 };
 
 /**
+ * Shifts of the two nuclei on the lattice for one impact parameter, see
+ * CollisionGeometry::latticeShifts(). A nucleus shifted by
+ * \f$(s_x, s_y)\f$ has its Wilson lines and nucleons moved by
+ * \f$a\,(s_x, s_y)\f$, with the lattice spacing \f$a\f$.
+ */
+struct NucleusShifts {
+    /// Shift of nucleus A (projectile) along x [lattice sites].
+    int xA = 0;
+    /// Shift of nucleus A (projectile) along y [lattice sites].
+    int yA = 0;
+    /// Shift of nucleus B (target) along x [lattice sites].
+    int xB = 0;
+    /// Shift of nucleus B (target) along y [lattice sites].
+    int yB = 0;
+};
+
+/**
  * The collision geometry of one event: samples the impact parameter and
  * reaction-plane angle, determines the wounded nucleons
  * (\f$N_{\text{part}}\f$, \f$N_{\text{coll}}\f$) from the sampled nucleon
@@ -61,9 +78,11 @@ struct OverlapSums {
  * densities, deciding whether the event is accepted.
  *
  * Works on the nucleon lists of the two nuclei passed to the constructor
- * (both centered at the origin); the nucleus A (projectile) is placed at
- * \f$+b/2\f$, the nucleus B (target) at \f$-b/2\f$ along the reaction
- * plane.
+ * (both centered at the origin). The nuclei are shifted by whole lattice
+ * sites (latticeShifts()), the nucleus A (projectile) by about
+ * \f$+b/2\f$ and the nucleus B (target) by about \f$-b/2\f$ along the
+ * reaction plane, so that their separation is the lattice vector closest
+ * to the impact parameter.
  */
 class CollisionGeometry {
   public:
@@ -78,13 +97,32 @@ class CollisionGeometry {
         : nucleusA_(nucleusA), nucleusB_(nucleusB) {}
 
     /**
+     * The shifts of the two nuclei on the lattice for the impact parameter
+     * \p b along \p phiRP: the lattice vector
+     * \f$\mathbf{D}\f$ closest to \f$b\,(\cos\phi_{RP},
+     * \sin\phi_{RP})/a\f$ (each component rounded), split between the
+     * nuclei, A by \f$\mathbf{D}/2\f$ rounded towards zero and B by the
+     * rest, \f$\mathbf{D}/2 - \mathbf{D}\f$. The nuclei are thus
+     * separated by \f$a\mathbf{D}\f$, and \f$b = 0\f$ shifts neither.
+     * \param[in] b Impact parameter [fm].
+     * \param[in] phiRP Reaction-plane angle [rad].
+     * \param[in] a Lattice spacing [fm].
+     * \return The shifts of the nuclei A and B.
+     */
+    static NucleusShifts latticeShifts(double b, double phiRP, double a);
+    /**
      * Samples this event's impact parameter \f$b\f$ (linearly or
      * uniformly distributed between
      * `param->collision.bMin`/`param->collision.bMax`, or `0` for the
      * constant-color-charge-density case) and reaction-plane angle, and resets
-     * every nucleon's `.collided` flag to `0`.
+     * every nucleon's `.collided` flag to `0`. Since the nuclei can only be
+     * shifted by whole lattice sites, \f$b\f$ and the angle are then
+     * replaced by those of the lattice vector closest to the sampled
+     * impact-parameter vector (latticeShifts()); \f$b\f$ can therefore be
+     * up to \f$a/\sqrt{2}\f$ outside the sampled range.
      * \param[in,out] param Simulation parameters;
-     * `param->event.b`/`param->event.phiRP` store the sampled values.
+     * `param->event.b`/`param->event.phiRP` store the values on the
+     * lattice, with \f$0 \le \phi_{RP} < 2\pi\f$.
      * \param[in,out] random Random-number source.
      */
     void sampleImpactParameter(Parameters *param, Random *random);
@@ -133,7 +171,8 @@ class CollisionGeometry {
      * \param[in,out] random Random-number source (Gaussian wounding only).
      * \param[in] d2 Squared wounding distance
      * (\f$\sigma_{NN}/(10\pi)\f$) [fm\f$^2\f$].
-     * \param[in] b Impact parameter [fm].
+     * \param[in] b Impact parameter [fm]; the nuclei are shifted by
+     * latticeShifts().
      * \param[in] phiRP Reaction-plane angle [rad].
      * \return The number of binary collisions.
      */
@@ -149,7 +188,8 @@ class CollisionGeometry {
      * \param[in] param Simulation parameters.
      * \param[in] N Lattice side length.
      * \param[in] a Lattice spacing [fm].
-     * \param[in] b Impact parameter [fm].
+     * \param[in] b Impact parameter [fm]; the nuclei are shifted by
+     * latticeShifts().
      * \param[in] phiRP Reaction-plane angle [rad].
      * \return The sums.
      */

@@ -20,6 +20,18 @@ using std::ofstream;
 using std::string;
 using std::stringstream;
 
+NucleusShifts CollisionGeometry::latticeShifts(
+    double b, double phiRP, double a) {
+    const long Dx = std::lround(b * cos(phiRP) / a);
+    const long Dy = std::lround(b * sin(phiRP) / a);
+    NucleusShifts shifts;
+    shifts.xA = static_cast<int>(Dx / 2);
+    shifts.yA = static_cast<int>(Dy / 2);
+    shifts.xB = shifts.xA - static_cast<int>(Dx);
+    shifts.yB = shifts.yA - static_cast<int>(Dy);
+    return shifts;
+}
+
 void CollisionGeometry::sampleImpactParameter(
     Parameters *param, Random *random) {
     const double bmin = param->collision.bMin;
@@ -52,13 +64,25 @@ void CollisionGeometry::sampleImpactParameter(
             b = (bmax - bmin) * xb + bmin;
         }
     }
-    param->event.b = b;
     double phiRP = 0.;
     if (param->collision.rotateReactionPlane) {
         phiRP = 2 * M_PI * random->genrand64_real2();
     }
+    // the nuclei can only be shifted by whole lattice sites: use the
+    // lattice vector closest to the sampled impact-parameter vector
+    const double a = param->lattice.L / param->lattice.size;
+    const NucleusShifts shifts = latticeShifts(b, phiRP, a);
+    const int Dx = shifts.xA - shifts.xB;
+    const int Dy = shifts.yA - shifts.yB;
+    param->event.b = a * std::hypot(Dx, Dy);
     param->event.phiRP = phiRP;
-    messager_ << "b = " << b << " fm, phi_RP = " << phiRP;
+    if (Dx != 0 || Dy != 0) {
+        param->event.phiRP = std::atan2(Dy, Dx);
+        if (param->event.phiRP < 0.) param->event.phiRP += 2. * M_PI;
+    }
+    messager_ << "b = " << b << " fm, phi_RP = " << phiRP
+              << "; on the lattice b = " << param->event.b
+              << " fm, phi_RP = " << param->event.phiRP;
     messager_.flush("info");
 
     for (unsigned int i = 0; i < nucleusA_.size(); i++) {
@@ -173,20 +197,22 @@ WoundedNucleons CollisionGeometry::determineNpartAndNcoll(
     if (!param->nucleus.useSmoothNucleus) {
         wounded.Ncoll = computeNcollList(param, random, d2, b, phiRP);
 
+        const double a = param->lattice.L / param->lattice.size;
+        const NucleusShifts shifts = latticeShifts(b, phiRP, a);
         if (param->output.writeNpartList) {
             stringstream strNpart_name;
             strNpart_name << "NpartList" << param->event.eventId << ".dat";
             ofstream foutNpart(strNpart_name.str().c_str(), std::ios::out);
             for (int i = 0; i < A1; i++) {
-                foutNpart << nucleusA_.at(i).x + b / 2. * cos(phiRP) << " "
-                          << nucleusA_.at(i).y + b / 2. * sin(phiRP) << " "
+                foutNpart << nucleusA_.at(i).x + a * shifts.xA << " "
+                          << nucleusA_.at(i).y + a * shifts.yA << " "
                           << nucleusA_.at(i).proton << " "
                           << nucleusA_.at(i).collided << endl;
             }
             foutNpart << endl;
             for (int i = 0; i < A2; i++) {
-                foutNpart << nucleusB_.at(i).x - b / 2. * cos(phiRP) << " "
-                          << nucleusB_.at(i).y - b / 2. * sin(phiRP) << " "
+                foutNpart << nucleusB_.at(i).x + a * shifts.xB << " "
+                          << nucleusB_.at(i).y + a * shifts.yB << " "
                           << nucleusB_.at(i).proton << " "
                           << nucleusB_.at(i).collided << endl;
             }
@@ -256,12 +282,16 @@ int CollisionGeometry::computeNcollList(
     // (1980) 301 (ISR data) and Bialas and Bzdak, Acta Phys. Polon. B 38
     // (2007) 159.
     const double G = 0.92;
+    const double a = param->lattice.L / param->lattice.size;
+    const NucleusShifts shifts = latticeShifts(b, phiRP, a);
     for (int i = 0; i < A1; i++) {
+        const double xA = nucleusA_.at(i).x + a * shifts.xA;
+        const double yA = nucleusA_.at(i).y + a * shifts.yA;
         for (int j = 0; j < A2; j++) {
-            double dx =
-                (nucleusB_.at(j).x - nucleusA_.at(i).x - b * cos(phiRP));
-            double dy =
-                (nucleusB_.at(j).y - nucleusA_.at(i).y - b * sin(phiRP));
+            const double xB = nucleusB_.at(j).x + a * shifts.xB;
+            const double yB = nucleusB_.at(j).y + a * shifts.yB;
+            double dx = xB - xA;
+            double dy = yB - yA;
             double dij = dx * dx + dy * dy;
 
             bool collided;
@@ -275,9 +305,8 @@ int CollisionGeometry::computeNcollList(
 
             if (collided) {
                 if (foutNcoll.is_open()) {
-                    foutNcoll
-                        << (nucleusB_.at(j).x + nucleusA_.at(i).x) / 2. << " "
-                        << (nucleusB_.at(j).y + nucleusA_.at(i).y) / 2. << endl;
+                    foutNcoll << (xA + xB) / 2. << " " << (yA + yB) / 2.
+                              << endl;
                 }
                 Ncoll++;
                 nucleusB_.at(j).collided = 1;
@@ -295,6 +324,7 @@ OverlapSums CollisionGeometry::scanOverlap(
     const double L = param->lattice.L;
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
+    const NucleusShifts shifts = latticeShifts(b, phiRP, a);
 
     for (int ipos = 0; ipos < N * N; ipos++) {
         // loop over all positions
@@ -304,15 +334,11 @@ OverlapSums CollisionGeometry::scanOverlap(
         double x = -L / 2. + a * ix;
         double y = -L / 2. + a * iy;
 
-        double xA = x - b / 2. * cos(phiRP);
-        double yA = y - b / 2. * sin(phiRP);
-        double xB = x + b / 2. * cos(phiRP);
-        double yB = y + b / 2. * sin(phiRP);
-
-        int ixA = static_cast<int>((xA + L / 2.) / a);
-        int iyA = static_cast<int>((yA + L / 2.) / a);
-        int ixB = static_cast<int>((xB + L / 2.) / a);
-        int iyB = static_cast<int>((yB + L / 2.) / a);
+        // the cells of the unshifted nuclei that are moved to (ix, iy)
+        int ixA = ix - shifts.xA;
+        int iyA = iy - shifts.yA;
+        int ixB = ix - shifts.xB;
+        int iyB = iy - shifts.yB;
 
         // check each coordinate: a flattened index would let an
         // out-of-range coordinate alias a valid site
@@ -349,8 +375,8 @@ OverlapSums CollisionGeometry::scanOverlap(
         }
 
         for (int i = 0; i < A1; i++) {
-            double xm = nucleusA_.at(i).x + b / 2. * cos(phiRP);
-            double ym = nucleusA_.at(i).y + b / 2. * sin(phiRP);
+            double xm = nucleusA_.at(i).x + a * shifts.xA;
+            double ym = nucleusA_.at(i).y + a * shifts.yA;
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
             if (r < sqrt(param->collision.sigmaNN * mbToFm2 / M_PI)
@@ -360,8 +386,8 @@ OverlapSums CollisionGeometry::scanOverlap(
         }
 
         for (int i = 0; i < A2; i++) {
-            double xm = nucleusB_.at(i).x - b / 2. * cos(phiRP);
-            double ym = nucleusB_.at(i).y - b / 2. * sin(phiRP);
+            double xm = nucleusB_.at(i).x + a * shifts.xB;
+            double ym = nucleusB_.at(i).y + a * shifts.yB;
             double r = sqrt((x - xm) * (x - xm) + (y - ym) * (y - ym));
 
             if (r < sqrt(param->collision.sigmaNN * mbToFm2 / M_PI)

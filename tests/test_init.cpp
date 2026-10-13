@@ -202,6 +202,67 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Init::shiftFieldsWithImpactParameter leaves the fields unchanged at "
+    "b = 0 and moves them by the lattice shifts otherwise") {
+    // L = 16 fm, N = 48: truncating (x + L/2)/a, with x = -L/2 + a ix,
+    // used to copy 10 rows from their neighbours at b = 0
+    const int N = 48;
+    Parameters param;
+    makeInitTestParam(param, N);
+    param.lattice.L = 16.;
+    const double a = param.lattice.L / N;
+    int nn[2] = {N, N};
+    Init init(nn);
+    Lattice lat(&param, N);
+    // a different multiple of the identity at every site, none of them 1
+    auto fill = [&]() {
+        for (int pos = 0; pos < N * N; pos++) {
+            lat.U[pos] = Matrix(2. + pos);
+            lat.U2[pos] = Matrix(-2. - pos);
+        }
+    };
+
+    fill();
+    param.event.b = 0.;
+    param.event.phiRP = 1.;
+    init.shiftFieldsWithImpactParameter(&lat, &param);
+    int changed = 0;
+    for (int pos = 0; pos < N * N; pos++) {
+        if (lat.U[pos].get(0).real() != 2. + pos) changed++;
+        if (lat.U2[pos].get(0).real() != -2. - pos) changed++;
+    }
+    CHECK(changed == 0);
+
+    fill();
+    param.event.b = 1.3;
+    param.event.phiRP = 2.2;
+    const NucleusShifts shifts = CollisionGeometry::latticeShifts(1.3, 2.2, a);
+    REQUIRE(shifts.xA - shifts.xB != 0);
+    REQUIRE(shifts.yA - shifts.yB != 0);
+    init.shiftFieldsWithImpactParameter(&lat, &param);
+    // the value of site (ix - sx, iy - sy) before the shift, the identity
+    // where the field is shifted in from outside the lattice
+    auto before = [&](int ix, int iy, int sx, int sy, double sign) {
+        const int jx = ix - sx, jy = iy - sy;
+        if (jx < 0 || jx >= N || jy < 0 || jy >= N) return 1.;
+        return sign * (2. + lat.positionFromXY(jx, jy));
+    };
+    int wrong = 0;
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const int pos = lat.positionFromXY(ix, iy);
+            if (lat.U[pos].get(0).real()
+                != before(ix, iy, shifts.xA, shifts.yA, 1.))
+                wrong++;
+            if (lat.U2[pos].get(0).real()
+                != before(ix, iy, shifts.xB, shifts.yB, -1.))
+                wrong++;
+        }
+    }
+    CHECK(wrong == 0);
+}
+
+TEST_CASE(
     "Init::computeSmoothNucleusThickness builds centered projectile (A) and "
     "target (B) profiles, and CollisionGeometry::scanOverlap finds their "
     "shifted overlap") {

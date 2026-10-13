@@ -332,7 +332,12 @@ class Init {
      */
     void readGeometry(Lattice *lat, Parameters *param);
     /**
-     * setV()'s lattice Poisson/UV kernel: depends only on transverse
+     * setV()'s lattice Poisson/UV kernel
+     * \f$K(\tilde k) = e^{-|\tilde k|\,\mathrm{UVdamp}} /
+     * (\tilde k^2 + m^2)\f$, with the lattice momentum
+     * \f$\tilde k^2 = 4[\sin^2(k_x/2) + \sin^2(k_y/2)]\f$. For
+     * \f$m = 0\f$ the zero mode is removed, \f$K(0) = 0\f$; the UV
+     * damping applies for any \f$m\f$. The kernel depends only on transverse
      * momentum and run parameters, so it's computed once and reused for
      * every longitudinal sheet of both nuclei.
      * \param[in] N Lattice side length.

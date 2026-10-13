@@ -484,9 +484,12 @@ struct EventState {
     /// Whether a collision happened this event: `0` no collision
     /// (restart), `1` collision happened.
     int success = 0;
-    /// Impact parameter [fm] actually used this event.
+    /// Impact parameter [fm] actually used this event: the length of the
+    /// lattice vector by which the nuclei are separated, the one closest to
+    /// the sampled impact parameter (CollisionGeometry::latticeShifts()).
     double b = 0.;
-    /// Reaction-plane angle [rad].
+    /// Reaction-plane angle [rad] of that lattice vector,
+    /// \f$0 \le \phi_{RP} < 2\pi\f$.
     double phiRP = 0.;
     /// Number of participants.
     int Npart = 0;

@@ -61,6 +61,7 @@ TEST_CASE(
     "CollisionGeometry::computeNcollList (hard-sphere mode) marks a p+p "
     "pair collided and counts it once") {
     Parameters param;
+    makeInitTestParam(param, 4);
     param.collision.sigmaNN = 4.2;
     param.collision.gaussianWounding = false;
     param.event.eventId = 0;
@@ -76,6 +77,43 @@ TEST_CASE(
     CHECK(nucleusA[0].collided == 1);
     CHECK(nucleusB[0].collided == 1);
     removeGeometryFiles();
+}
+
+TEST_CASE(
+    "CollisionGeometry::latticeShifts separates the nuclei by the lattice "
+    "vector closest to the impact parameter, and shifts neither for b = 0") {
+    const double a = 0.05;  // e.g. L = 30 fm with size 600
+    for (const double phi : {0., 0.3, 1.9, 3.5, 5.0}) {
+        const NucleusShifts none = CollisionGeometry::latticeShifts(0., phi, a);
+        CHECK(none.xA == 0);
+        CHECK(none.yA == 0);
+        CHECK(none.xB == 0);
+        CHECK(none.yB == 0);
+        for (const double b : {0.07, 1.234, 7.89, 13.3}) {
+            CAPTURE(phi);
+            CAPTURE(b);
+            const NucleusShifts shifts =
+                CollisionGeometry::latticeShifts(b, phi, a);
+            // the separation of A and B is the closest lattice vector
+            const int Dx = shifts.xA - shifts.xB;
+            const int Dy = shifts.yA - shifts.yB;
+            CHECK(std::abs(a * Dx - b * std::cos(phi)) <= a / 2. + 1e-12);
+            CHECK(std::abs(a * Dy - b * std::sin(phi)) <= a / 2. + 1e-12);
+            // A moves by about +b/2, B by about -b/2
+            CHECK(std::abs(a * shifts.xA - b / 2. * std::cos(phi)) < a);
+            CHECK(std::abs(a * shifts.yA - b / 2. * std::sin(phi)) < a);
+            CHECK(std::abs(a * shifts.xB + b / 2. * std::cos(phi)) < a);
+            CHECK(std::abs(a * shifts.yB + b / 2. * std::sin(phi)) < a);
+        }
+    }
+    // an odd separation: A gets the half rounded towards zero
+    const NucleusShifts odd = CollisionGeometry::latticeShifts(3. * a, 0., a);
+    CHECK(odd.xA == 1);
+    CHECK(odd.xB == -2);
+    const NucleusShifts oddNegative =
+        CollisionGeometry::latticeShifts(3. * a, M_PI, a);
+    CHECK(oddNegative.xA == -1);
+    CHECK(oddNegative.xB == 2);
 }
 
 TEST_CASE(
@@ -156,23 +194,38 @@ TEST_CASE(
     Random random;
     random.init_genrand64(4);
 
+    // b and phi_RP are those of a lattice vector (a = 1 fm here)
+    auto onLattice = [&]() {
+        const double Dx = param.event.b * std::cos(param.event.phiRP);
+        const double Dy = param.event.b * std::sin(param.event.phiRP);
+        return std::abs(Dx - std::round(Dx)) < 1e-12
+               && std::abs(Dy - std::round(Dy)) < 1e-12;
+    };
     for (bool linear : {true, false}) {
         CAPTURE(linear);
         param.collision.sampleBFromLinearDistribution = linear;
         for (int i = 0; i < 20; i++) {
             geometry.sampleImpactParameter(&param, &random);
+            // along x, the rounded b stays in [bMin, bMax] = [2, 3]
             CHECK(param.event.b >= 2.);
             CHECK(param.event.b <= 3.);
             CHECK(param.event.phiRP == 0.);
+            CHECK(onLattice());
         }
     }
     CHECK(nucleusA[0].collided == 0);
     CHECK(nucleusB[1].collided == 0);
 
     param.collision.rotateReactionPlane = true;
-    geometry.sampleImpactParameter(&param, &random);
-    CHECK(param.event.phiRP >= 0.);
-    CHECK(param.event.phiRP < 2. * M_PI);
+    for (int i = 0; i < 20; i++) {
+        geometry.sampleImpactParameter(&param, &random);
+        CHECK(param.event.phiRP >= 0.);
+        CHECK(param.event.phiRP < 2. * M_PI);
+        CHECK(onLattice());
+        // the closest lattice vector is at most a/sqrt(2) away
+        CHECK(param.event.b >= 2. - M_SQRT1_2);
+        CHECK(param.event.b <= 3. + M_SQRT1_2);
+    }
 
     param.collision.useNucleus = false;
     geometry.sampleImpactParameter(&param, &random);

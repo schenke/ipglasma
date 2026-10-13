@@ -625,23 +625,22 @@ void Init::shiftFieldsWithImpactParameter(Lattice *lat, Parameters *param) {
         lat_tmp.buffer2[ipos] = lat->U2[ipos];
     }
 
-    const double L = param->lattice.L;
-    const double a = L / N;  // lattice spacing in fm
+    const double a = param->lattice.L / N;  // lattice spacing in fm
+    const NucleusShifts shifts = CollisionGeometry::latticeShifts(b, phiRP, a);
+    messager_ << "[Init::shiftFieldsWithImpactParameter]: shifting nucleus A "
+                 "by ("
+              << shifts.xA << ", " << shifts.yA << ") and nucleus B by ("
+              << shifts.xB << ", " << shifts.yB << ") lattice sites";
+    messager_.flush("info");
     for (int ipos = 0; ipos < N * N; ipos++) {
         int ix = lat->xFromPosition(ipos);
         int iy = lat->yFromPosition(ipos);
-        double x = -L / 2. + a * ix;
-        double y = -L / 2. + a * iy;
 
-        double xA = x - b / 2. * cos(phiRP);
-        double yA = y - b / 2. * sin(phiRP);
-        double xB = x + b / 2. * cos(phiRP);
-        double yB = y + b / 2. * sin(phiRP);
-
-        int ixA = static_cast<int>((xA + L / 2.) / a);
-        int iyA = static_cast<int>((yA + L / 2.) / a);
-        int ixB = static_cast<int>((xB + L / 2.) / a);
-        int iyB = static_cast<int>((yB + L / 2.) / a);
+        // the cells of the unshifted nuclei that are moved to (ix, iy)
+        int ixA = ix - shifts.xA;
+        int iyA = iy - shifts.yA;
+        int ixB = ix - shifts.xB;
+        int iyB = iy - shifts.yB;
 
         if (ixA < 0 || ixA >= N || iyA < 0 || iyA >= N) {
             lat->U[ipos] = one_;

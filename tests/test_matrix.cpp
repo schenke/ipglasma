@@ -2,8 +2,10 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
+#include <random>
 #include <vector>
 
 #include "Group.h"
@@ -334,4 +336,88 @@ TEST_CASE(
     for (int k = 0; k < 9; k++) {
         CHECK(std::abs(vacuum.get(k) - identity.get(k)) < 1e-15);
     }
+}
+
+namespace {
+// exp(iQ) from its power series, with scaling and squaring: the reference
+// for Matrix::expiHermitian(), independent of its closed form.
+Matrix seriesExpi(const Matrix &Q) {
+    double norm = 0.;
+    for (int i = 0; i < 9; i++) norm += std::norm(Q(i));
+    int squarings = 0;
+    while (std::sqrt(norm) / std::pow(2., squarings) > 0.25) squarings++;
+    const Matrix X = complex<double>(0., std::pow(0.5, squarings)) * Q;
+    Matrix result(1.), term(1.);
+    for (int k = 1; k <= 20; k++) {
+        term = (1. / k) * (term * X);
+        result += term;
+    }
+    for (int i = 0; i < squarings; i++) result = result * result;
+    return result;
+}
+
+double maxDifference(const Matrix &a, const Matrix &b) {
+    double largest = 0.;
+    for (int i = 0; i < 9; i++)
+        largest = std::max(largest, std::abs(a(i) - b(i)));
+    return largest;
+}
+
+// max |U^dagger U - 1| and |det U - 1|
+double distanceFromSU3(const Matrix &U) {
+    const Matrix product = Matrix::prodAconjB(U, U);
+    return std::max(maxDifference(product, Matrix(1.)), std::abs(U.det() - 1.));
+}
+
+// A random traceless Hermitian matrix with Frobenius norm `norm`.
+Matrix randomTracelessHermitian(std::mt19937 &engine, double norm) {
+    std::normal_distribution<double> gauss;
+    Matrix A;
+    for (int i = 0; i < 9; i++)
+        A.set(i, complex<double>(gauss(engine), gauss(engine)));
+    Matrix Ad = A;
+    Ad.conjg();
+    Matrix Q = 0.5 * (A + Ad);
+    const complex<double> traceThird = Q.trace() / 3.;
+    Q = Q - traceThird * Matrix(1.);
+    double frobenius = 0.;
+    for (int i = 0; i < 9; i++) frobenius += std::norm(Q(i));
+    return (norm / std::sqrt(frobenius)) * Q;
+}
+}  // namespace
+
+TEST_CASE(
+    "Matrix::expiHermitian gives exp(iQ) in SU(3), also for equal "
+    "eigenvalues and tiny Q") {
+    std::mt19937 engine(7);
+    std::vector<Matrix> cases;
+    for (const double norm : {1e-13, 1e-7, 1e-3, 0.1, 0.5, 2., 5.}) {
+        for (int i = 0; i < 20; i++) {
+            cases.push_back(randomTracelessHermitian(engine, norm));
+        }
+    }
+    // equal eigenvalues (lambda_8 and -lambda_8: theta = 0 and pi in the
+    // closed form), det Q = 0 (lambda_3), nearly equal eigenvalues
+    for (const double s : {1e-6, 0.3, 2.}) {
+        Matrix lambda8(0.);
+        lambda8.set(0, 0, s);
+        lambda8.set(1, 1, s);
+        lambda8.set(2, 2, -2. * s);
+        cases.push_back(lambda8);
+        cases.push_back(-1. * lambda8);
+        cases.push_back(lambda8 + randomTracelessHermitian(engine, 1e-9 * s));
+        Matrix lambda3(0.);
+        lambda3.set(0, 0, s);
+        lambda3.set(1, 1, -s);
+        cases.push_back(lambda3);
+    }
+    for (const Matrix &Q : cases) {
+        const Matrix U = Matrix::expiHermitian(Q);
+        CAPTURE(Q(0));
+        CAPTURE(Q(1));
+        CHECK(maxDifference(U, seriesExpi(Q)) < 1e-12);
+        CHECK(distanceFromSU3(U) < 1e-13);
+    }
+    // no field: exactly the identity
+    CHECK(maxDifference(Matrix::expiHermitian(Matrix(0.)), Matrix(1.)) == 0.);
 }

@@ -114,3 +114,50 @@ TEST_CASE(
             {0.3, 0.104, 0.1, 0.005, 0.4, 0.5}, stepLength, itmax)
         == std::vector<int> {10, 30});
 }
+
+TEST_CASE(
+    "Evolution::evolveU rotates the links by exp(i omega E) and keeps them in "
+    "SU(3)") {
+    const int N = 4;
+    Parameters param;
+    makeEvolutionTestParam(param, N);
+    param.coupling.g = 1.3;
+    Lattice lat(&param, N);
+    // E large enough that the old 1 + X + X^2/2 left SU(3) visibly
+    Matrix E(0.);
+    E.set(0, 1, complex<double>(0.4, 0.3));
+    E.set(1, 0, complex<double>(0.4, -0.3));
+    E.set(1, 2, complex<double>(-0.2, 0.5));
+    E.set(2, 1, complex<double>(-0.2, -0.5));
+    E.set(0, 0, 0.6);
+    E.set(1, 1, -0.1);
+    E.set(2, 2, -0.5);
+    for (int pos = 0; pos < N * N; ++pos) {
+        lat.U[pos] = E;
+        lat.U2[pos] = -1. * E;
+        lat.Ux[pos] = Matrix(1.);
+        lat.Uy[pos] = Matrix(1.);
+    }
+    const double dtau = 0.1, tau = 0.3;
+    int nn[2] = {N, N};
+    Evolution evolution(nn);
+    for (int step = 0; step < 50; step++) {
+        evolution.evolveU(&lat, &param, dtau, tau);
+    }
+    // 50 rotations about the same generator add up
+    const double omega =
+        param.coupling.g * param.coupling.g * dtau / (tau + dtau / 2.);
+    const Matrix expectedX = Matrix::expiHermitian((50. * omega) * E);
+    const Matrix expectedY = Matrix::expiHermitian((-50. * omega) * E);
+    for (int pos = 0; pos < N * N; ++pos) {
+        for (int i = 0; i < 9; i++) {
+            CHECK(std::abs(lat.Ux[pos](i) - expectedX(i)) < 1e-12);
+            CHECK(std::abs(lat.Uy[pos](i) - expectedY(i)) < 1e-12);
+        }
+        const Matrix unitarity = Matrix::prodAconjB(lat.Ux[pos], lat.Ux[pos]);
+        for (int i = 0; i < 9; i++) {
+            CHECK(std::abs(unitarity(i) - ((i % 4 == 0) ? 1. : 0.)) < 1e-13);
+        }
+        CHECK(std::abs(lat.Ux[pos].det() - 1.) < 1e-13);
+    }
+}

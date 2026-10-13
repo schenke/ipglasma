@@ -36,19 +36,10 @@ namespace {
 /// Scratch matrices for evolveUTeam(), reused across cells to avoid
 /// reallocating.
 struct EvolveUScratch {
-    /// Initializes \c one to the identity matrix.
-    EvolveUScratch() : one(1.) {}
-
-    /// Padé-approximant intermediate for the \c Ux-side rotation.
+    /// The rotation \f$\exp(i\omega E_x)\f$ of the \c Ux link.
     Matrix E1;
-    /// Padé-approximant intermediate for the \c Uy-side rotation.
+    /// The rotation \f$\exp(i\omega E_y)\f$ of the \c Uy link.
     Matrix E2;
-    /// General scratch used while building `E1`/`E2`.
-    Matrix temp1;
-    /// General scratch used while building `E1`/`E2`.
-    Matrix temp2;
-    /// Reusable identity matrix.
-    Matrix one;
 };
 
 /// Scratch matrices for evolvePhiTeam(), reused across cells to avoid
@@ -179,9 +170,10 @@ inline void addEForceSU3(
 /**
  * `Evolution::evolveU()`'s per-cell kernel, run inside an existing
  * `#pragma omp parallel` region (its own `#pragma omp for` provides
- * the worksharing): rotates `Ux`/`Uy` by a second-order Padé
- * approximant of \f$\exp(i g^2 d\tau/(\tau+d\tau/2)\,U)\f$, using the
- * electric fields `U`/`U2` as the generator.
+ * the worksharing): rotates `Ux`/`Uy` by the exact exponential
+ * \f$\exp(i\omega E)\f$, \f$\omega = g^2 d\tau/(\tau+d\tau/2)\f$, of
+ * the electric fields \f$E\f$ in `U`/`U2` (Matrix::expiHermitian()), so
+ * the links stay in SU(3).
  * \param[in,out] lat Lattice whose `Ux`/`Uy` are updated in place.
  * \param[in] N Lattice side length.
  * \param[in] g Coupling \f$g\f$.
@@ -192,33 +184,12 @@ inline void addEForceSU3(
 void evolveUTeam(
     Lattice *lat, int N, double g, double dtau, double tau,
     EvolveUScratch &scratch) {
-    const int n = 2;
-    const complex<double> iOmega(0., g * g * dtau / (tau + dtau / 2.));
+    const double omega = g * g * dtau / (tau + dtau / 2.);
 
 #pragma omp for
     for (int pos = 0; pos < N * N; pos++) {
-        scratch.E1 = iOmega * lat->U[pos];
-
-        scratch.temp2 = scratch.one + 1. / (double)n * scratch.E1;
-        for (int in = 0; in < n - 1; in++) {
-            scratch.temp1 = scratch.E1 * scratch.temp2;
-            scratch.temp2 =
-                scratch.one + 1. / (double)(n - 1 - in) * scratch.temp1;
-        }
-
-        scratch.E1 = scratch.temp2;
-
-        scratch.E2 = iOmega * lat->U2[pos];
-
-        scratch.temp2 = scratch.one + 1. / (double)n * scratch.E2;
-        for (int in = 0; in < n - 1; in++) {
-            scratch.temp1 = scratch.E2 * scratch.temp2;
-            scratch.temp2 =
-                scratch.one + 1. / (double)(n - 1 - in) * scratch.temp1;
-        }
-
-        scratch.E2 = scratch.temp2;
-
+        scratch.E1 = Matrix::expiHermitian(omega * lat->U[pos]);
+        scratch.E2 = Matrix::expiHermitian(omega * lat->U2[pos]);
         lat->Ux[pos] = (scratch.E1 * lat->Ux[pos]);
         lat->Uy[pos] = (scratch.E2 * lat->Uy[pos]);
     }

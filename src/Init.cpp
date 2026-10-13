@@ -354,13 +354,16 @@ std::vector<double> Init::computeWilsonLineMomentumKernel(
         const double sx = sin(kx / 2.);
         const double sy = sin(ky / 2.);
         const double kt2 = 4. * (sx * sx + sy * sy);
+        // the UV damping applies with and without the infrared regulator
+        const double damping = exp(-sqrt(kt2) * UVdamp);
 
         if (m == 0.) {
+            // without a regulator, the zero mode is removed: K(0) = 0
             momentumKernel[static_cast<std::size_t>(pos)] =
-                (kt2 != 0.) ? 1. / kt2 : 0.;
+                (kt2 != 0.) ? (1. / kt2) * damping : 0.;
         } else {
             momentumKernel[static_cast<std::size_t>(pos)] =
-                (1. / (kt2 + m * m)) * exp(-sqrt(kt2) * UVdamp);
+                (1. / (kt2 + m * m)) * damping;
         }
     }
     return momentumKernel;

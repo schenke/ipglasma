@@ -157,6 +157,42 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Init::computeWilsonLineMomentumKernel: the UV damping "
+    "exp(-|kt| UVdamp) applies with and without the mass, and K(0) = 0 "
+    "stays for m = 0") {
+    const int N = 8;
+    int nn[2] = {N, N};
+    Init init(nn);
+    const double UVdamp = 0.7;
+    for (const double m : {0.0, 0.5}) {
+        CAPTURE(m);
+        const std::vector<double> kernel =
+            init.computeWilsonLineMomentumKernel(N, N * N, m, UVdamp);
+        for (int i = 0; i < N; ++i) {
+            for (int j = 0; j < N; ++j) {
+                const double kx =
+                    2. * M_PI * (-0.5 + static_cast<double>(i) / N);
+                const double ky =
+                    2. * M_PI * (-0.5 + static_cast<double>(j) / N);
+                const double kt2 = 4.
+                                   * (std::sin(kx / 2.) * std::sin(kx / 2.)
+                                      + std::sin(ky / 2.) * std::sin(ky / 2.));
+                const double value = kernel[latticeIndex(i, j, N)];
+                if (m == 0. && kt2 == 0.) {
+                    CHECK(value == 0.);
+                } else {
+                    CHECK(
+                        value
+                        == doctest::Approx(
+                            std::exp(-std::sqrt(kt2) * UVdamp)
+                            / (kt2 + m * m)));
+                }
+            }
+        }
+    }
+}
+
+TEST_CASE(
     "Init::computeWilsonLineColorChargeScales: g*sqrt(g2mu2*invNy) per "
     "nucleus") {
     const int N = 4;

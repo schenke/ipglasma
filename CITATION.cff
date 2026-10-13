@@ -1,0 +1,101 @@
+cff-version: 1.2.0
+message: >-
+  If you use IP-Glasma, please cite the papers below: the original
+  IP-Glasma papers and, if you use the JIMWLK evolution, the papers on its
+  implementation.
+title: IP-Glasma
+type: software
+abstract: >-
+  IP-Glasma computes the initial state of heavy-ion and small-system
+  collisions from the color-glass condensate: it samples the color charges
+  of the colliding nuclei, builds their Wilson lines (optionally evolved in
+  Bjorken x with JIMWLK) and evolves the gluon fields with the classical
+  Yang-Mills equations, giving initial conditions for hydrodynamics,
+  gluon spectra and eccentricities.
+authors:
+  - family-names: Schenke
+    given-names: Björn
+  - family-names: Mäntysaari
+    given-names: Heikki
+  - family-names: Roch
+    given-names: Hendrik
+  - family-names: Shen
+    given-names: Chun
+  - family-names: Zhao
+    given-names: Wenbin
+repository-code: "https://github.com/schenke/ipglasma"
+url: "https://schenke.github.io/ipglasma/"
+keywords:
+  - heavy-ion collisions
+  - color glass condensate
+  - Glasma
+  - JIMWLK
+  - initial conditions
+preferred-citation:
+  type: article
+  authors:
+    - family-names: Schenke
+      given-names: Björn
+    - family-names: Tribedy
+      given-names: Prithwish
+    - family-names: Venugopalan
+      given-names: Raju
+  title: Fluctuating Glasma initial conditions and flow in heavy ion collisions
+  journal: Physical Review Letters
+  volume: 108
+  start: 252301
+  year: 2012
+  doi: 10.1103/PhysRevLett.108.252301
+references:
+  - type: article
+    authors:
+      - family-names: Schenke
+        given-names: Björn
+      - family-names: Tribedy
+        given-names: Prithwish
+      - family-names: Venugopalan
+        given-names: Raju
+    title: >-
+      Event-by-event gluon multiplicity, energy density, and eccentricities
+      in ultrarelativistic heavy-ion collisions
+    journal: Physical Review C
+    volume: 86
+    start: "034908"
+    year: 2012
+    doi: 10.1103/PhysRevC.86.034908
+  - type: article
+    authors:
+      - family-names: Mäntysaari
+        given-names: Heikki
+      - family-names: Schenke
+        given-names: Björn
+      - family-names: Shen
+        given-names: Chun
+      - family-names: Zhao
+        given-names: Wenbin
+    title: >-
+      Collision-Energy Dependence in Heavy-Ion Collisions from Nonlinear QCD
+      Evolution
+    journal: Physical Review Letters
+    volume: 135
+    issue: 2
+    start: "022302"
+    year: 2025
+    doi: 10.1103/gf4y-p5j7
+  - type: article
+    authors:
+      - family-names: Mäntysaari
+        given-names: Heikki
+      - family-names: Schenke
+        given-names: Björn
+      - family-names: Shen
+        given-names: Chun
+      - family-names: Zhao
+        given-names: Wenbin
+    title: Impact of QCD energy evolution on observables in heavy-ion collisions
+    journal: Physical Review C
+    volume: 113
+    issue: 3
+    start: "034914"
+    year: 2026
+    doi: 10.1103/qsd7-zwmw

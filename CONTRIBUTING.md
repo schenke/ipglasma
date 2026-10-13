@@ -88,8 +88,11 @@ GitHub Pages to be enabled once by a repository admin (Settings -> Pages
 Inline math in the Markdown pages (README, OUTPUT, ...) is written as
 `$...$`, which GitHub renders; `doc/markdown_math_filter.py` turns it into
 Doxygen's `\f$...\f$` when the documentation is built. GitHub only renders
-it if the opening `$` does not directly follow a letter or a hyphen, so
-write units as plain text (`GeV⁻²`, not `GeV$^{-2}$`).
+it if the opening `$` starts a line or follows a space or `(`, and the
+closing `$` is not followed by a letter, digit or `_`; the filter uses the
+same rule, so math that GitHub leaves as text stays text on the site too.
+Write units as plain text (`GeV⁻²`, not `GeV$^{-2}$`), and put a space
+before math after other characters (`Bjorken $x$`, not `Bjorken-$x$`).
 
 ### Comment style
 

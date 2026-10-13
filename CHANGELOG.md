@@ -56,6 +56,7 @@ The changes since b36b2a9, the last commit on the default branch (`main`, former
 * Add a `doctest` unit test suite under `tests/` (built with `-Dunittest=ON`), which covers the matrix algebra, random numbers, input reading, nucleus and nucleon sampling, collision geometry, Wilson-line files, forward light cone, energy-momentum tensor, multiplicity and eccentricities.
 * Add the `AUTHORS` file and start every C++, Python and shell file with an SPDX license header (GPL-3.0-or-later) and a copyright line referring to `AUTHORS`, instead of the old notices that named a single author.
 * Add GitHub Actions workflows that build the code and run the unit tests on Ubuntu and macOS, with and without MPI (`build.yml`, `tests.yml`), check the Doxygen documentation (`doxygen.yml`), and apply `clang-format` to pull requests from branches of this repository (`clang-format.yml`).
+* Publish the Doxygen documentation with GitHub Pages at https://schenke.github.io/ipglasma/: the workflow `pages.yml` builds the `doc` target on every push to `main` (or when started by hand) and deploys it. The inline math of the Markdown pages, written as `$...$` for GitHub, is converted for Doxygen (`doc/markdown_math_filter.py`), and heading anchors follow GitHub's style, so the pages render the same in both.
 * Add `CITATION.cff`, so GitHub shows how to cite the code ("Cite this repository"): the software with its authors, the original IP-Glasma paper as the preferred citation, and the IP-Glasma and JIMWLK papers as references.
 
 ### Changed

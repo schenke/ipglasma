@@ -2,6 +2,8 @@
 
 IP-Glasma initial condition with JIMWLK evolution
 
+The full documentation, with this README, the output files (OUTPUT.md) and every class and function of the code, is at https://schenke.github.io/ipglasma/ (built from `main`).
+
 References
 * Original IP-Glasma: [Schenke, Tribedy, Venugopalan, PRL 108 (2012) 252301](https://doi.org/10.1103/PhysRevLett.108.252301), [arXiv:1202.6646](https://arxiv.org/abs/1202.6646) and [Schenke, Tribedy, Venugopalan, PRC 86 (2012) 034908](https://doi.org/10.1103/PhysRevC.86.034908), [arXiv:1206.6805](https://arxiv.org/abs/1206.6805)
 * JIMWLK evolution implementation: Mäntysaari, Schenke, Shen, Zhao, [Phys.Rev.Lett. 135 (2025) 2, 022302](https://doi.org/10.1103/gf4y-p5j7), [arXiv:2502.05138](https://arxiv.org/abs/2502.05138) and [Phys.Rev.C 113 (2026) 3, 034914](https://doi.org/10.1103/qsd7-zwmw), [arXiv:2511.03588](https://arxiv.org/abs/2511.03588)

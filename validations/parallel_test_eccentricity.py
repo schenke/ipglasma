@@ -543,7 +543,7 @@ def main():
     qs_table_name = read_input_value(template_path, "nucleusQsTableFileName") \
         if os.path.isfile(template_path) else None
     qs_table_path = os.path.join(ipglasma_path, qs_table_name) \
-        if qs_table_name else os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_200.in")
+        if qs_table_name else os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_240.in")
 
     validate_environment(
         ipglasma_path, ipglasma_binary, template_path, qs_table_path,

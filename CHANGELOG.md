@@ -55,6 +55,7 @@ The changes since b36b2a9, the last commit on the default branch (`main`, former
 * Add the validation scripts in `validations/`: the coherent and incoherent J/ψ cross section from IP-Glasma, JIMWLK and subnucleondiffraction, compared to arXiv:2207.03712, and a regression check of the ε₂ distribution.
 * Add a `doctest` unit test suite under `tests/` (built with `-Dunittest=ON`), which covers the matrix algebra, random numbers, input reading, nucleus and nucleon sampling, collision geometry, Wilson-line files, forward light cone, energy-momentum tensor, multiplicity and eccentricities.
 * Add GitHub Actions workflows that build the code and run the unit tests on Ubuntu and macOS, with and without MPI (`build.yml`, `tests.yml`), check the Doxygen documentation (`doxygen.yml`), and apply `clang-format` to pull requests from branches of this repository (`clang-format.yml`).
+* Add `CITATION.cff`, so GitHub shows how to cite the code ("Cite this repository"): the software with its authors, the original IP-Glasma paper as the preferred citation, and the IP-Glasma and JIMWLK papers as references.
 
 ### Changed
 * Rewrite `Matrix`, `Cell` and `Lattice` as a structure-of-arrays layout with a fixed 3x3 `Matrix`, generate the random numbers in bulk, and batch and parallelize the FFTs, which makes the code substantially faster.

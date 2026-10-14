@@ -123,3 +123,33 @@ TEST_CASE(
         CHECK(matricesClose(lat.Ux1[pos], identity, 1e-14));
     }
 }
+
+TEST_CASE(
+    "ForwardLightCone::computePiTeam gives the traceless part of "
+    "-(2i/g) A^eta (issue #102)") {
+    const int N = 4;
+    Parameters param;
+    makeInitTestParam(param, N);
+    param.coupling.g = 1.3;
+    Lattice lat(&param, N);
+    // A^eta with a trace, as the lattice expression of
+    // computeElectricFieldTeam() gives it
+    for (int pos = 0; pos < N * N; ++pos) {
+        lat.U[pos] = makeTestMatrix(pos + 1);
+        REQUIRE(std::abs(lat.U[pos].trace()) > 1e-3);
+    }
+
+    Group group;
+    ForwardLightCone flc(&group);
+    flc.computePiTeam(&lat, &param, N * N);
+
+    const std::complex<double> factor(0., -2. / param.coupling.g);
+    for (int pos = 0; pos < N * N; ++pos) {
+        CHECK(std::abs(lat.Ux2[pos].trace()) < 1e-14);
+        Matrix expected = factor * lat.U[pos];
+        const std::complex<double> traceThird = expected.trace() / 3.;
+        for (int i = 0; i < 3; i++)
+            expected.set(i, i, expected(i, i) - traceThird);
+        CHECK(matricesClose(lat.Ux2[pos], expected, 1e-14));
+    }
+}

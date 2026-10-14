@@ -327,10 +327,16 @@ void ForwardLightCone::computePiTeam(Lattice *lat, Parameters *param, int N2) {
     for (int pos = 0; pos < N2; pos++) {
         // this is pi in lattice units as needed for the evolution. (later,
         // the a^4 gives the right units for the energy density
-        lat->Ux2[pos] =
-            (complex<double>(0., -2. / param->coupling.g) * (lat->U[pos]));
         // factor -2 because I have A^eta (note the 1/8 before)
         // but want \pi (E^z).
+        Matrix pi = complex<double>(0., -2. / param->coupling.g) * lat->U[pos];
+        // The lattice expression has a trace part, a U(1) component that
+        // vanishes in the continuum limit (a commutator there): keep pi
+        // traceless, like the transverse electric fields. The evolution
+        // keeps it traceless then.
+        const complex<double> traceThird = pi.trace() / 3.;
+        for (int i = 0; i < 3; i++) pi.set(i, i, pi(i, i) - traceThird);
+        lat->Ux2[pos] = pi;
     }
 }
 

@@ -160,6 +160,47 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "CollisionGeometry::determineNpartAndNcoll and its lists use the nuclei "
+    "shifted by the rounded lattice vector, not by +-b/2") {
+    Parameters param;
+    makeInitTestParam(param, 8);  // a = 1 fm
+    // wounding distance sqrt(sigmaNN/pi) = 2.8 fm (hard sphere)
+    param.collision.sigmaNN = M_PI * 2.8 * 2.8 / PhysConst::mbToFm2;
+    param.collision.gaussianWounding = false;
+    // b = 2.6 fm along x rounds to 3 sites: A is shifted by +1, B by -2
+    // (with +-b/2 they would sit at +1.3 and -1.3)
+    param.event.b = 2.6;
+    param.event.phiRP = 0.;
+    std::vector<ReturnValue> nucleusA {nucleonAt(0., 0.)};
+    std::vector<ReturnValue> nucleusB {nucleonAt(0., 0.), nucleonAt(2.5, 0.)};
+    CollisionGeometry geometry(nucleusA, nucleusB);
+
+    const WoundedNucleons wounded =
+        geometry.determineNpartAndNcoll(&param, nullptr);
+    REQUIRE(wounded.accepted);
+    // A at x = 1 meets B's nucleon at 0.5 (distance 0.5), but not the one
+    // at -2 (distance 3 > 2.8); with +-b/2 both distances, 0.1 and 2.6,
+    // would be below 2.8
+    CHECK(wounded.Ncoll == 1);
+    CHECK(wounded.Npart == 2);
+    CHECK(nucleusB[0].collided == 0);
+    CHECK(nucleusB[1].collided == 1);
+
+    std::ifstream npart("NpartList0.dat");
+    double x, y;
+    int proton, collided;
+    std::vector<double> xs;
+    while (npart >> x >> y >> proton >> collided) xs.push_back(x);
+    CHECK(xs == std::vector<double> {1., -2., 0.5});
+    std::ifstream ncoll("NcollList0.dat");
+    ncoll >> x >> y;
+    REQUIRE_FALSE(ncoll.fail());
+    CHECK(x == doctest::Approx(0.75));  // midpoint of 1 and 0.5
+    CHECK(y == doctest::Approx(0.));
+    removeGeometryFiles();
+}
+
+TEST_CASE(
     "CollisionGeometry::determineNpartAndNcoll treats a p+p event as "
     "collided even without overlap") {
     Parameters param;
@@ -225,6 +266,14 @@ TEST_CASE(
         // the closest lattice vector is at most a/sqrt(2) away
         CHECK(param.event.b >= 2. - M_SQRT1_2);
         CHECK(param.event.b <= 3. + M_SQRT1_2);
+    }
+    // a b that rounds to the zero vector has no direction: phi_RP = 0
+    param.collision.bMin = 0.3;
+    param.collision.bMax = 0.4;
+    for (int i = 0; i < 5; i++) {
+        geometry.sampleImpactParameter(&param, &random);
+        CHECK(param.event.b == 0.);
+        CHECK(param.event.phiRP == 0.);
     }
 
     param.collision.useNucleus = false;

@@ -244,41 +244,19 @@ class Matrix {
     Matrix &expm(double t = 1.0, const int p = 6);
 
     /**
-     * Computes the coefficients of \f$\exp(iQ)\f$'s expansion in the
-     * identity and the eight SU(3) fundamental generators, for
-     * \f$Q = Q^a t^a\f$ a traceless Hermitian matrix given by its eight
-     * real generator coefficients -- exactly, via the matrix's
-     * characteristic-polynomial (Cayley-Hamilton) solution, rather
-     * than a series/Pade approximation. Allocation-free, for hot paths
-     * (e.g. GaugeFix.cpp's \c expGaugeRotationSU3, which combines
-     * these coefficients into the actual exponential matrix). Any
-     * coefficient that comes out NaN (a 0/0 case that can occur in the
-     * very-low-density region) is replaced by `0`; what that
-     * contributes to the final matrix depends on the caller's own
-     * combination of `out[0..8]` -- e.g. fromAlgebraExponent()
-     * separately checks for a zeroed `out[0]` and substitutes the
-     * identity matrix in that case, while \c expGaugeRotationSU3 has no
-     * such special case and simply uses the zeroed coefficient(s) as-is.
-     * \param[in] Q The eight real coefficients \f$Q^1,\ldots,Q^8\f$ of
-     * \f$Q\f$ in the generator basis (see Group).
-     * \param[out] out The nine coefficients: `out[0]` for the identity,
-     * `out[1..8]` for \f$t^1,\ldots,t^8\f$.
-     */
-    void expmCoeff(const double *Q, complex<double> out[9]) const;
-    /**
-     * Assembles the SU(3) matrix \f$\exp(i\sum_a Q_a t_a)\f$ from its
-     * eight real generator coefficients, via expmCoeff().
+     * Computes the SU(3) matrix \f$\exp(i\sum_a Q_a t_a)\f$ from its
+     * eight real generator coefficients, \f$t_a = \lambda_a/2\f$ (see
+     * Group), with expiHermitian().
      * \param[in] Q The eight coefficients \f$Q_1,\ldots,Q_8\f$.
-     * \return The assembled matrix (the identity if the exponential's
-     * identity-coefficient comes out numerically zero).
+     * \return \f$\exp(i\sum_a Q_a t_a)\f$.
      */
     static Matrix fromAlgebraExponent(const std::vector<double> &Q);
     /**
      * Computes \f$\exp(iQ)\f$ exactly, for a traceless Hermitian
      * \f$3\times3\f$ matrix \f$Q\f$, as \f$f_0 + f_1 Q + f_2 Q^2\f$
      * with the Cayley-Hamilton coefficients of Morningstar and Peardon
-     * (Phys. Rev. D 69, 054501 (2004), Eqs. (23)-(33)). Unlike
-     * expmCoeff(), it is evaluated for \f$|\det Q|\f$, using
+     * (Phys. Rev. D 69, 054501 (2004), Eqs. (23)-(33)), with their
+     * safeguards: it is evaluated for \f$|\det Q|\f$, using
      * \f$f_j(-c_0) = (-1)^j f_j^*(c_0)\f$, so the denominator
      * \f$9u^2 - w^2 \ge \mathrm{tr}(Q^2)\f$ never vanishes, also for
      * degenerate eigenvalues; \f$\sin(w)/w\f$ is expanded for small

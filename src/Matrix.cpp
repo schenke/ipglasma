@@ -280,109 +280,6 @@ Matrix Matrix::expiHermitian(const Matrix &Q) {
     return result;
 }
 
-// matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
-// Q^a of generators t^a as argument. Dimension is Nc
-void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
-    double sqrt3 = sqrt(3.);
-    complex<double> f0, f1, f2, iu, u0, ua[8];
-    double c0 = 0., c0max, u, w, xi0, den, thetaOverThree;
-
-    c0 = sqrt3 * (Q[0] * Q[0] * Q[7] + Q[1] * Q[1] * Q[7] + Q[2] * Q[2] * Q[7]);
-    c0 -= Q[7] * Q[7] * Q[7] / sqrt3;
-    c0 -= (sqrt3 / 2.)
-          * (Q[3] * Q[3] * Q[7] + Q[4] * Q[4] * Q[7] + Q[5] * Q[5] * Q[7]
-             + Q[6] * Q[6] * Q[7]);
-    c0 += 3.
-          * (Q[0] * Q[3] * Q[5] + Q[0] * Q[4] * Q[6] + Q[1] * Q[4] * Q[5]
-             - Q[1] * Q[3] * Q[6]);
-    c0 += 1.5
-          * (Q[2] * Q[3] * Q[3] + Q[2] * Q[4] * Q[4] - Q[2] * Q[5] * Q[5]
-             - Q[2] * Q[6] * Q[6]);
-
-    c0 /= 12.;
-
-    double c1 = 0.;
-    for (int a = 0; a < Nc2m1; a++) {
-        c1 += Q[a] * Q[a];
-    }
-    c1 *= 0.25;
-
-    const double c1Over3 = c1 / 3.;
-    const double sqrtC1Over3 = sqrt(c1Over3);
-    c0max = std::max(1e-15, 2. * c1Over3 * sqrtC1Over3);
-
-    thetaOverThree = acos(c0 / c0max) / 3.;
-
-    u = sqrtC1Over3 * cos(thetaOverThree);
-    w = sqrt(c1) * sin(thetaOverThree);
-
-    xi0 = sin(w) / w;
-
-    den = 9. * u * u - w * w;
-
-    iu = complex<double>(0, 1) * u;
-
-    double cosw = cos(w);
-    // iu is purely imaginary.  Construct the two phase factors directly
-    // instead of routing them through the general complex exponential.
-    const double sinu = sin(u);
-    const double cosu = cos(u);
-    complex<double> exp2iu(cos(2. * u), sin(2. * u));
-    complex<double> expmiu(cosu, -sinu);
-
-    f0 = (u * u - w * w) * exp2iu
-         + expmiu * (8. * u * u * cosw + 2. * iu * xi0 * (3. * u * u + w * w));
-    f0 /= den;
-
-    f1 = 2. * u * exp2iu
-         - expmiu
-               * (2. * u * cosw
-                  - complex<double>(0., 1.) * (3. * u * u - w * w) * xi0);
-    f1 /= den;
-
-    f2 = exp2iu - expmiu * (cosw + 3. * iu * xi0);
-    f2 /= den;
-
-    u0 = f0 + 2. / 3. * c1 * f2;
-
-    // The historical code divided f1 by (0.5*f2), added the real
-    // quadratic SU(3) coefficients, and then multiplied the whole result by
-    // (0.5*f2) again.  Algebraically cancel that complex division:
-    //   (f1/(0.5*f2) * Q + q2) * (0.5*f2)
-    //       = f1 * Q + q2 * (0.5*f2).
-    // Besides being cheaper, this avoids an unnecessary division when f2 is
-    // very small.
-    const complex<double> halfF2 = 0.5 * f2;
-
-    ua[0] = Q[3] * Q[5] + Q[4] * Q[6] + 2. / sqrt3 * Q[0] * Q[7];
-    ua[1] = 2. * Q[1] * Q[7] / sqrt3 - Q[3] * Q[6] + Q[4] * Q[5];
-    ua[2] = 2. * Q[2] * Q[7] / sqrt3 + 0.5 * Q[3] * Q[3] + 0.5 * Q[4] * Q[4]
-            - 0.5 * Q[5] * Q[5] - 0.5 * Q[6] * Q[6];
-    ua[3] = -1. / sqrt3 * Q[3] * Q[7] + Q[0] * Q[5] - Q[1] * Q[6] + Q[2] * Q[3];
-    ua[4] = -1. / sqrt3 * Q[4] * Q[7] + Q[0] * Q[6] + Q[1] * Q[5] + Q[2] * Q[4];
-    ua[5] = -1. / sqrt3 * Q[5] * Q[7] + Q[0] * Q[3] + Q[1] * Q[4] - Q[2] * Q[5];
-    ua[6] = -1. / sqrt3 * Q[6] * Q[7] + Q[0] * Q[4] - Q[1] * Q[3] - Q[2] * Q[6];
-    ua[7] = (Q[0] * Q[0] + Q[1] * Q[1] + Q[2] * Q[2] - Q[7] * Q[7]
-             - 0.5 * Q[3] * Q[3] - 0.5 * Q[4] * Q[4] - 0.5 * Q[5] * Q[5]
-             - 0.5 * Q[6] * Q[6])
-            / sqrt3;
-
-    out[0] = u0;
-    for (int i = 0; i < 8; i++) {
-        out[i + 1] = f1 * Q[i] + halfF2 * ua[i];
-    }
-
-    // Check potential NaNs
-    for (int i = 0; i < 9; i++) {
-        if (std::isnan(out[i].real()) or std::isnan(out[i].imag())) {
-            // Sometimes in the very low density region we may encounter
-            // (numerically) 0/0 situations In that case, set coefficient to 0,
-            // so this contributes only a unit matrix (=vacuum contribution)
-            out[i] = 0;
-        }
-    }
-}
-
 // matrix exponential using Pade approximant
 // t is a scalar that multiplies the matrix (default: t=1) and p is the order in
 // the Pade approximant (default: p=6)
@@ -714,35 +611,19 @@ Matrix &Matrix::logm() {
 }
 
 Matrix Matrix::fromAlgebraExponent(const std::vector<double> &Q) {
-    Matrix tempM(Matrix::noInit);
-    complex<double> U[9];
-
-    // expmCoeff calculates the coefficients of exp(i Q[a] t[a]).  Build
-    // the 3x3 matrix directly from the fixed SU(3) generators instead of
-    // allocating a coefficient vector and materializing eight scaled Matrix
-    // temporaries plus the chained sums.
-    tempM.expmCoeff(Q.data(), U);
-    // expmCoeff() sets the coefficients to 0 where they come out NaN
-    // (0/0 in the very-low-density region); a valid exponential always has
-    // a nonzero coefficient (its trace or its traceless part)
-    const bool allZero =
-        std::all_of(U, U + 9, [](const complex<double> &c) { return c == 0.; });
-    if (allZero) {
-        tempM = Matrix(1.);
-    } else {
-        const complex<double> I(0., 1.);
-        const double invSqrt3 = 1. / std::sqrt(3.);
-
-        tempM.set(0, 0, U[0] + 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
-        tempM.set(1, 1, U[0] - 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
-        tempM.set(2, 2, U[0] - invSqrt3 * U[8]);
-
-        tempM.set(0, 1, 0.5 * (U[1] - I * U[2]));
-        tempM.set(1, 0, 0.5 * (U[1] + I * U[2]));
-        tempM.set(0, 2, 0.5 * (U[4] - I * U[5]));
-        tempM.set(2, 0, 0.5 * (U[4] + I * U[5]));
-        tempM.set(1, 2, 0.5 * (U[6] - I * U[7]));
-        tempM.set(2, 1, 0.5 * (U[6] + I * U[7]));
-    }
-    return tempM;
+    // the traceless Hermitian Q^a t^a, with t^a = lambda^a/2 (Gell-Mann, the
+    // generators of Group)
+    const complex<double> I(0., 1.);
+    const double invSqrt3 = 1. / std::sqrt(3.);
+    Matrix H(noInit);
+    H.set(0, 0, 0.5 * (Q[2] + invSqrt3 * Q[7]));
+    H.set(1, 1, 0.5 * (-Q[2] + invSqrt3 * Q[7]));
+    H.set(2, 2, -invSqrt3 * Q[7]);
+    H.set(0, 1, 0.5 * (Q[0] - I * Q[1]));
+    H.set(1, 0, 0.5 * (Q[0] + I * Q[1]));
+    H.set(0, 2, 0.5 * (Q[3] - I * Q[4]));
+    H.set(2, 0, 0.5 * (Q[3] + I * Q[4]));
+    H.set(1, 2, 0.5 * (Q[5] - I * Q[6]));
+    H.set(2, 1, 0.5 * (Q[5] + I * Q[6]));
+    return expiHermitian(H);
 }

@@ -498,8 +498,9 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
 #pragma omp for
                         for (int pos = 0; pos < sites; pos++) {
                             for (int aa = 0; aa < Nc2m1; aa++) {
-                                // expmCoeff calculates exp(i in[a] t[a]), so
-                                // multiply by -1 (not -i).
+                                // fromAlgebraExponent calculates
+                                // exp(i in[a] t[a]), so multiply by -1 (not
+                                // -i).
                                 in[aa] = -(rhoACoeff[aa][pos]).real();
                             }
                             tempNew = Matrix::fromAlgebraExponent(in);

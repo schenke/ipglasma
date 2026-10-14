@@ -218,6 +218,67 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Output format: T^{mu nu} and the hydro fields are interpolated from the "
+    "plaquette centers, where EnergyMomentumTensor computes them") {
+    // A fluid at rest whose energy density rises linearly with x. A cell's
+    // value belongs to its plaquette center, x = -L/2 + a (i + 1/2), so the
+    // bilinear interpolation must give the profile at the output point
+    // (taking the values at the sites would give it at x + a/2).
+    const double e0 = 2., slope = 0.1;  // [fm^-4], [fm^-5]
+    auto profile = [&](double x) { return e0 + slope * x; };
+    for (const bool hydro : {false, true}) {
+        CAPTURE(hydro);
+        Parameters param;
+        makeOutputTestParam(param);
+        const double L = param.lattice.L;
+        const double a = L / N;
+        const double tau = it * param.run.dtau * a;
+        Lattice lat(&param, N);
+        for (int ix = 0; ix < N; ++ix) {
+            for (int iy = 0; iy < N; ++iy) {
+                Cell *cell = lat.cells[lat.positionFromXY(ix, iy)];
+                const double eps = profile(-L / 2. + a * (ix + 0.5));
+                cell->setTtautau(eps);
+                cell->setTxx(eps / 3.);
+                cell->setTyy(eps / 3.);
+                cell->setTetaeta(eps / 3. / (tau * tau));
+                cell->setg2mu2A(1.);
+                cell->setg2mu2B(1.);
+            }
+        }
+        // the output grid: x = -LOutput/2 + ix, spacing 1 fm
+        const double outputHalfSize = param.output.LOutput / 2.;
+        std::string fileName;
+        int xColumn, valueColumn;
+        if (hydro) {
+            param.output.writeHydro = true;
+            MyEigen().flowVelocity4D(&lat, &param, it, /*finalFlag=*/true);
+            fileName = "epsilon-u-Hydro-TauHydro-0.dat";
+            xColumn = 1;      // x [fm]
+            valueColumn = 3;  // epsilon
+        } else {
+            param.output.writeTmunu = true;
+            param.output.writeTmunuBinary = false;
+            MyEigen().writeTmunu4D(&lat, &param, it);
+            fileName = "Tmunu-t0.5-0.dat";
+            xColumn = 0;      // ix
+            valueColumn = 2;  // T^{tau tau}
+        }
+        const TextTable table = readTextTable(fileName);
+        std::remove(fileName.c_str());
+        REQUIRE(table.rows.size() == gridPoints * gridPoints);
+        for (const auto &row : table.rows) {
+            const double x = hydro ? std::stod(row[xColumn])
+                                   : -outputHalfSize + std::stod(row[xColumn]);
+            CAPTURE(x);
+            CHECK(
+                std::stod(row[valueColumn])
+                == doctest::Approx(hbarc * profile(x)).epsilon(1e-5));
+        }
+    }
+}
+
+TEST_CASE(
     "Output format: the Jazma file has 18 columns with u = (1, 0, 0, 0) and "
     "pi = 0") {
     Parameters param;

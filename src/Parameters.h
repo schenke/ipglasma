@@ -207,7 +207,7 @@ struct SubnucleonParameters {
     /// each coordinate Gaussian of variance BG (transverse
     /// \f$\langle b^2\rangle = 2B_G\f$); otherwise transverse positions
     /// at radius \f$b=\sqrt{2\omega x B_G}\f$, \f$x\f$ drawn with density
-    /// \f$\propto Q(1/\omega, x)\f$ (see Random::setGammaIncCDF()), so
+    /// \f$\propto Q(1/\omega, x)\f$ (see Random::sampleGammaInc()), so
     /// \f$\langle b^2\rangle = (1+\omega)B_G\f$. For \f$\omega\to1\f$
     /// the density becomes \f$\propto e^{-b^2/2B_G}\f$, the transverse
     /// projection of the `1` case.

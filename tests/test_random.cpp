@@ -2,6 +2,8 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <gsl/gsl_sf_gamma.h>
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -128,20 +130,90 @@ TEST_CASE(
     CHECK(std::abs(empiricalMean - mean) < 0.3);  // generous, fixed-seed check
 }
 
-TEST_CASE("Random: setGammaIncCDF/sampleGammaInc stay within [0, xmax]") {
+namespace {
+/// Kolmogorov-Smirnov statistic sqrt(n) D of \p samples against \p cdf,
+/// below 1.95 with probability 0.999 if they follow it. With \p stride
+/// > 1 the CDF is only evaluated at every stride-th sorted sample, which
+/// underestimates D by at most about 2 stride/n.
+template <typename Cdf>
+double kolmogorovSmirnov(
+    std::vector<double> samples, Cdf cdf, std::size_t stride = 1) {
+    std::sort(samples.begin(), samples.end());
+    const double n = static_cast<double>(samples.size());
+    double d = 0.;
+    for (std::size_t i = 0; i < samples.size(); i += stride) {
+        const double F = cdf(samples[i]);
+        d = std::max({d, F - i / n, (i + 1) / n - F});
+    }
+    return std::sqrt(n) * d;
+}
+}  // namespace
+
+TEST_CASE("Random: gammaVariate follows the Gamma distribution") {
+    Random rng;
+    rng.init_genrand64(101ULL);
+    const int n = 200000;
+    for (const double shape : {0.5, 1., 4. / 3., 3., 11.}) {
+        CAPTURE(shape);
+        std::vector<double> samples(n);
+        double sum = 0., sum2 = 0.;
+        bool positive = true;
+        for (double &x : samples) {
+            x = rng.gammaVariate(shape);
+            if (!(x > 0.)) positive = false;
+            sum += x;
+            sum2 += x * x;
+        }
+        CHECK(positive);
+        // mean and variance are both shape; the fourth central moment
+        // is 3 shape^2 + 6 shape
+        const double mean = sum / n;
+        const double var = sum2 / n - mean * mean;
+        CHECK(std::abs(mean - shape) < 5. * std::sqrt(shape / n));
+        CHECK(
+            std::abs(var - shape)
+            < 5. * std::sqrt((2. * shape * shape + 6. * shape) / n));
+        CHECK(
+            kolmogorovSmirnov(
+                samples,
+                [shape](double x) { return gsl_sf_gamma_inc_P(shape, x); })
+            < 1.95);
+    }
+}
+
+TEST_CASE(
+    "Random: sampleGammaInc draws x with the density omega Q(1/omega, x)") {
+    // With s = 1/omega the CDF is
+    // int_0^x Q(s, t) dt / s = x Q(s, x)/s + P(s + 1, x), the mean
+    // (s + 1)/2 and the second moment (s + 1)(s + 2)/3. A table of 4000
+    // bins whose left edges were returned (issue #104) gave
+    // sqrt(n) D = 5-15 here.
     Random rng;
     rng.init_genrand64(99ULL);
-
-    const double omega = 1.0;
-    rng.setGammaIncCDF(omega);
-    const double xmax = std::max(20.0, 20.0 / omega);
-
-    bool sawNonzero = false;
-    for (int i = 0; i < 2000; ++i) {
-        const double x = rng.sampleGammaInc();
-        CHECK(x >= 0.0);
-        CHECK(x <= xmax);
-        if (x > 0.0) sawNonzero = true;
+    const int n = 1000000;
+    for (const double omega : {0.3, 0.5, 2., 3.}) {
+        CAPTURE(omega);
+        const double s = 1. / omega;
+        std::vector<double> samples(n);
+        double sum = 0.;
+        bool positive = true;
+        for (double &x : samples) {
+            x = rng.sampleGammaInc(omega);
+            if (!(x > 0.)) positive = false;
+            sum += x;
+        }
+        CHECK(positive);
+        const double mean = (s + 1.) / 2.;
+        const double var = (s + 1.) * (s + 2.) / 3. - mean * mean;
+        CHECK(std::abs(sum / n - mean) < 5. * std::sqrt(var / n));
+        CHECK(
+            kolmogorovSmirnov(
+                samples,
+                [s](double x) {
+                    return x * gsl_sf_gamma_inc_Q(s, x) / s
+                           + gsl_sf_gamma_inc_P(s + 1., x);
+                },
+                100)
+            < 1.95);
     }
-    CHECK(sawNonzero);
 }

@@ -4,15 +4,12 @@
 
 #include "Random.h"
 
-#include <gsl/gsl_sf_gamma.h>
-
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <iostream>
 
 #include "Instrumentation.h"
-#include "PrettyOstream.h"
 #include "gsl/gsl_randist.h"
 
 // This file contains the random generator, which is
@@ -291,52 +288,35 @@ void Random::gaussBulk(
     }
 }
 
-void Random::setGammaIncCDF(const double omega) {
-    gammaIncCDF_.clear();
-    gammaIncCDFx_.clear();
-    // the tail beyond xmax is negligible (Q(1, 20) ~ 2e-9): a cut at 5
-    // lowered <x> by ~3% and made <b^2> jump at omega = 1
-    double xmax = std::max(20., 20. / omega);
-    int nX = 4000;
-    gammaIncCDF_.resize(nX, 0.);
-    gammaIncCDFx_.resize(nX, 0.);
-    double CDF = 0.;
-    for (int i = 0; i < nX; i++) {
-        double x = i * xmax / nX;
-        gammaIncCDFx_[i] = x;
-        gammaIncCDF_[i] = CDF;
-        CDF += gsl_sf_gamma_inc_Q(1. / omega, x);
+double Random::gammaVariate(const double shape) {
+    if (shape < 1.) {
+        // Gamma(k) = Gamma(k + 1) U^(1/k)
+        const double u = genrand64_real3();
+        return gammaVariate(shape + 1.) * std::pow(u, 1. / shape);
     }
-    for (int i = 0; i < nX; i++) {
-        gammaIncCDF_[i] /= CDF;
+    // Marsaglia & Tsang: d v with v = (1 + c z)^3 for a Gaussian z,
+    // accepted with the squeeze first and the exact test second
+    const double d = shape - 1. / 3.;
+    const double c = 1. / std::sqrt(9. * d);
+    while (true) {
+        double z, v;
+        do {
+            z = gauss();
+            v = 1. + c * z;
+        } while (v <= 0.);
+        v = v * v * v;
+        const double u = genrand64_real3();
+        const double z2 = z * z;
+        if (u < 1. - 0.0331 * z2 * z2) return d * v;
+        if (std::log(u) < 0.5 * z2 + d * (1. - v + std::log(v))) return d * v;
     }
 }
 
-double Random::sampleGammaInc() {
-    if (gammaIncCDF_.empty()) {
-        PrettyOstream messager;
-        messager.error(
-            "[Random::sampleGammaInc]: gammaIncCDF_ is empty; "
-            "setGammaIncCDF() must be called before sampleGammaInc(). "
-            "Exiting.");
-        exit(1);
-    }
-    double u = genrand64_real1();
-    int idx_l = 0;
-    int idx_h = gammaIncCDF_.size() - 1;
-    if (u > gammaIncCDF_[idx_h]) {
-        return gammaIncCDFx_[idx_h];
-    }
-    int idx_m = static_cast<int>((idx_l + idx_h) / 2);
-    while (idx_h - idx_l > 1) {
-        if (u < gammaIncCDF_[idx_m]) {
-            idx_h = idx_m;
-        } else {
-            idx_l = idx_m;
-        }
-        idx_m = static_cast<int>((idx_l + idx_h) / 2);
-    }
-    return gammaIncCDFx_[idx_m];
+double Random::sampleGammaInc(const double omega) {
+    // x = U G, G ~ Gamma(1/omega + 1), has the density omega Q(1/omega, x);
+    // two statements, so the order of the draws is fixed
+    const double g = gammaVariate(1. / omega + 1.);
+    return genrand64_real3() * g;
 }
 
 void Random::gslRandomInit(unsigned long long seed) {

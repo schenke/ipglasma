@@ -163,6 +163,69 @@ double interpolateCouplingFactor(
 }
 
 /**
+ * The four lattice cells around an output point, and the point's
+ * fractional offsets between them, for interpolateCellField() and
+ * interpolateCouplingFactor().
+ */
+struct InterpolationStencil {
+    /// Low-\f$x\f$, low-\f$y\f$ cell.
+    int pos1;
+    /// High-\f$x\f$, low-\f$y\f$ cell.
+    int pos2;
+    /// Low-\f$x\f$, high-\f$y\f$ cell.
+    int pos3;
+    /// High-\f$x\f$, high-\f$y\f$ cell.
+    int pos4;
+    /// Fractional \f$x\f$ offset from the low-\f$x\f$ cells, `[0,1)`.
+    double fracx;
+    /// Fractional \f$y\f$ offset from the low-\f$y\f$ cells, `[0,1)`.
+    double fracy;
+};
+
+/**
+ * Finds the cells around the output point \f$(x, y)\f$ for values
+ * located at \f$-L/2 + a\,(i + \text{offset})\f$ along each axis:
+ * `offset` 0 for values at the lattice sites (\f$g^2\mu^2\f$, the
+ * running-coupling factor), 1/2 for values at the plaquette centers
+ * (\f$T^{\mu\nu}\f$ and the \f$\epsilon\f$, \f$u^\mu\f$,
+ * \f$\pi^{\mu\nu}\f$ obtained from it, see EnergyMomentumTensor). A
+ * point before the first value takes the first value, a point after the
+ * last one the last.
+ * \param[in] lat Lattice, for its cell indices.
+ * \param[in] x Output point [fm].
+ * \param[in] y Output point [fm].
+ * \param[in] L Lattice size [fm].
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] N Lattice side length.
+ * \param[in] offset Position of the values within a cell, in units of
+ * \p a.
+ * \return The stencil.
+ */
+InterpolationStencil interpolationStencil(
+    Lattice *lat, double x, double y, double L, double a, int N,
+    double offset) {
+    auto axis = [&](double coordinate, int &low, int &high, double &frac) {
+        const double shifted = coordinate - a * offset;
+        low = static_cast<int>(floor((shifted + L / 2.) / a + 0.0000000001));
+        frac = (shifted - (-L / 2. + a * low)) / a;
+        if (low < 0) {
+            low = 0;
+            frac = 0.;
+        }
+        high = (low < N - 1) ? low + 1 : low;
+    };
+    int xpos, xposUp, ypos, yposUp;
+    InterpolationStencil stencil;
+    axis(x, xpos, xposUp, stencil.fracx);
+    axis(y, ypos, yposUp, stencil.fracy);
+    stencil.pos1 = lat->positionFromXY(xpos, ypos);
+    stencil.pos2 = lat->positionFromXY(xposUp, ypos);
+    stencil.pos3 = lat->positionFromXY(xpos, yposUp);
+    stencil.pos4 = lat->positionFromXY(xposUp, yposUp);
+    return stencil;
+}
+
+/**
  * Solves for the local flow velocity \f$u^\mu\f$ and energy density at
  * one lattice cell by diagonalizing the mixed tensor \f$T^\mu_\nu\f$
  * (Landau matching: find its timelike eigenvector, normalized under
@@ -595,8 +658,8 @@ double MyEigen::writeHydroText(
                  << " dy= " << ha << " tau= " << tau0 << '\n';
     }
 
-    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
-    double fracx, fracy, xlow, ylow, x, y;
+    int pos1, pos2, pos3, pos4;
+    double fracx, fracy, x, y;
     double resultE, resultutau, resultux, resultuy, resultueta;
     double resultpi00, resultpi0x, resultpi0y, resultpi0eta;
     double resultpixy, resultpixeta, resultpiyeta, resultpixx, resultpiyy,
@@ -613,34 +676,28 @@ double MyEigen::writeHydroText(
 
                 if (std::abs(x) < (L / 2. - 0.5)
                     && std::abs(y) < (L / 2. - 0.5)) {
-                    xpos = static_cast<int>(
-                        floor((x + L / 2.) / a + 0.0000000001));
-                    ypos = static_cast<int>(
-                        floor((y + L / 2.) / a + 0.0000000001));
-
-                    if (xpos < N - 1)
-                        xposUp = xpos + 1;
-                    else
-                        xposUp = xpos;
-
-                    if (ypos < N - 1)
-                        yposUp = ypos + 1;
-                    else
-                        yposUp = ypos;
-
-                    xlow = -L / 2. + a * xpos;
-                    ylow = -L / 2. + a * ypos;
-
-                    fracx = (x - xlow) / a;
-
-                    pos1 = lat->positionFromXY(xpos, ypos);
-                    pos2 = lat->positionFromXY(xposUp, ypos);
-                    pos3 = lat->positionFromXY(xpos, yposUp);
-                    pos4 = lat->positionFromXY(xposUp, yposUp);
-
-                    fracy = (y - ylow) / a;
+                    // the coupling factor and g^2 mu^2 are at the lattice
+                    // sites, epsilon, u and pi (from T^{mu nu}) at the
+                    // plaquette centers
+                    const InterpolationStencil site =
+                        interpolationStencil(lat, x, y, L, a, N, 0.);
                     const double gfactor = interpolateCouplingFactor(
-                        coupling, pos1, pos2, pos3, pos4, N, fracx, fracy);
+                        coupling, site.pos1, site.pos2, site.pos3, site.pos4, N,
+                        site.fracx, site.fracy);
+                    g2mu2A = interpolateCellField(
+                        lat, site.pos1, site.pos2, site.pos3, site.pos4, N,
+                        site.fracx, site.fracy, &Cell::getg2mu2A, true);
+                    g2mu2B = interpolateCellField(
+                        lat, site.pos1, site.pos2, site.pos3, site.pos4, N,
+                        site.fracx, site.fracy, &Cell::getg2mu2B, true);
+                    const InterpolationStencil plaquette =
+                        interpolationStencil(lat, x, y, L, a, N, 0.5);
+                    pos1 = plaquette.pos1;
+                    pos2 = plaquette.pos2;
+                    pos3 = plaquette.pos3;
+                    pos4 = plaquette.pos4;
+                    fracx = plaquette.fracx;
+                    fracy = plaquette.fracy;
 
                     // Note: the interpolated utau computed here would be
                     // immediately overwritten below by the u^mu
@@ -649,12 +706,6 @@ double MyEigen::writeHydroText(
                     resultE = interpolateCellField(
                         lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
                         &Cell::getEpsilon, true);
-                    g2mu2A = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getg2mu2A, true);
-                    g2mu2B = interpolateCellField(
-                        lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
-                        &Cell::getg2mu2B, true);
                     resultux = interpolateCellField(
                         lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
                         &Cell::getux);
@@ -776,40 +827,29 @@ void MyEigen::writeRawTmunu(
                  << " dy= " << ha << '\n';
     }
 
-    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
-    double fracx, fracy, xlow, ylow, x, y;
+    int pos1, pos2, pos3, pos4;
+    double fracx, fracy, x, y;
     // loop over all positions
     for (int iy = 0; iy < hy; iy++) {
         for (int ix = 0; ix < hx; ix++) {
             x = -hL / 2. + ha * ix;
             y = -hL / 2. + ha * iy;
             if (abs(x) < L / 2. && abs(y) < L / 2.) {
-                xpos = static_cast<int>(floor((x + L / 2.) / a + 0.0000000001));
-                ypos = static_cast<int>(floor((y + L / 2.) / a + 0.0000000001));
-
-                if (xpos < N - 1) {
-                    xposUp = xpos + 1;
-                } else {
-                    xposUp = xpos;
-                }
-                if (ypos < N - 1) {
-                    yposUp = ypos + 1;
-                } else {
-                    yposUp = ypos;
-                }
-
-                xlow = -L / 2. + a * xpos;
-                ylow = -L / 2. + a * ypos;
-
-                pos1 = lat->positionFromXY(xpos, ypos);
-                pos2 = lat->positionFromXY(xposUp, ypos);
-                pos3 = lat->positionFromXY(xpos, yposUp);
-                pos4 = lat->positionFromXY(xposUp, yposUp);
-
-                fracx = (x - xlow) / a;
-                fracy = (y - ylow) / a;
+                // the coupling factor is at the lattice sites, T^{mu nu} at
+                // the plaquette centers
+                const InterpolationStencil site =
+                    interpolationStencil(lat, x, y, L, a, N, 0.);
                 const double gfactor = interpolateCouplingFactor(
-                    coupling, pos1, pos2, pos3, pos4, N, fracx, fracy);
+                    coupling, site.pos1, site.pos2, site.pos3, site.pos4, N,
+                    site.fracx, site.fracy);
+                const InterpolationStencil plaquette =
+                    interpolationStencil(lat, x, y, L, a, N, 0.5);
+                pos1 = plaquette.pos1;
+                pos2 = plaquette.pos2;
+                pos3 = plaquette.pos3;
+                pos4 = plaquette.pos4;
+                fracx = plaquette.fracx;
+                fracy = plaquette.fracy;
 
                 resultT00 = interpolateCellField(
                     lat, pos1, pos2, pos3, pos4, N, fracx, fracy,

@@ -91,9 +91,10 @@ class MyEigen {
         bool tmunuOnly);
 
     /**
-     * Writes the hydro-flow text output (`epsilon-u-Hydro*.dat`):
-     * per-cell interpolated energy density, \f$u^\mu\f$, and
-     * \f$\pi^{\mu\nu}\f$ on the output grid.
+     * Writes the hydro-flow text output (`epsilon-u-Hydro*.dat`): the
+     * energy density, \f$u^\mu\f$, and \f$\pi^{\mu\nu}\f$ on the output
+     * grid, interpolated from the plaquette centers where they are
+     * computed (the running-coupling factor from the lattice sites).
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.
@@ -131,8 +132,10 @@ class MyEigen {
 
     /**
      * Writes the raw/binary Tmunu output (`Tmunu-t*.dat` or `*.ipgt`):
-     * per-cell interpolated \f$T^{\mu\nu}\f$ components on the output
-     * grid, in text or a little-endian binary format depending on
+     * the \f$T^{\mu\nu}\f$ components on the output grid, interpolated
+     * from the plaquette centers where they are computed (the
+     * running-coupling factor from the lattice sites), in text or a
+     * little-endian binary format depending on
      * `param->output.writeTmunuBinary`. A no-op unless
      * `param->output.writeTmunu` is set.
      * The file is described in \ref md_OUTPUT "OUTPUT.md".

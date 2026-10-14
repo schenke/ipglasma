@@ -30,6 +30,12 @@ files themselves.
   - `sizeOutput` × `sizeOutput` points with spacing
     `dx = LOutput/sizeOutput`;
   - point `(ix, iy)` sits at `x = -LOutput/2 + dx*ix` (same for y);
+  - T^μν, and the ε, u^μ and π^μν of the hydro file obtained from it, are
+    computed at the centres of the lattice plaquettes, `x = -L/2 + a*(i + 1/2)`,
+    and interpolated from there; the Jazma fields and the running-coupling
+    factor are at the lattice sites, `x = -L/2 + a*i`. A value at an output
+    point thus belongs to that point, in the coordinates of the nucleon
+    positions and the impact parameter;
   - one η slice at η = 0, since the fields are boost invariant; the headers
     record it as `etamax= 1` and `deta= 0`, the format MUSIC reads.
 - **Running coupling.** With `runningCoupling 1`, the hydro and T^μν outputs

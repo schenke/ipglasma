@@ -19,6 +19,9 @@ namespace EnergyMomentumTensor {
  * \f$T^{\mu\nu}\f$ at every cell (the spatial plaquette, the diagonal
  * electric and magnetic/gradient contributions, and the six
  * off-diagonal components), storing the results into `lat->cells`. The
+ * value of cell \f$(i, j)\f$ belongs to the center of its plaquette,
+ * \f$x + (a/2, a/2)\f$, where the fields are averaged to; the output
+ * writers (MyEigen) interpolate it from there. The
  * outermost ring of cells is a guard region and gets \f$T^{\mu\nu}=0\f$.
  * Runs its team kernels in sequence inside one shared
  * `#pragma omp parallel` region.

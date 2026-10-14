@@ -405,24 +405,40 @@ std::vector<double> Glauber::readInVy(
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 
+std::vector<double> Glauber::thicknessTableKey(const Nucleus &nucleus) const {
+    return {
+        static_cast<double>(nucleus.A),
+        static_cast<double>(nucleus.densityFunc),
+        nucleus.w_WS,
+        nucleus.a_WS,
+        nucleus.R_WS,
+        glauberData_.sigmaNN,
+        glauberData_.sCutoff,
+        static_cast<double>(glauberData_.interMax)};
+}
+
 double Glauber::interNuPInSP(double s) {
     double y;
-    static int ind = 0;
+    static std::vector<double> key;
     static double up, down;
     static int maxi_num;
     static std::vector<double> vx, vy;
-    ind++;
 
     if (glauberData_.projectile.A == 1) return 0.0;
 
-    if (ind == 1) {
+    // the table is shared by all instances; rebuild it when the nucleus or
+    // the parameters it depends on change
+    const std::vector<double> currentKey =
+        thicknessTableKey(glauberData_.projectile);
+    if (currentKey != key) {
+        key = currentKey;
         calcRho(&(glauberData_.projectile));
         up = 2.0 * glauberData_.sCutoff;
         down = 0.0;
         maxi_num = glauberData_.interMax;
         vx = makeVx(down, up, maxi_num);
         vy = makeVy(vx.data(), maxi_num);
-    } /* if ind */
+    }
 
     if (s > up)
         return 0.0;
@@ -438,15 +454,18 @@ double Glauber::interNuPInSP(double s) {
 
 double Glauber::interNuTInST(double s) {
     double y;
-    static int ind = 0;
+    static std::vector<double> key;
     static double up, down;
     static int maxi_num;
     static std::vector<double> vx, vy;
 
-    ind++;
     if (glauberData_.target.A == 1) return 0.0;
 
-    if (ind == 1) {
+    // see interNuPInSP()
+    const std::vector<double> currentKey =
+        thicknessTableKey(glauberData_.target);
+    if (currentKey != key) {
+        key = currentKey;
         calcRho(&(glauberData_.target));
 
         up = 2.0 * glauberData_.sCutoff;
@@ -455,7 +474,7 @@ double Glauber::interNuTInST(double s) {
 
         vx = makeVx(down, up, maxi_num);
         vy = makeVy(vx.data(), maxi_num);
-    } /* if ind */
+    }
 
     if (s > up)
         return 0.0;

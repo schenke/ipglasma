@@ -423,16 +423,13 @@ class Glauber {
 
     /**
      * Projectile thickness function \f$T_A(s)\f$ at transverse offset
-     * \p s, memoized in a lookup table built on the first call.
+     * \p s, memoized in a lookup table.
      *
-     * \warning The lookup table is a function-static local, shared by
-     * every call to this method regardless of which Glauber instance
-     * makes it: it is built once, from whichever projectile is
-     * configured on the *first* call made anywhere in the process, and
-     * never rebuilt afterward. This is safe today because a run's
-     * projectile species and Woods-Saxon parameters never change after
-     * the first event, but would silently return stale results if that
-     * ever changed.
+     * The lookup table is a function-static local, shared by every
+     * Glauber instance (main builds one per event): it is rebuilt
+     * whenever the projectile or a parameter it depends on differs
+     * from the one it was built for (thicknessTableKey()), so a run,
+     * whose collision system stays the same, builds it once.
      * \param[in] s Transverse offset [fm]; returns `0.0` for a
      * single-nucleon (\f$A=1\f$) projectile, or for \p s beyond the
      * table's upper bound (\f$2 \times\f$ \c sCutoff).
@@ -442,12 +439,21 @@ class Glauber {
     double interNuPInSP(double s);
     /**
      * Target thickness function \f$T_B(s)\f$ at transverse offset \p
-     * s; see interNuPInSP() (same caching caveat, same table
-     * construction, mirrored for the target nucleus).
+     * s; see interNuPInSP() (same table and caching, mirrored for the
+     * target nucleus).
      * \param[in] s Transverse offset [fm].
      * \return \f$T_B(s)\f$ [1/fm^2].
      */
     double interNuTInST(double s);
+    /**
+     * The values a thickness table of interNuPInSP()/interNuTInST()
+     * depends on: the mass number, density function and profile
+     * parameters of \p nucleus, \f$\sigma_{NN}\f$, the cutoff and the
+     * table size.
+     * \param[in] nucleus The projectile or the target.
+     * \return The values, compared to decide whether to rebuild a table.
+     */
+    std::vector<double> thicknessTableKey(const Nucleus &nucleus) const;
     /**
      * Normalizes a nucleus' central density \c rho_WS so its density
      * profile integrates to \p nucleus's mass number \c A, and records

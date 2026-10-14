@@ -259,6 +259,11 @@ void Init::computeSmoothNucleusThickness(
     // Both profiles are centered at the origin: the impact parameter is
     // sampled later and applied by shiftFieldsWithImpactParameter(), the
     // same as for nucleon-based nuclei. Nucleus A is the projectile.
+    // The deuteron's Hulthen density is that of the neutron-proton
+    // separation r; its nucleons sit at r/2 from the center, so their
+    // thickness is the Hulthen one at 2r (normalized to A below).
+    const double scaleA = (glauber->nucleusA1() == 2) ? 2. : 1.;
+    const double scaleB = (glauber->nucleusA2() == 2) ? 2. : 1.;
     double normA = 0.;
     double normB = 0.;
     for (int ix = 0; ix < N; ix++) {
@@ -268,8 +273,8 @@ void Init::computeSmoothNucleusThickness(
             const int localpos = lat->positionFromXY(ix, iy);
             const double r = sqrt(x * x + y * y);
 
-            double TA = glauber->interNuPInSP(r);
-            double TB = glauber->interNuTInST(r);
+            double TA = glauber->interNuPInSP(scaleA * r);
+            double TB = glauber->interNuTInST(scaleB * r);
             normA += TA * a * a;
             normB += TB * a * a;
 

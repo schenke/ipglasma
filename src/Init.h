@@ -301,10 +301,13 @@ class Init {
         double y, double nucleiInAverage) const;
     /**
      * setColorChargeDensity()'s `useSmoothNucleus` branch: sets
-     * \f$T_p^A\f$/\f$T_p^B\f$ from the smooth (undeformed) Woods-Saxon
-     * thickness functions (Glauber::interNuPInSP() for the projectile
-     * A, Glauber::interNuTInST() for the target B), centered at the
-     * origin and normalized to each nucleus' mass number. The impact
+     * \f$T_p^A\f$/\f$T_p^B\f$ from the smooth (undeformed) thickness
+     * functions of the density profiles (Glauber::interNuPInSP() for the
+     * projectile A, Glauber::interNuTInST() for the target B), centered
+     * at the origin and normalized to each nucleus' mass number. For the
+     * deuteron, whose Hulthen density is that of the neutron-proton
+     * separation \f$r\f$, the thickness is taken at \f$2r\f$, since its
+     * nucleons sit at \f$r/2\f$ from the center. The impact
      * parameter is applied later by shiftFieldsWithImpactParameter().
      * \param[in,out] lat Lattice to populate.
      * \param[in] param Simulation parameters.

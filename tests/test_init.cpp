@@ -220,6 +220,106 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Init::computeSmoothNucleusThickness gives a smooth deuteron the size of "
+    "its nucleon density, half of the Hulthen neutron-proton separation") {
+    const int N = 128;
+    const double L = 20.;
+    const double a = L / N;
+    Parameters param;
+    makeInitTestParam(param, N);
+    param.lattice.L = L;
+    param.collision.useNucleus = true;
+    param.nucleus.useSmoothNucleus = true;
+
+    Glauber glauber;
+    glauber.initGlauber(
+        42., /*target=*/"Au", /*projectile=*/"d", 0., false, 0., 0., 0., 0., 0.,
+        0., false, 0., 0., 0., 1000);
+    REQUIRE(glauber.nucleusA1() == 2);
+    int nn[2] = {N, N};
+    Init init(nn);
+    Lattice lat(&param, N);
+    init.computeSmoothNucleusThickness(&lat, &param, &glauber);
+
+    double sum = 0., sumR2 = 0.;
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const double x = -L / 2. + a * ix;
+            const double y = -L / 2. + a * iy;
+            const double T = lat.cells[lat.positionFromXY(ix, iy)]->getTpA() * a
+                             * a / hbarc / hbarc;
+            sum += T;
+            sumR2 += (x * x + y * y) * T;
+        }
+    }
+    CHECK(sum == doctest::Approx(2.).epsilon(0.02));
+    const double rms = std::sqrt(sumR2 / sum);
+
+    // The Hulthen thickness itself is that of the neutron-proton separation
+    // r. Evaluated with the same cut of the tails (T < 0.001) on a lattice
+    // with twice the spacing and size, it must be exactly twice as wide as
+    // the nucleons, which sit at r/2 from the center.
+    double sepSum = 0., sepSumR2 = 0.;
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            const double x = 2. * (-L / 2. + a * ix);
+            const double y = 2. * (-L / 2. + a * iy);
+            double T = glauber.interNuPInSP(std::sqrt(x * x + y * y));
+            if (T < 0.001) T = 0.;
+            sepSum += T;
+            sepSumR2 += (x * x + y * y) * T;
+        }
+    }
+    CHECK(rms == doctest::Approx(0.5 * std::sqrt(sepSumR2 / sepSum)));
+
+    // the shape is the Hulthen one: along x, T(s)/T(0) is the projected
+    // separation density at 2s, (int dz rho(sqrt(4s^2 + z^2)))/(same at 0)
+    // with rho(r) = (e^{-ar} - e^{-br})^2/r^2 (a Woods-Saxon such as Cu
+    // would give 0.86 instead of 0.21 at s = 1 fm)
+    auto projectedHulthen = [](double u) {
+        const double ha = 0.228, hb = 1.18;
+        auto rho = [&](double r) {
+            if (r < 1e-9) return (hb - ha) * (hb - ha);
+            const double f = (std::exp(-ha * r) - std::exp(-hb * r)) / r;
+            return f * f;
+        };
+        // Simpson's rule on z in [0, 60] fm
+        const int n = 6000;
+        const double h = 60. / n;
+        double integral = rho(u) + rho(std::sqrt(u * u + 3600.));
+        for (int i = 1; i < n; i++) {
+            const double z = i * h;
+            integral += (i % 2 ? 4. : 2.) * rho(std::sqrt(u * u + z * z));
+        }
+        return integral * h / 3.;
+    };
+    const double centralT =
+        lat.cells[lat.positionFromXY(N / 2, N / 2)]->getTpA();
+    for (const int k : {3, 6, 13}) {
+        const double sk = a * k;  // 0.47, 0.94 and 2.03 fm
+        CAPTURE(sk);
+        CHECK(
+            lat.cells[lat.positionFromXY(N / 2 + k, N / 2)]->getTpA() / centralT
+            == doctest::Approx(projectedHulthen(2. * sk) / projectedHulthen(0.))
+                   .epsilon(0.02));
+    }
+
+    // Analytically, the separation density (e^{-ar} - e^{-br})^2/r^2,
+    // a = 0.228/fm, b = 1.18/fm, has <r^2> = (4.07 fm)^2, so a nucleon has
+    // the transverse <s^2> = 2/3 <r^2>/4, rms 1.66 fm; the cut tails make it
+    // about 8% smaller (the separation density itself would give 3.32 fm)
+    const double ha = 0.228, hb = 1.18;
+    auto moment = [&](int n) {
+        return std::tgamma(n + 1.)
+               * (std::pow(2. * ha, -n - 1.) - 2. * std::pow(ha + hb, -n - 1.)
+                  + std::pow(2. * hb, -n - 1.));
+    };
+    const double expectedRms = std::sqrt(2. / 3. * moment(2) / moment(0) / 4.);
+    CHECK(rms < expectedRms);
+    CHECK(rms > 0.9 * expectedRms);
+}
+
+TEST_CASE(
     "Init::setConstantColorChargeDensity: flat background sets g2mu2A=g2mu2B="
     "(g2mu/g)^2 everywhere, with g2mu = g2muGeV in lattice units") {
     const int N = 4;
@@ -306,9 +406,6 @@ TEST_CASE(
     "Init::computeSmoothNucleusThickness builds centered projectile (A) and "
     "target (B) profiles, and CollisionGeometry::scanOverlap finds their "
     "shifted overlap") {
-    // Note: Glauber::interNuPInSP()/interNuTInST() cache their tables in
-    // function-local statics on first use, so they hold Cu/Au for every
-    // later call in this test binary.
     const int N = 64;
     const double L = 30.;
     const double a = L / N;

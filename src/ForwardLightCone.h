@@ -191,7 +191,10 @@ class ForwardLightCone {
     /**
      * Sets \c lat->Ux2 to the initial momentum \f$\pi\f$ (\f$E^\eta\f$)
      * in lattice units, from \c lat->U (the electric field just
-     * computed by computeElectricFieldTeam()).
+     * computed by computeElectricFieldTeam()), projected onto its
+     * traceless part: the lattice expression has a trace (a U(1)
+     * component that vanishes in the continuum limit), which the
+     * evolution would carry along as a free field.
      * \param[in,out] lat Lattice to read \c U from and write \c Ux2
      * into.
      * \param[in] param Simulation parameters; `param->coupling.g` is used.

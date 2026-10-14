@@ -5,6 +5,7 @@
 #ifndef SRC_GLAUBER_H_
 #define SRC_GLAUBER_H_
 
+#include <array>
 #include <string>
 #include <vector>
 
@@ -445,6 +446,10 @@ class Glauber {
      * \return \f$T_B(s)\f$ [1/fm^2].
      */
     double interNuTInST(double s);
+    /// The values a thickness table of interNuPInSP()/interNuTInST()
+    /// depends on (see thicknessTableKey()); fixed size, so comparing
+    /// keys on every lookup allocates nothing.
+    using ThicknessTableKey = std::array<double, 8>;
     /**
      * The values a thickness table of interNuPInSP()/interNuTInST()
      * depends on: the mass number, density function and profile
@@ -453,7 +458,7 @@ class Glauber {
      * \param[in] nucleus The projectile or the target.
      * \return The values, compared to decide whether to rebuild a table.
      */
-    std::vector<double> thicknessTableKey(const Nucleus &nucleus) const;
+    ThicknessTableKey thicknessTableKey(const Nucleus &nucleus) const;
     /**
      * Normalizes a nucleus' central density \c rho_WS so its density
      * profile integrates to \p nucleus's mass number \c A, and records

@@ -14,6 +14,7 @@
 #include <cstring>
 #include <fstream>
 #include <iomanip>
+#include <optional>
 #include <sstream>
 #include <string>
 
@@ -405,7 +406,8 @@ std::vector<double> Glauber::readInVy(
 
 /* %%%%%%%%%%%%%%%%%%%%%%%%%%%% */
 
-std::vector<double> Glauber::thicknessTableKey(const Nucleus &nucleus) const {
+Glauber::ThicknessTableKey Glauber::thicknessTableKey(
+    const Nucleus &nucleus) const {
     return {
         static_cast<double>(nucleus.A),
         static_cast<double>(nucleus.densityFunc),
@@ -419,7 +421,7 @@ std::vector<double> Glauber::thicknessTableKey(const Nucleus &nucleus) const {
 
 double Glauber::interNuPInSP(double s) {
     double y;
-    static std::vector<double> key;
+    static std::optional<ThicknessTableKey> key;  // empty: not built yet
     static double up, down;
     static int maxi_num;
     static std::vector<double> vx, vy;
@@ -428,7 +430,7 @@ double Glauber::interNuPInSP(double s) {
 
     // the table is shared by all instances; rebuild it when the nucleus or
     // the parameters it depends on change
-    const std::vector<double> currentKey =
+    const ThicknessTableKey currentKey =
         thicknessTableKey(glauberData_.projectile);
     if (currentKey != key) {
         key = currentKey;
@@ -454,7 +456,7 @@ double Glauber::interNuPInSP(double s) {
 
 double Glauber::interNuTInST(double s) {
     double y;
-    static std::vector<double> key;
+    static std::optional<ThicknessTableKey> key;  // empty: not built yet
     static double up, down;
     static int maxi_num;
     static std::vector<double> vx, vy;
@@ -462,8 +464,7 @@ double Glauber::interNuTInST(double s) {
     if (glauberData_.target.A == 1) return 0.0;
 
     // see interNuPInSP()
-    const std::vector<double> currentKey =
-        thicknessTableKey(glauberData_.target);
+    const ThicknessTableKey currentKey = thicknessTableKey(glauberData_.target);
     if (currentKey != key) {
         key = currentKey;
         calcRho(&(glauberData_.target));

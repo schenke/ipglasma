@@ -227,8 +227,8 @@ Matrix Matrix::prodAconjB(const Matrix &a, const Matrix &b) {
     return c;
 }
 
-// matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
-// Q^a of generators t^a as argument. Dimension is Nc
+// matrix exponential e^iQ of a traceless Hermitian 3x3 matrix Q, as
+// f0 + f1 Q + f2 Q^2 (Morningstar and Peardon)
 Matrix Matrix::expiHermitian(const Matrix &Q) {
     const Matrix Q2 = Q * Q;
     // c1 = tr(Q^2)/2, c0 = det Q (real for Hermitian Q)
@@ -280,6 +280,8 @@ Matrix Matrix::expiHermitian(const Matrix &Q) {
     return result;
 }
 
+// matrix exponential e^iQ of traceless Hermitian matrices, using coefficients
+// Q^a of generators t^a as argument. Dimension is Nc
 void Matrix::expmCoeff(const double *Q, complex<double> out[9]) const {
     double sqrt3 = sqrt(3.);
     complex<double> f0, f1, f2, iu, u0, ua[8];

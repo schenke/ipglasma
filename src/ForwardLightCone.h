@@ -144,11 +144,11 @@ class ForwardLightCone {
         Matrix UDy;
     };
     /**
-     * Computes the initial electric field's contribution from one
-     * direction (`neighborX`/`neighborY` select minus-shifted or
-     * plus-shifted neighbors), written into \p outputField. Called
-     * once with `(posmX, posmY, lat->U)` and once with `(pospX, pospY,
-     * lat->U2)` -- previously two copy-pasted loops.
+     * Computes the initial electric field (\f$A^\eta\f$) from the links
+     * at the cell and at the neighbors selected by `neighborX`/
+     * `neighborY`, written into \p outputField. initialize() calls it
+     * with `(posmX, posmY, lat->U)`; computePiTeam() turns the result into
+     * \f$\pi\f$.
      * \param[in] lat Lattice to read `Ux1`/`Uy1`/`Ux2`/`Uy2`/\c
      * Ux/\c Uy from.
      * \param[in] N2 Total number of lattice sites.
@@ -156,38 +156,15 @@ class ForwardLightCone {
      * (`lat->posmX` or `lat->pospX`).
      * \param[in] neighborY Neighbor-index table to use in \f$y\f$
      * (`lat->posmY` or `lat->pospY`).
-     * \param[in,out] outputField Field this contribution is written
-     * into (`lat->U` or `lat->U2`, reused as scratch here ahead of
-     * resetFieldsTeam() zeroing them).
+     * \param[in,out] outputField Field the result is written into
+     * (`lat->U`, reused as scratch here ahead of resetFieldsTeam() zeroing
+     * it).
      * \param[in,out] scratch Thread-local scratch storage.
      */
     void computeElectricFieldTeam(
         Lattice *lat, int N2, const std::vector<int> &neighborX,
         const std::vector<int> &neighborY, std::vector<Matrix> &outputField,
         ElectricFieldScratch &scratch);
-    /**
-     * Scratch matrices for computePlaquetteTeam(),
-     * reused across cells to avoid reallocating.
-     */
-    struct PlaquetteScratch {
-        /// Conjugate-transposed neighbor link in \f$x\f$.
-        Matrix UDx;
-        /// Conjugate-transposed neighbor link in \f$y\f$.
-        Matrix UDy;
-        /// The computed spatial plaquette.
-        Matrix Uplaq;
-    };
-    /**
-     * Computes the spatial plaquette from `Ux`/`Uy` into \c
-     * lat->Uy1 (reused as scratch here, ahead of
-     * computePiTeam()/resetFieldsTeam()
-     * repurposing it further).
-     * \param[in,out] lat Lattice to read `Ux`/`Uy` from and write \c
-     * Uy1 into.
-     * \param[in] N2 Total number of lattice sites.
-     * \param[in,out] scratch Thread-local scratch storage.
-     */
-    void computePlaquetteTeam(Lattice *lat, int N2, PlaquetteScratch &scratch);
     /**
      * Sets \c lat->Ux2 to the initial momentum \f$\pi\f$ (\f$E^\eta\f$)
      * in lattice units, from \c lat->U (the electric field just
@@ -220,9 +197,11 @@ class ForwardLightCone {
      * Solves the forward-lightcone matching condition
      * \f$U_1+U_2 = U_{\text{sol}} U_1 U_2 + (U_1 U_2)^\dagger
      * U_{\text{sol}}^\dagger\f$ for \f$U_{\text{sol}}\f$ via Newton's
-     * method in \f$U_{\text{sol}}\f$'s eight SU(3) generator
-     * coefficients (computeResidual()/
-     * computeJacobian()/solveAxb()). If the iteration
+     * method on the group (computeResidual()/computeJacobian()/
+     * solveAxb()): starting from \f$U_1 U_2\f$, each step rotates the
+     * estimate from the left, \f$U_{\text{sol}} \to
+     * e^{i\Delta\alpha_a t_a} U_{\text{sol}}\f$, with the exact Jacobian
+     * of that rotation. If the iteration
      * diverges or fails to converge within 2000 iterations, restarts
      * from a fresh initial guess drawn from a deterministic,
      * seed-independent pseudo-random stream (so restarts are
@@ -260,25 +239,22 @@ class ForwardLightCone {
         const Matrix &Usoldagger,
         const std::vector<complex<double>> &traceCache, double *Fa);
     /**
-     * Computes the Jacobian \f$dF/d\alpha\f$ into \p Jab, via a
-     * numerical finite difference, falling back to an analytical
-     * approximation if the numerical one comes out singular. \p alpha
-     * is left unchanged on return (each finite-difference step adds
-     * then subtracts its own \f$d\alpha_{b_i}\f$).
-     * \param[in] U0 \f$U_1 U_2\f$.
+     * Computes the Jacobian of computeResidual()'s \f$F_a\f$ for a
+     * rotation of \f$U_{\text{sol}}\f$ from the left,
+     * \f$U_{\text{sol}} \to e^{i\delta_b t_b} U_{\text{sol}}\f$, in the
+     * sign findU() uses (solveAxb() solves \f$J\,\Delta\alpha = F\f$):
+     * \f$J_{ab} = -\partial F_a/\partial\delta_b =
+     * -2\,\mathrm{Re}\,\mathrm{tr}[t_a (U_1+U_2)
+     * U_{\text{sol}}^\dagger t_b]\f$. It is exact and needs no
+     * exponential.
      * \param[in] U1pU2 \f$U_1+U_2\f$.
      * \param[in] Usoldagger \f$U_{\text{sol}}^\dagger\f$ at the current
      * estimate.
-     * \param[in,out] MtempArr Scratch, reused across calls; filled with
-     * \f$t_a (U_1+U_2)\f$ for the analytical fallback.
-     * \param[in,out] alpha Current Newton estimate; perturbed and
-     * restored in place during the finite-difference computation.
      * \param[out] Jab Filled with the row-major \f$8\times8\f$
      * Jacobian.
      */
     void computeJacobian(
-        const Matrix &U0, const Matrix &U1pU2, const Matrix &Usoldagger,
-        std::vector<Matrix> &MtempArr, std::vector<double> &alpha, double *Jab);
+        const Matrix &U1pU2, const Matrix &Usoldagger, double *Jab);
 
   private:
     /// SU(3) generators.

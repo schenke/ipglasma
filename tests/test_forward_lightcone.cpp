@@ -4,6 +4,8 @@
 
 #include <complex>
 #include <limits>
+#include <random>
+#include <vector>
 
 #include "ForwardLightCone.h"
 #include "Group.h"
@@ -69,33 +71,95 @@ TEST_CASE(
     }
 }
 
-TEST_CASE(
-    "ForwardLightCone::computePlaquetteTeam wires the four links in the "
-    "documented order") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    Lattice lat(&param, N);
-    for (int pos = 0; pos < N * N; ++pos) {
-        lat.Ux[pos] = makeTestMatrix(pos + 1);
-        lat.Uy[pos] = makeTestMatrix(pos + 51);
-    }
+namespace {
+// A random SU(3) matrix e^{i q_a t_a}, q_a Gaussian with width `width`.
+Matrix randomSU3(std::mt19937 &engine, double width) {
+    std::normal_distribution<double> gauss(0., width);
+    std::vector<double> q(8);
+    for (double &value : q) value = gauss(engine);
+    return Matrix::fromAlgebraExponent(q);
+}
 
+// The residual F_a of ForwardLightCone::computeResidual() for U1, U2 and U.
+std::vector<double> residual(
+    ForwardLightCone &flc, Group &group, const Matrix &U1, const Matrix &U2,
+    const Matrix &U) {
+    const Matrix W = U1 + U2;
+    Matrix Wdagger = W;
+    Wdagger.conjg();
+    std::vector<std::complex<double>> traceCache(8);
+    for (int a = 0; a < 8; a++) {
+        traceCache[a] = (group.getT(a) * (W - Wdagger)).trace();
+    }
+    Matrix Udagger = U;
+    Udagger.conjg();
+    std::vector<double> F(8);
+    flc.computeResidual(W, Wdagger, U, Udagger, traceCache, F.data());
+    return F;
+}
+}  // namespace
+
+TEST_CASE(
+    "ForwardLightCone::computeJacobian is the derivative of the residual for "
+    "a rotation from the left (issue #103)") {
     Group group;
     ForwardLightCone flc(&group);
-    ForwardLightCone::PlaquetteScratch scratch;
-    flc.computePlaquetteTeam(&lat, N * N, scratch);
-
-    for (int pos = 0; pos < N * N; ++pos) {
-        Matrix UDx = lat.Ux[lat.pospY[pos]];
-        UDx.conjg();
-        Matrix UDy = lat.Uy[pos];
-        UDy.conjg();
-        Matrix expected = lat.Ux[pos] * (lat.Uy[lat.pospX[pos]] * (UDx * UDy));
-        CHECK(matricesClose(lat.Uy1[pos], expected, 1e-10));
+    std::mt19937 engine(9);
+    for (int sample = 0; sample < 5; sample++) {
+        const Matrix U1 = randomSU3(engine, 0.8);
+        const Matrix U2 = randomSU3(engine, 0.8);
+        const Matrix U = randomSU3(engine, 0.8);
+        Matrix Udagger = U;
+        Udagger.conjg();
+        std::vector<double> J(64);
+        flc.computeJacobian(U1 + U2, Udagger, J.data());
+        // central difference of F under U -> e^{+-i eps t_b} U; findU()'s
+        // convention is J = -dF/d delta
+        const double eps = 1e-5;
+        for (int b = 0; b < 8; b++) {
+            std::vector<double> step(8, 0.);
+            step[b] = eps;
+            const Matrix Uplus = Matrix::fromAlgebraExponent(step) * U;
+            step[b] = -eps;
+            const Matrix Uminus = Matrix::fromAlgebraExponent(step) * U;
+            const std::vector<double> Fplus =
+                residual(flc, group, U1, U2, Uplus);
+            const std::vector<double> Fminus =
+                residual(flc, group, U1, U2, Uminus);
+            for (int a = 0; a < 8; a++) {
+                CAPTURE(a);
+                CAPTURE(b);
+                CHECK(
+                    J[a * 8 + b]
+                    == doctest::Approx(-(Fplus[a] - Fminus[a]) / (2. * eps))
+                           .epsilon(1e-7)
+                           .scale(1.));
+            }
+        }
     }
 }
 
+TEST_CASE(
+    "ForwardLightCone::findU solves the matching condition for random "
+    "links") {
+    Group group;
+    ForwardLightCone flc(&group);
+    std::mt19937 engine(4);
+    for (int sample = 0; sample < 20; sample++) {
+        CAPTURE(sample);
+        Matrix U1 = randomSU3(engine, 1.);
+        Matrix U2 = randomSU3(engine, 1.);
+        Matrix U;
+        REQUIRE(flc.findU(U1, U2, U, /*retrySeed=*/sample));
+        double Fzero = 0.;
+        for (double F : residual(flc, group, U1, U2, U)) Fzero += std::abs(F);
+        CHECK(Fzero < 1e-6);
+        Matrix Udagger = U;
+        Udagger.conjg();
+        CHECK(matricesClose(U * Udagger, Matrix(1.), 1e-13));
+        CHECK(std::abs(U.det() - 1.) < 1e-13);
+    }
+}
 TEST_CASE(
     "ForwardLightCone::resetFieldsTeam zeroes U/U2/Uy2 and resets Ux1 to "
     "the identity") {

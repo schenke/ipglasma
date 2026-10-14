@@ -86,6 +86,74 @@ void checkSamePositions(
 }
 }  // namespace
 
+TEST_CASE(
+    "NucleusSampler samples the deuteron's neutron-proton separation in 3D "
+    "from the Hulthen wave function") {
+    Parameters param;
+    makeInitTestParam(param, 4);
+    param.collision.nucleiToAverage = 1;
+    Glauber glauber;
+    glauber.initGlauber(
+        42., "d", "d", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0., 0.,
+        0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
+    const Nucleus &data = glauber.getGlauberData().projectile;
+    const double a = data.a_WS, b = data.w_WS;
+    REQUIRE(a == doctest::Approx(0.228));
+    REQUIRE(b == doctest::Approx(1.18));
+    // moments of r^2 |psi|^2 = (e^{-ar} - e^{-br})^2, from
+    // int_0^inf r^n e^{-cr} dr = n!/c^{n+1}
+    auto moment = [&](int n) {
+        return std::tgamma(n + 1.)
+               * (std::pow(2. * a, -n - 1.) - 2. * std::pow(a + b, -n - 1.)
+                  + std::pow(2. * b, -n - 1.));
+    };
+    const double meanR2 = moment(2) / moment(0);  // (4.07 fm)^2
+    Random random;
+    random.init_genrand64(3);
+    random.gslRandomInit(3);
+
+    // the separation itself: 0.5% statistical error
+    const int draws = 100000;
+    double sumR2 = 0.;
+    for (int i = 0; i < draws; i++) {
+        const double r = NucleusSampler::sampleHulthenSeparation(&random, data);
+        sumR2 += r * r;
+    }
+    CHECK(sumR2 / draws == doctest::Approx(meanR2).epsilon(0.03));
+
+    // the sampled (and randomly rotated) deuterons: isotropic in 3D, so the
+    // transverse separation has 2/3 of <r^2> (it had 4/9 when the pair was
+    // sampled in the transverse plane and then rotated); 2% statistical
+    // error
+    NucleusSampler sampler;
+    const int events = 5000;
+    double sumPerp2 = 0., sumZ2 = 0.;
+    int deuterons = 0;
+    for (int i = 0; i < events; i++) {
+        const Nuclei nuclei = sampler.sample(&param, &random, &glauber);
+        for (const auto *nucleus : {&nuclei.projectile, &nuclei.target}) {
+            REQUIRE(nucleus->size() == 2);
+            const ReturnValue &proton = (*nucleus)[0];
+            const ReturnValue &neutron = (*nucleus)[1];
+            REQUIRE(proton.proton);
+            REQUIRE_FALSE(neutron.proton);
+            // centered at the origin
+            REQUIRE(proton.x + neutron.x == doctest::Approx(0.));
+            REQUIRE(proton.z + neutron.z == doctest::Approx(0.));
+            const double dx = proton.x - neutron.x;
+            const double dy = proton.y - neutron.y;
+            const double dz = proton.z - neutron.z;
+            sumPerp2 += dx * dx + dy * dy;
+            sumZ2 += dz * dz;
+            deuterons++;
+        }
+    }
+    CHECK(
+        sumPerp2 / deuterons
+        == doctest::Approx(2. / 3. * meanR2).epsilon(0.06));
+    CHECK(sumZ2 / deuterons == doctest::Approx(1. / 3. * meanR2).epsilon(0.08));
+}
+
 TEST_CASE("NucleusSampler::sample places a proton at the origin") {
     Parameters param;
     makeInitTestParam(param, 4);

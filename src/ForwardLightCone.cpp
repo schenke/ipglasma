@@ -8,6 +8,7 @@
 #include <cstdint>
 #include <vector>
 
+#include "Instrumentation.h"
 #include "PhysConst.h"
 #include "gsl/gsl_linalg.h"
 
@@ -114,6 +115,7 @@ void ForwardLightCone::solveAxb(
 }
 
 void ForwardLightCone::initialize(Lattice *lat, Parameters *param) {
+    IPG_PROFILE_SCOPE("initialization.forward_light_cone");
     messager_.info(
         "[ForwardLightCone::initialize]: Finding fields in forward "
         "lightcone...");
@@ -129,18 +131,10 @@ void ForwardLightCone::initialize(Lattice *lat, Parameters *param) {
         UScratch uScratch;
         computeUxUyTeam(lat, param, N2, uScratch);
 
-        // compute initial electric field
+        // compute initial electric field (with minus ax, ay)
         ElectricFieldScratch electricScratch;
-        // with minus ax, ay
         computeElectricFieldTeam(
             lat, N2, lat->posmX, lat->posmY, lat->U, electricScratch);
-        // with plus ax, ay
-        computeElectricFieldTeam(
-            lat, N2, lat->pospX, lat->pospY, lat->U2, electricScratch);
-
-        // compute the plaquette
-        PlaquetteScratch plaquetteScratch;
-        computePlaquetteTeam(lat, N2, plaquetteScratch);
 
         computePiTeam(lat, param, N2);
 
@@ -302,23 +296,6 @@ void ForwardLightCone::computeElectricFieldTeam(
                         - scratch.UDy1mUDy2;
 
         outputField[pos] = ((1. / 8.) * scratch.temp2);
-    }
-}
-
-void ForwardLightCone::computePlaquetteTeam(
-    Lattice *lat, int N2, PlaquetteScratch &scratch) {
-#pragma omp for
-    for (int pos = 0; pos < N2; pos++) {
-        scratch.UDx = lat->Ux[lat->pospY[pos]];
-        scratch.UDy = lat->Uy[pos];
-
-        scratch.UDx.conjg();
-        scratch.UDy.conjg();
-
-        scratch.Uplaq =
-            lat->Ux[pos]
-            * (lat->Uy[lat->pospX[pos]] * (scratch.UDx * scratch.UDy));
-        lat->Uy1[pos] = (scratch.Uplaq);
     }
 }
 

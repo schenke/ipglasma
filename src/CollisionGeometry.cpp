@@ -75,7 +75,9 @@ void CollisionGeometry::sampleImpactParameter(
     const int Dx = shifts.xA - shifts.xB;
     const int Dy = shifts.yA - shifts.yB;
     param->event.b = a * std::hypot(Dx, Dy);
-    param->event.phiRP = phiRP;
+    // a zero lattice vector has no direction: phi_RP = 0, as for b = 0
+    // without nuclei
+    param->event.phiRP = 0.;
     if (Dx != 0 || Dy != 0) {
         param->event.phiRP = std::atan2(Dy, Dx);
         if (param->event.phiRP < 0.) param->event.phiRP += 2. * M_PI;

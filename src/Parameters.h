@@ -489,7 +489,7 @@ struct EventState {
     /// the sampled impact parameter (CollisionGeometry::latticeShifts()).
     double b = 0.;
     /// Reaction-plane angle [rad] of that lattice vector,
-    /// \f$0 \le \phi_{RP} < 2\pi\f$.
+    /// \f$0 \le \phi_{RP} < 2\pi\f$, and 0 if the vector is zero.
     double phiRP = 0.;
     /// Number of participants.
     int Npart = 0;

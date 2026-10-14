@@ -147,7 +147,9 @@ class Init {
      * Samples this event's impact parameter and reaction-plane angle
      * (CollisionGeometry::sampleImpactParameter()).
      * \param[in,out] param Simulation parameters;
-     * `param->event.b`/`param->event.phiRP` store the sampled values.
+     * `param->event.b`/`param->event.phiRP` store the length and angle of
+     * the lattice vector closest to the sampled impact parameter, by which
+     * the nuclei are separated.
      */
     void sampleImpactParameter(Parameters *param);
     /**

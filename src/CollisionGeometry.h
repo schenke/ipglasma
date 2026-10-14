@@ -122,7 +122,8 @@ class CollisionGeometry {
      * up to \f$a/\sqrt{2}\f$ outside the sampled range.
      * \param[in,out] param Simulation parameters;
      * `param->event.b`/`param->event.phiRP` store the values on the
-     * lattice, with \f$0 \le \phi_{RP} < 2\pi\f$.
+     * lattice, with \f$0 \le \phi_{RP} < 2\pi\f$ (\f$\phi_{RP} = 0\f$ if
+     * the lattice vector is zero).
      * \param[in,out] random Random-number source.
      */
     void sampleImpactParameter(Parameters *param, Random *random);

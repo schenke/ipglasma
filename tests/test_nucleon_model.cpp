@@ -186,7 +186,6 @@ TEST_CASE(
         const HotSpotNucleon model(param);
         Random random;
         random.init_genrand64(19ULL);
-        random.setGammaIncCDF(param.subnucleon.omega);
         int pairs = 0, close = 0;
         for (int i = 0; i < 2000; ++i) {
             const std::unique_ptr<NucleonProfile> profile =
@@ -214,20 +213,22 @@ TEST_CASE(
 TEST_CASE(
     "HotSpotNucleon: reference thicknesses with every option on (omega, "
     "dqMin, NqFluc, BGqVar, smearQs)") {
-    // Values of the current code, whose full runs are byte-identical to
-    // the code before the nucleon-model interface; they change if the
-    // sampling (including the order of the random draws) changes.
+    // Values of the current code; for omega = 1 its full runs are
+    // byte-identical to the code before the nucleon-model interface. They
+    // change if the sampling (including the order of the random draws)
+    // changes; the omega = 2 values did with the exact sampling of the
+    // radii (issue #104).
     const double expected[2][3][3] = {
         // omega = 1 (3D Gaussian positions)
         {{0.06130905822699826, 0.0030647365940887714, 0.00013074215615949835},
          {0.0012159547566270032, 0.1424820795261299, 0.0059570302662717454},
          {0.012469481836384959, 0.095459167771926923, 0.044697293222758824}},
-        // omega = 2 (transverse gamma-distributed radii)
-        {{0.10838912598795411, 0.043272629724808741, 0.039804447034985278},
-         {6.424269855251876e-15, 7.0122015504103813e-17,
-          3.9299184869361983e-16},
-         {6.5356186543335552e-09, 0.00050504370277445413,
-          3.9983364009132724e-17}}};
+        // omega = 2 (transverse radii with x from Random::sampleGammaInc)
+        {{0.011097854894937597, 0.00022282986370115402, 0.014740631587454516},
+         {0.00048249133926723208, 7.568334221799637e-07,
+          1.2275077820347333e-09},
+         {0.46728506314617302, 4.6798423364410479e-09,
+          4.3087428501343495e-12}}};
     const int expectedNq[2][3] = {{3, 3, 3}, {3, 2, 3}};
     const double points[3][2] = {{0.3, -0.2}, {0.6, 0.1}, {-0.1, -0.5}};
 
@@ -246,7 +247,6 @@ TEST_CASE(
         Random random;
         random.init_genrand64(2024ULL);
         random.gslRandomInit(2024ULL);
-        random.setGammaIncCDF(omega);
         const HotSpotNucleon model(param);
         for (int i = 0; i < 3; ++i) {
             CAPTURE(i);
@@ -412,7 +412,6 @@ TEST_CASE(
         const StringyNucleon model(param);
         Random random;
         random.init_genrand64(31ULL);
-        random.setGammaIncCDF(omega);
 
         bool someZ = false;
         for (int n = 0; n < 50; ++n) {
@@ -479,10 +478,10 @@ TEST_CASE(
          {0.067710670547497645, 0.0018023507228984231, 8.3750080501346203e-06},
          {0.04893515017337597, 0.006223252893511509, 0.0072116750964462545}},
         // omega = 2 (in the transverse plane)
-        {{0.12445122085035619, 0.030008010471454388, 0.0014726305023888813},
-         {0.0013897276534128875, 0.00012969240868316879, 0.018993590089068438},
-         {0.00042511836921709927, 2.4288605315594275e-05,
-          9.3576497076028076e-20}}};
+        {{0.037964595109460146, 0.017962494569568499, 2.2543992517198475e-06},
+         {0.014763549987617228, 0.0093340274720666652, 0.068448628728741856},
+         {0.046880135886485735, 0.0015668546098993974,
+          7.2804375871602392e-07}}};
     const double points[3][2] = {{0.3, -0.2}, {0.6, 0.1}, {-0.1, -0.5}};
 
     for (int io = 0; io < 2; ++io) {
@@ -499,7 +498,6 @@ TEST_CASE(
         Random random;
         random.init_genrand64(2024ULL);
         random.gslRandomInit(2024ULL);
-        random.setGammaIncCDF(omega);
         const StringyNucleon model(param);
         for (int i = 0; i < 3; ++i) {
             CAPTURE(i);
@@ -529,7 +527,6 @@ TEST_CASE(
         const HotSpotNucleon model(param);
         Random random;
         random.init_genrand64(41ULL);
-        random.setGammaIncCDF(omega);
         bool someZ = false;
         for (int i = 0; i < 20; ++i) {
             for (double z : model.sampleHotSpots(random).z) {
@@ -559,7 +556,6 @@ TEST_CASE(
         const HotSpotNucleon model(param);
         Random random;
         random.init_genrand64(43ULL);
-        random.setGammaIncCDF(omega);
         const double BG = param.subnucleon.BG * hbarc * hbarc;  // fm^2
 
         const int samples = 100000;
@@ -580,5 +576,39 @@ TEST_CASE(
         CHECK(
             static_cast<double>(inside) / samples
             == doctest::Approx(expectedFraction).epsilon(0.02));
+    }
+}
+
+TEST_CASE("HotSpotNucleon: omega != 1 gives <b^2> = (1 + omega) BG") {
+    // b^2 = 2 omega x BG with <x> = (s + 1)/2 and
+    // <x^2> = (s + 1)(s + 2)/3, s = 1/omega; the distribution of x itself
+    // is checked in test_random.cpp
+    for (const double omega : {0.3, 0.5, 2., 3.}) {
+        CAPTURE(omega);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.omega = omega;
+        // one hot spot, not moved back to the nucleon center
+        param.subnucleon.shiftConstituentQuarkProtonOrigin = false;
+        const HotSpotNucleon model(param);
+        Random random;
+        random.init_genrand64(47ULL);
+        const double BG = param.subnucleon.BG * hbarc * hbarc;  // fm^2
+
+        const int samples = 200000;
+        double sumB2 = 0.;
+        for (int i = 0; i < samples; ++i) {
+            const HotSpotConfiguration hotSpots =
+                model.sampleHotSpots(random, 1);
+            sumB2 +=
+                (hotSpots.x[0] * hotSpots.x[0] + hotSpots.y[0] * hotSpots.y[0])
+                / BG;
+        }
+        const double s = 1. / omega;
+        const double meanX = (s + 1.) / 2.;
+        const double varX = (s + 1.) * (s + 2.) / 3. - meanX * meanX;
+        CHECK(
+            std::abs(sumB2 / samples - (1. + omega))
+            < 5. * 2. * omega * std::sqrt(varX / samples));
     }
 }

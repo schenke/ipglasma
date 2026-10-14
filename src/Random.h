@@ -14,11 +14,10 @@
 /**
  * Random-number source for the whole simulation: a 64-bit Mersenne
  * Twister (MT19937-64, Nishimura & Matsumoto) for the reproducible
- * uniform/Gaussian streams the physics depends on bit-for-bit, plus a
- * secondary GSL generator for Poisson sampling, plus a tabulated
- * inverse-CDF sampler for a gamma-distribution-based radial profile
- * used in constituent-quark position sampling (see
- * HotSpotNucleon::sample()).
+ * uniform, Gaussian and Gamma streams the physics depends on
+ * bit-for-bit (including the hot-spot radii of HotSpotNucleon::sample()
+ * via sampleGammaInc()), plus a secondary GSL generator for Poisson
+ * sampling.
  */
 class Random {
   private:
@@ -53,13 +52,6 @@ class Random {
 
     /// Secondary GSL generator, used only by poisson().
     gsl_rng *gslRandom_;
-
-    /// Tabulated regularized-upper-incomplete-gamma CDF values built by
-    /// setGammaIncCDF(), indexed in step with \c gammaIncCDFx_.
-    std::vector<double> gammaIncCDF_;
-    /// Abscissas corresponding to \c gammaIncCDF_'s tabulated CDF
-    /// values.
-    std::vector<double> gammaIncCDFx_;
 
     /**
      * Draws \p count raw (untempered) MT19937-64 words, advancing the
@@ -175,31 +167,30 @@ class Random {
         double *out, std::size_t count, std::vector<double> &scratch);
 
     /**
-     * Builds the tabulated inverse-CDF sampler sampleGammaInc() draws
-     * from: 4000 abscissas \f$x_i = i \cdot x_{\max}/4000\f$ for
-     * \f$i=0,\ldots,3999\f$ (so evenly spaced over \f$[0, x_{\max})\f$,
-     * \f$x_{\max} = \max(20, 20/\omega)\f$, never reaching \f$x_{\max}\f$
-     * itself), paired with the regularized upper incomplete gamma
-     * function \f$Q(1/\omega, x)\f$'s cumulative sum evaluated at each
-     * bin's *left* edge (i.e. `gammaIncCDF_[i]` excludes bin `i`'s own
-     * weight), normalized by the sum over all 4000 bins. Consequently
-     * the table's last entry is strictly below `1`, not `1` itself;
-     * sampleGammaInc() maps the remaining upper-tail probability (any
-     * draw above that last entry) onto the last abscissa rather than
-     * sampling it.
-     * \param[in] omega Shape parameter; must match what
-     * sampleGammaInc()'s caller subsequently scales its result by
-     * (see HotSpotNucleon::sample()).
+     * Draws a Gamma-distributed double with unit scale, by the method of
+     * Marsaglia and Tsang (ACM Trans. Math. Softw. 26, 363 (2000)) on the
+     * Mersenne Twister: gauss() and genrand64_real3() draws, repeated
+     * until one is accepted; for \p shape < 1 a draw for \p shape + 1
+     * times \f$U^{1/\mathrm{shape}}\f$.
+     * \param[in] shape Shape parameter \f$k > 0\f$.
+     * \return A pseudorandom real with the density
+     * \f$x^{k-1}e^{-x}/\Gamma(k)\f$ on \f$(0, \infty)\f$, so mean and
+     * variance \f$k\f$.
      */
-    void setGammaIncCDF(const double omega);
+    double gammaVariate(double shape);
     /**
-     * Draws one sample from the distribution tabulated by
-     * setGammaIncCDF(), via binary search on its CDF table (with the
-     * upper-tail draws described there mapped to the last abscissa).
-     * \return A pseudorandom real in `[0, ` \c gammaIncCDFx_'s last
-     * entry `]`.
+     * Draws \f$x\f$ with the density \f$\omega\,Q(1/\omega, x)\f$ on
+     * \f$(0, \infty)\f$, \f$Q\f$ the regularized upper incomplete gamma
+     * function, so \f$\langle x\rangle = (1+\omega)/(2\omega)\f$; the
+     * hot-spot radii of HotSpotNucleon::sample() for \f$\omega \ne 1\f$.
+     * Exact: with \f$s = 1/\omega\f$, \f$x = U G\f$ for \f$U\f$ uniform
+     * on (0, 1) and \f$G\f$ Gamma-distributed with shape \f$s+1\f$
+     * (gammaVariate()) has the density
+     * \f$\int_x^\infty t^{s-1}e^{-t}\,dt/\Gamma(s+1) = Q(s, x)/s\f$.
+     * \param[in] omega \f$\omega > 0\f$.
+     * \return A pseudorandom real in \f$(0, \infty)\f$.
      */
-    double sampleGammaInc();
+    double sampleGammaInc(double omega);
 };
 
 #endif  // SRC_RANDOM_H_

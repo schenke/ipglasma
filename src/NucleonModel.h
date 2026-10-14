@@ -227,7 +227,7 @@ class HotSpotNucleon : public NucleonModel {
      * their positions
      * (for `omega 1` in 3D, each coordinate Gaussian with variance `BG`;
      * otherwise in the transverse plane at radius
-     * \f$\sqrt{\omega x B_G}\f$ with \f$x\f$ from Random::sampleGammaInc()
+     * \f$\sqrt{2\omega x B_G}\f$ with \f$x\f$ from Random::sampleGammaInc()
      * and a uniform angle; keeping a best-effort minimum distance
      * `dqMin`), the optional shift of their center of mass to the nucleon
      * center, and their Qs normalization.

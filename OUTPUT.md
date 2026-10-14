@@ -42,11 +42,12 @@ files themselves.
   are multiplied by the factor g²/(4π α_s) of the gluon spectrum and the
   eccentricities, with α_s evaluated at `runningCouplingQsFactor` × the Q_s
   that `runWithQs` selects: averaged over the overlap region, or with
-  `runWithLocalQs 1` the one of each cell, interpolated to the output grid
-  like the fields. With `useJIMWLK 1`, this Q_s is that of the initial
-  condition, before the JIMWLK evolution. The Jazma file is not rescaled
-  cell by cell; it follows only through its normalization to the total
-  energy of the hydro output.
+  `runWithLocalQs 1` the one of each cell, which is interpolated to the
+  output grid from the lattice sites (T^μν and the hydro fields from the
+  plaquette centers, see above). With `useJIMWLK 1`, this Q_s is that of
+  the initial condition, before the JIMWLK evolution. The Jazma file is not
+  rescaled cell by cell; it follows only through its normalization to the
+  total energy of the hydro output.
 - **Byte order.** The binary formats with a JSON header (`.ipgt`, `.ipgw`,
   `.ipgf` and the Wilson-line geometry files) are little-endian by
   definition, and the code refuses to write (or, for the geometry files, to

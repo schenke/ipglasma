@@ -110,9 +110,11 @@ void prepareSpectrumField(
  * \param[in] E1 The field's FFT'd momentum-space values, as a
  * pointer-per-cell view.
  * \param[in] useElectricNormalization Selects \c nkt's electric-field
- * normalization (`true`, \f$g^2/((it-0.5)d\tau)\f$) vs. the
- * \f$\pi\f$-field normalization (`false`, \f$(it-0.5)d\tau\f$, no
- * \f$g^2\f$).
+ * normalization (`true`, \f$g^2/\tau_n\f$) vs. the \f$\pi\f$-field
+ * normalization (`false`, \f$\tau_n\f$, no \f$g^2\f$), with
+ * \f$\tau_n = it\,d\tau\f$, where Evolution::run()'s final half step
+ * has moved the momenta (they are at \f$\tau_{n-1/2}\f$ only during the
+ * full steps).
  * \param[in] accumulateCounter Whether to also increment \p counter;
  * only one of the three per-field passes needs to, since all three
  * share the same \f$k_T\f$ grid.
@@ -136,6 +138,9 @@ void accumulateGluonSpectrum(
     double muZero, double dkt, int bins, const std::vector<Matrix *> &E1,
     bool useElectricNormalization, bool accumulateCounter, double &dNdeta,
     double &dEdeta, double *n, double *E, double *n2, int *counter) {
+    // E^i and pi are at tau_n = it dtau, like the links and phi:
+    // Evolution::run() advanced them by a final half step
+    const double tauN = it * dtau;
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             double nkt = 0.;
@@ -164,12 +169,12 @@ void accumulateGluonSpectrum(
                     if (useElectricNormalization) {
                         nkt =
                             2. / sqrt(omega2) / static_cast<double>(N * N)
-                            * (g * g / ((it - 0.5) * dtau)
+                            * (g * g / tauN
                                * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     } else {
                         nkt =
                             2. / sqrt(omega2) / static_cast<double>(N * N)
-                            * (((it - 0.5) * dtau)
+                            * (tauN
                                * ((((*E1[pos]) * (*E1[npos])).trace()).real()));
                     }
                     if (param->coupling.runWithKt) {

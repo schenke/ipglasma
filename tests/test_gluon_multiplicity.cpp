@@ -8,6 +8,7 @@
 #include <random>
 #include <sstream>
 #include <string>
+#include <utility>
 
 #include "GluonMultiplicity.h"
 #include "Group.h"
@@ -129,4 +130,51 @@ TEST_CASE(
         CHECK(std::count(values.begin(), values.end(), ',') == 99);
     }
     removeOutput();
+}
+
+TEST_CASE(
+    "GluonMultiplicity::compute normalizes the electric and pi terms at the "
+    "same time tau_n = it dtau") {
+    // The same field once as E^x and once as pi: the occupation numbers
+    // differ only by the factors g^2/tau of the E^i term and tau of the pi
+    // term, so dN_E/dN_pi = g^2/tau^2. After Evolution::run()'s final half
+    // step both momenta are at tau_n = it dtau (with tau_{n-1/2}, the ratio
+    // would be 1/0.35^2 = 8.16 instead of 1/0.4^2 = 6.25 here).
+    auto multiplicityOf = [](bool asPi) {
+        Parameters param;
+        makeMultiplicityTestParam(param);
+        Lattice lat(&param, N);
+        setVacuum(lat);
+        Group group;
+        std::mt19937 rng(11);
+        std::normal_distribution<double> gauss(0., 0.3);
+        for (int pos = 0; pos < N * N; pos++) {
+            Matrix field(0.);
+            for (int a = 0; a < 8; a++) field += gauss(rng) * group.getT(a);
+            (asPi ? lat.Ux2[pos] : lat.U[pos]) = field;
+        }
+        int nn[2] = {N, N};
+        GluonMultiplicity multiplicity(nn);
+        removeOutput();
+        REQUIRE(multiplicity.compute(&lat, &group, &param, it) == 1);
+        std::ifstream in("NpartdNdy-t0.4-0.dat");
+        REQUIRE(in.good());
+        double Npart, dNdy, Tpp, b, dEdy;
+        in >> Npart >> dNdy >> Tpp >> b >> dEdy;
+        in.close();
+        removeOutput();
+        return std::make_pair(dNdy, dEdy);
+    };
+    const auto electric = multiplicityOf(false);
+    const auto pi = multiplicityOf(true);
+    Parameters param;
+    makeMultiplicityTestParam(param);
+    const double tauN = it * param.run.dtau;
+    const double g2 = param.coupling.g * param.coupling.g;
+    CHECK(
+        electric.first / pi.first
+        == doctest::Approx(g2 / (tauN * tauN)).epsilon(1e-4));
+    CHECK(
+        electric.second / pi.second
+        == doctest::Approx(g2 / (tauN * tauN)).epsilon(1e-4));
 }

@@ -2,8 +2,10 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
+#include <random>
 #include <vector>
 
 #include "Group.h"
@@ -114,6 +116,72 @@ TEST_CASE("Matrix: logmPade computes log(I+A) directly for small A") {
     reconstructed.expm();  // exp(log(I + A)) should recover I + A
 
     CHECK(matricesClose(reconstructed, Matrix(1.) + A, 1e-10));
+}
+
+namespace {
+// exp(X) from its power series, with scaling and squaring: the reference
+// for Matrix::expm(), independent of its Pade approximant.
+Matrix seriesExp(const Matrix &X) {
+    double norm = 0.;
+    for (int i = 0; i < 9; i++) norm += std::norm(X(i));
+    int squarings = 0;
+    while (std::sqrt(norm) / std::pow(2., squarings) > 0.25) squarings++;
+    const Matrix Y = std::pow(0.5, squarings) * X;
+    Matrix result(1.), term(1.);
+    for (int k = 1; k <= 25; k++) {
+        term = (1. / k) * (term * Y);
+        result += term;
+    }
+    for (int i = 0; i < squarings; i++) result = result * result;
+    return result;
+}
+
+double largestDifference(const Matrix &a, const Matrix &b) {
+    double largest = 0.;
+    for (int i = 0; i < 9; i++) {
+        largest = std::max(largest, std::abs(a(i) - b(i)));
+    }
+    return largest;
+}
+
+// A random anti-Hermitian matrix i H with Frobenius norm `norm`.
+Matrix randomAntiHermitian(std::mt19937 &engine, double norm) {
+    std::normal_distribution<double> gauss;
+    Matrix B;
+    for (int i = 0; i < 9; i++) {
+        B.set(i, std::complex<double>(gauss(engine), gauss(engine)));
+    }
+    Matrix Bdag = B;
+    Bdag.conjg();
+    Matrix A = std::complex<double>(0., 0.5) * (B + Bdag);
+    double frobenius = 0.;
+    for (int i = 0; i < 9; i++) frobenius += std::norm(A(i));
+    return (norm / std::sqrt(frobenius)) * A;
+}
+}  // namespace
+
+TEST_CASE(
+    "Matrix: expm is accurate to rounding, with exact Pade coefficients, and "
+    "scales by t of either sign") {
+    std::mt19937 engine(5);
+    // ten-digit coefficients gave errors up to ~1e-11 (issue #101)
+    for (const double norm : {1e-3, 0.1, 0.5, 2.}) {
+        CAPTURE(norm);
+        for (int i = 0; i < 10; i++) {
+            const Matrix A = randomAntiHermitian(engine, norm);
+            Matrix X = A;
+            X.expm();
+            CHECK(largestDifference(X, seriesExp(A)) < 5e-15);
+        }
+    }
+    // the norm that sets the scaling is that of t A
+    const Matrix A = randomAntiHermitian(engine, 1.);
+    for (const double t : {0.5, 3., -1., -3.}) {
+        CAPTURE(t);
+        Matrix X = A;
+        X.expm(t);
+        CHECK(largestDifference(X, seriesExp(t * A)) < 1e-14);
+    }
 }
 
 TEST_CASE("Matrix: sqrtm computes the principal square root") {

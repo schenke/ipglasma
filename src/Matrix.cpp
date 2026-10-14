@@ -344,27 +344,21 @@ Matrix &Matrix::expm(double t, const int p) {
         messager.error("[Matrix::expm]: p should be at least 6. Exiting.");
         exit(1);
     }
-    // hard coded values for speed
+    // coefficients of the (p,p) Pade approximant,
+    // c_k = c_{k-1} (p + 1 - k) / (k (2p + 1 - k)): for p = 6, 1, 1/2, 5/44,
+    // 1/66, 1/792, 1/15840, 1/665280
     std::vector<double> c(p + 1, 0);
     c[0] = 1.;
-    c[1] = 0.5;
-    c[2] = 0.1136363636;
-    c[3] = 0.01515151515;
-    c[4] = 0.001262626263;
-    c[5] = 6.313131313e-05;
-    c[6] = 1.503126503e-06;
-    if (p > 6) {
-        for (int i = 6; i < p; ++i) {
-            c[i + 1] = c[i] * ((p - i) / ((i + 1.0) * (2.0 * p - i)));
-        }
+    for (int k = 1; k <= p; ++k) {
+        c[k] = c[k - 1] * ((p + 1. - k) / (k * (2. * p + 1. - k)));
     }
-    // Calculate the infinty norm of e, which is defined as the largest row sum
-    // of a matrix
+    // the infinity norm of t A, the largest row sum of |t A_ij|
     for (int i = 0; i < n; ++i) {
         double temp = 0.0;
         for (int j = 0; j < n; j++) temp += abs((*this)(i, j));
-        norm = t * std::max<double>(norm, temp);
+        norm = std::max<double>(norm, temp);
     }
+    norm *= std::abs(t);
     // If norm = 0, and all H elements are not nan or infinity but zero,
     // then U should be identity.
     if (norm == 0.0) {

@@ -148,8 +148,9 @@ class NucleusSampler {
     /**
      * Samples one nucleus' nucleon positions without configuration
      * files: a single proton (\f$A=1\f$) is placed at the origin, the
-     * deuteron (\f$A=2\f$) uses Glauber::sampleTARejection() and its
-     * neutron-proton distance convention, and everything else is
+     * deuteron (\f$A=2\f$) has its neutron-proton separation \f$r\f$
+     * drawn in 3D (sampleHulthenSeparation()), in a random direction,
+     * with the nucleons at \f$\pm r/2\f$, and everything else is
      * generate()d.
      * \param[in,out] random Random-number source.
      * \param[in] glauber Configured Glauber instance providing the
@@ -159,6 +160,18 @@ class NucleusSampler {
      */
     std::vector<ReturnValue> sampleWoodsSaxon(
         Random *random, Glauber *glauber, NucleusRole role);
+    /**
+     * Draws the deuteron's neutron-proton separation \f$r\f$ from the
+     * Hulthen wave function \f$\psi(r) \propto (e^{-ar} - e^{-br})/r\f$,
+     * i.e. from the density \f$r^2|\psi(r)|^2\f$ in 3D, by rejection
+     * sampling against \f$e^{-2ar}\f$ (about 87% of the draws are
+     * accepted for the deuteron).
+     * \param[in,out] random Random-number source.
+     * \param[in] data The deuteron's parameters: \f$a\f$ = `a_WS`,
+     * \f$b\f$ = `w_WS` [fm\f$^{-1}\f$], \f$a < b\f$.
+     * \return The separation \f$r\f$ [fm].
+     */
+    static double sampleHulthenSeparation(Random *random, const Nucleus &data);
     /**
      * Draws one nucleus' nucleon positions from a random pre-tabulated
      * configuration, assigns protons and recenters it; falls back to

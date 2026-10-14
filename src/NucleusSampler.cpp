@@ -178,27 +178,49 @@ std::vector<ReturnValue> NucleusSampler::sampleWoodsSaxon(
         rv.proton = 1;
         nucleus.push_back(rv);
     } else if (data.A == 2) {
-        // deuteron
-        rv = glauber->sampleTARejection(random, role);
-        // we sample the neutron proton distance, so distance to the center
-        // needs to be divided by 2
-        rv.x = rv.x / 2.;
-        rv.y = rv.y / 2.;
-        rv.z = 0.;
+        // deuteron: the neutron-proton separation r in 3D, in a random
+        // direction, with the nucleons at +-r/2 from the center
+        const double halfSeparation =
+            0.5 * sampleHulthenSeparation(random, data);
+        const double cosTheta = 1. - 2. * random->genrand64_real1();
+        const double sinTheta = std::sqrt(1. - cosTheta * cosTheta);
+        const double phi = 2. * M_PI * random->genrand64_real2();
+        rv.x = halfSeparation * sinTheta * std::cos(phi);
+        rv.y = halfSeparation * sinTheta * std::sin(phi);
+        rv.z = halfSeparation * cosTheta;
+        rv.phi = std::atan2(rv.y, rv.x);
         rv.proton = 1;
         rv.collided = 0;
         nucleus.push_back(rv);
-        // other nucleon is 180 degrees rotated:
+        // the neutron on the opposite side
         rv.x = -rv.x;
         rv.y = -rv.y;
         rv.z = -rv.z;
+        rv.phi = std::atan2(rv.y, rv.x);
         rv.proton = 0;
-        rv.collided = 0;
         nucleus.push_back(rv);
     } else {
         nucleus = generate(random, data);
     }
     return nucleus;
+}
+
+double NucleusSampler::sampleHulthenSeparation(
+    Random *random, const Nucleus &data) {
+    // Hulthen wave function psi(r) ~ (e^{-a r} - e^{-b r}) / r, so the
+    // separation r has the density r^2 psi^2 ~ (e^{-a r} - e^{-b r})^2
+    // <= e^{-2 a r} (a < b): sample the exponential and accept with the
+    // ratio (1 - e^{-(b - a) r})^2
+    const double a = data.a_WS;
+    const double b = data.w_WS;
+    double r = 0.;
+    double acceptance = 0.;
+    do {
+        r = -std::log(random->genrand64_real3()) / (2. * a);
+        const double ratio = 1. - std::exp(-(b - a) * r);
+        acceptance = ratio * ratio;
+    } while (random->genrand64_real1() > acceptance);
+    return r;
 }
 
 std::vector<ReturnValue> NucleusSampler::sampleFromConfigurations(

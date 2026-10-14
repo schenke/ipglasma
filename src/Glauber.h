@@ -66,18 +66,16 @@ struct ReturnValue {
     /// center.
     double y;
     /// Longitudinal \f$z\f$ position [fm], relative to the nucleus
-    /// center (0 for a purely transverse sampling such as
-    /// Glauber::sampleTARejection()).
+    /// center.
     double z;
-    /// Anisotropy/orientation angle [rad]; not set by every producer
-    /// (see Glauber::sampleTARejection()) -- callers that need it set
-    /// for every nucleon do so afterward (e.g.
+    /// Anisotropy/orientation angle [rad]; not set by every producer --
+    /// callers that need it set for every nucleon do so afterward (e.g.
     /// Init::sampleNucleonAnisotropyAngles()).
     double phi;
     /// `1` if this nucleon has undergone at least one binary collision,
-    /// `0` otherwise. Initialized to `0` by every producer (both
-    /// Glauber::sampleTARejection() and NucleusSampler's other position
-    /// samplers); later set to `1` by CollisionGeometry::computeNcollList() for
+    /// `0` otherwise. Initialized to `0` by every producer (NucleusSampler's
+    /// position samplers); later set to `1` by
+    /// CollisionGeometry::computeNcollList() for
     /// nucleons found to collide, and reset to `0` again at the start
     /// of each new event by CollisionGeometry::sampleImpactParameter().
     int collided;
@@ -645,28 +643,5 @@ class Glauber {
         bool setWSDeformParams, double R_WS, double a_WS, double beta2,
         double beta3, double beta4, double gamma, bool forceDminFlag,
         double d_min, double dR_np, double da_np, int imax);
-    /**
-     * Envelope-area helper for sampleTARejection()'s rejection sampling:
-     * the (unnormalized) area under its Gaussian-like envelope function
-     * out to radius \p x.
-     * \param[in] x Upper radius [fm].
-     * \param[in] A Overall envelope-height scale (from \p A's inelastic
-     * cross section, see sampleTARejection()).
-     * \return The envelope's area out to \p x.
-     */
-    double areaTA(double x, double A);
-    /**
-     * Samples one nucleon's transverse position from the projectile's
-     * or target's thickness function \f$T_A(r)\f$/\f$T_B(r)\f$ via
-     * rejection sampling against a Gaussian-like envelope, logging a
-     * warning if the true distribution ever exceeds that envelope.
-     * \param[in] random Random-number source.
-     * \param[in] nucleus Which nucleus' thickness function to sample
-     * from.
-     * \return A ReturnValue with `x`/`y` set to the sampled position
-     * and \c collided set to `0`; \c z, \c phi and \c proton are left
-     * unset (see ReturnValue::phi for why that's safe today).
-     */
-    ReturnValue sampleTARejection(Random *random, NucleusRole nucleus);
 };
 #endif  // SRC_GLAUBER_H_

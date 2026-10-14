@@ -91,48 +91,6 @@ inline double projectGaugeDivergenceSU3(
     return frobeniusSquared / 3.0;
 }
 
-/**
- * Evaluates \f$g = \exp(i\chi)\f$ directly in SU(3), for \f$\chi\f$
- * already known to be Hermitian and traceless (as produced by
- * GaugeFix::fftChi()'s momentum-space relaxation step). Recovers
- * \f$\chi\f$'s eight real Gell-Mann coefficients directly from the
- * \f$3\times3\f$ matrix and reuses Matrix::expmCoeff() (the same
- * analytic SU(3) exponential the Wilson-line construction hot path
- * uses), avoiding both the generic Pade exponential and the
- * reunitarization it would otherwise need.
- * \param[in] chi Hermitian, traceless SU(3) algebra element.
- * \param[out] out Receives \f$\exp(i\chi)\f$, the local gauge
- * transformation.
- */
-inline void expGaugeRotationSU3(const Matrix &chi, Matrix &out) {
-    double q[8];
-    q[0] = 2.0 * chi.getRe(1);
-    q[1] = -2.0 * chi.getIm(1);
-    q[2] = chi.getRe(0) - chi.getRe(4);
-    q[3] = 2.0 * chi.getRe(2);
-    q[4] = -2.0 * chi.getIm(2);
-    q[5] = 2.0 * chi.getRe(5);
-    q[6] = -2.0 * chi.getIm(5);
-    q[7] = std::sqrt(3.0) * (chi.getRe(0) + chi.getRe(4));
-
-    complex<double> U[9];
-    out.expmCoeff(q, U);
-
-    const complex<double> I(0.0, 1.0);
-    const double invSqrt3 = 1.0 / std::sqrt(3.0);
-
-    out.set(0, 0, U[0] + 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
-    out.set(1, 1, U[0] - 0.5 * U[3] + 0.5 * invSqrt3 * U[8]);
-    out.set(2, 2, U[0] - invSqrt3 * U[8]);
-
-    out.set(0, 1, 0.5 * (U[1] - I * U[2]));
-    out.set(1, 0, 0.5 * (U[1] + I * U[2]));
-    out.set(0, 2, 0.5 * (U[4] - I * U[5]));
-    out.set(2, 0, 0.5 * (U[4] + I * U[5]));
-    out.set(1, 2, 0.5 * (U[6] - I * U[7]));
-    out.set(2, 1, 0.5 * (U[6] + I * U[7]));
-}
-
 }  // namespace
 
 //**************************************************************************
@@ -276,7 +234,7 @@ void GaugeFix::fftChi(
                         // exp(i chi) directly in SU(3).  This avoids the
                         // generic Pade exponential and the subsequent
                         // reunitarization.
-                        expGaugeRotationSU3(*chi[localpos], localg);
+                        localg = Matrix::expiHermitian(*chi[localpos]);
 
                         if (localg(2) != localg(2)) {
                             // A fresh, stack-local instance: this runs

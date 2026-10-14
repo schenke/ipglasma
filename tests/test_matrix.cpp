@@ -258,9 +258,11 @@ TEST_CASE("Matrix: traceOfProductOfMatrix matches (a*b).trace()") {
 }
 
 TEST_CASE(
-    "Matrix: expmCoeff matches expm(i*sum Q^a t^a) via Group's generators") {
+    "Matrix::fromAlgebraExponent matches expm(i*sum Q^a t^a) with Group's "
+    "generators") {
     Group group;
-    double Q[8] = {0.10, -0.07, 0.15, 0.02, -0.12, 0.08, -0.05, 0.09};
+    const std::vector<double> Q = {0.10,  -0.07, 0.15,  0.02,
+                                   -0.12, 0.08,  -0.05, 0.09};
 
     Matrix H;  // H = sum_a Q[a] * t_a (traceless Hermitian)
     for (int a = 0; a < 8; ++a) H += Q[a] * group.getT(a);
@@ -268,14 +270,10 @@ TEST_CASE(
     Matrix reference = std::complex<double>(0.0, 1.0) * H;
     reference.expm();  // exp(i H)
 
-    Matrix dummy;  // expmCoeff does not read *this
-    std::complex<double> out[9];
-    dummy.expmCoeff(Q, out);
-
-    Matrix reconstructed = out[0] * Matrix(1.);
-    for (int a = 0; a < 8; ++a) reconstructed += out[a + 1] * group.getT(a);
-
-    CHECK(matricesClose(reconstructed, reference, 1e-9));
+    CHECK(matricesClose(Matrix::fromAlgebraExponent(Q), reference, 1e-9));
+    // the same matrix as expiHermitian of H
+    CHECK(matricesClose(
+        Matrix::fromAlgebraExponent(Q), Matrix::expiHermitian(H), 1e-15));
 }
 
 TEST_CASE("Matrix: MatrixToString formats elements in row-major order") {
@@ -315,8 +313,8 @@ TEST_CASE("Matrix: free +/- operators match the in-place versions") {
 }
 
 TEST_CASE(
-    "Matrix::fromAlgebraExponent: exp(i Q^a t^a) is unitary, and the NaN "
-    "fallback gives the identity") {
+    "Matrix::fromAlgebraExponent: exp(i Q^a t^a) is unitary, also for "
+    "degenerate eigenvalues, and Q = 0 gives the identity") {
     // a generic exponent: unitary with determinant 1
     std::vector<double> Q = {0.3, -1.2, 0.7, 2.1, -0.4, 0.9, 1.5, -2.2};
     const Matrix U = Matrix::fromAlgebraExponent(Q);
@@ -329,13 +327,10 @@ TEST_CASE(
     }
     CHECK(std::abs(U.det() - std::complex<double>(1., 0.)) < 1e-12);
 
-    // expmCoeff() zeroes the coefficients that come out NaN (0/0 in the
-    // very-low-density region); that becomes the vacuum, the identity
-    std::vector<double> nanQ(8, std::nan(""));
-    const Matrix vacuum = Matrix::fromAlgebraExponent(nanQ);
-    for (int k = 0; k < 9; k++) {
-        CHECK(std::abs(vacuum.get(k) - identity.get(k)) < 1e-15);
-    }
+    // Q = 0 is exactly the identity
+    const Matrix vacuum =
+        Matrix::fromAlgebraExponent(std::vector<double>(8, 0.));
+    for (int k = 0; k < 9; k++) CHECK(vacuum.get(k) == identity.get(k));
 }
 
 namespace {
@@ -420,4 +415,31 @@ TEST_CASE(
     }
     // no field: exactly the identity
     CHECK(maxDifference(Matrix::expiHermitian(Matrix(0.)), Matrix(1.)) == 0.);
+}
+
+TEST_CASE(
+    "Matrix::fromAlgebraExponent is exact along +-t^8 and for nearly "
+    "degenerate eigenvalues (issue #100)") {
+    // the former closed form returned the identity for Q = +-s t^8 (two
+    // equal eigenvalues) and lost precision as 1/splitting^2 close to them
+    Group group;
+    auto error = [&](const std::vector<double> &Q) {
+        Matrix H;
+        for (int a = 0; a < 8; ++a) H += Q[a] * group.getT(a);
+        return maxDifference(Matrix::fromAlgebraExponent(Q), seriesExpi(H));
+    };
+    for (const double s : {0.5, 1., -0.5, -1.}) {
+        CAPTURE(s);
+        std::vector<double> Q(8, 0.);
+        Q[7] = s;
+        CHECK(error(Q) < 1e-13);
+        CHECK(maxDifference(Matrix::fromAlgebraExponent(Q), Matrix(1.)) > 0.1);
+    }
+    for (const double splitting : {1e-1, 1e-3, 1e-5, 1e-7}) {
+        CAPTURE(splitting);
+        std::vector<double> Q(8, 0.);
+        Q[7] = 1.;
+        Q[2] = splitting;
+        CHECK(error(Q) < 1e-13);
+    }
 }

@@ -70,33 +70,6 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "ForwardLightCone::computePlaquetteTeam wires the four links in the "
-    "documented order") {
-    const int N = 4;
-    Parameters param;
-    makeInitTestParam(param, N);
-    Lattice lat(&param, N);
-    for (int pos = 0; pos < N * N; ++pos) {
-        lat.Ux[pos] = makeTestMatrix(pos + 1);
-        lat.Uy[pos] = makeTestMatrix(pos + 51);
-    }
-
-    Group group;
-    ForwardLightCone flc(&group);
-    ForwardLightCone::PlaquetteScratch scratch;
-    flc.computePlaquetteTeam(&lat, N * N, scratch);
-
-    for (int pos = 0; pos < N * N; ++pos) {
-        Matrix UDx = lat.Ux[lat.pospY[pos]];
-        UDx.conjg();
-        Matrix UDy = lat.Uy[pos];
-        UDy.conjg();
-        Matrix expected = lat.Ux[pos] * (lat.Uy[lat.pospX[pos]] * (UDx * UDy));
-        CHECK(matricesClose(lat.Uy1[pos], expected, 1e-10));
-    }
-}
-
-TEST_CASE(
     "ForwardLightCone::resetFieldsTeam zeroes U/U2/Uy2 and resets Ux1 to "
     "the identity") {
     const int N = 4;

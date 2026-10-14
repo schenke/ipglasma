@@ -5,6 +5,7 @@
 // Checks the output-file layouts described in OUTPUT.md, so the document and
 // the writers cannot drift apart unnoticed.
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -20,6 +21,7 @@
 #include "MyEigen.h"
 #include "Parameters.h"
 #include "PhysConst.h"
+#include "RunningCoupling.h"
 #include "WilsonLineIO.h"
 #include "doctest.h"
 #include "test_helpers.h"
@@ -274,6 +276,149 @@ TEST_CASE(
             CHECK(
                 std::stod(row[valueColumn])
                 == doctest::Approx(hbarc * profile(x)).epsilon(1e-5));
+        }
+    }
+}
+
+TEST_CASE(
+    "Output format: T^{mu nu} before the first and after the last plaquette "
+    "center takes the value of the edge plaquette") {
+    // The plaquette centers run from -L/2 + a/2 to L/2 - a/2, but the
+    // T^{mu nu} output covers |x| < L/2: an output grid with spacing
+    // 0.2 fm from -3.9 fm to 3.7 fm has points on both sides beyond them
+    // (the hydro output stops at |x| < L/2 - 0.5 fm, which for a <= 1 fm
+    // is inside them).
+    const double e0 = 2., slope = 0.1;  // [fm^-4], [fm^-5]
+    auto profile = [&](double x) { return e0 + slope * x; };
+    Parameters param;
+    makeOutputTestParam(param);
+    param.output.LOutput = 7.8;
+    param.output.sizeOutput = 39;
+    const double L = param.lattice.L;
+    const double a = L / N;
+    const double tau = it * param.run.dtau * a;
+    Lattice lat(&param, N);
+    for (int ix = 0; ix < N; ++ix) {
+        for (int iy = 0; iy < N; ++iy) {
+            Cell *cell = lat.cells[lat.positionFromXY(ix, iy)];
+            const double eps = profile(-L / 2. + a * (ix + 0.5));
+            cell->setTtautau(eps);
+            cell->setTxx(eps / 3.);
+            cell->setTyy(eps / 3.);
+            cell->setTetaeta(eps / 3. / (tau * tau));
+        }
+    }
+    param.output.writeTmunu = true;
+    param.output.writeTmunuBinary = false;
+    MyEigen().writeTmunu4D(&lat, &param, it);
+    const std::string fileName = "Tmunu-t0.5-0.dat";
+    const TextTable table = readTextTable(fileName);
+    std::remove(fileName.c_str());
+    REQUIRE(table.rows.size() == 39 * 39);
+    const double dx = param.output.LOutput / param.output.sizeOutput;
+    const double firstCenter = -L / 2. + a / 2., lastCenter = L / 2. - a / 2.;
+    int before = 0, after = 0;
+    for (const auto &row : table.rows) {
+        const double x = -param.output.LOutput / 2. + dx * std::stoi(row[0]);
+        CAPTURE(x);
+        if (x < firstCenter - 1e-9) before++;
+        if (x > lastCenter + 1e-9) after++;
+        CHECK(
+            std::stod(row[2])
+            == doctest::Approx(
+                   hbarc * profile(std::clamp(x, firstCenter, lastCenter)))
+                   .epsilon(1e-5));
+    }
+    CHECK(before > 0);
+    CHECK(after > 0);
+}
+
+TEST_CASE(
+    "Output format: the local running-coupling factor is interpolated from "
+    "the lattice sites, T^{mu nu} from the plaquette centers") {
+    // A uniform fluid at rest, so every output value is the interpolated
+    // factor times the energy density. g^2 mu^2, and with it the factor,
+    // grows with x; taking the factor with the plaquette stencil would
+    // shift it by a/2.
+    const double e0 = 2.;  // [fm^-4]
+    for (const bool hydro : {false, true}) {
+        CAPTURE(hydro);
+        Parameters param;
+        makeOutputTestParam(param);
+        param.output.LOutput = 6.;
+        param.output.sizeOutput = 12;  // spacing 0.5 fm, between the sites
+        param.coupling.runningCoupling = true;
+        param.coupling.runWithLocalQs = true;
+        param.coupling.runWithQs = 1;
+        param.coupling.c = 0.2;
+        param.coupling.mu0 = 0.3;
+        param.coupling.LambdaQCD = 0.2;
+        param.coupling.nFlavors = 3;
+        param.coupling.runningCouplingQsFactor = 0.5;
+        param.colorCharge.QsMuRatio = 0.6;
+        param.event.averageQs = 1.;
+        const double L = param.lattice.L;
+        const double a = L / N;
+        const double tau = it * param.run.dtau * a;
+        Lattice lat(&param, N);
+        for (int ix = 0; ix < N; ++ix) {
+            for (int iy = 0; iy < N; ++iy) {
+                Cell *cell = lat.cells[lat.positionFromXY(ix, iy)];
+                cell->setTtautau(e0);
+                cell->setTxx(e0 / 3.);
+                cell->setTyy(e0 / 3.);
+                cell->setTetaeta(e0 / 3. / (tau * tau));
+                // Q_s from about 1.2 to 3.3 GeV
+                cell->setg2mu2A(100. * (1 + ix));
+                cell->setg2mu2B(100. * (1 + ix));
+            }
+        }
+        const CouplingFactor factor = latticeCouplingFactor(&lat, &param);
+        REQUIRE(factor.perCell.size() == static_cast<std::size_t>(N * N));
+        CHECK(
+            factor.perCell[lat.positionFromXY(3, 3)]
+            != doctest::Approx(factor.perCell[lat.positionFromXY(4, 3)]));
+        // bilinear in the factors at the sites x = -L/2 + a i; the output
+        // points stay between the first and the last site
+        auto siteFactor = [&](double x, double y) {
+            const double sx = (x + L / 2.) / a, sy = (y + L / 2.) / a;
+            const int ix = static_cast<int>(std::floor(sx + 1e-10));
+            const int iy = static_cast<int>(std::floor(sy + 1e-10));
+            const double fx = sx - ix, fy = sy - iy;
+            auto f = [&](int i, int j) {
+                return factor.perCell[lat.positionFromXY(i, j)];
+            };
+            return (1. - fx) * (1. - fy) * f(ix, iy)
+                   + fx * (1. - fy) * f(ix + 1, iy)
+                   + (1. - fx) * fy * f(ix, iy + 1)
+                   + fx * fy * f(ix + 1, iy + 1);
+        };
+        std::string fileName;
+        if (hydro) {
+            param.output.writeHydro = true;
+            MyEigen().flowVelocity4D(&lat, &param, it, /*finalFlag=*/true);
+            fileName = "epsilon-u-Hydro-TauHydro-0.dat";
+        } else {
+            param.output.writeTmunu = true;
+            param.output.writeTmunuBinary = false;
+            MyEigen().writeTmunu4D(&lat, &param, it);
+            fileName = "Tmunu-t0.5-0.dat";
+        }
+        const TextTable table = readTextTable(fileName);
+        std::remove(fileName.c_str());
+        REQUIRE(table.rows.size() == 12 * 12);
+        for (const auto &row : table.rows) {
+            // hydro: eta, x, y, epsilon; T^{mu nu}: ix, iy, T^{tau tau}
+            const double x =
+                hydro ? std::stod(row[1]) : -3. + 0.5 * std::stoi(row[0]);
+            const double y =
+                hydro ? std::stod(row[2]) : -3. + 0.5 * std::stoi(row[1]);
+            CAPTURE(x);
+            CAPTURE(y);
+            CHECK(
+                std::stod(row[hydro ? 3 : 2])
+                == doctest::Approx(hbarc * e0 * siteFactor(x, y))
+                       .epsilon(1e-5));
         }
     }
 }

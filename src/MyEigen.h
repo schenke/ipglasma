@@ -110,7 +110,7 @@ class MyEigen {
      * \param[in] dtau Evolution time step [lattice units].
      * \param[in] coupling Running-coupling factor of each lattice cell
      * (`1` if running coupling is disabled), interpolated to the output
-     * grid like the fields.
+     * grid from the lattice sites.
      * \param[in] hx Output grid size in \f$x\f$.
      * \param[in] hy Output grid size in \f$y\f$.
      * \param[in] heta Output grid size in \f$\eta\f$.
@@ -147,7 +147,7 @@ class MyEigen {
      * \param[in] a Lattice spacing [fm].
      * \param[in] dtau Evolution time step [lattice units].
      * \param[in] coupling Running-coupling factor of each lattice cell,
-     * interpolated to the output grid like the fields.
+     * interpolated to the output grid from the lattice sites.
      * \param[in] hx Output grid size in \f$x\f$.
      * \param[in] hy Output grid size in \f$y\f$.
      * \param[in] heta Output grid size in \f$\eta\f$.

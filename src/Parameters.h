@@ -171,7 +171,8 @@ struct NucleusParameters {
 /// event.
 struct SubnucleonParameters {
     /// Infrared mass regulator [GeV] cutting off the Coulomb tail;
-    /// should be of order \f$\Lambda_{QCD}=0.2\f$ GeV.
+    /// should be of order \f$\Lambda_{QCD}=0.2\f$ GeV. With `0`, the
+    /// \f$k = 0\f$ mode of the propagator is removed instead.
     double m = 0.;
     /// Transverse structure of a nucleon, see NucleonModel: `gaussian`
     /// (a single Gaussian of width BG), `hotspots` (Nq Gaussian hot spots
@@ -251,8 +252,8 @@ struct SubnucleonParameters {
     double smearingWidth = 0.;
     /// UV damping length [GeV\f$^{-1}\f$]: the propagator
     /// \f$1/(k^2+m^2)\f$ from the color charges to the gauge field is
-    /// multiplied by \f$e^{-|k|\,\text{UVDamp}}\f$; only with \c m
-    /// \f$\neq 0\f$.
+    /// multiplied by \f$e^{-|k|\,\text{UVDamp}}\f$, also with \c m = 0
+    /// (Init::computeWilsonLineMomentumKernel()).
     double UVDamp = 0.;
 };
 

@@ -30,6 +30,10 @@ struct EvolutionParameters {
     bool runEvolution = false;
     /// Maximal evolution time [fm/c].
     double maxTime = 0.;
+    /// Number of time steps per lattice spacing: the time step is
+    /// \f$d\tau \approx a/\f$ \c timeStepsPerLatticeSpacing, adjusted so
+    /// that \c maxTime is a whole number of steps (see RunState::dtau).
+    int timeStepsPerLatticeSpacing = 10;
     /// Whether to use \f$1/Q_s\f$ as the maximal evolution time (`1`)
     /// or the manually entered \c maxTime (`0`).
     bool inverseQsForMaxTime = false;
@@ -471,7 +475,9 @@ struct RunState {
     /// Number of events each rank generates (the second command-line
     /// argument).
     int eventsPerRank = 1;
-    /// Evolution time step [lattice units].
+    /// Evolution time step [lattice units]: about
+    /// `1/timeStepsPerLatticeSpacing`, such that `maxTime` is a whole
+    /// number of steps.
     double dtau = 0.;
     /// The random seed actually used this run (so the event can be
     /// reproduced), as opposed to \c seed's configured input.

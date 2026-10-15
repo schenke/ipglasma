@@ -600,6 +600,12 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("g", &P::coupling, &CouplingParameters::g).check(positive()),
         param("maxTime", &P::evolution, &EvolutionParameters::maxTime)
             .check(nonNegative()),
+        // the time step is about a over this number (issue #109)
+        param(
+            "timeStepsPerLatticeSpacing", &P::evolution,
+            &EvolutionParameters::timeStepsPerLatticeSpacing)
+            .optional("10")
+            .check(positive<int>()),
         param(
             "inverseQsForMaxTime", &P::evolution,
             &EvolutionParameters::inverseQsForMaxTime),
@@ -1191,11 +1197,13 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     if (!errors.empty()) return errors;
 
     // Derived settings.
-    // dtau (in lattice units) is ~0.1, adjusted so maxtime is a whole number
-    // of steps. With fewer than one step (e.g. maxTime 0 to only produce
-    // Wilson lines) use 0.1 instead of dividing by zero.
+    // dtau (in lattice units) is ~1/timeStepsPerLatticeSpacing, adjusted so
+    // maxTime is a whole number of steps. With fewer than one step (e.g.
+    // maxTime 0 to only produce Wilson lines) use 1/timeStepsPerLatticeSpacing
+    // instead of dividing by zero.
     const double latticeSpacing = lattice.L / static_cast<double>(lattice.size);
-    const double steps = 10 * evolution.maxTime / latticeSpacing;
+    const double stepsPerSpacing = evolution.timeStepsPerLatticeSpacing;
+    const double steps = stepsPerSpacing * evolution.maxTime / latticeSpacing;
     if (steps > 1e8) {
         errors.push_back(
             source + ": maxTime " + std::to_string(evolution.maxTime)
@@ -1205,7 +1213,7 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     const int timeSteps = static_cast<int>(steps);
     run.dtau = (timeSteps > 0)
                    ? evolution.maxTime / (timeSteps * latticeSpacing)
-                   : 0.1;
+                   : 1. / stepsPerSpacing;
     // polarized nuclei are only available as configuration files
     if (nucleus.polarizationProjectile != 0
         || nucleus.polarizationTarget != 0) {

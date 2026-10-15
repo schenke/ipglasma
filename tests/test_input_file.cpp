@@ -241,6 +241,58 @@ TEST_CASE("Parameters::readInput: maxTime 0 gives dtau 0.1, not NaN") {
     CHECK(param.run.dtau == 0.1);
 }
 
+TEST_CASE(
+    "Parameters::readInput: timeStepsPerLatticeSpacing sets the time step, "
+    "10 by default") {
+    // the time step before the parameter existed (issue #109)
+    auto dtauWith = [](const std::string &text) {
+        Parameters param;
+        REQUIRE(param.readInput(inputFromText(text)).empty());
+        return param.run.dtau;
+    };
+    const std::string input = readSourceFile("input");
+    Parameters example;
+    REQUIRE(example.readInput(inputFromText(input)).empty());
+    const double a = example.lattice.L / example.lattice.size;
+    const double maxTime = example.evolution.maxTime;
+    const double oldDtau = maxTime / (static_cast<int>(10 * maxTime / a) * a);
+    CHECK(example.evolution.timeStepsPerLatticeSpacing == 10);
+    CHECK(example.run.dtau == oldDtau);
+    // optional: without the key it is 10 as well
+    CHECK(
+        dtauWith(inputWith(input, "timeStepsPerLatticeSpacing", ""))
+        == oldDtau);
+    for (const int n : {1, 20, 40, 80}) {
+        CAPTURE(n);
+        const double dtau = dtauWith(
+            inputWith(input, "timeStepsPerLatticeSpacing", std::to_string(n)));
+        // maxTime is a whole number of steps, the largest number up to
+        // n maxTime / a
+        const double steps = maxTime / (a * dtau);
+        CHECK(steps == doctest::Approx(static_cast<int>(n * maxTime / a)));
+        CHECK(steps == doctest::Approx(static_cast<int>(steps + 0.5)));
+        // fewer than one step: 1/n
+        CHECK(
+            dtauWith(inputWith(
+                exampleInputWith("maxTime", "0"), "timeStepsPerLatticeSpacing",
+                std::to_string(n)))
+            == 1. / n);
+    }
+    // the step limit counts the steps with the chosen time step
+    const std::vector<std::string> errors = readErrors(inputWith(
+        exampleInputWith("maxTime", "1e7"), "timeStepsPerLatticeSpacing", "1"));
+    CHECK(errors.empty());
+    CHECK(anyContains(
+        readErrors(inputWith(
+            exampleInputWith("maxTime", "1e7"), "timeStepsPerLatticeSpacing",
+            "1000")),
+        "more than 1e8 time steps"));
+    // an integer
+    CHECK(anyContains(
+        readErrors(exampleInputWith("timeStepsPerLatticeSpacing", "12.5")),
+        "timeStepsPerLatticeSpacing"));
+}
+
 TEST_CASE("Parameters::readInput: unknown keys are errors, with a suggestion") {
     const std::vector<std::string> errors = readErrors(insertBeforeEndOfFile(
         readSourceFile("input"), "writeTmunuBinry 0\nfoo 1\n"));
@@ -363,6 +415,8 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"nFlavors", "-1", "must be between 0 and 16"},
              {"L", "0", "must be positive"},
              {"maxTime", "-1", "must not be negative"},
+             {"timeStepsPerLatticeSpacing", "0", "must be positive"},
+             {"timeStepsPerLatticeSpacing", "-10", "must be positive"},
              {"nucleiToAverage", "0", "must be positive"},
              {"polarizationTarget", "3", "must be one of 0, 1, 2"},
              {"Nq", "0", "must be at least 1"},

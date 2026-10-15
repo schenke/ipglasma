@@ -73,7 +73,7 @@ Useful flags:
 - `--keep-logs` — keep the per-event working directories after the run
   instead of deleting them (failed events are always kept).
 
-Output: `epsilon2_distribution.pdf`/`.png` in `--datadir`, plus
+Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 `eccentricity_results.json` (or, with `--save-reference`, an updated
 `eccentricity_reference.json` next to the script) recording the ε₂ values and
 the exact command used to reproduce the run. The script exits non-zero if the

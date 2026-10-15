@@ -1,5 +1,10 @@
 #!/bin/bash
-#SBATCH --job-name=validation
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
+# This file is part of IP-Glasma; the license text is in LICENSE.
+
+#SBATCH --job-name=validation_eccentricity
 #SBATCH --account=<your_account>
 #SBATCH --partition=small
 #SBATCH --time=2:30:00
@@ -20,4 +25,4 @@ module add python-data gsl fftw
 taskset -pc $$
 
 # Run the program
-python3 parallel_test_eccentricity.py --size 512 --ipglasma-path /path/to/ipglasma --max-workers "${SLURM_NTASKS:-1}" --maxevents 1500 --datadir /path/to/datadir --input-template input_eccentricity --slurm 
+python3 parallel_test_eccentricity.py --size 128 --ipglasma-path /path/to/ipglasma --max-workers "${SLURM_NTASKS:-1}" --maxevents 1500 --datadir /path/to/datadir --input-template input_eccentricity --slurm

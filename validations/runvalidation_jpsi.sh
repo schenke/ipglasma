@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=validation
+#SBATCH --job-name=validation_jpsi
 #SBATCH --account=<your_account>
 #SBATCH --partition=small
 #SBATCH --time=2:30:00

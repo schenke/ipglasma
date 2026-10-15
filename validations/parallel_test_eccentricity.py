@@ -329,6 +329,37 @@ def save_reference(reference_file, eps2_values, run_meta):
         json.dump(payload, f, indent=2)
 
 
+def check_reference_parameters(run_meta, reference):
+    """Return a list of warning messages, one for every run parameter
+    recorded in `reference` (and in this run's `run_meta`) whose value
+    differs between the two -- comparing eps2 distributions obtained with
+    different settings is not a meaningful regression check."""
+    # Older reference files stored maxTime under the key "maxtime".
+    reference = dict(reference)
+    if "maxTime" not in reference and "maxtime" in reference:
+        reference["maxTime"] = reference.pop("maxtime")
+
+    warnings = []
+    for key, value in run_meta.items():
+        if key not in reference:
+            warnings.append(
+                "WARNING: parameter '{0}' is not recorded in the reference "
+                "file (this run: {1})".format(key, value))
+            continue
+        ref_value = reference[key]
+        if isinstance(value, (int, float)) and not isinstance(value, bool) \
+                and isinstance(ref_value, (int, float)) \
+                and not isinstance(ref_value, bool):
+            same = np.isclose(value, ref_value)
+        else:
+            same = value == ref_value
+        if not same:
+            warnings.append(
+                "WARNING: parameter '{0}' differs from the reference: "
+                "reference {1}, this run {2}".format(key, ref_value, value))
+    return warnings
+
+
 def compare_to_reference(eps2_values, reference, mean_tol, std_tol):
     current = summarize(eps2_values)
     messages = []
@@ -549,6 +580,7 @@ def main():
         ipglasma_path, ipglasma_binary, template_path, qs_table_path,
         require_run_inputs=not args.plot_only)
 
+
     datadir = os.path.abspath(args.datadir)
     os.makedirs(datadir, exist_ok=True)
 
@@ -617,8 +649,21 @@ def main():
 
     exit_code = 1 if failures else 0
 
+    # Record the values the events actually ran with: --L / --maxtime
+    # default to None, meaning "keep the template's value", so fall back to
+    # reading those from the template instead of storing null.
+    def effective_value(override, key):
+        if override is not None:
+            return override
+        if not os.path.isfile(template_path):
+            return None
+        value = read_input_value(template_path, key)
+        return float(value) if value is not None else None
+
     run_meta = {
-        "size": args.size, "L": args.L, "maxTime": args.maxtime,
+        "size": args.size,
+        "L": effective_value(args.L, "L"),
+        "maxTime": effective_value(args.maxtime, "maxTime"),
         "jimwlk": args.jimwlk,
     }
     if args.save_reference:
@@ -635,6 +680,8 @@ def main():
         print("Saved this run's eps2 distribution to {0}".format(results_file))
 
         if reference is not None:
+            for warning in check_reference_parameters(run_meta, reference):
+                print(warning)
             passed, message = compare_to_reference(
                 eps2_values, reference, args.mean_tol, args.std_tol)
             print(message)

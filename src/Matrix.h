@@ -234,7 +234,7 @@ class Matrix {
      * Horner's method (inverting the denominator through
      * cofactorInverse()), then squares the result \f$s\f$ times.
      * \param[in] t Scalar multiplying this matrix before
-     * exponentiating.
+     * exponentiating; `0` gives the identity.
      * \param[in] p Pade approximant order; must be at least 6 (exits
      * with an error otherwise). The coefficients come from their
      * recurrence \f$c_k = c_{k-1} (p+1-k)/(k(2p+1-k))\f$, \f$c_0 = 1\f$.

@@ -352,13 +352,13 @@ Matrix &Matrix::expm(double t, const int p) {
     for (int k = 1; k <= p; ++k) {
         c[k] = c[k - 1] * ((p + 1. - k) / (k * (2. * p + 1. - k)));
     }
-    // the infinity norm of t A, the largest row sum of |t A_ij|
+    // the infinity norm of A, the largest row sum of |A_ij|, and below that
+    // of t A
     for (int i = 0; i < n; ++i) {
         double temp = 0.0;
         for (int j = 0; j < n; j++) temp += abs((*this)(i, j));
         norm = std::max<double>(norm, temp);
     }
-    norm *= std::abs(t);
     // If norm = 0, and all H elements are not nan or infinity but zero,
     // then U should be identity.
     if (norm == 0.0) {
@@ -385,6 +385,12 @@ Matrix &Matrix::expm(double t, const int p) {
             exit(1);
         }
     }
+    // exp(0 A) = 1
+    if (t == 0.) {
+        *this = I;
+        return *this;
+    }
+    norm *= std::abs(t);
 
     // Scaling, seek s such that || e*2^(-s) || < 1/2, and set scale = 2^(-s)
     int s = 0;

@@ -23,6 +23,10 @@ namespace EnergyMomentumTensor {
  * \f$x + (a/2, a/2)\f$, where the fields are averaged to; the output
  * writers (MyEigen) interpolate it from there. The
  * outermost ring of cells is a guard region and gets \f$T^{\mu\nu}=0\f$.
+ * \f$T^{\tau x}\f$ and \f$T^{x\eta}\f$ need the fields two sites ahead in
+ * \f$x\f$, and \f$T^{\tau y}\f$ and \f$T^{y\eta}\f$ two sites ahead in
+ * \f$y\f$, so they are also 0 on the last interior column
+ * (\f$i = N-2\f$) and row (\f$j = N-2\f$), respectively.
  * Runs its team kernels in sequence inside one shared
  * `#pragma omp parallel` region.
  * \param[in,out] lat Lattice to read the fields from and write

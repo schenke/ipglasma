@@ -315,6 +315,17 @@ Each output-grid point holds ten components, in GeV/fm³:
 | 8 | `neg_tau_Tyeta` | −τ T^yη |
 | 9 | `neg_tau_Txeta` | −τ T^xη |
 
+The components are those of T^μν in the local frame with z = τη (so
+T^τz = τ T^τη, T^zz = τ² T^ηη), with the sign of every off-diagonal
+component flipped. This is not an index lowering or a reflection, but the
+input and output format of [KøMPøST](https://github.com/KMPST/KoMPoST),
+which reads the text file as it is (it defines T0X = −T^τx, …,
+TZX = −τ T^ηx in `src/EnergyMomentumTensor.h` and flips the signs back in
+`get_Tmunu_raised_hyperbolic`). To get T^μν back, multiply components 4, 5
+and 7 by −1 and components 6, 8 and 9 by −1/τ, and divide component 3 by τ²
+(in the text file the components start in the third column).
+MUSIC does not read this file; it starts from the hydro initial conditions.
+
 Points outside the lattice, or with T^ττ below 10⁻¹⁶ GeV/fm³, get
 (10⁻¹⁶, 0.5·10⁻¹⁶, 0.5·10⁻¹⁶, 0, …, 0).
 

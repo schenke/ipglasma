@@ -515,7 +515,10 @@ struct TmunuOffDiagonalScratch {
  * Computes the six off-diagonal energy-momentum tensor components
  * (\f$T^{\tau x}\f$, \f$T^{\tau y}\f$, \f$T^{\tau\eta}\f$,
  * \f$T^{xy}\f$, \f$T^{x\eta}\f$, \f$T^{y\eta}\f$) at every cell,
- * zeroing all six at the nonphysical boundary ring.
+ * zeroing all six at the nonphysical boundary ring, and \f$T^{\tau x}\f$,
+ * \f$T^{x\eta}\f$ (\f$T^{\tau y}\f$, \f$T^{y\eta}\f$) also on the last
+ * interior column (row), where their stencil, which reaches two sites
+ * ahead, leaves the lattice.
  * \param[in,out] lat Lattice to read the fields from and write the
  * six components into (via `lat->cells`).
  * \param[in] N Lattice side length.
@@ -830,6 +833,21 @@ void tmunuOffDiagonalTeam(
                 -2. / (it * dtau) / (it * dtau)
                 * (1. / 4. * g * tyetaElectricTrace.real()
                    - 1. / 8. / g * scratch.chainA.trace().imag()));
+
+            // T^{tau x} and T^{x eta} need the plaquette and phi two sites
+            // ahead in x, T^{tau y} and T^{y eta} two sites ahead in y. On
+            // the last interior column and row these lie outside the
+            // lattice (the clamped indices give an open loop and a link
+            // that leaves it), so the components are 0 there, like on the
+            // outermost ring (issue #112).
+            if (i == N - 2) {
+                lat->cells[pos]->setTtaux(0.);
+                lat->cells[pos]->setTxeta(0.);
+            }
+            if (j == N - 2) {
+                lat->cells[pos]->setTtauy(0.);
+                lat->cells[pos]->setTyeta(0.);
+            }
 
             lat->cells[pos]->setTtaux(
                 lat->cells[pos]->getTtaux() * 1 / pow(a, 4.));

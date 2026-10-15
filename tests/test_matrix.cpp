@@ -182,6 +182,22 @@ TEST_CASE(
         X.expm(t);
         CHECK(largestDifference(X, seriesExp(t * A)) < 1e-14);
     }
+    // t = 0 gives the identity, not an error for a nonzero A
+    Matrix X0 = A;
+    X0.expm(0.);
+    CHECK(largestDifference(X0, Matrix(1.)) == 0.);
+    // orders above 6, odd and even, use the same recurrence and Horner
+    // scheme with the roles of P and Q swapped for odd p
+    for (const int p : {7, 8, 13}) {
+        CAPTURE(p);
+        for (const double norm : {0.1, 2.}) {
+            CAPTURE(norm);
+            const Matrix B = randomAntiHermitian(engine, norm);
+            Matrix X = B;
+            X.expm(1., p);
+            CHECK(largestDifference(X, seriesExp(B)) < 5e-15);
+        }
+    }
 }
 
 TEST_CASE("Matrix: sqrtm computes the principal square root") {

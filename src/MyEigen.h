@@ -137,7 +137,10 @@ class MyEigen {
      * running-coupling factor from the lattice sites), in text or a
      * little-endian binary format depending on
      * `param->output.writeTmunuBinary`. A no-op unless
-     * `param->output.writeTmunu` is set.
+     * `param->output.writeTmunu` is set. The off-diagonal components
+     * are written with a flipped sign (\f$-T^{\tau x}\f$, ...,
+     * \f$-\tau T^{x\eta}\f$), the input format of KoMPoST, which flips
+     * them back.
      * The file is described in \ref md_OUTPUT "OUTPUT.md".
      * \param[in] lat Lattice to read from.
      * \param[in] param Simulation parameters.

@@ -50,7 +50,8 @@ import numpy as np
 MAGIC = b"IPGTMU01"
 
 # Order of the 10 independent components IP-Glasma writes out, all in
-# GeV/fm^3. Index 0 (T00) is T^tautau.
+# GeV/fm^3. Index 0 (T00) is T^tautau. The off-diagonal components have a
+# flipped sign, the input format of KoMPoST (see OUTPUT.md).
 COMPONENTS = [
     "T00", "Txx", "Tyy", "tau2_Tetaeta",
     "neg_T0x", "neg_T0y", "neg_tau_T0eta",

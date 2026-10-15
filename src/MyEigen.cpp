@@ -888,6 +888,8 @@ void MyEigen::writeRawTmunu(
                     values[1] = resultTxx * gfactor * hbarc;
                     values[2] = resultTyy * gfactor * hbarc;
                     values[3] = tau0 * tau0 * resultTetaeta * gfactor * hbarc;
+                    // the off-diagonal components with a flipped sign,
+                    // the input format of KoMPoST (see OUTPUT.md)
                     values[4] = -resultT0x * gfactor * hbarc;
                     values[5] = -resultT0y * gfactor * hbarc;
                     values[6] = -tau0 * resultT0eta * gfactor * hbarc;

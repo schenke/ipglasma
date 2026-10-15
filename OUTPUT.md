@@ -53,9 +53,10 @@ files themselves.
   definition, and the code refuses to write (or, for the geometry files, to
   read) them on a big-endian host. The binary Wilson-line files are written
   in the host's byte order.
-- **Short runs.** With a `maxTime` below one time step (0.1 `a`), there is no
-  time step, so none of the files written at the final time (hydro, Jazma,
-  T^μν, eccentricities, multiplicity) is written.
+- **Short runs.** With a `maxTime` below one time step
+  (`a`/`timeStepsPerLatticeSpacing`), there is no time step, so none of the
+  files written at the final time (hydro, Jazma, T^μν, eccentricities,
+  multiplicity) is written.
 
 ## Overview
 

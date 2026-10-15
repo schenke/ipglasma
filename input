@@ -76,6 +76,7 @@ sigmaNN 73.
 gaussianWounding 1
 inverseQsForMaxTime 0
 maxTime 0.5
+timeStepsPerLatticeSpacing 10
 LOutput 30
 sizeOutput 340
 writeHydro 0

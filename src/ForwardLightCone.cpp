@@ -10,6 +10,7 @@
 
 #include "Instrumentation.h"
 #include "PhysConst.h"
+#include "SU3.h"
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::Nc2m1;
@@ -348,44 +349,16 @@ double ForwardLightCone::computeResidual(
 }
 
 void ForwardLightCone::computeJacobian(
-    const Matrix &U0, const Matrix &U1pU2, const Matrix &Usoldagger,
-    std::vector<Matrix> &MtempArr, std::vector<double> &alpha, double *Jab) {
-    Matrix Mtemp(0.);
-
-    // numerical formula
-    bool JabGood = true;
-    for (int bi = 0; bi < Nc2m1; bi++) {
-        double dalpha_bi =
-            (std::max(0.001, std::min(10., 0.01 * std::abs(alpha[bi]))));
-        alpha[bi] = alpha[bi] + dalpha_bi;
-        Mtemp = Matrix::fromAlgebraExponent(alpha) * U0;
-        Mtemp.conjg();
-        Mtemp = U1pU2 * (Mtemp - Usoldagger);
-        double Mcheck = 0.;
-        for (int ai = 0; ai < Nc2m1; ai++) {
-            int countMe = ai * Nc2m1 + bi;
-            complex<double> traceLoc =
-                Mtemp.traceOfProductOfMatrix(group_->getT(ai), Mtemp);
-            Jab[countMe] = 2. * imag(traceLoc) / dalpha_bi;
-            Mcheck += std::abs(Jab[countMe]);
-            if (Mcheck < 1e-15) {
-                // avoid matrix to be singular
-                JabGood = false;
-            }
-        }
-        alpha[bi] = alpha[bi] - dalpha_bi;
-    }
-    if (!JabGood) {
-        // analytical approximated formula
+    const Matrix &U1pU2, const Matrix &Usoldagger, double *Jab) {
+    // dF_a/d delta_b for U -> e^{i delta_b t_b} U is
+    // 2 Re tr[t_a (U1 + U2) U^dagger t_b]; solveAxb() solves J dx = F, so
+    // J = -dF/d delta
+    const Matrix M = U1pU2 * Usoldagger;
+    for (int ai = 0; ai < Nc2m1; ai++) {
         for (int bi = 0; bi < Nc2m1; bi++) {
-            Mtemp = group_->getT(bi) * Usoldagger;
-            for (int ai = 0; ai < Nc2m1; ai++) {
-                int countMe = ai * Nc2m1 + bi;
-                complex<double> traceLoc =
-                    Mtemp.traceOfProductOfMatrix(MtempArr[ai], Mtemp);
-                auto traceRes = -2. * real(traceLoc);
-                Jab[countMe] = traceRes;
-            }
+            Jab[ai * Nc2m1 + bi] =
+                -2.
+                * su3::traceABC(group_->getT(ai), M, group_->getT(bi)).real();
         }
     }
 }
@@ -395,19 +368,14 @@ bool ForwardLightCone::findU(
     const int maxIterations = 2000;
     const int maxRetrys = 200;
 
-    Matrix U0 = U1 * U2;
-    Matrix U1pU2 = U1 + U2;
+    const Matrix U0 = U1 * U2;
+    const Matrix U1pU2 = U1 + U2;
     Matrix U1pU2dagger = U1pU2;
     U1pU2dagger.conjg();
 
-    Matrix Mtemp(0.);
-    std::vector<Matrix> MtempArr;
-    MtempArr.resize(Nc2m1);
     std::vector<complex<double>> traceCache(Nc2m1, 0.);
     for (int ai = 0; ai < Nc2m1; ai++) {
-        Mtemp = group_->getT(ai) * (U1pU2 - U1pU2dagger);
-        traceCache[ai] = Mtemp.trace();
-        MtempArr[ai] = group_->getT(ai) * U1pU2;
+        traceCache[ai] = (group_->getT(ai) * (U1pU2 - U1pU2dagger)).trace();
     }
 
     // JabData/FaData own the storage; Jab/Fa are raw-pointer views into it
@@ -423,10 +391,12 @@ bool ForwardLightCone::findU(
     double FzeroMin = 1e6;
     Matrix UsolBestEst(1.);
 
-    // set up initial guess
-    std::vector<double> alpha(Nc2m1, 0.);  // solution
+    // Newton's method on the group: start from U1 U2 and rotate the
+    // estimate from the left, U -> e^{i Dalpha_a t_a} U, with the exact
+    // Jacobian of that rotation
+    std::vector<double> alpha(Nc2m1, 0.);
     std::vector<double> Dalpha(Nc2m1, 0.);
-    Usol = Matrix::fromAlgebraExponent(alpha) * U0;
+    Usol = U0;
     Matrix Usoldagger = Usol;
     Usoldagger.conjg();
 
@@ -436,33 +406,33 @@ bool ForwardLightCone::findU(
     auto nextRetryGaussian = [&]() {
         return deterministicRetryGaussian(retrySeed, retryDraw++);
     };
+    // a fresh start e^{i alpha_a t_a} U1 U2 with random alpha
+    auto restart = [&]() {
+        for (int ai = 0; ai < Nc2m1; ai++) alpha[ai] = nextRetryGaussian();
+        Usol = Matrix::fromAlgebraExponent(alpha) * U0;
+    };
     while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
         iter++;
 
         Fzero = computeResidual(
             U1pU2, U1pU2dagger, Usol, Usoldagger, traceCache, Fa);
 
-        computeJacobian(U0, U1pU2, Usoldagger, MtempArr, alpha, Jab);
+        computeJacobian(U1pU2, Usoldagger, Jab);
 
         solveAxb(Jab, Fa, Dalpha);
 
         bool DalphaCheck = true;
         for (int ai = 0; ai < Nc2m1; ai++) {
-            if (std::abs(Dalpha[ai]) > 1e5) {
+            if (!(std::abs(Dalpha[ai]) <= 1e5)) {
                 DalphaCheck = false;
                 break;
             }
         }
         if (DalphaCheck) {
-            for (int ai = 0; ai < Nc2m1; ai++) {
-                alpha[ai] = alpha[ai] + Dalpha[ai];
-            }
+            Usol = Matrix::fromAlgebraExponent(Dalpha) * Usol;
         } else {
-            for (int ai = 0; ai < Nc2m1; ai++) {
-                alpha[ai] = nextRetryGaussian();
-            }
+            restart();
         }
-        Usol = Matrix::fromAlgebraExponent(alpha) * U0;
         Usoldagger = Usol;
         Usoldagger.conjg();
 
@@ -471,10 +441,7 @@ bool ForwardLightCone::findU(
             UsolBestEst = Usol;
         }
         if (iter == maxIterations) {
-            for (int ai = 0; ai < Nc2m1; ai++) {
-                alpha[ai] = nextRetryGaussian();
-            }
-            Usol = Matrix::fromAlgebraExponent(alpha) * U0;
+            restart();
             Usoldagger = Usol;
             Usoldagger.conjg();
 

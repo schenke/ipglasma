@@ -301,10 +301,8 @@ def plot_distribution(eps2_values, datadir, reference=None):
 
     out_path = os.path.join(datadir, "epsilon2_distribution.pdf")
     fig.savefig(out_path)
-    out_path_png = os.path.join(datadir, "epsilon2_distribution.png")
-    fig.savefig(out_path_png, dpi=150)
     plt.close(fig)
-    return out_path_png
+    return out_path
 
 
 def load_reference(reference_file):
@@ -331,6 +329,37 @@ def save_reference(reference_file, eps2_values, run_meta):
     payload.update(run_meta)
     with open(reference_file, "w") as f:
         json.dump(payload, f, indent=2)
+
+
+def check_reference_parameters(run_meta, reference):
+    """Return a list of warning messages, one for every run parameter
+    recorded in `reference` (and in this run's `run_meta`) whose value
+    differs between the two -- comparing eps2 distributions obtained with
+    different settings is not a meaningful regression check."""
+    # Older reference files stored maxTime under the key "maxtime".
+    reference = dict(reference)
+    if "maxTime" not in reference and "maxtime" in reference:
+        reference["maxTime"] = reference.pop("maxtime")
+
+    warnings = []
+    for key, value in run_meta.items():
+        if key not in reference:
+            warnings.append(
+                "WARNING: parameter '{0}' is not recorded in the reference "
+                "file (this run: {1})".format(key, value))
+            continue
+        ref_value = reference[key]
+        if isinstance(value, (int, float)) and not isinstance(value, bool) \
+                and isinstance(ref_value, (int, float)) \
+                and not isinstance(ref_value, bool):
+            same = np.isclose(value, ref_value)
+        else:
+            same = value == ref_value
+        if not same:
+            warnings.append(
+                "WARNING: parameter '{0}' differs from the reference: "
+                "reference {1}, this run {2}".format(key, ref_value, value))
+    return warnings
 
 
 def compare_to_reference(eps2_values, reference, mean_tol, std_tol):
@@ -417,7 +446,7 @@ def validate_environment(ipglasma_path, ipglasma_binary, template_path,
 
 
 # Stray output files IP-Glasma writes relative to its process cwd (see
-# Init.cpp / Evolution.cpp) using "<name><eventId>.<ext>" 
+# Init.cpp / Evolution.cpp) using "<name><eventId>.<ext>"
 #  Each event's run
 # is launched with cwd=worker_dir, so these normally land inside that
 # event's own working directory and are removed along with it; this is a
@@ -475,17 +504,17 @@ def main():
                               "(random seeds) to run in parallel")
     parser.add_argument("--datadir", default="./eccentricity_test_output/",
                          help="directory for per-event working dirs and plots")
-    parser.add_argument("--ipglasma-path", default=".",
+    parser.add_argument("--ipglasma-path", default="..",
                          help="directory containing the ipglasma binary, "
                               "input template and Qs table")
     parser.add_argument("--ipglasma-cmd", default="ipglasma")
-    parser.add_argument("--input-template", default="input",
+    parser.add_argument("--input-template", default="input_eccentricity",
                          help="IP-Glasma input file to use as a template ")
     parser.add_argument("--size", type=int, default=128,
-                         help="lattice size override, default 256")                       
-    parser.add_argument("--L", type=float, default=None,
+                         help="lattice size override, default 256")
+    parser.add_argument("--L", type=float, default=30,
                          help="transverse box size override in fm "
-                              "(default: keep the template's value)")
+                              "(default: 30 fm)")
     parser.add_argument("--maxtime", type=float, default=None,
                          help="evolution end time override in fm/c "
                               "(default: keep the template's value)")
@@ -547,11 +576,36 @@ def main():
     qs_table_name = read_input_value(template_path, "nucleusQsTableFileName") \
         if os.path.isfile(template_path) else None
     qs_table_path = os.path.join(ipglasma_path, qs_table_name) \
-        if qs_table_name else os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_200.in")
+        if qs_table_name else os.path.join(ipglasma_path, "qs2Adj_vs_Tp_vs_Y_240.in")
 
     validate_environment(
         ipglasma_path, ipglasma_binary, template_path, qs_table_path,
         require_run_inputs=not args.plot_only)
+
+    # Record the values the events actually ran with
+    # None means "keep the template's value", so in that case fall back to
+    # reading those from the template instead of storing null.
+    def effective_value(override, key):
+        if override is not None:
+            return override
+        if not os.path.isfile(template_path):
+            return None
+        value = read_input_value(template_path, key)
+        return float(value) if value is not None else None
+
+    run_meta = {
+        "size": args.size,
+        "L": effective_value(args.L, "L"),
+        "maxTime": effective_value(args.maxtime, "maxTime"),
+        "jimwlk": args.jimwlk,
+    }
+
+    reference = None if args.save_reference else load_reference(args.reference_file)
+    # Warn up front, before spending time on the run, if this run's
+    # parameters don't match those the reference was recorded with.
+    if reference is not None:
+        for warning in check_reference_parameters(run_meta, reference):
+            print(warning)
 
     datadir = os.path.abspath(args.datadir)
     os.makedirs(datadir, exist_ok=True)
@@ -615,16 +669,11 @@ def main():
               stats["n_events"], stats["mean"], stats["std"],
               stats["median"], stats["min"], stats["max"]))
 
-    reference = None if args.save_reference else load_reference(args.reference_file)
     plot_path = plot_distribution(eps2_values, datadir, reference=reference)
     print("Wrote epsilon_2 distribution plot to {0}".format(plot_path))
 
     exit_code = 1 if failures else 0
 
-    run_meta = {
-        "size": args.size, "L": args.L, "maxTime": args.maxtime,
-        "jimwlk": args.jimwlk,
-    }
     if args.save_reference:
         save_reference(args.reference_file, eps2_values, run_meta)
         print("Saved new reference distribution to {0}".format(
@@ -654,13 +703,14 @@ def main():
                   "physics is correct.".format(args.reference_file))
 
     if not args.keep_logs and not args.plot_only:
+            print("Removing temporary files under {0} ...".format(
+                datadir))
             for seed in range(args.maxevents):
                 worker_dir = os.path.join(datadir, f"seed_{seed}")
                 if os.path.exists(worker_dir):
                     cleanup_stray_output_files(worker_dir)
-                    print(f"Removed temporary files for seed {seed} from {worker_dir}", flush=True)
 
-    
+
 
 
     sys.exit(exit_code)

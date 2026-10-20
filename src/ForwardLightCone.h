@@ -209,19 +209,22 @@ class ForwardLightCone {
      * (computeResidual()/computeJacobian()/solveAxb()): starting from
      * \f$U_1 U_2\f$, each step rotates the estimate from the left,
      * \f$U_{\text{sol}} \to e^{i\Delta\alpha_a t_a} U_{\text{sol}}\f$,
-     * with the exact Jacobian of that rotation. Once the residual is
-     * below \f$10^{-6}\f$, one more step refines the solution and the
-     * estimate is returned. If a step is singular or diverges (a
+     * with the exact Jacobian of that rotation. Once the residual is below
+     * \f$10^{-6}\f$, one more step refines the solution and the estimate
+     * is returned. A step longer than 1 (the length of the eight
+     * \f$\Delta\alpha_a\f$) is shortened to 1. In strong-field cells the
+     * matching condition can have more than one solution (issue #107);
+     * with the full Newton step, which one the iteration found changed
+     * with rounding-level changes of the input in up to 0.1% of the cells,
+     * while with the shortened step it does not, and it is mostly the one
+     * closer to \f$U_1 U_2\f$. If a step is singular or diverges (a
      * \f$|\Delta\alpha_a|\f$ above \f$10^5\f$ or NaN), or the iteration
      * does not converge within 2000 iterations, it restarts from a
      * fresh initial guess drawn from a deterministic,
      * seed-independent pseudo-random stream (so restarts are
      * reproducible without touching the shared Random state), up to
      * 200 restarts; then it returns the best (lowest-residual) estimate
-     * found. Non-finite \p U1 or \p U2 give the identity and `false`. In
-     * strong-field cells the matching condition can have more than one
-     * solution; findU() returns the one this iteration reaches from \f$U_1
-     * U_2\f$, which is as justified as any other (issue #107).
+     * found. Non-finite \p U1 or \p U2 give the identity and `false`.
      * \param[in] U1 Projectile-side link.
      * \param[in] U2 Target-side link.
      * \param[out] Usol The solved (or best-effort) matching matrix.

@@ -4,6 +4,7 @@
 
 #include "ForwardLightCone.h"
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <vector>
@@ -17,6 +18,20 @@ using PhysConst::Nc2m1;
 using std::complex;
 
 namespace {
+
+/**
+ * Whether all nine elements of \p M are finite.
+ * \param[in] M The matrix.
+ * \return `false` if an element has a NaN or infinite part.
+ */
+bool isFinite(const Matrix &M) {
+    for (int i = 0; i < 9; i++) {
+        if (!std::isfinite(M(i).real()) || !std::isfinite(M(i).imag())) {
+            return false;
+        }
+    }
+    return true;
+}
 
 /**
  * SplitMix64 finalizer/counter step, used only to construct a
@@ -96,23 +111,29 @@ inline double deterministicRetryGaussian(
 
 }  // namespace
 
-void ForwardLightCone::solveAxb(
+bool ForwardLightCone::solveAxb(
     double *Jab, double *Fa, std::vector<double> &xvec) {
     gsl_matrix_view m = gsl_matrix_view_array(Jab, Nc2m1, Nc2m1);
     gsl_vector_view c = gsl_vector_view_array(Fa, Nc2m1);
-    gsl_vector *x = gsl_vector_alloc(Nc2m1);
+    gsl_vector_view x = gsl_vector_view_array(xvec.data(), Nc2m1);
 
     int s;
     gsl_permutation *p = gsl_permutation_alloc(Nc2m1);
     gsl_linalg_LU_decomp(&m.matrix, p, &s);
-    gsl_linalg_LU_solve(&m.matrix, p, &c.vector, x);
-    gsl_permutation_free(p);
-
+    // with a zero pivot gsl_linalg_LU_solve calls the GSL error handler,
+    // which aborts the program by default (and JIMWLK turns it off, so
+    // the solution would be left undefined)
+    bool solved = true;
     for (int i = 0; i < Nc2m1; i++) {
-        xvec[i] = gsl_vector_get(x, i);
+        if (gsl_matrix_get(&m.matrix, i, i) == 0.) solved = false;
     }
-
-    gsl_vector_free(x);
+    if (solved) {
+        solved = gsl_linalg_LU_solve(&m.matrix, p, &c.vector, &x.vector)
+                 == GSL_SUCCESS;
+    }
+    gsl_permutation_free(p);
+    if (!solved) std::fill(xvec.begin(), xvec.end(), 0.);
+    return solved;
 }
 
 void ForwardLightCone::initialize(Lattice *lat, Parameters *param) {
@@ -144,19 +165,10 @@ void ForwardLightCone::initialize(Lattice *lat, Parameters *param) {
 }
 
 void ForwardLightCone::sanitizeU(Lattice *lat, int N2) {
-// compute Ux(3) Uy(3) after the collision
 #pragma omp for
     for (int pos = 0; pos < N2; pos++) {
-        // loops over all cells
-        auto checkU = lat->U[pos].trace();
-        if (checkU != checkU) {
-            lat->U[pos] = (one_);
-        }
-
-        checkU = lat->U2[pos].trace();
-        if (checkU != checkU) {
-            lat->U2[pos] = (one_);
-        }
+        if (!isFinite(lat->U[pos])) lat->U[pos] = one_;
+        if (!isFinite(lat->U2[pos])) lat->U2[pos] = one_;
     }
 }
 
@@ -368,6 +380,13 @@ bool ForwardLightCone::findU(
     const int maxIterations = 2000;
     const int maxRetrys = 200;
 
+    // the iteration needs finite links; sanitizeU() has replaced non-finite
+    // Wilson lines already, so this only guards other callers
+    if (!isFinite(U1) || !isFinite(U2)) {
+        Usol = one_;
+        return false;
+    }
+
     const Matrix U0 = U1 * U2;
     const Matrix U1pU2 = U1 + U2;
     Matrix U1pU2dagger = U1pU2;
@@ -387,70 +406,69 @@ bool ForwardLightCone::findU(
     double *Jab = JabData.data();
     double *Fa = FaData.data();
 
-    double Fzero = 10.;
+    // the lowest residual so far and the estimate that has it
     double FzeroMin = 1e6;
     Matrix UsolBestEst(1.);
 
     // Newton's method on the group: start from U1 U2 and rotate the
     // estimate from the left, U -> e^{i Dalpha_a t_a} U, with the exact
     // Jacobian of that rotation
-    std::vector<double> alpha(Nc2m1, 0.);
     std::vector<double> Dalpha(Nc2m1, 0.);
     Usol = U0;
     Matrix Usoldagger = Usol;
     Usoldagger.conjg();
 
-    int iter = 0;
-    int nRestart = 0;
     std::uint64_t retryDraw = 0;
-    auto nextRetryGaussian = [&]() {
-        return deterministicRetryGaussian(retrySeed, retryDraw++);
-    };
     // a fresh start e^{i alpha_a t_a} U1 U2 with random alpha
     auto restart = [&]() {
-        for (int ai = 0; ai < Nc2m1; ai++) alpha[ai] = nextRetryGaussian();
+        std::vector<double> alpha(Nc2m1);
+        for (double &a : alpha) {
+            a = deterministicRetryGaussian(retrySeed, retryDraw++);
+        }
         Usol = Matrix::fromAlgebraExponent(alpha) * U0;
-    };
-    while (Fzero > 1e-6 && iter < maxIterations && nRestart < maxRetrys) {
-        iter++;
-
-        Fzero = computeResidual(
-            U1pU2, U1pU2dagger, Usol, Usoldagger, traceCache, Fa);
-
-        computeJacobian(U1pU2, Usoldagger, Jab);
-
-        solveAxb(Jab, Fa, Dalpha);
-
-        bool DalphaCheck = true;
-        for (int ai = 0; ai < Nc2m1; ai++) {
-            if (!(std::abs(Dalpha[ai]) <= 1e5)) {
-                DalphaCheck = false;
-                break;
-            }
-        }
-        if (DalphaCheck) {
-            Usol = Matrix::fromAlgebraExponent(Dalpha) * Usol;
-        } else {
-            restart();
-        }
         Usoldagger = Usol;
         Usoldagger.conjg();
+    };
 
+    int iter = 0;
+    int nRestart = 0;
+    bool converged = false;
+    while (nRestart < maxRetrys) {
+        iter++;
+
+        const double Fzero = computeResidual(
+            U1pU2, U1pU2dagger, Usol, Usoldagger, traceCache, Fa);
         if (Fzero < FzeroMin) {
             FzeroMin = Fzero;
             UsolBestEst = Usol;
         }
-        if (iter == maxIterations) {
-            restart();
+        // false for a NaN residual
+        converged = Fzero <= 1e-6;
+
+        computeJacobian(U1pU2, Usoldagger, Jab);
+        bool stepIsGood = solveAxb(Jab, Fa, Dalpha);
+        for (int ai = 0; ai < Nc2m1; ai++) {
+            // also catches a NaN step
+            if (!(std::abs(Dalpha[ai]) <= 1e5)) stepIsGood = false;
+        }
+        if (stepIsGood) {
+            // also once more after convergence, which refines the solution
+            Usol = Matrix::fromAlgebraExponent(Dalpha) * Usol;
             Usoldagger = Usol;
             Usoldagger.conjg();
+        } else if (!converged) {
+            restart();
+        }
+        // a converged estimate is kept, not replaced by a restart
+        if (converged) break;
 
+        if (iter == maxIterations) {
+            restart();
             nRestart++;
             iter = 0;
         }
     }
-    bool success = true;
-    if (nRestart == maxRetrys) {
+    if (!converged) {
         // findU() is called from inside an omp
         // parallel/for region (initialize), so use a
         // fresh, stack-local instance rather than sharing messager_.
@@ -459,7 +477,6 @@ bool ForwardLightCone::findU(
                       << "Fzero: " << FzeroMin;
         localMessager.flush("warning");
         Usol = UsolBestEst;  // return the best estimate
-        success = false;
     }
-    return (success);
+    return converged;
 }

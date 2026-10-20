@@ -403,6 +403,8 @@ bool ForwardLightCone::findU(
     Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed) {
     const int maxIterations = 2000;
     const int maxRetrys = 200;
+    // the largest Newton step, as the length of Dalpha
+    const double maxStep = 1.;
 
     // the iteration needs finite links; sanitizeU() has replaced non-finite
     // Wilson lines already, so this only guards other callers
@@ -471,6 +473,16 @@ bool ForwardLightCone::findU(
             if (!(std::abs(Dalpha[ai]) <= 1e5)) stepIsGood = false;
         }
         if (stepIsGood) {
+            // a Newton step longer than maxStep is shortened to it: far from
+            // the solution the linearization does not hold, and a long step
+            // jumps to an arbitrary point of the group, after which the
+            // solution found depends on rounding (issue #107)
+            double stepLength = 0.;
+            for (const double d : Dalpha) stepLength += d * d;
+            stepLength = std::sqrt(stepLength);
+            if (stepLength > maxStep) {
+                for (double &d : Dalpha) d *= maxStep / stepLength;
+            }
             // also once more after convergence, which refines the solution
             Usol = Matrix::fromAlgebraExponent(Dalpha) * Usol;
             Usoldagger = Usol;

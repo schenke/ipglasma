@@ -200,6 +200,32 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "ForwardLightCone::findU: the solution does not change with a "
+    "rounding-level change of the links (issue #107)") {
+    // for links of width >~ 1 the matching condition often has several
+    // solutions; with the full Newton step, which one was found changed with
+    // a 1e-12 rotation of U1 for about 8% of these pairs, with the step
+    // shortened to length 1 for none
+    Group group;
+    ForwardLightCone flc(&group);
+    std::vector<double> tiny(8, 0.);
+    tiny[0] = 1e-12;
+    tiny[7] = 0.7e-12;
+    const Matrix R = Matrix::fromAlgebraExponent(tiny);
+    std::mt19937 engine(11);
+    int switched = 0;
+    for (int sample = 0; sample < 500; sample++) {
+        const Matrix U1 = randomSU3(engine, 1.5);
+        const Matrix U2 = randomSU3(engine, 1.5);
+        Matrix A1 = U1, A2 = U2, B1 = R * U1, B2 = U2, U, Uperturbed;
+        REQUIRE(flc.findU(A1, A2, U, sample));
+        REQUIRE(flc.findU(B1, B2, Uperturbed, sample));
+        if (!matricesClose(U, Uperturbed, 1e-6)) switched++;
+    }
+    CHECK(switched == 0);
+}
+
+TEST_CASE(
     "ForwardLightCone::findU returns the identity and false for non-finite "
     "links") {
     Group group;

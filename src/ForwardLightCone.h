@@ -45,8 +45,8 @@ class ForwardLightCone {
      */
     void initialize(Lattice *lat, Parameters *param);
     /**
-     * Replaces any NaN `U`/`U2` (left over from a failed
-     * forward-lightcone solve at a previous stage) with the identity.
+     * Replaces any `U`/`U2` with a NaN or infinite element (left over
+     * from a failed computation at a previous stage) with the identity.
      * \param[in,out] lat Lattice to sanitize.
      * \param[in] N2 Total number of lattice sites.
      */
@@ -191,29 +191,37 @@ class ForwardLightCone {
      * decomposition, sized for the SU(3) adjoint dimension
      * (\f$8\times8\f$); used by findU()'s Newton
      * iteration.
-     * \param[in] Jab Row-major \f$8\times8\f$ Jacobian.
+     * \param[in] Jab Row-major \f$8\times8\f$ Jacobian (overwritten by
+     * its LU decomposition).
      * \param[in] Fa Length-8 right-hand side.
-     * \param[out] xvec Filled with the length-8 solution.
+     * \param[out] xvec Filled with the length-8 solution, or zeros if
+     * there is none.
+     * \return `false` if \p Jab is singular (a zero pivot), instead of
+     * calling the GSL error handler, which aborts by default.
      */
-    void solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
+    bool solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
     /**
-     * Solves the forward-lightcone matching condition
-     * \f$U_1+U_2 = U_{\text{sol}} U_1 U_2 + (U_1 U_2)^\dagger
-     * U_{\text{sol}}^\dagger\f$ for \f$U_{\text{sol}}\f$ via Newton's
-     * method on the group (computeResidual()/computeJacobian()/
-     * solveAxb()): starting from \f$U_1 U_2\f$, each step rotates the
-     * estimate from the left, \f$U_{\text{sol}} \to
-     * e^{i\Delta\alpha_a t_a} U_{\text{sol}}\f$, with the exact Jacobian
-     * of that rotation. If the iteration
-     * diverges or fails to converge within 2000 iterations, restarts
-     * from a fresh initial guess drawn from a deterministic,
+     * Solves the forward-lightcone matching condition for the link
+     * \f$U_{\text{sol}}\f$ after the collision,
+     * \f$\mathrm{tr}\{t_a[(U_1+U_2)(1+U_{\text{sol}}^\dagger) -
+     * (1+U_{\text{sol}})(U_1+U_2)^\dagger]\} = 0\f$ for all eight
+     * generators \f$t_a\f$, via Newton's method on the group
+     * (computeResidual()/computeJacobian()/solveAxb()): starting from
+     * \f$U_1 U_2\f$, each step rotates the estimate from the left,
+     * \f$U_{\text{sol}} \to e^{i\Delta\alpha_a t_a} U_{\text{sol}}\f$,
+     * with the exact Jacobian of that rotation. Once the residual is
+     * below \f$10^{-6}\f$, one more step refines the solution and the
+     * estimate is returned. If a step is singular or diverges (a
+     * \f$|\Delta\alpha_a|\f$ above \f$10^5\f$ or NaN), or the iteration
+     * does not converge within 2000 iterations, it restarts from a
+     * fresh initial guess drawn from a deterministic,
      * seed-independent pseudo-random stream (so restarts are
      * reproducible without touching the shared Random state), up to
-     * 200 restarts; returns the best (lowest-residual) estimate found
-     * across all restarts either way. In strong-field cells the matching
-     * condition can have more than one solution; findU() returns the one
-     * this iteration reaches from \f$U_1 U_2\f$, which is as justified as
-     * any other (issue #107).
+     * 200 restarts; then it returns the best (lowest-residual) estimate
+     * found. Non-finite \p U1 or \p U2 give the identity and `false`. In
+     * strong-field cells the matching condition can have more than one
+     * solution; findU() returns the one this iteration reaches from \f$U_1
+     * U_2\f$, which is as justified as any other (issue #107).
      * \param[in] U1 Projectile-side link.
      * \param[in] U2 Target-side link.
      * \param[out] Usol The solved (or best-effort) matching matrix.
@@ -228,8 +236,9 @@ class ForwardLightCone {
     bool findU(Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
     /**
      * findU()'s per-iteration residual: computes
-     * \f$F_a\f$ (the quantity the Newton iteration drives to zero) into
-     * \p Fa.
+     * \f$F_a = -\mathrm{Im}\,\mathrm{tr}\{t_a[(U_1+U_2)
+     * (1+U_{\text{sol}}^\dagger) - (1+U_{\text{sol}})(U_1+U_2)^\dagger]\}\f$
+     * (the quantity the Newton iteration drives to zero) into \p Fa.
      * \param[in] U1pU2 \f$U_1+U_2\f$.
      * \param[in] U1pU2dagger \f$(U_1+U_2)^\dagger\f$.
      * \param[in] Usol Current estimate of the matching matrix.

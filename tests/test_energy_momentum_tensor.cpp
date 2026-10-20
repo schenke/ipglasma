@@ -47,13 +47,6 @@ Matrix algebraElement(const Group &group, std::mt19937 &rng) {
     return m;
 }
 
-Matrix randomLink(std::mt19937 &rng) {
-    std::normal_distribution<double> gauss(0., 0.4);
-    std::vector<double> Q(8);
-    for (double &q : Q) q = gauss(rng);
-    return Matrix::fromAlgebraExponent(Q);
-}
-
 bool isGuard(int ix, int iy) {
     return ix == 0 || iy == 0 || ix == N - 1 || iy == N - 1;
 }
@@ -140,8 +133,8 @@ TEST_CASE(
     Group group;
     std::mt19937 rng(17);
     for (int pos = 0; pos < N * N; pos++) {
-        lat.Ux[pos] = randomLink(rng);
-        lat.Uy[pos] = randomLink(rng);
+        lat.Ux[pos] = randomSU3(rng, 0.4);
+        lat.Uy[pos] = randomSU3(rng, 0.4);
         lat.U[pos] = algebraElement(group, rng);
         lat.U2[pos] = algebraElement(group, rng);
         lat.Ux2[pos] = algebraElement(group, rng);
@@ -183,8 +176,8 @@ TEST_CASE(
     Group group;
     std::mt19937 rng(23);
     for (int pos = 0; pos < N * N; pos++) {
-        lat.Ux[pos] = randomLink(rng);
-        lat.Uy[pos] = randomLink(rng);
+        lat.Ux[pos] = randomSU3(rng, 0.4);
+        lat.Uy[pos] = randomSU3(rng, 0.4);
         lat.U[pos] = algebraElement(group, rng);
         lat.U2[pos] = algebraElement(group, rng);
         lat.Ux2[pos] = algebraElement(group, rng);
@@ -203,8 +196,8 @@ TEST_CASE(
     for (int pos = 0; pos < N * N; pos++) before[pos] = components(pos);
 
     for (int k = 0; k < N; k++) {
-        lat.Ux[lat.positionFromXY(N - 1, k)] = randomLink(rng);
-        lat.Uy[lat.positionFromXY(k, N - 1)] = randomLink(rng);
+        lat.Ux[lat.positionFromXY(N - 1, k)] = randomSU3(rng, 0.4);
+        lat.Uy[lat.positionFromXY(k, N - 1)] = randomSU3(rng, 0.4);
     }
     EnergyMomentumTensor::compute(&lat, &param, it);
     for (int ix = 1; ix < N - 1; ix++) {

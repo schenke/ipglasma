@@ -9,10 +9,20 @@
 
 #include <complex>
 #include <fstream>
+#include <random>
 #include <string>
+#include <vector>
 
 #include "Matrix.h"
 #include "Parameters.h"
+
+// A random SU(3) matrix e^{i q_a t_a}, with q_a Gaussian of width `width`.
+inline Matrix randomSU3(std::mt19937 &engine, double width) {
+    std::normal_distribution<double> gauss(0., width);
+    std::vector<double> q(8);
+    for (double &value : q) value = gauss(engine);
+    return Matrix::fromAlgebraExponent(q);
+}
 
 // Writes a nuclear Q_s table with Qs^2 = 2 T + 3 y, which bilinear
 // interpolation reproduces exactly: 240 values T = 0.5 + 0.1 iT (outer)

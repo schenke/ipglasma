@@ -84,29 +84,21 @@ TEST_CASE(
 }
 
 namespace {
-// A random SU(3) matrix e^{i q_a t_a}, q_a Gaussian with width `width`.
-Matrix randomSU3(std::mt19937 &engine, double width) {
-    std::normal_distribution<double> gauss(0., width);
-    std::vector<double> q(8);
-    for (double &value : q) value = gauss(engine);
-    return Matrix::fromAlgebraExponent(q);
+// M = (U1 + U2) U^dagger, the argument of computeResidual()/
+// computeJacobian()
+Matrix residualProduct(const Matrix &U1, const Matrix &U2, const Matrix &U) {
+    Matrix Udagger = U;
+    Udagger.conjg();
+    return (U1 + U2) * Udagger;
 }
 
 // The residual F_a of ForwardLightCone::computeResidual() for U1, U2 and U.
 std::vector<double> residual(
-    ForwardLightCone &flc, Group &group, const Matrix &U1, const Matrix &U2,
+    ForwardLightCone &flc, const Matrix &U1, const Matrix &U2,
     const Matrix &U) {
-    const Matrix W = U1 + U2;
-    Matrix Wdagger = W;
-    Wdagger.conjg();
-    std::vector<std::complex<double>> traceCache(8);
-    for (int a = 0; a < 8; a++) {
-        traceCache[a] = (group.getT(a) * (W - Wdagger)).trace();
-    }
-    Matrix Udagger = U;
-    Udagger.conjg();
     std::vector<double> F(8);
-    flc.computeResidual(W, Wdagger, U, Udagger, traceCache, F.data());
+    flc.computeResidual(
+        residualProduct(U1, U2, U), flc.residualTraceCache(U1 + U2), F.data());
     return F;
 }
 }  // namespace
@@ -121,10 +113,8 @@ TEST_CASE(
         const Matrix U1 = randomSU3(engine, 0.8);
         const Matrix U2 = randomSU3(engine, 0.8);
         const Matrix U = randomSU3(engine, 0.8);
-        Matrix Udagger = U;
-        Udagger.conjg();
         std::vector<double> J(64);
-        flc.computeJacobian(U1 + U2, Udagger, J.data());
+        flc.computeJacobian(residualProduct(U1, U2, U), J.data());
         // central difference of F under U -> e^{+-i eps t_b} U; findU()'s
         // convention is J = -dF/d delta
         const double eps = 1e-5;
@@ -134,10 +124,8 @@ TEST_CASE(
             const Matrix Uplus = Matrix::fromAlgebraExponent(step) * U;
             step[b] = -eps;
             const Matrix Uminus = Matrix::fromAlgebraExponent(step) * U;
-            const std::vector<double> Fplus =
-                residual(flc, group, U1, U2, Uplus);
-            const std::vector<double> Fminus =
-                residual(flc, group, U1, U2, Uminus);
+            const std::vector<double> Fplus = residual(flc, U1, U2, Uplus);
+            const std::vector<double> Fminus = residual(flc, U1, U2, Uminus);
             for (int a = 0; a < 8; a++) {
                 CAPTURE(a);
                 CAPTURE(b);
@@ -164,7 +152,7 @@ TEST_CASE(
         Matrix U;
         REQUIRE(flc.findU(U1, U2, U, /*retrySeed=*/sample));
         double Fzero = 0.;
-        for (double F : residual(flc, group, U1, U2, U)) Fzero += std::abs(F);
+        for (double F : residual(flc, U1, U2, U)) Fzero += std::abs(F);
         CHECK(Fzero < 1e-6);
         Matrix Udagger = U;
         Udagger.conjg();
@@ -207,7 +195,7 @@ TEST_CASE(
     Matrix U;
     CHECK(flc.findU(U1, U2, U, /*retrySeed=*/7));
     double Fzero = 0.;
-    for (double F : residual(flc, group, U1, U2, U)) Fzero += std::abs(F);
+    for (double F : residual(flc, U1, U2, U)) Fzero += std::abs(F);
     CHECK(Fzero < 1e-6);
 }
 

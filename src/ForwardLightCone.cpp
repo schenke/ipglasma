@@ -11,7 +11,6 @@
 
 #include "Instrumentation.h"
 #include "PhysConst.h"
-#include "SU3.h"
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::Nc2m1;
@@ -343,11 +342,24 @@ void ForwardLightCone::resetFieldsTeam(Lattice *lat, int N2) {
     }
 }
 
+std::vector<complex<double>> ForwardLightCone::residualTraceCache(
+    const Matrix &U1pU2) const {
+    Matrix U1pU2dagger = U1pU2;
+    U1pU2dagger.conjg();
+    std::vector<complex<double>> traceCache(Nc2m1, 0.);
+    for (int ai = 0; ai < Nc2m1; ai++) {
+        traceCache[ai] = (group_->getT(ai) * (U1pU2 - U1pU2dagger)).trace();
+    }
+    return traceCache;
+}
+
 double ForwardLightCone::computeResidual(
-    const Matrix &U1pU2, const Matrix &U1pU2dagger, const Matrix &Usol,
-    const Matrix &Usoldagger, const std::vector<complex<double>> &traceCache,
+    const Matrix &M, const std::vector<complex<double>> &traceCache,
     double *Fa) {
-    Matrix Mtemp = U1pU2 * Usoldagger - Usol * U1pU2dagger;
+    // M - M^dagger = (U1 + U2) U^dagger - U (U1 + U2)^dagger
+    Matrix Mdagger = M;
+    Mdagger.conjg();
+    Matrix Mtemp = M - Mdagger;
     double Fzero = 0.;
     for (int ai = 0; ai < Nc2m1; ai++) {
         complex<double> traceLoc =
@@ -360,17 +372,29 @@ double ForwardLightCone::computeResidual(
     return Fzero;
 }
 
-void ForwardLightCone::computeJacobian(
-    const Matrix &U1pU2, const Matrix &Usoldagger, double *Jab) {
+void ForwardLightCone::computeJacobian(const Matrix &M, double *Jab) {
     // dF_a/d delta_b for U -> e^{i delta_b t_b} U is
     // 2 Re tr[t_a (U1 + U2) U^dagger t_b]; solveAxb() solves J dx = F, so
-    // J = -dF/d delta
-    const Matrix M = U1pU2 * Usoldagger;
+    // J = -dF/d delta. t_a M is computed once per a, and the trace summed
+    // in the order of su3::traceABC(t_a, M, t_b), which gives the same
+    // numbers with a third of the operations.
+    const complex<double> *B = M.data();
+    complex<double> tM[9];
     for (int ai = 0; ai < Nc2m1; ai++) {
+        const complex<double> *A = group_->getT(ai).data();
+        for (int i = 0; i < 3; ++i) {
+            for (int j = 0; j < 3; ++j) {
+                tM[3 * i + j] = A[3 * i] * B[j] + A[3 * i + 1] * B[3 + j]
+                                + A[3 * i + 2] * B[6 + j];
+            }
+        }
         for (int bi = 0; bi < Nc2m1; bi++) {
-            Jab[ai * Nc2m1 + bi] =
-                -2.
-                * su3::traceABC(group_->getT(ai), M, group_->getT(bi)).real();
+            const complex<double> *C = group_->getT(bi).data();
+            complex<double> tr = 0.;
+            for (int i = 0; i < 3; ++i) {
+                for (int j = 0; j < 3; ++j) tr += tM[3 * i + j] * C[3 * j + i];
+            }
+            Jab[ai * Nc2m1 + bi] = -2. * tr.real();
         }
     }
 }
@@ -389,13 +413,7 @@ bool ForwardLightCone::findU(
 
     const Matrix U0 = U1 * U2;
     const Matrix U1pU2 = U1 + U2;
-    Matrix U1pU2dagger = U1pU2;
-    U1pU2dagger.conjg();
-
-    std::vector<complex<double>> traceCache(Nc2m1, 0.);
-    for (int ai = 0; ai < Nc2m1; ai++) {
-        traceCache[ai] = (group_->getT(ai) * (U1pU2 - U1pU2dagger)).trace();
-    }
+    const std::vector<complex<double>> traceCache = residualTraceCache(U1pU2);
 
     // JabData/FaData own the storage; Jab/Fa are raw-pointer views into it
     // for solveAxb's GSL interface (gsl_matrix_view_array/
@@ -436,8 +454,9 @@ bool ForwardLightCone::findU(
     while (nRestart < maxRetrys) {
         iter++;
 
-        const double Fzero = computeResidual(
-            U1pU2, U1pU2dagger, Usol, Usoldagger, traceCache, Fa);
+        // shared by the residual and the Jacobian
+        const Matrix M = U1pU2 * Usoldagger;
+        const double Fzero = computeResidual(M, traceCache, Fa);
         if (Fzero < FzeroMin) {
             FzeroMin = Fzero;
             UsolBestEst = Usol;
@@ -445,7 +464,7 @@ bool ForwardLightCone::findU(
         // false for a NaN residual
         converged = Fzero <= 1e-6;
 
-        computeJacobian(U1pU2, Usoldagger, Jab);
+        computeJacobian(M, Jab);
         bool stepIsGood = solveAxb(Jab, Fa, Dalpha);
         for (int ai = 0; ai < Nc2m1; ai++) {
             // also catches a NaN step

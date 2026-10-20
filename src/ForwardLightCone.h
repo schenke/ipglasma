@@ -235,24 +235,28 @@ class ForwardLightCone {
      */
     bool findU(Matrix &U1, Matrix &U2, Matrix &Usol, std::uint64_t retrySeed);
     /**
+     * The part of computeResidual()'s \f$F_a\f$ that does not depend
+     * on \f$U_{\text{sol}}\f$: \f$\mathrm{tr}\{t_a[(U_1+U_2) -
+     * (U_1+U_2)^\dagger]\}\f$, computed once per findU() call.
+     * \param[in] U1pU2 \f$U_1+U_2\f$.
+     * \return The eight traces.
+     */
+    std::vector<complex<double>> residualTraceCache(const Matrix &U1pU2) const;
+    /**
      * findU()'s per-iteration residual: computes
      * \f$F_a = -\mathrm{Im}\,\mathrm{tr}\{t_a[(U_1+U_2)
      * (1+U_{\text{sol}}^\dagger) - (1+U_{\text{sol}})(U_1+U_2)^\dagger]\}\f$
      * (the quantity the Newton iteration drives to zero) into \p Fa.
-     * \param[in] U1pU2 \f$U_1+U_2\f$.
-     * \param[in] U1pU2dagger \f$(U_1+U_2)^\dagger\f$.
-     * \param[in] Usol Current estimate of the matching matrix.
-     * \param[in] Usoldagger \f$U_{\text{sol}}^\dagger\f$.
-     * \param[in] traceCache Per-generator trace terms that don't depend
-     * on \p Usol, precomputed once by findU().
+     * \param[in] M \f$(U_1+U_2)U_{\text{sol}}^\dagger\f$ at the current
+     * estimate, shared with computeJacobian().
+     * \param[in] traceCache residualTraceCache() of \f$U_1+U_2\f$.
      * \param[out] Fa Filled with the eight residual components.
      * \return \f$F_{\text{zero}} = \sum_a |F_a|\f$, the convergence
      * criterion.
      */
     double computeResidual(
-        const Matrix &U1pU2, const Matrix &U1pU2dagger, const Matrix &Usol,
-        const Matrix &Usoldagger,
-        const std::vector<complex<double>> &traceCache, double *Fa);
+        const Matrix &M, const std::vector<complex<double>> &traceCache,
+        double *Fa);
     /**
      * Computes the Jacobian of computeResidual()'s \f$F_a\f$ for a
      * rotation of \f$U_{\text{sol}}\f$ from the left,
@@ -262,14 +266,12 @@ class ForwardLightCone {
      * -2\,\mathrm{Re}\,\mathrm{tr}[t_a (U_1+U_2)
      * U_{\text{sol}}^\dagger t_b]\f$. It is exact and needs no
      * exponential.
-     * \param[in] U1pU2 \f$U_1+U_2\f$.
-     * \param[in] Usoldagger \f$U_{\text{sol}}^\dagger\f$ at the current
+     * \param[in] M \f$(U_1+U_2)U_{\text{sol}}^\dagger\f$ at the current
      * estimate.
      * \param[out] Jab Filled with the row-major \f$8\times8\f$
      * Jacobian.
      */
-    void computeJacobian(
-        const Matrix &U1pU2, const Matrix &Usoldagger, double *Jab);
+    void computeJacobian(const Matrix &M, double *Jab);
 
   private:
     /// SU(3) generators.

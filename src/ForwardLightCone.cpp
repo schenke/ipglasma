@@ -111,9 +111,10 @@ inline double deterministicRetryGaussian(
 }  // namespace
 
 bool ForwardLightCone::solveAxb(
-    double *Jab, double *Fa, std::vector<double> &xvec) {
-    gsl_matrix_view m = gsl_matrix_view_array(Jab, Nc2m1, Nc2m1);
-    gsl_vector_view c = gsl_vector_view_array(Fa, Nc2m1);
+    std::vector<double> &Jab, const std::vector<double> &Fa,
+    std::vector<double> &xvec) {
+    gsl_matrix_view m = gsl_matrix_view_array(Jab.data(), Nc2m1, Nc2m1);
+    gsl_vector_const_view c = gsl_vector_const_view_array(Fa.data(), Nc2m1);
     gsl_vector_view x = gsl_vector_view_array(xvec.data(), Nc2m1);
 
     int s;
@@ -355,7 +356,7 @@ std::vector<complex<double>> ForwardLightCone::residualTraceCache(
 
 double ForwardLightCone::computeResidual(
     const Matrix &M, const std::vector<complex<double>> &traceCache,
-    double *Fa) {
+    std::vector<double> &Fa) {
     // M - M^dagger = (U1 + U2) U^dagger - U (U1 + U2)^dagger
     Matrix Mdagger = M;
     Mdagger.conjg();
@@ -372,7 +373,8 @@ double ForwardLightCone::computeResidual(
     return Fzero;
 }
 
-void ForwardLightCone::computeJacobian(const Matrix &M, double *Jab) {
+void ForwardLightCone::computeJacobian(
+    const Matrix &M, std::vector<double> &Jab) {
     // dF_a/d delta_b for U -> e^{i delta_b t_b} U is
     // 2 Re tr[t_a (U1 + U2) U^dagger t_b]; solveAxb() solves J dx = F, so
     // J = -dF/d delta. t_a M is computed once per a, and the trace summed
@@ -417,14 +419,8 @@ bool ForwardLightCone::findU(
     const Matrix U1pU2 = U1 + U2;
     const std::vector<complex<double>> traceCache = residualTraceCache(U1pU2);
 
-    // JabData/FaData own the storage; Jab/Fa are raw-pointer views into it
-    // for solveAxb's GSL interface (gsl_matrix_view_array/
-    // gsl_vector_view_array need a raw contiguous buffer, not a
-    // std::vector).
-    std::vector<double> JabData(Nc2m1 * Nc2m1);
-    std::vector<double> FaData(Nc2m1);
-    double *Jab = JabData.data();
-    double *Fa = FaData.data();
+    std::vector<double> Jab(Nc2m1 * Nc2m1);
+    std::vector<double> Fa(Nc2m1);
 
     // the lowest residual so far and the estimate that has it
     double FzeroMin = 1e6;
@@ -483,10 +479,22 @@ bool ForwardLightCone::findU(
             if (stepLength > maxStep) {
                 for (double &d : Dalpha) d *= maxStep / stepLength;
             }
-            // also once more after convergence, which refines the solution
-            Usol = Matrix::fromAlgebraExponent(Dalpha) * Usol;
-            Usoldagger = Usol;
-            Usoldagger.conjg();
+            Matrix Unew = Matrix::fromAlgebraExponent(Dalpha) * Usol;
+            Matrix Unewdagger = Unew;
+            Unewdagger.conjg();
+            // the step after convergence refines the solution; it is kept
+            // only if the refined estimate still meets the tolerance, since
+            // a nearly singular Jacobian can turn rounding errors into a
+            // long step
+            bool keepStep = true;
+            if (converged) {
+                keepStep =
+                    computeResidual(U1pU2 * Unewdagger, traceCache, Fa) <= 1e-6;
+            }
+            if (keepStep) {
+                Usol = Unew;
+                Usoldagger = Unewdagger;
+            }
         } else if (!converged) {
             restart();
         }

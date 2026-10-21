@@ -73,7 +73,8 @@ inline Matrix makeTestMatrix(int seed) {
 
 inline bool matricesClose(const Matrix &a, const Matrix &b, double tol) {
     for (int k = 0; k < 9; ++k) {
-        if (std::abs(a.get(k) - b.get(k)) >= tol) return false;
+        // also false for a NaN difference
+        if (!(std::abs(a.get(k) - b.get(k)) < tol)) return false;
     }
     return true;
 }

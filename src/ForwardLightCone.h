@@ -191,7 +191,7 @@ class ForwardLightCone {
      * decomposition, sized for the SU(3) adjoint dimension
      * (\f$8\times8\f$); used by findU()'s Newton
      * iteration.
-     * \param[in] Jab Row-major \f$8\times8\f$ Jacobian (overwritten by
+     * \param[in,out] Jab Row-major \f$8\times8\f$ Jacobian (overwritten by
      * its LU decomposition).
      * \param[in] Fa Length-8 right-hand side.
      * \param[out] xvec Filled with the length-8 solution, or zeros if
@@ -199,7 +199,9 @@ class ForwardLightCone {
      * \return `false` if \p Jab is singular (a zero pivot), instead of
      * calling the GSL error handler, which aborts by default.
      */
-    bool solveAxb(double *Jab, double *Fa, std::vector<double> &xvec);
+    bool solveAxb(
+        std::vector<double> &Jab, const std::vector<double> &Fa,
+        std::vector<double> &xvec);
     /**
      * Solves the forward-lightcone matching condition for the link
      * \f$U_{\text{sol}}\f$ after the collision,
@@ -210,8 +212,9 @@ class ForwardLightCone {
      * \f$U_1 U_2\f$, each step rotates the estimate from the left,
      * \f$U_{\text{sol}} \to e^{i\Delta\alpha_a t_a} U_{\text{sol}}\f$,
      * with the exact Jacobian of that rotation. Once the residual is below
-     * \f$10^{-6}\f$, one more step refines the solution and the estimate
-     * is returned. A step longer than 1 (the length of the eight
+     * \f$10^{-6}\f$, one more step refines the solution, if the refined
+     * estimate still meets the tolerance, and the estimate is returned. A step
+     * longer than 1 (the length of the eight
      * \f$\Delta\alpha_a\f$) is shortened to 1. In strong-field cells the
      * matching condition can have more than one solution (issue #107);
      * with the full Newton step, which one the iteration found changed
@@ -259,7 +262,7 @@ class ForwardLightCone {
      */
     double computeResidual(
         const Matrix &M, const std::vector<complex<double>> &traceCache,
-        double *Fa);
+        std::vector<double> &Fa);
     /**
      * Computes the Jacobian of computeResidual()'s \f$F_a\f$ for a
      * rotation of \f$U_{\text{sol}}\f$ from the left,
@@ -274,7 +277,7 @@ class ForwardLightCone {
      * \param[out] Jab Filled with the row-major \f$8\times8\f$
      * Jacobian.
      */
-    void computeJacobian(const Matrix &M, double *Jab);
+    void computeJacobian(const Matrix &M, std::vector<double> &Jab);
 
   private:
     /// SU(3) generators.

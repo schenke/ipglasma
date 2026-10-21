@@ -98,7 +98,7 @@ std::vector<double> residual(
     const Matrix &U) {
     std::vector<double> F(8);
     flc.computeResidual(
-        residualProduct(U1, U2, U), flc.residualTraceCache(U1 + U2), F.data());
+        residualProduct(U1, U2, U), flc.residualTraceCache(U1 + U2), F);
     return F;
 }
 }  // namespace
@@ -114,7 +114,7 @@ TEST_CASE(
         const Matrix U2 = randomSU3(engine, 0.8);
         const Matrix U = randomSU3(engine, 0.8);
         std::vector<double> J(64);
-        flc.computeJacobian(residualProduct(U1, U2, U), J.data());
+        flc.computeJacobian(residualProduct(U1, U2, U), J);
         // central difference of F under U -> e^{+-i eps t_b} U; findU()'s
         // convention is J = -dF/d delta
         const double eps = 1e-5;
@@ -226,6 +226,35 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "ForwardLightCone::findU keeps a converged link when the refinement step "
+    "would spoil it (nearly singular Jacobian)") {
+    // U1 = U2 = diag(e^{i theta}, e^{i theta}, e^{-2 i theta}): the start
+    // U1 U2 solves the condition exactly, but at theta = acos((sqrt(33) -
+    // 1)/8) the Jacobian there is singular. Within a few hundred ulp of it,
+    // the refinement step after convergence turned rounding errors into a
+    // long step, and findU reported success with residuals up to 0.45 (256
+    // of these 601 thetas)
+    Group group;
+    ForwardLightCone flc(&group);
+    double theta = std::acos((std::sqrt(33.) - 1.) / 8.);
+    for (int i = 0; i < 300; i++) theta = std::nextafter(theta, 0.);
+    int bad = 0;
+    for (int i = 0; i <= 600; i++, theta = std::nextafter(theta, 4.)) {
+        const std::complex<double> phase = std::polar(1., theta);
+        Matrix U1(0.);
+        U1.set(0, 0, phase);
+        U1.set(1, 1, phase);
+        U1.set(2, 2, std::conj(phase * phase));
+        Matrix A1 = U1, A2 = U1, U;
+        const bool converged = flc.findU(A1, A2, U, /*retrySeed=*/i);
+        double Fzero = 0.;
+        for (double F : residual(flc, U1, U1, U)) Fzero += std::abs(F);
+        if (!converged || !(Fzero < 1e-6)) bad++;
+    }
+    CHECK(bad == 0);
+}
+
+TEST_CASE(
     "ForwardLightCone::findU returns the identity and false for non-finite "
     "links") {
     Group group;
@@ -252,7 +281,7 @@ TEST_CASE(
         F[a] = 1.;
     }
     J[0 * 8 + 7] = 2.;
-    CHECK(flc.solveAxb(J.data(), F.data(), x));
+    CHECK(flc.solveAxb(J, F, x));
     CHECK(x[7] == doctest::Approx(1. / 8.));
     CHECK(x[0] == doctest::Approx(1. - 2. / 8.));
     for (int a = 1; a < 7; a++) CHECK(x[a] == doctest::Approx(1. / (a + 1.)));
@@ -261,7 +290,7 @@ TEST_CASE(
     std::fill(J.begin(), J.end(), 0.);
     for (int a = 0; a < 7; a++) J[a * 8 + a] = 1.;
     std::fill(x.begin(), x.end(), -1.);
-    CHECK_FALSE(flc.solveAxb(J.data(), F.data(), x));
+    CHECK_FALSE(flc.solveAxb(J, F, x));
     for (double value : x) CHECK(value == 0.);
 }
 

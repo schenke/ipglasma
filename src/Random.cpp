@@ -4,6 +4,10 @@
 
 #include "Random.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -226,29 +230,61 @@ void Random::gaussBulk(
         const std::size_t uniformCount = 2 * needed;
 
         // Advance the MT state exactly as the scalar generator would, but copy
-        // the untempered state words out in bulk. Tempering is independent for
-        // every word and can therefore use the existing OpenMP team safely.
+        // the untempered state words out in bulk (the recurrence is serial).
         genrand64RawBulk(bulkRawScratch_.data(), uniformCount);
 
-#pragma omp parallel for
-        for (std::size_t q = 0; q < uniformCount; ++q) {
-            const unsigned long long x = temperMT64(bulkRawScratch_[q]);
-            uniforms[q] = ((x >> 12) + 0.5) * (1.0 / 4503599627370496.0);
-        }
-
-        // Scan candidates serially in original RNG order.  This preserves the
-        // precise rejection decisions and accepted-pair ordering of gauss().
-        for (std::size_t pair = 0; pair < needed; ++pair) {
-            const double v1 = 2.0 * uniforms[2 * pair] - 1.0;
-            const double v2 = 2.0 * uniforms[2 * pair + 1] - 1.0;
-            const double rsq = v1 * v1 + v2 * v2;
-            if (rsq <= 1.0 && rsq != 0.0) {
-                const std::size_t base = 3 * acceptedPairs++;
-                accepted[base] = v1;
-                accepted[base + 1] = v2;
-                accepted[base + 2] = rsq;
+        // Temper the words, test the candidate pairs and keep the accepted
+        // ones in one parallel region (issue #121). Each thread handles a
+        // contiguous range of pairs: it counts its accepted pairs, a prefix
+        // sum over the threads gives each one its offset, and the accepted
+        // pairs are written in the original RNG order, so the rejection
+        // decisions and the order are exactly those of gauss().
+#pragma omp parallel
+        {
+#ifdef _OPENMP
+            const std::size_t thread = omp_get_thread_num();
+            const std::size_t threads = omp_get_num_threads();
+#else
+            const std::size_t thread = 0;
+            const std::size_t threads = 1;
+#endif
+#pragma omp single
+            bulkCountScratch_.assign(threads + 1, 0);
+            const std::size_t begin = needed * thread / threads;
+            const std::size_t end = needed * (thread + 1) / threads;
+            std::size_t acceptedHere = 0;
+            for (std::size_t pair = begin; pair < end; ++pair) {
+                for (std::size_t q = 2 * pair; q < 2 * pair + 2; ++q) {
+                    const unsigned long long x = temperMT64(bulkRawScratch_[q]);
+                    uniforms[q] =
+                        2.0 * (((x >> 12) + 0.5) * (1.0 / 4503599627370496.0))
+                        - 1.0;
+                }
+                const double v1 = uniforms[2 * pair];
+                const double v2 = uniforms[2 * pair + 1];
+                const double rsq = v1 * v1 + v2 * v2;
+                if (rsq <= 1.0 && rsq != 0.0) acceptedHere++;
+            }
+            bulkCountScratch_[thread + 1] = acceptedHere;
+#pragma omp barrier
+#pragma omp single
+            for (std::size_t t = 0; t < threads; ++t) {
+                bulkCountScratch_[t + 1] += bulkCountScratch_[t];
+            }
+            std::size_t next = acceptedPairs + bulkCountScratch_[thread];
+            for (std::size_t pair = begin; pair < end; ++pair) {
+                const double v1 = uniforms[2 * pair];
+                const double v2 = uniforms[2 * pair + 1];
+                const double rsq = v1 * v1 + v2 * v2;
+                if (rsq <= 1.0 && rsq != 0.0) {
+                    const std::size_t base = 3 * next++;
+                    accepted[base] = v1;
+                    accepted[base + 1] = v2;
+                    accepted[base + 2] = rsq;
+                }
             }
         }
+        acceptedPairs += bulkCountScratch_.back();
     }
 
     if (profile) {

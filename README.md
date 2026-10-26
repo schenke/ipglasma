@@ -65,7 +65,7 @@ export OMP_WAIT_POLICY=active
 export OMP_PROC_BIND=close
 export OMP_PLACES=cores
 ```
-Several steps (the Wilson lines, their random numbers and the FFTs, also those of the Coulomb gauge fixing) alternate short parallel loops with short serial sections. With the default wait policy of GCC's OpenMP runtime, idle threads soon fall asleep and have to be woken up for every loop. For a central Pb+Pb event of the example input at 256² without JIMWLK (with hydro output, eccentricities and gluon multiplicity), these settings halve the time with 8 threads, from 4.0 to 2.0 s (about 8.5 s with one thread); the results do not change. Active waiting keeps the idle cores busy during the serial sections, so do not use it when the threads of all ranks together exceed the number of cores. For single-threaded events (`OMP_NUM_THREADS=1`, as in the validation scripts) the setting makes no difference.
+Several steps (the Wilson lines, their random numbers and the FFTs, also those of the Coulomb gauge fixing) alternate short parallel loops with short serial sections. With the default wait policy of GCC's OpenMP runtime, idle threads soon fall asleep and have to be woken up for every loop, and their cores slow down meanwhile. For a central Pb+Pb event of the example input at 256² without JIMWLK (with hydro output, eccentricities and gluon multiplicity), 8 threads take 1.8–1.9 s with these settings and 2.0–2.5 s with the default policy (8 s with one thread); the results do not change. Active waiting keeps the idle cores busy during the serial sections, so do not use it when the threads of all ranks together exceed the number of cores. For single-threaded events (`OMP_NUM_THREADS=1`, as in the validation scripts) the setting makes no difference.
 
 
 ## Input parameters

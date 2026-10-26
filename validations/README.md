@@ -26,6 +26,8 @@ parts of the code against exact or published results:
   scaling of the energy density and the gluon number (see below).
 - **`numerical_parameters/`** — how the observables of a Pb+Pb event depend
   on the lattice spacing, `Ny` and `m` at a fixed geometry (see below).
+- **`constant_glasma/`** — the glasma of a constant color-charge density
+  against the published classical Yang-Mills results of Lappi (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -336,6 +338,76 @@ python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \
 `--ipglasma-path` is a directory with the `ipglasma` executable,
 `qs2Adj_vs_Tp_vs_Y_240.in`, `nucleusConfigurations/` and `tables/`. Runs are
 cached in their directories, so a rerun only runs what is missing.
+
+### Constant-g²μ glasma
+
+`constant_glasma/constant_glasma.py` (issue #126) tests the absolute
+normalization and the time dependence of the classical Yang-Mills part
+against T. Lappi, Phys. Rev. C 67 (2003) 054903 [hep-ph/0303076]: SU(3), a
+constant color-charge density (`useNucleus 0`), `Ny 1` and `m 0`, on the
+lattices of Lappi's Fig. 3 (N = 128, 256 and 512 at fixed g²μL, so
+g²μa = g²μL/N). T^μν is averaged over the interior of the lattice, farther
+than τ + 2a from the edges: Lappi used periodic lattices, the evolution of
+IP-Glasma has open boundaries. The script computes, averaged over the seeds,
+
+- f_E = g²τε/(g²μ)³ against g²μτ; its plateau is the value at the last
+  time, g²μτ = 20. After its maximum at g²μτ ≈ 1, τε decreases slowly
+  (d(τε)/dτ = −P_L, and P_L is slightly positive). Lappi's Table I gives the
+  asymptote of a fit A + B exp(−τ/τ₀), which his Fig. 4 reaches at
+  g²μτ ≈ 20 (τ = 2 fm there);
+- P_L/ε = τ²T^ηη/T^ττ and P_T/ε = (T^xx + T^yy)/(2T^ττ) against τ;
+- ε(τ → 0⁺), at the first time step, against the lattice spacing.
+
+It checks that P_L/ε = −1 and P_T/ε = 1 within 0.02 at the first time step
+(purely longitudinal fields) and about 0 and 1/2 at the last time
+(`--pressure-tolerance` 0.1), that f_E changes by less than 10% between half
+the last time and the last time, that ε(0⁺) grows as a → 0 while the plateau of f_E changes by
+less than 10% (beyond two standard deviations) between the two finest
+lattices (T. Lappi, Phys. Lett. B 643 (2006) 11 [hep-ph/0606207]), and that
+on the 512² lattices of Lappi's Table I (g²μL = 72, 120, 192) the plateau
+agrees with his f_E (0.265 ± 0.005, 0.227 ± 0.003, 0.238 ± 0.005) within
+three combined standard deviations. The f_E of Krasnitz, Nara and
+Venugopalan, Phys. Rev. Lett. 87 (2001) 192302 [hep-ph/0108092], as quoted
+by Lappi and halved as in their erratum, Nucl. Phys. A 727 (2003) 427
+[hep-ph/0305112] (0.269 at g²μL = 44.3, 0.248 at g²μL = 148.4), are printed
+for information; their lattice spacing is not quoted, so they are not
+checked.
+
+```bash
+cd constant_glasma
+# quick test: g²μL = 36 on 128² and 256², four seeds (30 s)
+python3 constant_glasma.py --ipglasma-path ../.. --quick --max-workers 4
+# the setup of the paper: g²μL = 72 and 120 on 128², 256² and 512²
+python3 constant_glasma.py --ipglasma-path ../.. --max-workers 4
+```
+
+With the defaults (four seeds, 6 minutes with 4 workers of 4 threads), all
+checks pass. The plateau agrees with Lappi's Table I on 512², and with the
+points of his Fig. 3 (read off the figure) on the coarser lattices:
+
+| g²μL | N   | g²μa | f_E           | Lappi    |
+|------|-----|------|---------------|----------|
+| 72   | 128 | 0.56 | 0.237 ± 0.009 | ≈ 0.237  |
+| 72   | 256 | 0.28 | 0.254 ± 0.010 | ≈ 0.265  |
+| 72   | 512 | 0.14 | 0.272 ± 0.014 | 0.265 ± 0.005 |
+| 120  | 128 | 0.94 | 0.189 ± 0.005 | ≈ 0.193  |
+| 120  | 256 | 0.47 | 0.220 ± 0.007 | ≈ 0.217  |
+| 120  | 512 | 0.23 | 0.238 ± 0.007 | 0.227 ± 0.003 |
+
+g²ε(0⁺)/(g²μ)⁴ grows from 0.62 to 0.81 and 1.06 (g²μL = 72) and from 0.40
+to 0.58 and 0.77 (g²μL = 120) as a is halved. P_L/ε is between −0.995 and
+−0.988 at the first time step and +0.02 to +0.03 at g²μτ = 20 (Lappi's
+Fig. 5 gives about +0.025), and f_E decreases by 0.5–3.4% between g²μτ = 10
+and 20 (5.5% on the coarsest lattice). The errors are those of the mean over
+four seeds of the interior average; more seeds are needed to reach the
+precision of Lappi's errors.
+
+The gluon number f_N is not compared. It is computed from the fields of the
+whole lattice, and near the open boundaries of the evolution the pure-gauge
+fields of the nuclei become physical fields, which contaminate it for a
+constant color-charge density (see the dilute limit). An interior
+(windowed) multiplicity or periodic boundaries for `useNucleus 0` would be
+needed for it.
 
 ### Vector meson production validation
 

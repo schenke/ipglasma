@@ -18,7 +18,7 @@ parts of the code against exact or published results:
   thing to run after touching the code.
 - **`dipole_correlator/`** — the dipole correlator of the MV model (constant
   color-charge density) against its exact lattice prediction, for a scan of
-  `g2muGeV`, `m`, `Ny` and `UVDamp` (see below).
+  `g2muGeV`, `m` and `Ny`, optionally also of `UVDamp` (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -123,9 +123,15 @@ cd dipole_correlator
 # quick test: 64², g²μ = 1 GeV, m = 0.2 GeV, Ny = 1...50, 2 seeds (seconds)
 python3 dipole_correlator.py --ipglasma-path ../.. --quick --max-workers 4
 # the scan for the paper: 512², L = 25.6 fm, g²μ = 0.5, 1, 2 GeV,
-# m = 0, 0.2, 0.4 GeV, Ny = 1...100, UVDamp 0.1/GeV, 4 seeds
+# m = 0, 0.2, 0.4 GeV, Ny = 1...100, 4 seeds
 python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8
+# optionally also the UV-damped kernel, at g²μ = 1 GeV and m = 0.2 GeV
+python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 \
+    --uvdamp 0.1
 ```
+
+The UV damping is off by default (`UVDamp 0`, the MV model used in
+practice); `--uvdamp` adds a `Ny` scan for each given value.
 
 `--ipglasma-path` is a directory with the `ipglasma` executable and
 `qs2Adj_vs_Tp_vs_Y_240.in`. The results (D(r) and D_G(r) for every setting,
@@ -136,7 +142,7 @@ the fit, the checks, Q_s/g²μ) go to `<datadir>/dipole_summary.json`
 working directory, so `--analyze-only` redoes the analysis, and a rerun only
 runs what is missing; `--keep-files` keeps the Wilson lines. The script exits
 non-zero if a check fails. At 256² with 8 configurations per `Ny`
-(`--size 256 --L 25.6 --g2mu 1 --m 0.2 --uvdamp --seeds 4`, 15 s with
+(`--size 256 --L 25.6 --g2mu 1 --m 0.2 --seeds 4`, 15 s with
 8 workers), D − D_G at r_s falls from 0.09 (`Ny 1`) to 0.002 (`Ny 100`),
 `Ny` (D − D_G) ≈ 0.1, and the extrapolation gives (1.2 ± 0.8)·10⁻³.
 

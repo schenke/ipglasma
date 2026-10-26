@@ -335,9 +335,10 @@ def main():
                         default=[1, 2, 5, 10, 25, 50, 100])
     parser.add_argument("--m", type=float, nargs="+", default=[0., 0.2, 0.4],
                         help="IR regulator [GeV]")
-    parser.add_argument("--uvdamp", type=float, nargs="*", default=[0.1],
+    parser.add_argument("--uvdamp", type=float, nargs="*", default=[],
                         help="UVDamp values [1/GeV] for an extra Ny scan at "
-                             "the middle g^2 mu and m")
+                             "the middle g^2 mu and m (none by default: "
+                             "UVDamp 0 is the MV model used in practice)")
     parser.add_argument("--seeds", type=int, default=4,
                         help="runs per setting (two configurations each)")
     parser.add_argument("--first-seed", type=int, default=1)
@@ -346,7 +347,7 @@ def main():
     parser.add_argument("--max-workers", type=int, default=1)
     parser.add_argument("--quick", action="store_true",
                         help="small test: size 64, L 8, g2mu 1, m 0.2, "
-                             "Ny 1..50, 2 seeds, no UVDamp scan")
+                             "Ny 1..50, 2 seeds")
     parser.add_argument("--analyze-only", action="store_true",
                         help="only analyze the results in --datadir")
     parser.add_argument("--keep-files", action="store_true",
@@ -354,7 +355,7 @@ def main():
     args = parser.parse_args()
     if args.quick:
         args.size, args.L, args.g2mu, args.m = 64, 8., [1.], [0.2]
-        args.ny, args.seeds, args.uvdamp = [1, 2, 5, 10, 25, 50], 2, []
+        args.ny, args.seeds = [1, 2, 5, 10, 25, 50], 2
 
     ipglasma_path = os.path.abspath(args.ipglasma_path)
     settings = {

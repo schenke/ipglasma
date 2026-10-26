@@ -22,6 +22,8 @@ parts of the code against exact or published results:
 - **`lattice_symmetries/`** — two exact symmetries of the lattice
   formulation, the transposition x ↔ y and the exchange of projectile and
   target, applied to the Wilson lines of a Pb+Pb event (see below).
+- **`dilute_limit/`** — the dilute limit of the glasma: the (g²μ)⁴/g²
+  scaling of the energy density (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -199,6 +201,49 @@ from the example `input` (`--template`). The results go to
 128², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 1.4% of the
 T^μν points differ and the observables by less than 0.1%; in (b) 6% and
 0.3%.
+
+### Dilute limit
+
+`dilute_limit/dilute_limit.py` (issue #125) tests the forward light cone,
+the evolution and T^μν in their perturbative limit. With a constant
+color-charge density (`useNucleus 0`) and an IR regulator m large compared
+with g²μ, both nuclei enter to second order, so the energy density scales as
+(g²μ)⁴/g². The script runs the example input with `useNucleus 0`, `m 1` and
+no JIMWLK for a scan of `g2muGeV`, all with the same seed (the random
+numbers are then the same, only scaled), plus a run with `g 2`. It checks
+that ε at the first time step and τε at the final time (0.5 fm), averaged
+over the interior of the lattice, scale with exponent 4 within 1% over the
+dilute range (default g²μ = 0.05–0.2 GeV), and that ε g² does not depend on
+g. It reports how far the larger g²μ deviate (the onset of saturation).
+
+```bash
+cd dilute_limit
+# quick test: 64², five g²μ (a few seconds)
+python3 dilute_limit.py --ipglasma-path ../.. --quick --max-workers 6
+# the setup of the paper: 256², L = 3.2 fm (ħc/a = 16 GeV), m = 1 GeV
+python3 dilute_limit.py --ipglasma-path ../.. --max-workers 8
+```
+
+With the defaults (16 s with 8 workers), the exponents are 3.9998 ± 0.0002
+(ε at τ → 0⁺) and 4.014 ± 0.007 (τε), and τε falls 2%, 5% and 15% below the
+dilute scaling at g²μ = 0.5, 1 and 2 GeV.
+
+Two limitations, both reported by the script:
+
+- **dN/dy and the spectrum are not checked.** They are computed from the
+  fields of the whole lattice, and the open boundaries of the evolution
+  turn the pure-gauge fields of the nuclei, of first order in g²μ, into
+  physical fields in a band near the edges. In the dilute limit this band
+  carries almost all of the energy (99.9% at g²μ = 0.05 GeV, 71% at 2 GeV in
+  the default box), and dN/dy of the whole lattice scales as (g²μ)². In
+  collisions of nuclei the fields vanish near the edges, so this only
+  concerns the constant color-charge density. The script reports dN/dy,
+  a fit of k⁴ dN/d²k to A + B ln k and the share of the band.
+- **The dilute range is bounded below by numerics.** For g²μ a and m a
+  small enough (e.g. g²μ = 0.01 GeV at a = 0.0125 fm), the field produced
+  in the collision falls below what the light-cone solver resolves with its
+  tolerance (ε at τ → 0⁺ comes out 13% low), and the late energy density
+  below the floor of the T^μν output (10⁻¹⁶ GeV/fm³).
 
 ### Vector meson production validation
 

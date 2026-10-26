@@ -24,6 +24,8 @@ parts of the code against exact or published results:
   target, applied to the Wilson lines of a Pb+Pb event (see below).
 - **`dilute_limit/`** — the dilute limit of the glasma: the (g²μ)⁴/g²
   scaling of the energy density and the gluon number (see below).
+- **`numerical_parameters/`** — how the observables of a Pb+Pb event depend
+  on the lattice spacing, `Ny` and `m` at a fixed geometry (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -244,6 +246,36 @@ enough (e.g. g²μ = 0.01 GeV at a = 0.0125 fm), the field produced in the
 collision falls below what the light-cone solver resolves with its tolerance
 (ε at τ → 0⁺ comes out 13% low), and the late energy density below the floor
 of the T^μν output (10⁻¹⁶ GeV/fm³).
+
+### Dependence on a, Ny and m at a fixed geometry
+
+`numerical_parameters/numerical_parameters.py` (issue #127) runs the example
+input without JIMWLK (b fixed, L = 30 fm, `seed 3`) for three scans: the
+size (a = L/size) at the `Ny` and `m` of the input, `Ny` and `m` at a fixed
+size. With a fixed `seed` and b = 0 (or a multiple of L/128), the geometry
+(nucleon positions, hot spots, T_p) does not depend on `size`, `Ny` or `m`;
+only the color charges change. These are varied with the input parameter
+`colorChargeSeed`, which draws them from their own stream, so that a few
+seeds per setting give its statistical error. The script computes dE/dη =
+τ∫T^ττ d²x at τ = 0.2 fm and at the final time (0.4 fm), dN/dy, ε₂, ε₃ and
+their angles, and reports their mean and error against a, `Ny` and `m`
+(`numerical_parameters_summary.json` and `numerical_parameters.pdf` in
+`--datadir`, default `./numerical_parameters_output`). It checks that the
+geometry is the same in all runs (N_part and N_coll lists, b) and that the
+color-charge seeds give different events. The change of the physical Q_s
+with `Ny` and `m` at fixed `QsMuRatio` is measured by the dipole setup.
+
+```bash
+cd numerical_parameters
+# quick test: sizes 64 and 128, Ny and m scans at 64, 2 seeds (5 s with 8 workers)
+python3 numerical_parameters.py --ipglasma-path ../.. --quick --max-workers 8
+# the setup of the paper: sizes 128-1024, Ny 1-100, m 0.1-0.8 GeV, 4 seeds
+python3 numerical_parameters.py --ipglasma-path ../.. --max-workers 4
+```
+
+`--ipglasma-path` is a directory with the `ipglasma` executable,
+`qs2Adj_vs_Tp_vs_Y_240.in`, `nucleusConfigurations/` and `tables/`. Runs are
+cached in their directories, so a rerun only runs what is missing.
 
 ### Vector meson production validation
 

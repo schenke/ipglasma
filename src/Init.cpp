@@ -649,8 +649,17 @@ void Init::init(
             }
             setColorChargeDensity(lat, param, random, glauber);
         }
-        // sample color charges and find Wilson lines V_A and V_B
-        setV(lat, param, random);
+        // sample color charges and find Wilson lines V_A and V_B; with
+        // colorChargeSeed, the color charges come from their own stream, so
+        // that they can be varied at a fixed geometry (issue #127)
+        if (param->random.colorChargeSeed >= 0) {
+            Random colorChargeRandom;
+            colorChargeRandom.init_genrand64(colorChargeRandomSeed(
+                param->random.colorChargeSeed, param->event.eventId));
+            setV(lat, param, &colorChargeRandom);
+        } else {
+            setV(lat, param, random);
+        }
     }
 }
 

@@ -438,6 +438,7 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"targetX", "-1e-3", "must be positive"},
              {"jimwlkInitialX", "0", "must be positive"},
              {"seed", "-2", "must be at least -1"},
+             {"colorChargeSeed", "-2", "must be at least -1"},
          }) {
         CAPTURE(c.key);
         CAPTURE(c.value);

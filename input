@@ -55,6 +55,7 @@ runWithLocalQs 0
 runWithKt 0
 Ny 50
 useSeedList 0
+colorChargeSeed -1
 seed 13
 projectile Pb
 target Pb

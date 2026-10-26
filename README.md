@@ -96,6 +96,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 ### Random seed
 - **seed**: random seed; MPI rank $r$ uses `seed` $+ 1000 r$. `-1` draws the seed from `std::random_device` (rank $r$ again adds $1000 r$). It also enters the names of the Wilson-line files (see `writeWilsonLines`), as `0` for `seed -1`, and also with `useSeedList 1`
 - **useSeedList**: `1` reads one seed per MPI rank from the file `seedList` in the working directory (rank $r$ uses the $(r+1)$-th number); it overrides `seed`
+- **colorChargeSeed** (optional, default `-1`; only used when the color charges are sampled, `readInitialWilsonLines 0`): `-1` draws the color charges from the random numbers of the run, after the geometry. A value $\ge 0$ draws them from a separate generator, seeded with this value and the event id, so that the color charges can be varied while the geometry (nucleon positions, hot spots, impact parameter), which `seed` determines, stays the same, e.g. to measure their statistical spread at a fixed geometry. The random numbers drawn after the color charges (e.g. the JIMWLK noise, the next event) then differ from a run with `-1`
 
 ### Lattice
 - **size**: controls the size of the lattice that is `size`$^2$.

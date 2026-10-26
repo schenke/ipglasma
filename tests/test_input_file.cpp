@@ -225,7 +225,7 @@ TEST_CASE("Parameters::readInput: reads values and sets derived ones") {
     CHECK(param.lattice.size == 256);
     CHECK(param.lattice.L == 30.);
     CHECK(param.collision.projectile == "Pb");
-    CHECK(param.jimwlk.xSnapshotList.size() == 5);
+    CHECK(param.jimwlk.xSnapshotList.size() == 4);
     CHECK(param.jimwlk.enabled == true);
     // derived: dtau ~0.1 with maxTime a whole number of steps
     const double a = param.lattice.L / param.lattice.size;

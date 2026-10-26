@@ -12,6 +12,7 @@
 #include <complex>
 #include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 
 #include "Instrumentation.h"
@@ -234,13 +235,39 @@ void JIMWLK::runEvolutionLoop(
     std::vector<int> snapshotStep;
     if (saveSnapshots) {
         snapshotStep = snapshotSteps(xSnapshotList, x0, dlogx, steps);
+        // the Wilson lines before and after the evolution have their own
+        // files anyway (written by Init::setV() and main, or read), so a
+        // snapshot under one of these names would only write them again
+        const double finalX = (nucleus == NucleusRole::Projectile)
+                                  ? param_.colorCharge.projectileX
+                                  : param_.colorCharge.targetX;
+        const std::string initialFile =
+            WilsonLineIO::fileName(&param_, x0, nucleus);
+        const std::string finalFile =
+            WilsonLineIO::fileName(&param_, finalX, nucleus);
         for (std::size_t i = 0; i < xSnapshotList.size(); i++) {
-            if (snapshotStep[i] >= 0) continue;
-            messager_ << "[JIMWLK::evolution]: x = " << xSnapshotList[i]
-                      << " of jimwlkXSnapshotList is not between " << x0
-                      << " and " << x0 * exp(-steps * dlogx) << " (the "
-                      << label << " evolution); no snapshot is saved for it.";
-            messager_.flush("warning");
+            if (snapshotStep[i] < 0) {
+                messager_ << "[JIMWLK::evolution]: x = " << xSnapshotList[i]
+                          << " of jimwlkXSnapshotList is not between " << x0
+                          << " and " << x0 * exp(-steps * dlogx) << " (the "
+                          << label
+                          << " evolution); no snapshot is saved for it.";
+                messager_.flush("warning");
+                continue;
+            }
+            const std::string file =
+                WilsonLineIO::fileName(&param_, xSnapshotList[i], nucleus);
+            if ((snapshotStep[i] == 0 && file == initialFile)
+                || (snapshotStep[i] == steps && file == finalFile)) {
+                messager_ << "[JIMWLK::evolution]: x = " << xSnapshotList[i]
+                          << " of jimwlkXSnapshotList is the "
+                          << (snapshotStep[i] == 0 ? "initial" : "final")
+                          << " x of the " << label
+                          << " evolution, whose Wilson lines are in " << file
+                          << " anyway; no separate snapshot is saved.";
+                messager_.flush("info");
+                snapshotStep[i] = -1;
+            }
         }
     }
     // writes the snapshots due after `step` steps, named with their

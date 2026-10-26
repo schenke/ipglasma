@@ -3,6 +3,8 @@
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
 #include <cmath>
+#include <filesystem>
+#include <string>
 #include <vector>
 
 #include "Group.h"
@@ -10,6 +12,7 @@
 #include "Lattice.h"
 #include "Parameters.h"
 #include "Random.h"
+#include "WilsonLineIO.h"
 #include "doctest.h"
 
 namespace {
@@ -164,4 +167,47 @@ TEST_CASE(
     CHECK(
         JIMWLK::snapshotSteps(requested, x0, dlogx, steps)
         == std::vector<int> {0, 5, 6, 20, 0, -1, -1, -1});
+}
+
+TEST_CASE(
+    "JIMWLK::evolution writes the snapshots between the initial and the "
+    "final x, but not a second copy of the initial or final Wilson lines "
+    "(issue #120)") {
+    const int N = 8;
+    Parameters param;
+    makeJimwlkTestParam(param, N);
+    const std::filesystem::path dir =
+        std::filesystem::temp_directory_path() / "ipglasma_test_snapshots";
+    std::filesystem::remove_all(dir);
+    std::filesystem::create_directories(dir);
+    param.wilsonLines.wilsonLinePath = dir.string();
+    param.wilsonLines.writeWilsonLines = 2;
+    param.run.eventsPerRank = 1;
+    param.jimwlk.enabled = true;  // the initial x is jimwlkInitialX
+    param.jimwlk.saveSnapshots = true;
+    // 7 steps from 0.01 to 0.008 for both nuclei; 0.009 lies in between,
+    // and 0.01 and 0.008 are the initial and the final x, whose Wilson
+    // lines Init::setV() and main write under the same names
+    param.jimwlk.initialX = 0.01;
+    param.colorCharge.projectileX = 0.008;
+    param.colorCharge.targetX = 0.008;
+    param.jimwlk.xSnapshotList = {0.01, 0.009, 0.008};
+
+    Group group;
+    Random random;
+    random.init_genrand64(42ULL);
+    Lattice lat(&param, N);
+    JIMWLK jimwlk(param, &group, &lat, &random);
+    jimwlk.evolution();
+
+    for (const NucleusRole nucleus :
+         {NucleusRole::Projectile, NucleusRole::Target}) {
+        CHECK(std::filesystem::exists(
+            WilsonLineIO::fileName(&param, 0.009, nucleus)));
+        CHECK_FALSE(std::filesystem::exists(
+            WilsonLineIO::fileName(&param, 0.01, nucleus)));
+        CHECK_FALSE(std::filesystem::exists(
+            WilsonLineIO::fileName(&param, 0.008, nucleus)));
+    }
+    std::filesystem::remove_all(dir);
 }

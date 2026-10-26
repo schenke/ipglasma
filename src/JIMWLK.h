@@ -231,7 +231,10 @@ class JIMWLK {
      * Shared by evolution()'s projectile and target passes: runs \p
      * steps Langevin steps for \p nucleus, logging progress and writing
      * the snapshots of \p xSnapshotList along the way, at the steps
-     * snapshotSteps() finds, each named with its requested \f$x\f$.
+     * snapshotSteps() finds, each named with its requested \f$x\f$. A
+     * snapshot whose file is that of the Wilson lines before (at \p x0)
+     * or after the evolution (at `projectileX`/`targetX`) is skipped,
+     * since those are written (or were read) anyway.
      * \param[in] nucleus Which nucleus to evolve.
      * \param[in] steps Number of Langevin steps to run.
      * \param[in] x0 Starting Bjorken \f$x\f$ for this evolution.

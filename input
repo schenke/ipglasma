@@ -103,6 +103,6 @@ jimwlkLambdaQCD 0.040
 jimwlkC 0.2
 jimwlkMass 0.4
 jimwlkSaveSnapshots 1
-jimwlkXSnapshotList 5e-3,2e-3,0.0001,0.00005,0.00001
+jimwlkXSnapshotList 5e-3,2e-3,1e-3,5e-4
 EndOfFile
 BOB

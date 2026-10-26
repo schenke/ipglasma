@@ -1,6 +1,8 @@
 # Running the validation scripts
 
-This folder contains two parallel validation/regression scripts for IP-Glasma:
+This folder contains two parallel validation/regression scripts for IP-Glasma,
+and in subfolders the small validation setups of the code paper, which test
+parts of the code against exact or published results:
 
 - **`parallel_test_vector_meson_production.py`** — runs many independent
   IP-Glasma + JIMWLK events, feeds the resulting Wilson lines to the external
@@ -14,6 +16,9 @@ This folder contains two parallel validation/regression scripts for IP-Glasma:
   checks the resulting ε₂ distribution against a saved baseline. This is the
   lighter-weight "did the physics silently change" check and is a good first
   thing to run after touching the code.
+- **`lattice_symmetries/`** — two exact symmetries of the lattice
+  formulation, the transposition x ↔ y and the exchange of projectile and
+  target, applied to the Wilson lines of a Pb+Pb event (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -79,6 +84,57 @@ Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 the exact command used to reproduce the run. The script exits non-zero if the
 new distribution's mean/std or KS test drifts beyond tolerance
 (`--mean-tol`, `--std-tol`) from the reference.
+
+### Lattice symmetries
+
+`lattice_symmetries/lattice_symmetries.py` (issue #124) tests the index
+bookkeeping of the forward light cone, the evolution, T^μν, the Landau
+matching, the interpolation to the output grid, the eccentricities and the
+gluon spectrum. A Pb+Pb event at b = 0 (the example input without JIMWLK,
+`gaussianWounding 0`, `rotateReactionPlane 0`) writes its Wilson lines and
+geometry files, which are read back (`readInitialWilsonLines 2`) three
+times:
+
+- **(0)** unchanged: this must reproduce the event, to the last bit with a
+  build with `-DIPGLASMA_DETERMINISTIC_FFT=ON` (the script copies the FFT
+  wisdom file into every run directory);
+- **(a)** transposed, x ↔ y (Wilson lines, nucleon positions, g²μ² and T_p
+  maps): all outputs map onto those of (0) point by point, with
+  T^xx ↔ T^yy, T^τx ↔ T^τy, T^xη ↔ T^yη, u^x ↔ u^y (and likewise π^μν),
+  the same |ε_n|, Ψ_n → π/2 − Ψ_n and the same gluon spectrum;
+- **(b)** projectile and target exchanged (the reflection η → −η):
+  T^τη, T^xη, T^yη, u^η and π^{μη} change sign, everything else is
+  unchanged.
+
+Both hold to rounding except where the light-cone solver finds another
+solution of the matching condition (issue #107): in (b) it starts from
+U_B U_A instead of U_A U_B, and in (a) a link that has to restart draws
+another random start, since the restart stream depends on the site and the
+link direction. These links lie in the strong-field region, and their
+differences spread by the final time. The script therefore reports the
+fraction of T^μν points that differ beyond rounding and accepts (a) and (b)
+if it is at most `--max-differing` (default 25%; a general error in the
+index bookkeeping changes about half of all points, the rest being empty)
+and dN/dy, dE/dy, ε₂ and ε₃ change by less than `--observable-tolerance`
+(default 3%). With a restart stream that does not depend on the site, (a)
+holds everywhere: T^μν to 6·10⁻¹³, the hydro fields (from the Landau
+matching) to 2·10⁻⁷.
+
+```bash
+cd lattice_symmetries
+# quick test: 64², L = 24 fm (about 5 s)
+python3 lattice_symmetries.py --ipglasma-path ../.. --quick
+# the setup of the paper: 256², L = 30 fm
+python3 lattice_symmetries.py --ipglasma-path ../..
+```
+
+`--ipglasma-path` is a directory with the `ipglasma` executable,
+`qs2Adj_vs_Tp_vs_Y_240.in` and `nucleusConfigurations/`; the input starts
+from the example `input` (`--template`). The results go to
+`<datadir>/symmetries_summary.json` (default `./symmetries_output`). At
+128², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 1.4% of the
+T^μν points differ and the observables by less than 0.1%; in (b) 6% and
+0.3%.
 
 ### Vector meson production validation
 

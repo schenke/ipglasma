@@ -5,6 +5,7 @@ message: >-
   implementation.
 title: IP-Glasma
 type: software
+version: 2.0.0
 abstract: >-
   IP-Glasma computes the initial state of heavy-ion and small-system
   collisions from the color-glass condensate: it samples the color charges

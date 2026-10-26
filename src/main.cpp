@@ -54,6 +54,11 @@ bool readInput(Parameters *param, int argc, char *argv[], int rank);
 void display_logo();
 void writeparams(Parameters *param);
 
+// set by CMake from the project version
+#ifndef IPGLASMA_VERSION
+#define IPGLASMA_VERSION "unknown"
+#endif
+
 // main program 1
 int main(int argc, char *argv[]) {
     int rank;
@@ -78,6 +83,7 @@ int main(int argc, char *argv[]) {
 
     int h5Flag = 0;
     PrettyOstream messager;
+    if (rank == 0) messager.info("[main::main]: IP-Glasma " IPGLASMA_VERSION);
 
     Parameters paramStorage;
     Parameters *param = &paramStorage;
@@ -447,7 +453,8 @@ void writeparams(Parameters *param) {
     strup_name << "usedParameters" << param->event.eventId << ".dat";
     ofstream fout1(strup_name.str());
     time_t rawtime = time(0);
-    fout1 << "# Input parameters used by IP-Glasma for event "
+    fout1 << "# Input parameters used by IP-Glasma " IPGLASMA_VERSION
+             " for event "
           << param->event.eventId << ", written " << ctime(&rawtime);
     fout1 << "# This file is a valid input file. Running it does not "
              "reproduce this event:\n"

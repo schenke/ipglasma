@@ -45,6 +45,18 @@ Start a new file with this header, and add yourself to `AUTHORS` with your
 first contribution. Code taken from another project keeps its own copyright
 and license notice; list it at the end of `AUTHORS`.
 
+## Releases
+
+The version (`X.Y.Z`, see `CHANGELOG.md` for its meaning) is set once, in
+`project(IPGlasma VERSION X.Y.Z ...)` in `CMakeLists.txt`. The program
+prints it at start-up and writes it into the header of
+`usedParameters<id>.dat`, and the documentation shows it. For a release:
+
+- set the version in `CMakeLists.txt`;
+- set `version` and `date-released` in `CITATION.cff`;
+- give the changes since the last release a `## X.Y.Z` heading in
+  `CHANGELOG.md`.
+
 ## Code formatting
 
 The code in `src/`, `tests/` and `utilities/` is formatted with clang-format

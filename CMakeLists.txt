@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.10)
-project(IPGlasma VERSION 1.0 LANGUAGES CXX)
+project(IPGlasma VERSION 2.0.0 LANGUAGES CXX)
 
 set(libname "ipglasma_lib")
 set(exename "ipglasma")
@@ -120,6 +120,9 @@ option(IPGLASMA_DETERMINISTIC_FFT
 if (IPGLASMA_DETERMINISTIC_FFT)
     add_compile_definitions(IPGLASMA_DETERMINISTIC_FFT)
 endif()
+
+# the version, printed at start-up and recorded in usedParameters<id>.dat
+add_compile_definitions(IPGLASMA_VERSION="${PROJECT_VERSION}")
 
 add_subdirectory (src)
 

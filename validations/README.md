@@ -230,8 +230,7 @@ color-field (Tr V(x)) plots for a couple of representative events.
 ## Running on a computing cluster (SLURM)
 
 `runvalidation_jpsi.sh` is a SLURM batch script template for
-`parallel_test_vector_meson_production.py` (`runvalidation_eccentricity.sh`
-is the same for `parallel_test_eccentricity.py`):
+`parallel_test_vector_meson_production.py`:
 
 ```bash
 #!/bin/bash
@@ -288,16 +287,15 @@ Notes:
   1), which can help binding/placement on some clusters. The templates pass
   it; remove `--slurm` from the `python3` invocation if your cluster runs
   the binaries directly.
-- The same pattern (a batch script that calls the script with
-  `--max-workers "${SLURM_NTASKS:-1}"`) works for
-  `parallel_test_eccentricity.py`; just swap the python invocation, e.g.:
+- `runvalidation_eccentricity.sh` is the same template for
+  `parallel_test_eccentricity.py` (submit it with
+  `sbatch runvalidation_eccentricity.sh`); only the python invocation
+  differs:
   ```bash
-  python3 parallel_test_eccentricity.py \
-      --input-template input_eccentricity \
-      --ipglasma-path /path/to/ipglasma_upstream \
-      --datadir /path/to/datadir \
-      --maxevents 200 \
-      --max-workers "${SLURM_NTASKS:-1}"
+  python3 parallel_test_eccentricity.py --size 128 \
+      --ipglasma-path /path/to/ipglasma \
+      --max-workers "${SLURM_NTASKS:-1}" --maxevents 1500 \
+      --datadir /path/to/datadir --input-template input_eccentricity --slurm
   ```
 - Expect one `seed_<n>/` working directory per event under `--datadir` while
   the job runs; both scripts clean these up at the end unless `--keep-logs`

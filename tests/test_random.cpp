@@ -9,6 +9,10 @@
 #include <vector>
 
 #include "Random.h"
+
+#ifdef _OPENMP
+#include <omp.h>
+#endif
 #include "doctest.h"
 
 TEST_CASE("Random: gaussBulk reproduces the exact gauss() stream") {
@@ -38,6 +42,51 @@ TEST_CASE("Random: gaussBulk reproduces the exact gauss() stream") {
         CHECK(bulkStream[i] == scalarStream[i]);
     }
     CHECK(bulkRng.gauss() == scalarNext);
+}
+
+TEST_CASE(
+    "Random: gaussBulk reproduces the scalar stream for any number of "
+    "threads and sizes, mixed with scalar draws (issue #121)") {
+    // the acceptance scan runs in parallel, with a prefix sum over the
+    // threads; sizes below the number of threads leave some of them idle
+    const std::vector<std::size_t> sizes = {1, 2, 3, 7, 1000, 524289, 4};
+    const unsigned long long seed = 777ULL;
+    Random scalarRng;
+    scalarRng.init_genrand64(seed);
+    std::vector<double> expected;
+    for (const std::size_t n : sizes) {
+        for (std::size_t i = 0; i < n; ++i) {
+            expected.push_back(scalarRng.gauss());
+        }
+        expected.push_back(scalarRng.genrand64_real2());
+    }
+#ifdef _OPENMP
+    const int maxThreads = omp_get_max_threads();
+    for (const int threads : {1, 3, 8}) {
+        omp_set_num_threads(threads);
+#else
+    for (const int threads : {1}) {
+#endif
+        CAPTURE(threads);
+        Random bulkRng;
+        bulkRng.init_genrand64(seed);
+        std::vector<double> scratch, values, stream;
+        for (const std::size_t n : sizes) {
+            values.resize(n);
+            bulkRng.gaussBulk(values.data(), n, scratch);
+            stream.insert(stream.end(), values.begin(), values.end());
+            stream.push_back(bulkRng.genrand64_real2());
+        }
+        REQUIRE(stream.size() == expected.size());
+        std::size_t mismatches = 0;
+        for (std::size_t i = 0; i < stream.size(); ++i) {
+            if (stream[i] != expected[i]) mismatches++;
+        }
+        CHECK(mismatches == 0);
+    }
+#ifdef _OPENMP
+    omp_set_num_threads(maxThreads);
+#endif
 }
 
 TEST_CASE("Random: gaussBulk output has ~zero mean and ~unit variance") {

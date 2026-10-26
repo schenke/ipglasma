@@ -12,7 +12,9 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=6000M
 
-# Each event runs single-threaded; the workers run the events in parallel
+# Each event runs single-threaded; the workers run the events in parallel.
+# (With several threads per event, also set OMP_WAIT_POLICY=active and
+# OMP_PROC_BIND=close; see "Threads and MPI ranks" in the README.)
 export OMP_NUM_THREADS=1
 
 # Place and bind threads to single cores

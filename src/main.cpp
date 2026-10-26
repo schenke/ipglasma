@@ -271,13 +271,6 @@ int main(int argc, char *argv[]) {
                 evolution.run(&lat, &group, param);
             }
 
-#ifndef DISABLEMPI
-            {
-                IPG_PROFILE_SCOPE("mpi.barrier");
-                MPI_Barrier(MPI_COMM_WORLD);
-            }
-#endif
-
             messager.info("[main::main]: One event finished");
             if (param->output.writeOutputsToHDF5) {
                 IPG_PROFILE_SCOPE("output.hdf5_collect_event");
@@ -315,8 +308,11 @@ int main(int argc, char *argv[]) {
     }
 
 #ifndef DISABLEMPI
-    // Every rank must have finished appending its last event to its
-    // RESULTS_rank*.h5 before rank 0 merges (and deletes) those files.
+    // The ranks exchange no data and run their events independently (a
+    // barrier after each event made every rank wait for the slowest event of
+    // each round, issue #117). This is the only synchronization: every rank
+    // must have finished appending its last event to its RESULTS_rank*.h5
+    // before rank 0 merges (and deletes) those files.
     MPI_Barrier(MPI_COMM_WORLD);
 #endif
 

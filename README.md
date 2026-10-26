@@ -56,6 +56,17 @@ mpirun -np <ranks> ./ipglasma [input file] [events per rank]
 ```
 The input file defaults to `input`, and the number of events per MPI rank to 1; with MPI, the run generates ranks × events per rank events. The number of events per rank also enters the names of the Wilson-line files. File names in the input file (e.g. `nucleusQsTableFileName`) are relative to the working directory, and the output files are written there, apart from the Wilson-line files (see `wilsonLinePath` and [OUTPUT.md](OUTPUT.md)).
 
+### Threads and MPI ranks
+Each event runs with `OMP_NUM_THREADS` OpenMP threads. The MPI ranks generate their events independently, with their own random numbers and output files, and only wait for each other at the end of the run (to combine the HDF5 files with `writeOutputsToHDF5 1`), so a run takes as long as its slowest rank.
+
+With several threads per event, use one thread per physical core and set
+```
+export OMP_WAIT_POLICY=active
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
+```
+Several steps (the Wilson lines, their random numbers and the FFTs, also those of the Coulomb gauge fixing) alternate short parallel loops with short serial sections. With the default wait policy of GCC's OpenMP runtime, idle threads soon fall asleep and have to be woken up for every loop. For a central Pb+Pb event of the example input at 256² without JIMWLK (with hydro output, eccentricities and gluon multiplicity), these settings halve the time with 8 threads, from 4.0 to 2.0 s (about 8.5 s with one thread); the results do not change. Active waiting keeps the idle cores busy during the serial sections, so do not use it when the threads of all ranks together exceed the number of cores. For single-threaded events (`OMP_NUM_THREADS=1`, as in the validation scripts) the setting makes no difference.
+
 
 ## Input parameters
 Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.

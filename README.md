@@ -252,6 +252,7 @@ The JIMWLK evolution starts from a fixed $x$, `jimwlkInitialX`, and evolves the 
 Python scripts in `utilities/` for working with the output files (see [OUTPUT.md](OUTPUT.md)):
 - `read_tmunu.py`: reads the $T^{\mu\nu}$ files, binary (`.ipgt`) and text (`.dat`), into numpy arrays, e.g. the energy density with `get_energy_density()`.
 - `eccentricity.py`: the eccentricities $\epsilon_n$ of an energy-density grid, e.g. from `read_tmunu.py` (`eccentricity_from_tmunu_file()`).
+- `read_wilson_lines.py`: reads the Wilson-line files, binary and text, into a numpy array `V[ix, iy]` of 3×3 matrices (`read_wilson_lines()`); run as a script, it prints their header and checks their unitarity.
 - `combine_events_into_hdf5.py`: collects the text outputs of events into an HDF5 file. The program calls it after each event with `writeOutputsToHDF5 1`; it can also be run by hand on a results folder (`--help` lists the options).
 - `fetch_IPGlasma_event_from_hdf5_database.py`: writes the hydro file (the MUSIC input) or the text $T^{\mu\nu}$ file of one event at a given proper time back out of such an HDF5 file: `fetch_IPGlasma_event_from_hdf5_database.py RESULTS.h5 <event id> <0: hydro, 1: Tmunu> <tau>`. Without the proper time it lists the available ones.
 - `saveToBinaryFile.py`: an example of converting a text table of nucleon configurations into the binary format of the configuration files.

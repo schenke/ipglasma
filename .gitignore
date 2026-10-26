@@ -16,6 +16,9 @@ test.out
 /WilsonLine_*
 /WilsonLineGeometry_*
 
+# Outputs of the validation scripts
+validations/**/*_output/
+
 # Plots
 *.pdf
 *.png

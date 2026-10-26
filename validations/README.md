@@ -1,6 +1,8 @@
 # Running the validation scripts
 
-This folder contains two parallel validation/regression scripts for IP-Glasma:
+This folder contains two parallel validation/regression scripts for IP-Glasma,
+and in subfolders the small validation setups of the code paper, which test
+parts of the code against exact or published results:
 
 - **`parallel_test_vector_meson_production.py`** — runs many independent
   IP-Glasma + JIMWLK events, feeds the resulting Wilson lines to the external
@@ -14,6 +16,9 @@ This folder contains two parallel validation/regression scripts for IP-Glasma:
   checks the resulting ε₂ distribution against a saved baseline. This is the
   lighter-weight "did the physics silently change" check and is a good first
   thing to run after touching the code.
+- **`dipole_correlator/`** — the dipole correlator of the MV model (constant
+  color-charge density) against its exact lattice prediction, for a scan of
+  `g2muGeV`, `m`, `Ny` and `UVDamp` (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -79,6 +84,61 @@ Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 the exact command used to reproduce the run. The script exits non-zero if the
 new distribution's mean/std or KS test drifts beyond tolerance
 (`--mean-tol`, `--std-tol`) from the reference.
+
+### Dipole correlator of the MV model
+
+`dipole_correlator/dipole_correlator.py` (issue #123) tests the Wilson lines:
+the normalization of the color charges (and that `g` drops out), the
+momentum-space kernel with lattice momenta, IR regulator and UV damping,
+the FFT conventions and the product over the `Ny` layers.
+
+With a constant color-charge density (`useNucleus 0`), the layers are
+Gaussian with the two-point function, summed over the layers,
+
+G(r) = (g²μ a)²/N² Σ_k K(k)² cos(k·r),
+K(k) = exp(−|k̃| u)/[(k̃ a)² + (m a)²] (K(0) = 0 for m = 0),
+
+exactly on the periodic lattice, with the lattice momentum
+k̃² a² = 4[sin²(k_x a/2) + sin²(k_y a/2)] and the UV damping u. The dipole
+correlator D(r) = Re⟨tr V†(x) V(x+r)⟩/N_c therefore tends to
+D_G(r) = exp{−C_F [G(0) − G(r)]} for `Ny` → ∞, with corrections of order
+1/`Ny`; no continuum or infinite-volume approximation enters. The script
+runs IP-Glasma (`runEvolution 0`, `writeWilsonLines 2`, input template
+`dipole_correlator/input_dipole`) for each setting and seed, computes D(r)
+from the two nuclei of each run (two independent configurations) along the
+axes and the diagonal, averaged over all sites, and checks that
+
+- D approaches D_G for large `Ny`,
+- `Ny` (D − D_G) at the r where D_G = e^{−1/2} tends to a constant,
+- the extrapolation D − D_G = d_∞ + c/`Ny` (for `Ny` ≥ 5) gives a d_∞
+  consistent with 0,
+- a run with `g 2` gives the same D as with `g 1` (to rounding).
+
+It also reports Q_s/g²μ, with D(r_s) = e^{−1/2} and Q_s² = 2/r_s², to be
+compared with T. Lappi, Eur. Phys. J. C 55 (2008) 285
+([arXiv:0711.3039](https://arxiv.org/abs/0711.3039)).
+
+```bash
+cd dipole_correlator
+# quick test: 64², g²μ = 1 GeV, m = 0.2 GeV, Ny = 1...50, 2 seeds (seconds)
+python3 dipole_correlator.py --ipglasma-path ../.. --quick --max-workers 4
+# the scan for the paper: 512², L = 25.6 fm, g²μ = 0.5, 1, 2 GeV,
+# m = 0, 0.2, 0.4 GeV, Ny = 1...100, UVDamp 0.1/GeV, 4 seeds
+python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8
+```
+
+`--ipglasma-path` is a directory with the `ipglasma` executable and
+`qs2Adj_vs_Tp_vs_Y_240.in`. The results (D(r) and D_G(r) for every setting,
+the fit, the checks, Q_s/g²μ) go to `<datadir>/dipole_summary.json`
+(default `./dipole_output`), with one figure per setting
+(`dipole_<setting>.pdf`: D(r) against D_G(r) for several `Ny`, and
+`Ny` (D − D_G) with its statistical error). Each run caches its D(r) in its
+working directory, so `--analyze-only` redoes the analysis, and a rerun only
+runs what is missing; `--keep-files` keeps the Wilson lines. The script exits
+non-zero if a check fails. At 256² with 8 configurations per `Ny`
+(`--size 256 --L 25.6 --g2mu 1 --m 0.2 --uvdamp --seeds 4`, 15 s with
+8 workers), D − D_G at r_s falls from 0.09 (`Ny 1`) to 0.002 (`Ny 100`),
+`Ny` (D − D_G) ≈ 0.1, and the extrapolation gives (1.2 ± 0.8)·10⁻³.
 
 ### Vector meson production validation
 

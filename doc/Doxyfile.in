@@ -12,6 +12,7 @@
 # Project
 #---------------------------------------------------------------------------
 PROJECT_NAME           = "IP-Glasma"
+PROJECT_NUMBER         = @PROJECT_VERSION@
 PROJECT_BRIEF          = "IP-Glasma initial condition with JIMWLK evolution"
 OUTPUT_DIRECTORY       = @CMAKE_CURRENT_BINARY_DIR@
 OPTIMIZE_OUTPUT_FOR_C  = NO

@@ -1,0 +1,70 @@
+# Input template of the dipole-correlator validation (issue #123), run by
+# dipole_correlator.py, which overrides size, L, Ny, m, UVDamp, g2muGeV, g,
+# seed and nucleusQsTableFileName for each run.
+#
+# The MV model with a constant color-charge density (useNucleus 0): only the
+# Wilson lines of the two nuclei are built (runEvolution 0) and written in
+# binary (writeWilsonLines 2); the two nuclei are two independent
+# configurations. The parameters below are those this setup reads; the
+# nucleus and hot-spot ones are required but not used with useNucleus 0.
+runEvolution 0
+size 128
+L 12.8
+Ny 50
+g 1
+maxTime 0.5
+timeStepsPerLatticeSpacing 10
+inverseQsForMaxTime 0
+seed 1
+useSeedList 0
+projectile Pb
+target Pb
+sigmaNN 73
+useNucleus 0
+readInitialWilsonLines 0
+g2muGeV 1
+useSmoothNucleus 0
+nucleiToAverage 1
+nucleonPositionsFromFile 0
+polarizationProjectile 0
+polarizationTarget 0
+useInputWSParams 0
+forceDMin 0
+dMin 0.9
+nucleonModel hotspots
+subNucleonParamType 0
+m 0.2
+BG 3.3
+BGq 0.3
+BGqVar 0
+dqMin 0
+omega 1
+Nq 3
+NqFluc 0
+shiftConstituentQuarkProtonOrigin 1
+QsMuRatio 0.643
+smearQs 0
+UVDamp 0
+minimumQs2ST 0
+nucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_240.in
+rapidity 0
+usePseudoRapidity 0
+useFluctuatingX 0
+projectileX 1e-04
+targetX 1e-04
+runningCoupling 0
+nFlavors 3
+computeGluonMultiplicity 0
+computeEccentricities 0
+writeHydro 0
+writeJazma 0
+writeTmunu 0
+writeWilsonLineSnapshot 0
+writeNpartList 1
+writeNcollList 1
+writeNgluonEstimators 1
+writeOutputsToHDF5 0
+writeWilsonLines 2
+writeWilsonLineGeometry 1
+wilsonLinePath ./
+useJIMWLK 0

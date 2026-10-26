@@ -93,6 +93,21 @@ class Init {
     explicit Init(const int nn[]) : fft_(nn), one_(1.) {};
 
     /**
+     * The seed of the separate generator of the color charges with
+     * `colorChargeSeed` (issue #127): \p colorChargeSeed in the lower and
+     * \p eventId in the upper 32 bits, so that every event of a run, and
+     * every `colorChargeSeed` below \f$2^{32}\f$, gets its own stream.
+     * \param[in] colorChargeSeed The input parameter (not `-1`).
+     * \param[in] eventId The event id.
+     * \return The seed for Random::init_genrand64().
+     */
+    static unsigned long long colorChargeRandomSeed(
+        long long colorChargeSeed, int eventId) {
+        return static_cast<unsigned long long>(colorChargeSeed)
+               + (static_cast<unsigned long long>(eventId) << 32);
+    }
+
+    /**
      * Destroys this Init (nothing to release).
      */
     ~Init() {};

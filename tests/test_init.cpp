@@ -628,3 +628,48 @@ TEST_CASE(
     CHECK(kept == redrawn);
     removeCollisionFiles();
 }
+
+TEST_CASE(
+    "Init::init: with colorChargeSeed the color charges come from their own "
+    "stream, seeded with it and the event id (issue #127)") {
+    const int N = 4;
+    // the projectile's Wilson lines of one event with constant color charges
+    auto wilsonLines = [&](long long seed, long long colorChargeSeed,
+                           int eventId) {
+        Parameters param;
+        makeInitTestParam(param, N);
+        param.collision.useNucleus = false;
+        param.collision.g2muGeV = 1.;
+        param.coupling.g = 1.;
+        param.colorCharge.Ny = 2;
+        param.subnucleon.m = 0.2;
+        param.random.seed = seed;
+        param.random.colorChargeSeed = colorChargeSeed;
+        param.event.eventId = eventId;
+        Lattice lat(&param, N);
+        int nn[2] = {N, N};
+        Init init(nn);
+        Glauber glauber;
+        Random random;
+        random.init_genrand64(static_cast<unsigned long long>(seed));
+        init.init(
+            &lat, &param, &random, &glauber,
+            InitializationMethod::SampleColorCharges);
+        return lat.U;
+    };
+    auto same = [](const std::vector<Matrix> &a, const std::vector<Matrix> &b) {
+        for (std::size_t i = 0; i < a.size(); ++i) {
+            if (!matricesClose(a[i], b[i], 1e-15)) return false;
+        }
+        return true;
+    };
+    // the main stream (seed) no longer matters, colorChargeSeed and the
+    // event do
+    CHECK(same(wilsonLines(1, 5, 0), wilsonLines(2, 5, 0)));
+    CHECK_FALSE(same(wilsonLines(1, 5, 0), wilsonLines(1, 6, 0)));
+    CHECK_FALSE(same(wilsonLines(1, 5, 0), wilsonLines(1, 5, 1)));
+    // -1: the color charges come from the stream of the run
+    CHECK_FALSE(same(wilsonLines(1, -1, 0), wilsonLines(2, -1, 0)));
+    CHECK_FALSE(same(wilsonLines(1, -1, 0), wilsonLines(1, 5, 0)));
+    CHECK(Init::colorChargeRandomSeed(5, 3) == 5ULL + (3ULL << 32));
+}

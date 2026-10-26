@@ -398,6 +398,15 @@ bool sqrtSUsed(const Parameters &p) {
 bool couplingRuns(const Parameters &p) { return p.coupling.runningCoupling; }
 
 /**
+ * Condition for the seed of the color charges.
+ * \param[in] p The parameters read so far.
+ * \return Whether the color charges are sampled (not read).
+ */
+bool colorChargesSampled(const Parameters &p) {
+    return p.wilsonLines.readInitialWilsonLines == 0;
+}
+
+/**
  * Condition for the directory of the Wilson-line files.
  * \param[in] p The parameters read so far.
  * \return Whether Wilson lines are written or read.
@@ -629,6 +638,11 @@ const std::vector<ParameterSpec> &parameterTable() {
             "readInitialWilsonLines", &P::wilsonLines,
             &WilsonLineParameters::readInitialWilsonLines)
             .check(oneOf({0, 1, 2}, " (0: sample, 1: text, 2: binary)")),
+        // a separate stream for the color charges (issue #127)
+        param("colorChargeSeed", &P::random, &RandomParameters::colorChargeSeed)
+            .onlyIf(colorChargesSampled)
+            .optional("-1")
+            .check(atLeast(-1LL, " (-1: the stream of the run)")),
         param("bMin", &P::collision, &CollisionParameters::bMin)
             .onlyIf(nucleiCollide)
             .check(nonNegative()),

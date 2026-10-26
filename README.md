@@ -268,6 +268,8 @@ The JIMWLK evolution starts from a fixed $x$, `jimwlkInitialX`, and evolves the 
   - 0.005 with running coupling
   - 0.0005 with fixed coupling
 
+  The step is of first order, and a finite step makes the evolution too fast. For the MV model with a constant color-charge density ($g^2\mu$ = 2 GeV) evolved from $x$ = 0.01, $Q_s$ comes out 1.9% too large after 4.7 units of rapidity at 0.005 with running coupling, and 0.5% after 2 units at 0.0005 with fixed coupling ($\alpha_s$ = 0.2); the error is proportional to the step and grows about linearly with the rapidity (see `validations/jimwlk_step_size`)
+
   Default parameters for the JIMWLK evolution with fluctuating proton at initial $x=0.01$ fitted to HERA vector meson production data are reported in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 
 ## Utilities

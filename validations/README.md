@@ -32,6 +32,9 @@ parts of the code against exact or published results:
   against the published classical Yang-Mills results of Lappi (see below).
 - **`performance/`** — the time per stage of an event and the peak memory
   against the lattice size and the number of threads (see below).
+- **`jimwlk_step_size/`** — the convergence of the JIMWLK evolution in its
+  step size `jimwlkDs`, and its error at the recommended step sizes (see
+  below).
 
 The two regression tests parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -52,7 +55,8 @@ simultaneously.
    [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
    separately and note its path (needed for `--subnucleondiffraction-path`).
 3. Python 3 with `numpy` and `matplotlib` (and optionally `scipy`, used for
-   the two-sample KS test in the eccentricity script if available).
+   the two-sample KS test in the eccentricity script if available; the
+   JIMWLK step-size script needs it).
 
 ## Running interactively
 
@@ -510,6 +514,78 @@ python3 performance.py --ipglasma-path ../..
 
 The results go to `performance_summary.json` and `performance.pdf` in
 `--datadir` (default `./performance_output`).
+
+### JIMWLK step size
+
+`jimwlk_step_size/jimwlk_step_size.py` (issue #128) tests the convergence of
+the Langevin step of the JIMWLK evolution in `jimwlkDs`, and the error at
+the step sizes recommended in the main README (0.005 with running and 0.0005
+with fixed coupling). The MV model with a constant color-charge density
+(`useNucleus 0`, g²μ = 2 GeV, `Ny 50`, m = 0.4 GeV, 512², L = 10 fm) is
+evolved from x₀ = 0.01 with `jimwlkMass 0.4`:
+
+- running coupling (`jimwlkAlphaS 0`, the other coupling parameters of the
+  example input): `jimwlkDs` = 0.01, 0.005, 0.0025, 0.00125, to
+  s = ln(x₀/x)/π² = 0.48 (y = 4.74; 48 to 384 steps);
+- fixed coupling (`jimwlkAlphaS 0.2`): `jimwlkDs` = 0.002, 0.001, 0.0005,
+  0.00025, to s = α_s ln(x₀/x)/π² = 0.04 (y = 1.97; 20 to 160 steps).
+
+Q_s grows from 1.05 to 1.9 GeV (running) and 1.4 GeV (fixed), so
+1/L ≪ Q_s ≪ 1/a holds (r_s ≥ 7.5 a). The evolution time and the three
+snapshots in between are multiples of the largest step, so all step sizes
+end and take their snapshots at exactly the same x. All step sizes use the
+same seeds, so they start from the same initial Wilson lines (checked), and
+both nuclei of a run are evolved, two configurations per run.
+
+From the Wilson lines the script computes the dipole correlator D(r) (with
+the functions of `dipole_correlator/`) and Q_s from D(r_s) = e^{−1/2},
+Q_s² = 2/r_s². It fits the differences to the smallest step,
+Q_s(ds) − Q_s(ds_min), which share the initial Wilson lines, with their
+covariance over the configurations: a first-order scheme gives
+c (ds − ds_min), the χ² of this fit tests it, and Q_s(0) = Q_s(ds_min) −
+c ds_min is the extrapolation to zero step size. A fit c (ds^p − ds_min^p)
+gives the order p. The same is done for D at the r* where D = e^{−1/2} at
+the smallest step. At the final x it checks that the initial Wilson lines
+agree for all step sizes, that Q_s and D converge monotonically (every
+successive difference has the sign of c or is zero within 2σ), that they are
+consistent with first order (p-value above 0.01) and that the deviation
+c ds/Q_s(0) at the recommended step size is below 3% (`--max-deviation`).
+
+Each step size draws its own Langevin noise, so the differences between step
+sizes fluctuate by 1–2% per configuration even at 512², and many
+configurations are needed: with four seeds, the target of one step size
+happened to lie 2% low in three of them.
+
+```bash
+cd jimwlk_step_size
+# quick test: 128² with the same lattice spacing, four seeds (1 minute)
+python3 jimwlk_step_size.py --ipglasma-path ../.. --quick --max-workers 4
+# the setup of the paper: 512², eight seeds (16 configurations)
+python3 jimwlk_step_size.py --ipglasma-path ../.. --max-workers 5
+```
+
+With the defaults (37 minutes with 5 workers of 4 threads), all checks
+pass. The step is of first order (fitted order 0.90 [0.68, 1.15] for Q_s
+with running and 1.00 [0.49, 1.59] with fixed coupling, χ² p-values above
+0.5), and a finite step makes the evolution too fast. At the final x, the
+deviation from zero step size, c ds/Q_s(0), is
+
+| coupling | jimwlkDs | Q_s            | D(r*)           |
+|----------|----------|----------------|-----------------|
+| running  | 0.01     | +3.8%          | −2.1%           |
+| running  | 0.005    | +1.9% ± 0.15%  | −1.0% ± 0.08%   |
+| running  | 0.0025   | +0.9%          | −0.5%           |
+| fixed    | 0.002    | +1.8%          | −1.0%           |
+| fixed    | 0.0005   | +0.46% ± 0.05% | −0.26% ± 0.03%  |
+| fixed    | 0.00025  | +0.23%         | −0.13%          |
+
+(the measured deviations, e.g. +2.0% ± 0.3% and +0.6% ± 0.4% at the
+recommended steps, agree with the fit). The error grows about linearly with
+the rapidity: at `jimwlkDs 0.005` it is +0.3%, +0.7%, +1.1% and +1.9% at
+y = 1.2, 2.4, 3.6 and 4.7, about 0.4% per unit of y, or 3% of the evolution
+speed d ln Q_s/dy (1.6% with fixed coupling at 0.0005). The recommended step
+sizes stay below the 3% of the acceptance over the evolution of the example
+input (from x = 0.01 to 10⁻⁴, y = 4.6).
 
 ### Vector meson production validation
 

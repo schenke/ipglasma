@@ -334,6 +334,61 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Output format: on a periodic lattice, T^{mu nu} before the first and "
+    "after the last plaquette center is interpolated across the edge") {
+    // As above, but with periodic boundaries (useNucleus 0) the plaquette
+    // centers continue beyond the edges: the one after the last is the
+    // first. The profile jumps there, so the interpolation across the edge
+    // differs from the value of either edge plaquette.
+    const double e0 = 2., slope = 0.1;  // [fm^-4], [fm^-5]
+    Parameters param;
+    makeOutputTestParam(param);
+    param.output.LOutput = 7.8;
+    param.output.sizeOutput = 39;
+    const double L = param.lattice.L;
+    const double a = L / N;
+    const double tau = it * param.run.dtau * a;
+    Lattice lat(&param, N, LatticeBoundary::Periodic);
+    std::vector<double> plaquette(N);
+    for (int ix = 0; ix < N; ++ix) {
+        plaquette[ix] = e0 + slope * (-L / 2. + a * (ix + 0.5));
+        for (int iy = 0; iy < N; ++iy) {
+            Cell *cell = lat.cells[lat.positionFromXY(ix, iy)];
+            cell->setTtautau(plaquette[ix]);
+            cell->setTxx(plaquette[ix] / 3.);
+            cell->setTyy(plaquette[ix] / 3.);
+            cell->setTetaeta(plaquette[ix] / 3. / (tau * tau));
+        }
+    }
+    param.output.writeTmunu = true;
+    param.output.writeTmunuBinary = false;
+    MyEigen().writeTmunu4D(&lat, &param, it);
+    const std::string fileName = "Tmunu-t0.5-0.dat";
+    const TextTable table = readTextTable(fileName);
+    std::remove(fileName.c_str());
+    REQUIRE(table.rows.size() == 39 * 39);
+    const double dx = param.output.LOutput / param.output.sizeOutput;
+    const double firstCenter = -L / 2. + a / 2., lastCenter = L / 2. - a / 2.;
+    int before = 0, after = 0;
+    for (const auto &row : table.rows) {
+        const double x = -param.output.LOutput / 2. + dx * std::stoi(row[0]);
+        CAPTURE(x);
+        if (x < firstCenter - 1e-9) before++;
+        if (x > lastCenter + 1e-9) after++;
+        const double s = (x - firstCenter) / a;
+        const int low = static_cast<int>(std::floor(s + 1e-9));
+        const double frac = s - low;
+        const double expected = (1. - frac) * plaquette[(low % N + N) % N]
+                                + frac * plaquette[(low + 1 + N) % N];
+        CHECK(
+            std::stod(row[2])
+            == doctest::Approx(hbarc * expected).epsilon(1e-5));
+    }
+    CHECK(before > 0);
+    CHECK(after > 0);
+}
+
+TEST_CASE(
     "Output format: the local running-coupling factor is interpolated from "
     "the lattice sites, T^{mu nu} from the plaquette centers") {
     // A uniform fluid at rest, so every output value is the interpolated

@@ -53,6 +53,49 @@ TEST_CASE(
     const int last = length * length - 1;
     CHECK(lat.pospX[last] == last);
     CHECK(lat.pospY[last] == last);
+
+    // clamped is the default, and neighborPosition() clamps the same way
+    CHECK_FALSE(lat.isPeriodic());
+    CHECK(
+        lat.neighborPosition(length + 1, -2)
+        == lat.positionFromXY(length - 1, 0));
+    CHECK(lat.neighborPosition(1, 2) == lat.positionFromXY(1, 2));
+}
+
+TEST_CASE(
+    "Lattice: with periodic boundaries the neighbor tables and "
+    "neighborPosition() wrap around to the opposite edge") {
+    const int length = 4;
+    Parameters param;
+    makeLatticeParam(param, length);
+    Lattice lat(&param, length, LatticeBoundary::Periodic);
+    CHECK(lat.isPeriodic());
+
+    for (int ix = 0; ix < length; ++ix) {
+        for (int iy = 0; iy < length; ++iy) {
+            CAPTURE(ix);
+            CAPTURE(iy);
+            const int pos = lat.positionFromXY(ix, iy);
+            const int xp = (ix + 1) % length;
+            const int xm = (ix + length - 1) % length;
+            const int yp = (iy + 1) % length;
+            const int ym = (iy + length - 1) % length;
+            CHECK(lat.pospX[pos] == lat.positionFromXY(xp, iy));
+            CHECK(lat.posmX[pos] == lat.positionFromXY(xm, iy));
+            CHECK(lat.pospY[pos] == lat.positionFromXY(ix, yp));
+            CHECK(lat.posmY[pos] == lat.positionFromXY(ix, ym));
+            CHECK(lat.posmXpY[pos] == lat.positionFromXY(xm, yp));
+            CHECK(lat.pospXmY[pos] == lat.positionFromXY(xp, ym));
+            CHECK(
+                lat.neighborPosition(ix + 2, iy - 2)
+                == lat.positionFromXY(
+                    (ix + 2) % length, (iy + length - 2) % length));
+        }
+    }
+    // up to one side length outside the lattice
+    CHECK(
+        lat.neighborPosition(-length, 2 * length - 1)
+        == lat.positionFromXY(0, length - 1));
 }
 
 TEST_CASE("Lattice::writeSU3Matrices writes non-empty Phi/Pi files") {

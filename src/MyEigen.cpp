@@ -190,8 +190,10 @@ struct InterpolationStencil {
  * (\f$T^{\mu\nu}\f$ and the \f$\epsilon\f$, \f$u^\mu\f$,
  * \f$\pi^{\mu\nu}\f$ obtained from it, see EnergyMomentumTensor). A
  * point before the first value takes the first value, a point after the
- * last one the last.
- * \param[in] lat Lattice, for its cell indices.
+ * last one the last; on a periodic lattice (`useNucleus 0`) the values
+ * continue across the edges instead, so such a point lies between the
+ * last and the first value.
+ * \param[in] lat Lattice, for its cell indices and boundaries.
  * \param[in] x Output point [fm].
  * \param[in] y Output point [fm].
  * \param[in] L Lattice size [fm].
@@ -204,10 +206,16 @@ struct InterpolationStencil {
 InterpolationStencil interpolationStencil(
     Lattice *lat, double x, double y, double L, double a, int N,
     double offset) {
+    const bool periodic = lat->isPeriodic();
     auto axis = [&](double coordinate, int &low, int &high, double &frac) {
         const double shifted = coordinate - a * offset;
         low = static_cast<int>(floor((shifted + L / 2.) / a + 0.0000000001));
         frac = (shifted - (-L / 2. + a * low)) / a;
+        if (periodic) {
+            low = (low % N + N) % N;
+            high = (low + 1) % N;
+            return;
+        }
         if (low < 0) {
             low = 0;
             frac = 0.;

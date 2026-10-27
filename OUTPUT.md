@@ -128,7 +128,9 @@ parameter table (`src/ParameterTable.cpp`). Parameters that are not read
 under the chosen settings are left out. Comment lines (`#`) carry the event
 information:
 
-- a header with the IP-Glasma version, the event id and the date;
+- a header with the IP-Glasma version and, for a build from a git checkout,
+  its git description (as printed by `ipglasma --version`, see the README),
+  the event id and the date;
 - with a posterior parameter set (`subNucleonParamType` > 0), the set that
   was used and its values of `m`, `BG`, `BGq`, `smearingWidth`, `Nq`,
   `QsMuRatio` and `dqMin`;

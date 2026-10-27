@@ -26,6 +26,23 @@ else ()
     install(TARGETS ${exename} DESTINATION ${CMAKE_HOME_DIRECTORY})
 endif ()
 
-# the HDF5 collection (writeOutputsToHDF5) calls this script
+# the HDF5 collection (writeOutputsToHDF5) calls this script; the version
+# is printed at start-up and by --version and recorded in
+# usedParameters<id>.dat
 target_compile_definitions(${exename} PRIVATE
-    IPGLASMA_HDF5_SCRIPT="${PROJECT_SOURCE_DIR}/utilities/combine_events_into_hdf5.py")
+    IPGLASMA_HDF5_SCRIPT="${PROJECT_SOURCE_DIR}/utilities/combine_events_into_hdf5.py"
+    IPGLASMA_VERSION="${PROJECT_VERSION}")
+
+# the git description of the source tree, next to the version; recorded at
+# every build (CMakeModules/GitDescribe.cmake), so that it follows commits
+# without a new configure
+set(gitDescribeHeader "${CMAKE_CURRENT_BINARY_DIR}/GitDescribe.h")
+add_custom_target(ipglasma_git_describe
+    COMMAND ${CMAKE_COMMAND} -DSOURCE_DIR=${PROJECT_SOURCE_DIR}
+        -DOUTPUT=${gitDescribeHeader}
+        -P ${PROJECT_SOURCE_DIR}/CMakeModules/GitDescribe.cmake
+    BYPRODUCTS ${gitDescribeHeader}
+    COMMENT "Recording the git description of the source tree"
+    VERBATIM)
+add_dependencies(${exename} ipglasma_git_describe)
+target_include_directories(${exename} PRIVATE ${CMAKE_CURRENT_BINARY_DIR})

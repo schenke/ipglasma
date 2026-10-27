@@ -49,13 +49,21 @@ and license notice; list it at the end of `AUTHORS`.
 
 The version (`X.Y.Z`, see `CHANGELOG.md` for its meaning) is set once, in
 `project(IPGlasma VERSION X.Y.Z ...)` in `CMakeLists.txt`. The program
-prints it at start-up and writes it into the header of
-`usedParameters<id>.dat`, and the documentation shows it. For a release:
+prints it at start-up and with `ipglasma --version`, and writes it into the
+header of `usedParameters<id>.dat`, and the documentation shows it. Next to
+it, the program reports `git describe --tags --always --dirty` of the source
+tree (`CMakeModules/GitDescribe.cmake`, run at every build), so builds of
+different commits with the same version can be told apart. For a
+release:
 
 - set the version in `CMakeLists.txt`;
 - set `version` and `date-released` in `CITATION.cff`;
 - give the changes since the last release a `## X.Y.Z` heading in
-  `CHANGELOG.md`.
+  `CHANGELOG.md`;
+- tag the release commit on `main` with the version and push the tag
+  (`git tag -a X.Y.Z -m "IP-Glasma X.Y.Z"`, `git push origin X.Y.Z`); the
+  comparison link at the end of `CHANGELOG.md` and the Zenodo archive need
+  it, and builds of the release then report `(git X.Y.Z)`.
 
 ## Code formatting
 

@@ -5,8 +5,11 @@
 # links MPI, regardless of the disableMPI setting used for the main build.
 include(${CMAKE_SOURCE_DIR}/src/Sources.cmake)
 
-set(LIB_SOURCES ${IPGLASMA_LIB_SOURCES})
-list(TRANSFORM LIB_SOURCES PREPEND "${CMAKE_SOURCE_DIR}/src/")
+# (a loop rather than list(TRANSFORM ...), which needs CMake 3.12)
+set(LIB_SOURCES "")
+foreach(source ${IPGLASMA_LIB_SOURCES})
+    list(APPEND LIB_SOURCES "${CMAKE_SOURCE_DIR}/src/${source}")
+endforeach()
 
 set(TEST_SOURCES
     test_main.cpp

@@ -118,11 +118,10 @@ option(IPGLASMA_DETERMINISTIC_FFT
     "Pin FFTW plan selection via an on-disk wisdom cache for bit-reproducible runs"
     OFF)
 if (IPGLASMA_DETERMINISTIC_FFT)
-    add_compile_definitions(IPGLASMA_DETERMINISTIC_FFT)
+    # add_definitions rather than add_compile_definitions, which needs
+    # CMake 3.12
+    add_definitions(-DIPGLASMA_DETERMINISTIC_FFT)
 endif()
-
-# the version, printed at start-up and recorded in usedParameters<id>.dat
-add_compile_definitions(IPGLASMA_VERSION="${PROJECT_VERSION}")
 
 add_subdirectory (src)
 

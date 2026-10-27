@@ -179,7 +179,11 @@ def main():
     parser = argparse.ArgumentParser(
         description="Constant-g^2 mu glasma against published classical "
                     "Yang-Mills results (issue #126).")
-    parser.add_argument("--ipglasma-path", default="../..")
+    parser.add_argument("--ipglasma-path",
+                        default=os.path.join(HERE, "..", ".."),
+                        help="directory with the ipglasma executable and "
+                             "qs2Adj_vs_Tp_vs_Y_240.in (default: the "
+                             "repository; build/src is tried as well)")
     parser.add_argument("--ipglasma-cmd", default="ipglasma")
     parser.add_argument("--template", default=os.path.join(HERE, "..", "..",
                                                            "input"))
@@ -214,8 +218,16 @@ def main():
         args.g2muL, args.sizes = [36.], [128, 256]
 
     path = os.path.abspath(args.ipglasma_path)
+    executable = os.path.join(path, args.ipglasma_cmd)
+    if not args.analyze_only and not os.path.exists(executable):
+        # a CMake build without `make install` leaves it in build/src
+        built = os.path.join(path, "build", "src", args.ipglasma_cmd)
+        if not os.path.exists(built):
+            sys.exit(f"no {args.ipglasma_cmd} in {path} or {path}/build/src;"
+                     " build IP-Glasma or set --ipglasma-path")
+        executable = built
     settings = {
-        "ipglasma": os.path.join(path, args.ipglasma_cmd),
+        "ipglasma": executable,
         "template": os.path.abspath(args.template),
         "datadir": os.path.abspath(args.datadir),
         "threads": args.threads, "g2mu": args.g2mu, "g": args.g,
@@ -374,14 +386,13 @@ def main():
                       ms=3, color=color, label=label)
         if "lappi_fE" in g:
             value, error = g["lappi_fE"]
-            left.axhspan(value - error, value + error, color=color,
-                         alpha=0.2, lw=0)
+            left.errorbar([x[-1] * 1.15], [value], yerr=[error], fmt="D",
+                          ms=5, color=color, mfc="none", capsize=3)
         middle.plot(x, [r["PL_over_eps"] for r in g["rows"]], "o-", ms=3,
                     color=color)
         middle.plot(x, [r["PT_over_eps"] for r in g["rows"]], "s--", ms=3,
                     color=color)
-    left.set_ylabel(r"$f_E = g^2\tau\varepsilon/(g^2\mu)^3$ (bands: "
-                    "Lappi 2003)")
+    left.set_ylabel(r"$f_E$ (open diamonds: Lappi 2003)")
     middle.set_ylabel(r"$P_L/\varepsilon$ (o), $P_T/\varepsilon$ (s)")
     for ax in (left, middle):
         ax.set_xscale("log")

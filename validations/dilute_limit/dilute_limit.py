@@ -26,22 +26,21 @@ The script runs IP-Glasma (the example input with useNucleus 0, no
 JIMWLK) for a logarithmic scan of g2muGeV, all with the same seed (so the
 random numbers are the same and only scaled), plus a run with g = 2, and
 computes eps(tau -> 0+) (at the first time step) and tau eps at the final
-time, averaged over the interior of the lattice (away from the open
-boundaries of the evolution), dN/dy per area and the spectrum. It checks
-that
+time, averaged over the whole lattice, which for useNucleus 0 is periodic,
+dN/dy per area and the spectrum. It checks that
 
-  1. the exponents of eps(0+) and tau eps in g^2 mu are 4 within
+  1. the exponents of eps(0+), tau eps and dN/dy in g^2 mu are 4 within
      --exponent-tolerance (1%) over the dilute range,
   2. eps(0+) g^2 does not depend on g.
 
-dN/dy and the spectrum (a fit A + B ln k of k^4 dN/d^2k in the window
-[--k-min-over-m m, --k-max-times-a / a]) are only reported: they are
-computed from the fields of the whole lattice, and the open boundaries of
-the evolution turn the pure-gauge fields of the nuclei, which are of first
-order in g^2 mu, into physical fields in a band of width ~tau near the
-edges. In the dilute limit this band dominates the whole-lattice
-quantities, which then scale like (g^2 mu)^2; the script reports its share
-of the energy. (In collisions of nuclei the fields vanish near the edges.)
+The spectrum, a fit k^4 dN/d^2k = B ln(k/k0) in the window
+[--k-min-over-m m, --k-max-times-a / a], is only reported.
+
+Before the lattice of useNucleus 0 was periodic (#139), its clamped edges
+turned the pure-gauge fields of the nuclei, which are of first order in
+g^2 mu, into physical fields in a band of width ~tau near the edges. In
+the dilute limit this band dominated the whole lattice: it carried 99.9%
+of the energy at g^2 mu = 0.05 GeV, and dN/dy scaled like (g^2 mu)^2.
 
 Usage (from validations/dilute_limit/):
     # quick test, 64^2 (about 10 s)
@@ -88,14 +87,10 @@ def write_input(template, overrides, path):
         f.writelines(lines)
 
 
-def interior_mean(tmunu, meta, margin_fm):
-    """The mean of T^tautau over the sites farther than margin_fm from the
-    edges of the lattice."""
-    t00 = tmunu[..., COMPONENTS.index("T00")]
-    n = t00.shape[0]
-    x = -0.5 * n * meta["dx_fm"] + meta["dx_fm"] * np.arange(n)
-    inside = np.abs(x) < 0.5 * n * meta["dx_fm"] - margin_fm
-    return float(t00[np.ix_(inside, inside)].mean())
+def lattice_mean(tmunu):
+    """The mean of T^tautau over the whole (periodic) lattice."""
+    return float(tmunu[..., COMPONENTS.index("T00")].astype(np.float64)
+                 .mean())
 
 
 def run_one(cfg, settings):
@@ -123,19 +118,10 @@ def run_one(cfg, settings):
                    key=lambda p: float(p.split("Tmunu-t")[1].split("-")[0]))
     early, meta_early = read_tmunu(files[0])
     late, meta_late = read_tmunu(files[-1])
-    margin = settings["margin_fm"]
     out["tau_early"] = meta_early["tau_fm"]
     out["tau_late"] = meta_late["tau_fm"]
-    out["eps0"] = interior_mean(early, meta_early, margin)  # GeV/fm^3
-    out["tau_eps"] = meta_late["tau_fm"] * interior_mean(late, meta_late,
-                                                         margin)
-    # the share of the energy outside the interior, where the open
-    # boundaries turn the pure-gauge fields of the nuclei into physical ones
-    t00 = late[..., COMPONENTS.index("T00")]
-    n = t00.shape[0]
-    inside_sites = (n - 2 * int(np.ceil(margin / meta_late["dx_fm"]))) ** 2
-    out["edge_share"] = float(1. - interior_mean(late, meta_late, margin)
-                              * inside_sites / t00.sum())
+    out["eps0"] = lattice_mean(early)  # GeV/fm^3
+    out["tau_eps"] = meta_late["tau_fm"] * lattice_mean(late)
     with open(os.path.join(workdir, "gluonMultiplicity0.json")) as f:
         gluons = json.load(f)
     out["dN_dy_per_area"] = gluons["dN"] / settings["L"] ** 2  # 1/fm^2
@@ -198,8 +184,6 @@ def main():
         "datadir": os.path.abspath(args.datadir),
         "tables": os.path.join(path, "tables"),
         "threads": args.threads, "L": args.L,
-        # the open boundaries reach tau into the lattice
-        "margin_fm": args.maxtime + 2 * a,
         "overrides": {
             "size": args.size, "L": args.L, "sizeOutput": args.size,
             "LOutput": args.L, "useNucleus": 0, "m": args.m,
@@ -239,11 +223,6 @@ def main():
     for g in g2mu:
         summary["runs"][f"{g:g}"] = results[(g, 1.)]
     names = ["eps0", "tau_eps", "dN_dy_per_area"]
-    # dN/dy and the spectrum come from the fields of the whole lattice,
-    # including the band near the open boundaries, where the pure-gauge
-    # fields of the nuclei (first order in g^2 mu) become physical ones;
-    # in the dilute limit this band dominates, so they are only reported
-    checked = ["eps0", "tau_eps"]
     use = g2mu <= args.dilute_max
     print(f"\nScaling with g^2 mu (dilute range: g^2 mu <= "
           f"{args.dilute_max} GeV, {use.sum()} points):")
@@ -254,18 +233,16 @@ def main():
         fits[name] = {"exponent": p, "error": dp, "coefficient": c,
                       "ratio_to_dilute": (y / (c * g2mu ** p)).tolist()}
         ok = abs(p - 4.) <= args.exponent_tolerance
-        if name in checked:
-            summary["checks"][f"exponent_{name}"] = bool(ok)
-        label = ("OK  " if ok else "FAIL") if name in checked else "info"
-        print(f"  {label} {name:15s} exponent "
+        summary["checks"][f"exponent_{name}"] = bool(ok)
+        print(f"  {'OK  ' if ok else 'FAIL'} {name:15s} exponent "
               f"{p:.4f} +- {dp:.4f}; value / dilute fit: "
               + " ".join(f"{r:.3f}" for r in fits[name]["ratio_to_dilute"]))
     summary["fits"] = fits
 
-    # k^4 dN/d^2k ~ A + B ln k in the window
+    # k^4 dN/d^2k = A + B ln k = B ln(k/k0) in the window
     k_lo, k_hi = args.k_min_over_m * args.m, args.k_max_times_a * HBARC / a
     spectra = {}
-    print(f"\nSpectrum, k^4 dN/d^2k = A + B ln k for {k_lo:.2f} < k < "
+    print(f"\nSpectrum, k^4 dN/d^2k = B ln(k/k0) for {k_lo:.2f} < k < "
           f"{k_hi:.2f} GeV:")
     for g in g2mu[use]:
         out = results[(g, 1.)]
@@ -279,19 +256,14 @@ def main():
         B, A = np.polyfit(np.log(k[window]), y, 1)
         residual = float(np.sqrt(np.mean((y - A - B * np.log(k[window])) ** 2))
                          / np.mean(y))
-        spectra[f"{g:g}"] = {"A": float(A), "B": float(B),
+        k0 = float(np.exp(-A / B))
+        spectra[f"{g:g}"] = {"A": float(A), "B": float(B), "k0_GeV": k0,
                              "relative_residual": residual,
                              "bins": int(window.sum())}
-        print(f"  info g^2 mu {g:g} GeV: B/A = "
-              f"{B / A:+.3f}, relative residual {residual:.3f} "
+        print(f"  info g^2 mu {g:g} GeV: k0 = {k0:.2f} GeV "
+              f"({k0 / args.m:.2f} m), relative residual {residual:.3f} "
               f"({window.sum()} bins)")
     summary["spectra"] = spectra
-    print("\nShare of the energy at the final time in the band near the open "
-          "boundaries:\n  " + ", ".join(
-              f"g^2 mu {g:g}: {results[(g, 1.)]['edge_share']:.3f}"
-              for g in g2mu))
-    print("  (dN/dy and the spectrum include this band, whose fields are of "
-          "first order in g^2 mu, so they are not checked)")
 
     gc = configs[-1]["g2mu"]
     if (gc, 2.) in results and (gc, 1.) in results:

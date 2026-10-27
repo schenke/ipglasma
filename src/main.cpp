@@ -34,6 +34,10 @@
 #include "Random.h"
 #include "WilsonLineIO.h"
 
+// IPGLASMA_GIT_DESCRIBE, generated at every build by
+// CMakeModules/GitDescribe.cmake (src/CMakeLists.txt)
+#include "GitDescribe.h"
+
 #define _SECURE_SCL 0
 #define _HAS_ITERATOR_DEBUGGING 0
 
@@ -54,13 +58,28 @@ bool readInput(Parameters *param, int argc, char *argv[], int rank);
 void display_logo();
 void writeparams(Parameters *param);
 
-// set by CMake from the project version
+// set by CMake from the project version (src/CMakeLists.txt)
 #ifndef IPGLASMA_VERSION
-#define IPGLASMA_VERSION "unknown"
+#error "IPGLASMA_VERSION is not set; build IP-Glasma with CMake"
 #endif
+
+// "IP-Glasma <version>", followed by "(git <description>)" when the code was
+// built from a git checkout, e.g. "IP-Glasma 2.0.0 (git 2.0.0-14-g1a2b3c4)"
+std::string versionString() {
+    std::string version = "IP-Glasma " IPGLASMA_VERSION;
+    const std::string git = IPGLASMA_GIT_DESCRIBE;
+    if (!git.empty()) version += " (git " + git + ")";
+    return version;
+}
 
 // main program 1
 int main(int argc, char *argv[]) {
+    // "ipglasma --version" prints the version and exits, without MPI
+    if (argc == 2 && std::string(argv[1]) == "--version") {
+        std::cout << versionString() << std::endl;
+        return 0;
+    }
+
     int rank;
     int size;
 
@@ -83,7 +102,7 @@ int main(int argc, char *argv[]) {
 
     int h5Flag = 0;
     PrettyOstream messager;
-    if (rank == 0) messager.info("[main::main]: IP-Glasma " IPGLASMA_VERSION);
+    if (rank == 0) messager.info("[main::main]: " + versionString());
 
     Parameters paramStorage;
     Parameters *param = &paramStorage;
@@ -453,8 +472,7 @@ void writeparams(Parameters *param) {
     strup_name << "usedParameters" << param->event.eventId << ".dat";
     ofstream fout1(strup_name.str());
     time_t rawtime = time(0);
-    fout1 << "# Input parameters used by IP-Glasma " IPGLASMA_VERSION
-             " for event "
+    fout1 << "# Input parameters used by " << versionString() << " for event "
           << param->event.eventId << ", written " << ctime(&rawtime);
     fout1 << "# This file is a valid input file. Running it does not "
              "reproduce this event:\n"

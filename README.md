@@ -53,8 +53,9 @@ It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions
 ```
 ./ipglasma [input file] [events per rank]
 mpirun -np <ranks> ./ipglasma [input file] [events per rank]
+./ipglasma --version
 ```
-The input file defaults to `input`, and the number of events per MPI rank to 1; with MPI, the run generates ranks × events per rank events. The number of events per rank also enters the names of the Wilson-line files. File names in the input file (e.g. `nucleusQsTableFileName`) are relative to the working directory, and the output files are written there, apart from the Wilson-line files (see `wilsonLinePath` and [OUTPUT.md](OUTPUT.md)).
+`--version` prints the version and exits, e.g. `IP-Glasma 2.0.0 (git 2.0.0-14-g1a2b3c4-dirty)`: the version set in `CMakeLists.txt`, followed by the output of `git describe --tags --always --dirty` for the source tree it was built from, i.e. the nearest tag, the number of commits since that tag, the abbreviated commit hash, and `-dirty` if the tracked files had uncommitted changes. The git description is recorded at every build, so it follows commits without a new `cmake` configure; it is left out if the code was not built from a git checkout. The same line is printed at start-up and written to the header of `usedParameters<id>.dat`, so the outputs of a run can be traced back to the commit that produced them. The input file defaults to `input`, and the number of events per MPI rank to 1; with MPI, the run generates ranks × events per rank events. The number of events per rank also enters the names of the Wilson-line files. File names in the input file (e.g. `nucleusQsTableFileName`) are relative to the working directory, and the output files are written there, apart from the Wilson-line files (see `wilsonLinePath` and [OUTPUT.md](OUTPUT.md)).
 
 ### Threads and MPI ranks
 Each event runs with `OMP_NUM_THREADS` OpenMP threads. The MPI ranks generate their events independently, with their own random numbers and output files, and only wait for each other at the end of the run (to combine the HDF5 files with `writeOutputsToHDF5 1`), so a run takes as long as its slowest rank.

@@ -289,8 +289,8 @@ Notes:
   the binaries directly.
 - `runvalidation_eccentricity.sh` is the same template for
   `parallel_test_eccentricity.py` (submit it with
-  `sbatch runvalidation_eccentricity.sh`); only the python invocation
-  differs:
+  `sbatch runvalidation_eccentricity.sh`); only the job name and the
+  python invocation differ:
   ```bash
   python3 parallel_test_eccentricity.py --size 128 \
       --ipglasma-path /path/to/ipglasma \

@@ -627,7 +627,10 @@ void Init::init(
             (init_method == InitializationMethod::ReadWlineBinary) ? 2 : 1);
         // (the geometry files are not written again: a run that writes the
         // Wilson lines it read, e.g. after JIMWLK, uses the same names)
-        if (param->collision.useNucleus) readGeometry(lat, param);
+        if (param->collision.useNucleus) {
+            readGeometry(lat, param);
+            reportColorChargeResolution(lat, param);
+        }
         // the nuclei are given: only the impact parameter can be redrawn
         if (collide
             && !sampleCollision(
@@ -651,6 +654,7 @@ void Init::init(
             }
             setColorChargeDensity(lat, param, random, glauber);
         }
+        reportColorChargeResolution(lat, param);
         // sample color charges and find Wilson lines V_A and V_B; with
         // colorChargeSeed, the color charges come from their own stream, so
         // that they can be varied at a fixed geometry (issue #127)
@@ -662,6 +666,49 @@ void Init::init(
         } else {
             setV(lat, param, random);
         }
+    }
+}
+
+double Init::medianG2muA(std::vector<double> g2mu2, double g) {
+    // the weight (g^2 mu)^2 grows with g^2 mu a = g sqrt(g2mu2), so the
+    // median is where the sorted weights reach half of their sum
+    std::sort(g2mu2.begin(), g2mu2.end());
+    double total = 0.;
+    for (const double weight : g2mu2) total += weight;
+    if (!(total > 0.)) return 0.;
+    double sum = 0.;
+    for (const double weight : g2mu2) {
+        sum += weight;
+        if (sum >= 0.5 * total) return g * sqrt(weight);
+    }
+    return g * sqrt(g2mu2.back());
+}
+
+void Init::reportColorChargeResolution(Lattice *lat, Parameters *param) {
+    const int cells = param->lattice.size * param->lattice.size;
+    std::vector<double> g2mu2;
+    g2mu2.reserve(2 * cells);
+    for (int pos = 0; pos < cells; pos++) {
+        g2mu2.push_back(lat->cells[pos]->getg2mu2A());
+        g2mu2.push_back(lat->cells[pos]->getg2mu2B());
+    }
+    const double median = medianG2muA(std::move(g2mu2), param->coupling.g);
+    if (median <= 0.) return;
+    const double a = param->lattice.L / param->lattice.size;  // fm
+    messager_ << "[Init::init]: median g^2 mu a = " << median
+              << " (g^2 mu = " << median * hbarc / a << " GeV, a = " << a
+              << " fm), weighted with (g^2 mu)^2";
+    messager_.flush("info");
+    if (median > 1.) {
+        messager_ << "[Init::init]: the lattice does not resolve the "
+                     "color-charge density: the median g^2 mu a is "
+                  << median
+                  << " > 1. The gluon multiplicity converges in the lattice "
+                     "spacing only for g^2 mu a below about 1, the energy "
+                     "more slowly, and the JIMWLK evolution raises the "
+                     "required resolution further. Use a smaller lattice "
+                     "spacing (size, L); see the README.";
+        messager_.flush("warning");
     }
 }
 

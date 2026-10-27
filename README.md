@@ -102,6 +102,11 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **size**: controls the size of the lattice that is `size`$^2$.
   - Recommended to be of the form $2^n$
 - **L**: the total physical extent of the lattice (in fm)
+  - The lattice spacing $a$ = `L`/`size` has to resolve the color-charge density $g^2\mu = Q_s/$`QsMuRatio`: the gluon multiplicity converges only for $g^2\mu a \lesssim 1$ (like $a^2$), the energy more slowly (like $a$, from the $1/k^4$ tail of the gluon spectrum up to the lattice cutoff), and the JIMWLK evolution raises $Q_s$ and with it the required resolution. Small hot spots make $g^2\mu$ large: with the `BGq 0.3` of the example input, the median $g^2\mu$ of a central Pb+Pb event (weighted with $(g^2\mu)^2$, like the multiplicity) is about 5 GeV, so $a \lesssim 0.03$ fm is needed (see `validations/numerical_parameters`). Every event prints this median of $g^2\mu a$, and a warning if it is above 1, e.g. for the example input:
+    ```
+    [Info] [Init::init]: median g^2 mu a = 3.03707 (g^2 mu = 5.114 GeV, a = 0.117188 fm), weighted with (g^2 mu)^2
+    [Warning] [Init::init]: the lattice does not resolve the color-charge density: the median g^2 mu a is 3.03707 > 1. ...
+    ```
 - **Ny**: number of longitudinal layers of color charges per nucleus, at least 1: each Wilson line is a product of `Ny` factors, each sampled with the color-charge density $g^2\mu^2/N_y$ (T. Lappi, Eur. Phys. J. C 55 (2008) 285)
 
 ### Initial state

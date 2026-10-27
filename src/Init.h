@@ -143,6 +143,28 @@ class Init {
         Lattice *lat, Parameters *param, Random *random, Glauber *glauber,
         InitializationMethod init_method);
     /**
+     * How well the lattice resolves the color-charge density: the median of
+     * \f$g^2\mu a\f$ over the given cells, weighted with \f$(g^2\mu)^2\f$
+     * like the gluon multiplicity. The multiplicity converges only for
+     * values below about 1, the energy more slowly.
+     * \param[in] g2mu2 The stored \f$g^2\mu^2\f$ of the cells
+     * (Cell::getg2mu2A(), Cell::getg2mu2B()), in lattice units and divided
+     * by \f$g^2\f$, so that \f$g^2\mu a = g \sqrt{g^2\mu^2}\f$.
+     * \param[in] g The coupling of the stored values.
+     * \return The weighted median of \f$g^2\mu a\f$, or 0 if no cell has a
+     * color charge.
+     */
+    static double medianG2muA(std::vector<double> g2mu2, double g);
+    /**
+     * Prints the median \f$g^2\mu a\f$ of both nuclei of the event
+     * (medianG2muA()) and, if it is above 1, a warning that the lattice
+     * does not resolve the color-charge density. Does nothing if no cell
+     * has a color charge.
+     * \param[in] lat Lattice whose cells hold \f$g^2\mu^2\f$ of both nuclei.
+     * \param[in] param Simulation parameters (size, L, g).
+     */
+    void reportColorChargeResolution(Lattice *lat, Parameters *param);
+    /**
      * Reads the nuclear \f$Q_s\f$ table that setColorChargeDensity() and
      * computeCellColorCharge() interpolate (NuclearQsTable::read()).
      * \param[in] fileName Path of the table file.

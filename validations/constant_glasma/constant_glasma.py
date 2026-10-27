@@ -11,9 +11,8 @@ density, as in T. Lappi, Phys. Rev. C 67 (2003) 054903 [hep-ph/0303076].
 SU(3), useNucleus 0, one layer (Ny 1) and no IR regulator (m 0), on the
 lattices of Lappi's Fig. 3: N = 128, 256 and 512 sites at fixed g^2 mu L,
 so g^2 mu a = g^2 mu L / N. The script runs IP-Glasma, writes T^munu at
-dense output times and averages it over the interior of the lattice
-(farther than tau + 2a from the edges: the references used periodic
-lattices, the evolution of IP-Glasma has open boundaries). It computes
+dense output times and averages it over the whole lattice, which for
+useNucleus 0 is periodic, as the lattices of the references. It computes
 
   * f_E = g^2 tau eps / (g^2 mu)^3 against g^2 mu tau, and its plateau,
     the value at the last time (g^2 mu tau = 20 by default). After its
@@ -24,6 +23,11 @@ lattices, the evolution of IP-Glasma has open boundaries). It computes
   * P_L/eps = tau^2 T^etaeta / T^tautau and P_T/eps = (T^xx + T^yy) /
     (2 T^tautau) against tau,
   * eps(tau -> 0+), at the first time step, against the lattice spacing,
+  * f_N = g^2 (dN/dy) / (g^2 mu L)^2, the gluon number per unit rapidity
+    and transverse area, from the multiplicity of the whole lattice at the
+    last time. IP-Glasma computes it in transverse Coulomb gauge with the
+    free lattice dispersion, as Eqs. (27) and (28) of Lappi 2003, the
+    definition of his Table I,
 
 and checks that
 
@@ -38,19 +42,14 @@ and checks that
      combined standard deviations (T. Lappi, Phys. Lett. B 643 (2006) 11
      [hep-ph/0606207]),
   5. on the 512^2 lattices of Lappi's Table I (g^2 mu L = 72, 120, 192),
-     the plateau agrees with his f_E within three combined standard
-     deviations (his quoted error and the error of the mean over the
-     seeds).
+     the plateau of f_E and f_N agree with his values within three
+     combined standard deviations (his quoted error and the error of the
+     mean over the seeds).
 
 The f_E of Krasnitz, Nara and Venugopalan, Phys. Rev. Lett. 87 (2001)
 192302 [hep-ph/0108092], as quoted by Lappi and halved as in their
 erratum, Nucl. Phys. A 727 (2003) 427 [hep-ph/0305112], are printed for
 information; their lattice spacing is not quoted, so they are not checked.
-
-The gluon number f_N is not compared: the multiplicity is computed from
-the fields of the whole lattice, and near the open boundaries the
-pure-gauge fields of the nuclei become physical fields that contaminate it
-for a constant color-charge density (see validations/dilute_limit).
 
 Usage (from validations/constant_glasma/):
     python3 constant_glasma.py --ipglasma-path ../.. --quick
@@ -76,10 +75,12 @@ from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
 HBARC = 0.1973269804
 STEPS_PER_SPACING = 10
 
-# Lappi 2003, Table I: f_E (SU(3)) on the 512^2 lattices nearest to the
-# continuum limit in his Fig. 3, by g^2 mu L
+# Lappi 2003, Table I: f_E and f_N (SU(3), f_N with the free dispersion)
+# on the 512^2 lattices nearest to the continuum limit in his Fig. 3, by
+# g^2 mu L
 LAPPI_SIZE = 512
 LAPPI_FE = {72.: (0.265, 0.005), 120.: (0.227, 0.003), 192.: (0.238, 0.005)}
+LAPPI_FN = {72.: (0.297, 0.006), 120.: (0.289, 0.003), 192.: (0.329, 0.006)}
 # Krasnitz, Nara, Venugopalan 2001, as quoted in Lappi 2003 (Sec. V) for
 # Lambda_s R_A = 25 and 83.7 with pi R_A^2 = L^2, halved per their erratum
 KNV_FE = {np.sqrt(np.pi) * 25.: 0.537 / 2, np.sqrt(np.pi) * 83.7: 0.497 / 2}
@@ -101,13 +102,10 @@ def write_input(template, overrides, path):
         f.writelines(lines)
 
 
-def interior(tmunu, meta, margin_fm):
-    """Means of T^tautau, T^xx + T^yy and tau^2 T^etaeta over the sites
-    farther than margin_fm from the edges."""
-    n = tmunu.shape[0]
-    x = -0.5 * n * meta["dx_fm"] + meta["dx_fm"] * np.arange(n)
-    inside = np.abs(x) < 0.5 * n * meta["dx_fm"] - margin_fm
-    t = tmunu[np.ix_(inside, inside)].astype(np.float64)
+def lattice_mean(tmunu):
+    """Means of T^tautau, T^xx + T^yy and tau^2 T^etaeta over the whole
+    (periodic) lattice."""
+    t = tmunu.astype(np.float64)
     c = {name: COMPONENTS.index(name)
          for name in ("T00", "Txx", "Tyy", "tau2_Tetaeta")}
     return (float(t[..., c["T00"]].mean()),
@@ -128,10 +126,8 @@ def run_one(cfg, settings):
     size = cfg["size"]
     a = L / size
     dt = a / STEPS_PER_SPACING
-    # the interior, farther than tau + 2a from the edges, keeps at least
-    # 40% of the width
     taus = [x * HBARC / g2mu for x in settings["g2mu_tau"]]
-    taus = [t for t in taus if 2 * dt <= t and t + 2 * a <= 0.3 * L]
+    taus = [t for t in taus if 2 * dt <= t]
     max_time = taus[-1]
     # the first time step (an output time is rounded down to it) for
     # eps(0+)
@@ -152,7 +148,7 @@ def run_one(cfg, settings):
     for path in glob.glob(os.path.join(workdir, "Tmunu-t*-0.ipgt")):
         tmunu, meta = read_tmunu(path)
         tau = meta["tau_fm"]
-        eps, pt2, pl = interior(tmunu, meta, tau + 2 * a)
+        eps, pt2, pl = lattice_mean(tmunu)
         os.remove(path)
         rows.append({"tau_fm": tau, "g2mu_tau": tau * g2mu / HBARC,
                      # f_E = g^2 tau eps / (g^2 mu)^3, tau eps in GeV^3
@@ -163,7 +159,11 @@ def run_one(cfg, settings):
                      / g2mu ** 4,
                      "PL_over_eps": pl / eps, "PT_over_eps": 0.5 * pt2 / eps})
     rows.sort(key=lambda r: r["tau_fm"])
-    out = {"L_fm": L, "a_fm": a, "rows": rows}
+    with open(os.path.join(workdir, "gluonMultiplicity0.json")) as f:
+        dN = json.load(f)["dN"]
+    out = {"L_fm": L, "a_fm": a, "rows": rows,
+           # f_N = g^2 (dN/dy) / (g^2 mu)^2 / L^2
+           "f_N": settings["g"] ** 2 * dN / cfg["g2muL"] ** 2}
     with open(cache, "w") as f:
         json.dump(out, f)
     return cfg, out, None
@@ -194,8 +194,8 @@ def main():
                         default=[0.1, 0.2, 0.3, 0.5, 0.75, 1., 1.5, 2., 2.5,
                                  3., 4., 5., 6., 8., 10., 12., 14., 16., 18.,
                                  20.],
-                        help="output times g^2 mu tau (those after "
-                             "0.3 L - 2a are dropped)")
+                        help="output times g^2 mu tau; the last is the "
+                             "final time, where f_N is measured")
     parser.add_argument("--seeds", type=int, default=4)
     parser.add_argument("--plateau-tolerance", type=float, default=0.1)
     parser.add_argument("--spacing-tolerance", type=float, default=0.1)
@@ -227,7 +227,7 @@ def main():
             "timeStepsPerLatticeSpacing": STEPS_PER_SPACING,
             "writeWilsonLines": 0, "writeWilsonLineGeometry": 0,
             "writeTmunu": 1, "writeTmunuBinary": 1, "writeHydro": 0,
-            "computeGluonMultiplicity": 0, "computeEccentricities": 0,
+            "computeGluonMultiplicity": 1, "computeEccentricities": 0,
             "nucleusQsTableFileName": os.path.join(
                 path, "qs2Adj_vs_Tp_vs_Y_240.in"),
         },
@@ -289,6 +289,8 @@ def main():
                  "eps0": first["eps_scaled"],
                  "eps0_error": first["eps_scaled_error"],
                  "fE": last["f_E"], "fE_error": last["f_E_error"]}
+        group["fN"], group["fN_error"] = mean_error(
+            [out["f_N"] for out in runs])
         checks[f"{tag}: P_L/eps = -1, P_T/eps = 1 at the first step"] = bool(
             abs(first["PL_over_eps"] + 1.) < 0.02
             and abs(first["PT_over_eps"] - 1.) < 0.02)
@@ -304,6 +306,12 @@ def main():
             checks[f"{tag}: f_E = {reference[0]} +- {reference[1]} "
                    "(Lappi 2003, Table I)"] = bool(
                 abs(group["fE"] - reference[0]) <= 3 * sigma)
+            reference_fN = LAPPI_FN[L_]
+            group["lappi_fN"] = reference_fN
+            sigma = np.hypot(group["fN_error"], reference_fN[1])
+            checks[f"{tag}: f_N = {reference_fN[0]} +- {reference_fN[1]} "
+                   "(Lappi 2003, Table I)"] = bool(
+                abs(group["fN"] - reference_fN[0]) <= 3 * sigma)
         summary["groups"].append(group)
         print(f"\n{tag} (g2mu a {L_ / n:.3g}, L = {runs[0]['L_fm']:.3f} fm, "
               f"{len(runs)} seeds):")
@@ -312,8 +320,11 @@ def main():
             print(f"   {row['g2mu_tau']:8.4g}   {row['f_E']:.4f} +- "
                   f"{row['f_E_error']:.4f}   {row['PL_over_eps']:+.3f}"
                   f"    {row['PT_over_eps']:.3f}")
+        print(f"   f_N at g2mu tau {last['g2mu_tau']:.4g}: "
+              f"{group['fN']:.4f} +- {group['fN_error']:.4f}")
         if reference is not None:
-            print(f"   Lappi 2003: f_E = {reference[0]} +- {reference[1]}")
+            print(f"   Lappi 2003: f_E = {reference[0]} +- {reference[1]}, "
+                  f"f_N = {LAPPI_FN[L_][0]} +- {LAPPI_FN[L_][1]}")
 
     # the lattice-spacing dependence at fixed g^2 mu L
     for L_ in args.g2muL:
@@ -331,10 +342,11 @@ def main():
             bool(abs(fine["fE"] - coarse["fE"]) - 2 * sigma
                  < args.spacing_tolerance * fine["fE"])
         print(f"\ng2muL {L_:g}:  g2mu a    g^2 eps(0+)/(g^2 mu)^4   f_E "
-              "plateau")
+              "plateau         f_N")
         for g in groups:
             print(f"             {g['g2mua']:.4f}   {g['eps0']:8.4f}"
-                  f"                 {g['fE']:.4f} +- {g['fE_error']:.4f}")
+                  f"                 {g['fE']:.4f} +- {g['fE_error']:.4f}"
+                  f"   {g['fN']:.4f} +- {g['fN_error']:.4f}")
     print("\nKrasnitz, Nara, Venugopalan (2001), halved per their erratum "
           "(lattice spacing not quoted, not checked): "
           + ", ".join(f"f_E = {v:.3f} at g2muL {k:.1f}"
@@ -382,10 +394,13 @@ def main():
         right.errorbar(x, [g["fE"] for g in groups],
                        yerr=[g["fE_error"] for g in groups], fmt="o-",
                        ms=4, color=f"C{i}", label=fr"$g^2\mu L = {L_:g}$")
+        right.errorbar(x, [g["fN"] for g in groups],
+                       yerr=[g["fN_error"] for g in groups], fmt="D:",
+                       ms=4, color=f"C{i}")
         twin.plot(x, [g["eps0"] for g in groups], "s--", ms=4,
                   color=f"C{i}")
     right.set_xlabel(r"$g^2\mu a$")
-    right.set_ylabel(r"plateau of $f_E$ (o)")
+    right.set_ylabel(r"plateau of $f_E$ (o), $f_N$ (D)")
     twin.set_ylabel(r"$g^2\varepsilon(0^+)/(g^2\mu)^4$ (s)")
     right.legend(fontsize=7)
     fig.tight_layout()

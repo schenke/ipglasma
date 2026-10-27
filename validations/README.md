@@ -346,9 +346,9 @@ normalization and the time dependence of the classical Yang-Mills part
 against T. Lappi, Phys. Rev. C 67 (2003) 054903 [hep-ph/0303076]: SU(3), a
 constant color-charge density (`useNucleus 0`), `Ny 1` and `m 0`, on the
 lattices of Lappi's Fig. 3 (N = 128, 256 and 512 at fixed g²μL, so
-g²μa = g²μL/N). T^μν is averaged over the interior of the lattice, farther
-than τ + 2a from the edges: Lappi used periodic lattices, the evolution of
-IP-Glasma has open boundaries. The script computes, averaged over the seeds,
+g²μa = g²μL/N). T^μν and the gluon multiplicity are taken from the whole
+lattice, which for `useNucleus 0` is periodic, as Lappi's. The script
+computes, averaged over the seeds,
 
 - f_E = g²τε/(g²μ)³ against g²μτ; its plateau is the value at the last
   time, g²μτ = 20. After its maximum at g²μτ ≈ 1, τε decreases slowly
@@ -356,7 +356,11 @@ IP-Glasma has open boundaries. The script computes, averaged over the seeds,
   asymptote of a fit A + B exp(−τ/τ₀), which his Fig. 4 reaches at
   g²μτ ≈ 20 (τ = 2 fm there);
 - P_L/ε = τ²T^ηη/T^ττ and P_T/ε = (T^xx + T^yy)/(2T^ττ) against τ;
-- ε(τ → 0⁺), at the first time step, against the lattice spacing.
+- ε(τ → 0⁺), at the first time step, against the lattice spacing;
+- f_N = g²(dN/dy)/(g²μL)², the gluon number per unit rapidity and
+  transverse area, at the last time. IP-Glasma computes the multiplicity in
+  transverse Coulomb gauge with the free lattice dispersion, as Eqs. (27)
+  and (28) of Lappi, the definition of his Table I.
 
 It checks that P_L/ε = −1 and P_T/ε = 1 within 0.02 at the first time step
 (purely longitudinal fields) and about 0 and 1/2 at the last time
@@ -364,9 +368,10 @@ It checks that P_L/ε = −1 and P_T/ε = 1 within 0.02 at the first time step
 the last time and the last time, that ε(0⁺) grows as a → 0 while the plateau of f_E changes by
 less than 10% (beyond two standard deviations) between the two finest
 lattices (T. Lappi, Phys. Lett. B 643 (2006) 11 [hep-ph/0606207]), and that
-on the 512² lattices of Lappi's Table I (g²μL = 72, 120, 192) the plateau
-agrees with his f_E (0.265 ± 0.005, 0.227 ± 0.003, 0.238 ± 0.005) within
-three combined standard deviations. The f_E of Krasnitz, Nara and
+on the 512² lattices of Lappi's Table I (g²μL = 72, 120, 192) the plateau of
+f_E (0.265 ± 0.005, 0.227 ± 0.003, 0.238 ± 0.005) and f_N (0.297 ± 0.006,
+0.289 ± 0.003, 0.329 ± 0.006) agree with his values within three combined
+standard deviations. The f_E of Krasnitz, Nara and
 Venugopalan, Phys. Rev. Lett. 87 (2001) 192302 [hep-ph/0108092], as quoted
 by Lappi and halved as in their erratum, Nucl. Phys. A 727 (2003) 427
 [hep-ph/0305112] (0.269 at g²μL = 44.3, 0.248 at g²μL = 148.4), are printed
@@ -375,39 +380,38 @@ checked.
 
 ```bash
 cd constant_glasma
-# quick test: g²μL = 36 on 128² and 256², four seeds (30 s)
+# quick test: g²μL = 36 on 128² and 256², four seeds (1 minute)
 python3 constant_glasma.py --ipglasma-path ../.. --quick --max-workers 4
 # the setup of the paper: g²μL = 72 and 120 on 128², 256² and 512²
 python3 constant_glasma.py --ipglasma-path ../.. --max-workers 4
 ```
 
-With the defaults (four seeds, 6 minutes with 4 workers of 4 threads), all
-checks pass. The plateau agrees with Lappi's Table I on 512², and with the
-points of his Fig. 3 (read off the figure) on the coarser lattices:
+With the defaults (four seeds, 9 minutes with 2 workers of 4 threads), all
+checks pass. f_E and f_N agree with Lappi's Table I on 512², and the plateau
+of f_E with the points of his Fig. 3 (read off the figure) on the coarser
+lattices:
 
-| g²μL | N   | g²μa | f_E           | Lappi    |
-|------|-----|------|---------------|----------|
-| 72   | 128 | 0.56 | 0.237 ± 0.009 | ≈ 0.237  |
-| 72   | 256 | 0.28 | 0.254 ± 0.010 | ≈ 0.265  |
-| 72   | 512 | 0.14 | 0.272 ± 0.014 | 0.265 ± 0.005 |
-| 120  | 128 | 0.94 | 0.189 ± 0.005 | ≈ 0.193  |
-| 120  | 256 | 0.47 | 0.220 ± 0.007 | ≈ 0.217  |
-| 120  | 512 | 0.23 | 0.238 ± 0.007 | 0.227 ± 0.003 |
+| g²μL | N   | g²μa | f_E           | Lappi         | f_N           | Lappi         |
+|------|-----|------|---------------|---------------|---------------|---------------|
+| 72   | 128 | 0.56 | 0.246 ± 0.011 | ≈ 0.237       | 0.319 ± 0.013 |               |
+| 72   | 256 | 0.28 | 0.249 ± 0.008 | ≈ 0.265       | 0.298 ± 0.011 |               |
+| 72   | 512 | 0.14 | 0.264 ± 0.010 | 0.265 ± 0.005 | 0.305 ± 0.014 | 0.297 ± 0.006 |
+| 120  | 128 | 0.94 | 0.199 ± 0.008 | ≈ 0.193       | 0.297 ± 0.008 |               |
+| 120  | 256 | 0.47 | 0.217 ± 0.008 | ≈ 0.217       | 0.297 ± 0.009 |               |
+| 120  | 512 | 0.23 | 0.231 ± 0.006 | 0.227 ± 0.003 | 0.300 ± 0.008 | 0.289 ± 0.003 |
 
-g²ε(0⁺)/(g²μ)⁴ grows from 0.62 to 0.81 and 1.06 (g²μL = 72) and from 0.40
-to 0.58 and 0.77 (g²μL = 120) as a is halved. P_L/ε is between −0.995 and
-−0.988 at the first time step and +0.02 to +0.03 at g²μτ = 20 (Lappi's
-Fig. 5 gives about +0.025), and f_E decreases by 0.5–3.4% between g²μτ = 10
-and 20 (5.5% on the coarsest lattice). The errors are those of the mean over
-four seeds of the interior average; more seeds are needed to reach the
+g²ε(0⁺)/(g²μ)⁴ grows from 0.62 to 0.81 and 1.06 (g²μL = 72) and from 0.41
+to 0.58 and 0.77 (g²μL = 120) as a is halved, while f_N hardly depends on
+the lattice spacing. P_L/ε is between −0.995 and −0.988 at the first time
+step and +0.015 to +0.025 at g²μτ = 20 (Lappi's Fig. 5 gives about +0.025),
+and f_E decreases by 2.5–2.7% between g²μτ = 10 and 20. The errors are
+those of the mean over four seeds; more seeds are needed to reach the
 precision of Lappi's errors.
 
-The gluon number f_N is not compared. It is computed from the fields of the
-whole lattice, and near the open boundaries of the evolution the pure-gauge
-fields of the nuclei become physical fields, which contaminate it for a
-constant color-charge density (see the dilute limit). An interior
-(windowed) multiplicity or periodic boundaries for `useNucleus 0` would be
-needed for it.
+On a lattice with clamped boundaries, as `useNucleus 0` had before #139,
+the pure-gauge fields of the nuclei become physical fields along the
+edges; averaged over the whole lattice, f_E and f_N on 512² were then 20–43%
+too large.
 
 ### Vector meson production validation
 

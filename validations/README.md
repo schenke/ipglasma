@@ -250,9 +250,10 @@ of the T^μν output (10⁻¹⁶ GeV/fm³).
 ### Dependence on a, Ny and m at a fixed geometry
 
 `numerical_parameters/numerical_parameters.py` (issue #127) runs the example
-input without JIMWLK (b fixed, L = 30 fm, `seed 3`) for three scans: the
-size (a = L/size) at the `Ny` and `m` of the input, `Ny` and `m` at a fixed
-size. With a fixed `seed` and b = 0 (or a multiple of L/128), the geometry
+input without JIMWLK (b = 0, L = 22.5 fm, which suffices at b = 0, `seed 3`)
+for three scans: the size (a = L/size, by default 0.234 to 0.018 fm for the
+sizes 96 to 1280) at the `Ny` and `m` of the input, and `Ny` and `m` at the
+size 768 (a = 0.029 fm). For another impact parameter, use L = 30 fm. With a fixed `seed` and b = 0 (or a multiple of L/128), the geometry
 (nucleon positions, hot spots, T_p) does not depend on `size`, `Ny` or `m`;
 only the color charges change. These are varied with the input parameter
 `colorChargeSeed`, which draws them from their own stream, so that a few
@@ -272,8 +273,8 @@ geometry; the script reports its median (weighted with (g²μ)², like the
 multiplicity) and maximum, and the median g²μ a of each size. The hot spots
 of the example input are small (`BGq 0.3` GeV⁻², a width of 0.11 fm) and
 overlap in Pb to g²μ of up to 13 GeV; for `seed 3` the median is 5.2 GeV
-(1/g²μ = 0.038 fm), i.e. g²μ a = 6.2, 3.1, 1.5 and 0.77 for the sizes 128
-to 1024, so that only the finest lattices resolve most of the event. As a
+(1/g²μ = 0.038 fm), i.e. g²μ a = 6.2, 3.1, 1.5, 0.77, 0.58 and 0.46 for the
+default sizes, so that only the finest lattices resolve most of the event. As a
 reference, a fourth scan runs a constant g²μ (`useNucleus 0`,
 `--uniform-g2mu`, default 5 GeV, L = 3 fm) at the `Ny` and `m` of the
 input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512). There dN/dy is within about
@@ -282,14 +283,40 @@ a = 0.3 to 0.15): the perturbative 1/k⁴ tail of the gluon spectrum carries
 energy up to the lattice cutoff (the energy density at τ = 0 even diverges
 like ln² a, T. Lappi, Phys. Lett. B 643 (2006) 11).
 
+**Convergence check.** For each observable of the size scans, the script
+compares the two finest lattices: the relative change must be below
+`--convergence-tolerance` (1%) plus two standard deviations. For an
+observable that fails, it prints a prominent `WARNING: NOT CONVERGED IN THE
+LATTICE SPACING` with the change and an estimate of the remaining deviation
+from an extrapolation linear in a, marks the panel in the figure, and lists
+it under `not_converged` in the summary. With the defaults (25 minutes with
+2 workers of 8 threads), the results are
+
+| size | 96 | 192 | 384 | 768 | 1024 | 1280 |
+|---|---|---|---|---|---|---|
+| a [fm] | 0.234 | 0.117 | 0.059 | 0.029 | 0.022 | 0.018 |
+| dN/dy | 8195 | 14375 | 18994 | 21418 | 21766 | 21931 |
+| dE/dη (0.4 fm) [GeV] | 9062 | 28602 | 51825 | 68667 | 72709 | 75766 |
+
+dN/dy changes by +0.8% ± 2.0% in the last step, ε₂ and ε₃ by less than
+their errors, so they converge. dE/dη still grows by 4.2% ± 1.2%, and the
+linear extrapolation puts its value at a = 0 about 16% above the finest
+lattice (8% for the constant g²μ): converging the energy to the percent
+level would need lattice spacings far below 0.018 fm, so its dependence on
+a has to be quoted as a systematic uncertainty. The `Ny` scan (at 768²)
+converges for dN/dy by `Ny` ≈ 25–50 (21418 for `Ny 50`, 21174 for
+`Ny 100`); the `m` scan changes dN/dy from 28825 (`m 0.1`) to 15675
+(`m 0.8`) at fixed `QsMuRatio`, which changes the physical Q_s.
+
 ```bash
 cd numerical_parameters
 # quick test: sizes 64 and 128, Ny and m scans at 64, the constant g²μ at
 # sizes 32 and 64, 2 seeds (6 s with 8 workers)
 python3 numerical_parameters.py --ipglasma-path ../.. --quick --max-workers 8
-# the setup of the paper: sizes 128-1024, Ny 1-100, m 0.1-0.8 GeV, the
-# constant g²μ at sizes 32-512, 4 seeds
-python3 numerical_parameters.py --ipglasma-path ../.. --max-workers 4
+# the setup of the paper (the defaults): sizes 96-1280, Ny 1-100,
+# m 0.1-0.8 GeV, the constant g²μ at sizes 32-512, 4 seeds (25 minutes)
+python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \
+    --max-workers 2
 ```
 
 `--ipglasma-path` is a directory with the `ipglasma` executable,

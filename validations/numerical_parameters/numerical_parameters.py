@@ -16,11 +16,13 @@ varied with `colorChargeSeed`, which draws them from their own stream, so
 that the spread at a fixed geometry gives the statistical error of each
 setting.
 
-The script runs the example input without JIMWLK, with b fixed and
-L = 30 fm, for three scans:
+The script runs the example input without JIMWLK, with b fixed (0 by
+default) and L = 22.5 fm (which suffices at b = 0; use 30 fm for other
+impact parameters), for three scans:
 
-  * size (a = L/size) at the Ny and m of the input,
-  * Ny at a fixed size,
+  * size (a = L/size, by default 0.234 to 0.018 fm) at the Ny and m of the
+    input,
+  * Ny at a fixed size (768, a = 0.029 fm),
   * m at a fixed size,
 
 each with several color-charge seeds, and computes dE/deta = tau int T^tautau
@@ -48,12 +50,24 @@ perturbative 1/k^4 tail of the gluon spectrum carries a part of the energy
 up to the lattice cutoff (the energy density at tau = 0 even diverges, as
 ln^2 a; T. Lappi, Phys. Lett. B 643 (2006) 11).
 
+The script checks the convergence in the lattice spacing for each
+observable: the relative change between the two finest lattices must be
+below --convergence-tolerance (1%) plus two standard deviations. For an
+observable that does not converge, it prints a prominent warning, with an
+estimate of the remaining deviation from an extrapolation linear in a,
+marks it in the figure and in the summary. With the defaults, dN/dy and
+the eccentricities converge, while dE/deta still changes by about 4% between
+the two finest lattices; the linear extrapolation puts its continuum value
+about 16% above the finest one, which would need lattice spacings far below
+0.018 fm to reach.
+
 Usage (from validations/numerical_parameters/):
     # quick test: sizes 64 and 128, Ny and m scans at 64, the constant
     # g^2 mu at sizes 32 and 64, 2 seeds
     python3 numerical_parameters.py --ipglasma-path ../.. --quick
-    # the setup of the paper
-    python3 numerical_parameters.py --ipglasma-path ../.. --max-workers 4
+    # the setup of the paper (about 25 min with 2 workers of 8 threads)
+    python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \
+        --max-workers 2
 
 --ipglasma-path is a directory with the ipglasma executable,
 qs2Adj_vs_Tp_vs_Y_240.in, nucleusConfigurations/ and tables/. The results
@@ -236,6 +250,39 @@ def statistics(values):
             "values": values.tolist()}
 
 
+# observables whose convergence in the lattice spacing is checked (not the
+# angles)
+CONVERGENCE_OBSERVABLES = ["dE/deta(0.2)", "dE/deta(final)", "dN/dy",
+                           "eps_2", "eps_3"]
+
+
+def convergence(rows, L, tolerance):
+    """Per observable of a size scan: the relative change between the two
+    finest lattices with its error, whether it is below tolerance plus two
+    standard deviations, and, from an extrapolation linear in a, the
+    relative deviation of the finest lattice from a = 0."""
+    if len(rows) < 2:
+        return {}
+    second, finest = sorted(rows, key=lambda r: r["value"])[-2:]
+    a1, a2 = L / finest["value"], L / second["value"]
+    result = {}
+    for name in CONVERGENCE_OBSERVABLES:
+        if name not in finest["observables"]:
+            continue
+        x1 = finest["observables"][name]["mean"]
+        x2 = second["observables"][name]["mean"]
+        e1 = finest["observables"][name]["error"]
+        e2 = second["observables"][name]["error"]
+        change = x1 / x2 - 1.
+        error = abs(x1 / x2) * float(np.hypot(e1 / x1, e2 / x2))
+        result[name] = {
+            "a_fm": [a2, a1], "change": change, "error": error,
+            "converged": bool(abs(change) <= tolerance + 2. * error),
+            # x(a) = x(0) + c a through both points
+            "extrapolated_deviation": (x1 - x2) / (a2 - a1) * a1 / x1}
+    return result
+
+
 def plot(summary, path):
     import matplotlib
     matplotlib.use("Agg")
@@ -269,6 +316,15 @@ def plot(summary, path):
                 ax.xaxis.set_tick_params(labelbottom=True)
             if scan in ("ny", "uniform"):
                 ax.set_xscale("log")
+            check = summary.get("convergence", {}).get(scan, {}).get(name)
+            if check and not check["converged"]:
+                # the values grow towards small a: the lower left is free
+                ax.text(0.03, 0.06, f"NOT CONVERGED: "
+                        f"{100 * check['change']:+.1f}% in the last step",
+                        transform=ax.transAxes, color="#c0392b",
+                        fontsize=7, fontweight="bold", va="bottom",
+                        bbox={"facecolor": "white", "edgecolor": "none",
+                              "alpha": 0.8})
     scale = (summary["geometry"] or {}).get("g2mu_GeV")
     if scale and scans[0][0] == "size":
         # the median g^2 mu a of the geometry on top of the size scan
@@ -290,19 +346,21 @@ def main():
     parser.add_argument("--template", default=os.path.join(HERE, "..", "..",
                                                            "input"))
     parser.add_argument("--datadir", default="./numerical_parameters_output")
-    parser.add_argument("--L", type=float, default=30., help="[fm]")
+    parser.add_argument("--L", type=float, default=22.5,
+                        help="[fm]; 22.5 fm suffices for b = 0, use 30 fm "
+                             "for other impact parameters")
     parser.add_argument("--b", type=float, default=0.,
                         help="impact parameter [fm]; a multiple of L/128 "
                              "is a lattice vector for all sizes")
     parser.add_argument("--seed", type=int, default=3,
                         help="the seed of the geometry")
     parser.add_argument("--sizes", type=int, nargs="+",
-                        default=[128, 256, 512, 1024])
+                        default=[96, 192, 384, 768, 1024, 1280])
     parser.add_argument("--ny", type=int, nargs="+",
                         default=[1, 5, 10, 25, 50, 100])
     parser.add_argument("--m", type=float, nargs="+",
                         default=[0.1, 0.2, 0.4, 0.8], help="[GeV]")
-    parser.add_argument("--scan-size", type=int, default=256,
+    parser.add_argument("--scan-size", type=int, default=768,
                         help="the size of the Ny and m scans, and of the "
                              "run that gives g^2 mu of the geometry")
     parser.add_argument("--uniform-g2mu", type=float, default=5.,
@@ -316,7 +374,12 @@ def main():
                              "it")
     parser.add_argument("--color-seeds", type=int, default=4)
     parser.add_argument("--maxtime", type=float, default=0.4, help="[fm/c]")
-    parser.add_argument("--threads", type=int, default=1,
+    parser.add_argument("--convergence-tolerance", type=float,
+                        default=0.01,
+                        help="largest relative change between the two "
+                             "finest lattices (plus two standard deviations) "
+                             "of a converged observable")
+    parser.add_argument("--threads", type=int, default=4,
                         help="OpenMP threads per run")
     parser.add_argument("--max-workers", type=int, default=1)
     parser.add_argument("--quick", action="store_true",
@@ -454,6 +517,39 @@ def main():
                 for n in names)
             g2mu_a = f"{row['g2mu_a']:8.3g}" if "g2mu_a" in row else " " * 8
             print(f"  {row['value']:>7g}{g2mu_a}{cells}")
+    summary["convergence"] = {
+        scan: convergence(summary["scans"][scan],
+                          args.uniform_L if scan == "uniform" else args.L,
+                          args.convergence_tolerance)
+        for scan in ("size", "uniform") if summary["scans"].get(scan)}
+    print(f"\nconvergence in the lattice spacing (change between the two "
+          f"finest lattices; converged if below "
+          f"{100 * args.convergence_tolerance:g}% plus two standard "
+          f"deviations):")
+    not_converged = []
+    for scan, checks in summary["convergence"].items():
+        for name, check in checks.items():
+            state = "ok" if check["converged"] else "NOT CONVERGED"
+            print(f"  {scan:8s}{name:16s}{100 * check['change']:+7.2f}% "
+                  f"(+- {100 * check['error']:.2f}%)  {state}")
+            if not check["converged"]:
+                not_converged.append((scan, name, check))
+    if not_converged:
+        line = "!" * 76
+        print(f"\n{line}\nWARNING: NOT CONVERGED IN THE LATTICE SPACING")
+        for scan, name, check in not_converged:
+            print(f"  {name} ({scan} scan) changes by "
+                  f"{100 * check['change']:+.1f}% "
+                  f"(+- {100 * check['error']:.1f}%) from a = "
+                  f"{check['a_fm'][0]:.3g} to {check['a_fm'][1]:.3g} fm; "
+                  f"an extrapolation linear in a puts a = 0 "
+                  f"{100 * check['extrapolated_deviation']:+.0f}% away.")
+        print("The gluon number converges like a^2 once g^2 mu a < 1, the "
+              "energy only like a\n(the 1/k^4 tail of the spectrum up to "
+              "the lattice cutoff), so these values\nstill depend on the "
+              "lattice spacing; see validations/README.md.\n" + line)
+    summary["not_converged"] = [f"{scan}: {name}"
+                                for scan, name, _ in not_converged]
     passed = all(summary["checks"].values())
     for name, ok in summary["checks"].items():
         print(f"{'OK  ' if ok else 'FAIL'} {name}")

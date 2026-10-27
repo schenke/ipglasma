@@ -35,7 +35,10 @@ files themselves.
     and interpolated from there; the Jazma fields and the running-coupling
     factor are at the lattice sites, `x = -L/2 + a*i`. A value at an output
     point thus belongs to that point, in the coordinates of the nucleon
-    positions and the impact parameter;
+    positions and the impact parameter. An output point before the first or
+    after the last of these positions takes the value there with
+    `useNucleus 1`; with `useNucleus 0`, whose lattice is periodic (see the
+    README), it is interpolated across the edge;
   - one η slice at η = 0, since the fields are boost invariant; the headers
     record it as `etamax= 1` and `deta= 0`, the format MUSIC reads.
 - **Running coupling.** With `runningCoupling 1`, the hydro and T^μν outputs

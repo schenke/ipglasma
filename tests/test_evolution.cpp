@@ -2,17 +2,23 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <fstream>
+#include <random>
 #include <string>
 #include <vector>
 
 #include "Cell.h"
+#include "EnergyMomentumTensor.h"
 #include "Evolution.h"
+#include "ForwardLightCone.h"
+#include "Group.h"
 #include "Lattice.h"
 #include "Parameters.h"
 #include "doctest.h"
+#include "test_helpers.h"
 
 namespace {
 // Matches test_lattice.cpp's makeLatticeParam: Parameters holds a
@@ -160,4 +166,90 @@ TEST_CASE(
         }
         CHECK(std::abs(lat.Ux[pos].det() - 1.) < 1e-13);
     }
+}
+
+TEST_CASE(
+    "With periodic boundaries, the forward light cone, the evolution and "
+    "T^{mu nu} commute with a cyclic shift of the Wilson lines") {
+    // A constant color-charge density (useNucleus 0) is an infinite target,
+    // whose lattice is periodic: no site is special, so shifting the Wilson
+    // lines of both nuclei by s shifts every field and T^{mu nu} by s, also
+    // where the stencils cross an edge. With clamped boundaries the edges
+    // are special, and the shift changes the result.
+    const int N = 6;
+    const int steps = 3;
+    const int sx = 1;
+    const int sy = 4;
+    Parameters param;
+    makeEvolutionTestParam(param, N);
+    param.coupling.g = 1.3;
+    Group group;
+    std::mt19937 rng(41);
+    std::vector<Matrix> VA, VB;
+    for (int pos = 0; pos < N * N; ++pos) {
+        VA.push_back(randomSU3(rng, 0.5));
+        VB.push_back(randomSU3(rng, 0.5));
+    }
+
+    // the largest difference between the fields and T^{mu nu} of the
+    // shifted Wilson lines at x + s and those of the original ones at x
+    auto shiftDeviation = [&](LatticeBoundary boundary) {
+        Lattice lat(&param, N, boundary);
+        Lattice shifted(&param, N, boundary);
+        auto target = [&](int pos) {
+            return lat.positionFromXY(
+                (lat.xFromPosition(pos) + sx) % N,
+                (lat.yFromPosition(pos) + sy) % N);
+        };
+        for (int pos = 0; pos < N * N; ++pos) {
+            lat.U[pos] = VA[pos];
+            lat.U2[pos] = VB[pos];
+            shifted.U[target(pos)] = VA[pos];
+            shifted.U2[target(pos)] = VB[pos];
+        }
+        int nn[2] = {N, N};
+        Evolution evolution(nn);
+        const double dtau = param.run.dtau;
+        for (Lattice *l : {&lat, &shifted}) {
+            ForwardLightCone(&group).initialize(l, &param);
+            evolution.evolvePhi(l, &param, dtau, 0.);
+            evolution.evolveU(l, &param, dtau, 0.);
+            for (int it = 1; it < steps; ++it) {
+                evolution.evolvePi(l, &param, dtau, it * dtau);
+                evolution.evolveE(l, &param, dtau, it * dtau);
+                evolution.evolvePhi(l, &param, dtau, it * dtau);
+                evolution.evolveU(l, &param, dtau, it * dtau);
+            }
+            EnergyMomentumTensor::compute(l, &param, steps);
+        }
+
+        double deviation = 0.;
+        for (int pos = 0; pos < N * N; ++pos) {
+            const int to = target(pos);
+            for (auto field :
+                 {&Lattice::Ux, &Lattice::Uy, &Lattice::U, &Lattice::U2,
+                  &Lattice::Ux2, &Lattice::Uy2}) {
+                for (int k = 0; k < 9; ++k) {
+                    deviation = std::max(
+                        deviation, std::abs(
+                                       (shifted.*field)[to].get(k)
+                                       - (lat.*field)[pos].get(k)));
+                }
+            }
+            const Cell &cell = *lat.cells[pos];
+            const Cell &moved = *shifted.cells[to];
+            for (auto component :
+                 {&Cell::getEpsilon, &Cell::getTxx, &Cell::getTyy,
+                  &Cell::getTxy, &Cell::getTtaux, &Cell::getTtauy,
+                  &Cell::getTtaueta, &Cell::getTxeta, &Cell::getTyeta}) {
+                const double value = (cell.*component)();
+                deviation = std::max(
+                    deviation, std::abs((moved.*component)() - value)
+                                   / (1. + std::abs(value)));
+            }
+        }
+        return deviation;
+    };
+    CHECK(shiftDeviation(LatticeBoundary::Periodic) < 1e-10);
+    CHECK(shiftDeviation(LatticeBoundary::Clamped) > 1e-3);
 }

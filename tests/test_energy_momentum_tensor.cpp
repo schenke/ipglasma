@@ -227,3 +227,104 @@ TEST_CASE(
         }
     }
 }
+
+TEST_CASE(
+    "EnergyMomentumTensor::compute on a periodic lattice: a uniform E_1 "
+    "field gives the same T^{mu nu} on every cell, the edges included") {
+    Parameters param;
+    makeTmunuTestParam(param);
+    Lattice lat(&param, N, LatticeBoundary::Periodic);
+    setVacuum(lat);
+    Group group;
+    std::mt19937 rng(3);
+    const Matrix E1 = algebraElement(group, rng);
+    for (int pos = 0; pos < N * N; pos++) lat.U[pos] = E1;
+    EnergyMomentumTensor::compute(&lat, &param, it);
+
+    const double a = param.lattice.L / N;
+    const double tauLattice = it * param.run.dtau;
+    const double expected = param.coupling.g * param.coupling.g
+                            / (tauLattice * tauLattice)
+                            * su3::traceSquare(E1).real() / std::pow(a, 4.);
+    REQUIRE(expected > 0.);
+    for (int pos = 0; pos < N * N; pos++) {
+        CAPTURE(pos);
+        const Cell &cell = *lat.cells[pos];
+        CHECK(cell.getEpsilon() == doctest::Approx(expected));
+        CHECK(cell.getTxx() == doctest::Approx(-expected));
+        CHECK(cell.getTyy() == doctest::Approx(expected));
+        CHECK(cell.getTxy() == doctest::Approx(0.));
+        CHECK(cell.getTtaux() == doctest::Approx(0.));
+        CHECK(cell.getTtauy() == doctest::Approx(0.));
+    }
+}
+
+TEST_CASE(
+    "EnergyMomentumTensor::compute on a periodic lattice: a cyclic shift of "
+    "random fields shifts T^{mu nu}, which is traceless on every cell") {
+    // The stencils wrap around, so no cell is special: T^{mu nu} of the
+    // shifted fields at x + s is that of the fields at x, also where the
+    // stencil crosses an edge.
+    Parameters param;
+    makeTmunuTestParam(param);
+    Group group;
+    std::mt19937 rng(29);
+    std::vector<Matrix> Ux, Uy, E1, E2, pi, phi;
+    for (int pos = 0; pos < N * N; pos++) {
+        Ux.push_back(randomSU3(rng, 0.4));
+        Uy.push_back(randomSU3(rng, 0.4));
+        E1.push_back(algebraElement(group, rng));
+        E2.push_back(algebraElement(group, rng));
+        pi.push_back(algebraElement(group, rng));
+        phi.push_back(algebraElement(group, rng));
+    }
+    const int sx = 2;
+    const int sy = 5;
+    Lattice lat(&param, N, LatticeBoundary::Periodic);
+    Lattice shifted(&param, N, LatticeBoundary::Periodic);
+    for (int ix = 0; ix < N; ix++) {
+        for (int iy = 0; iy < N; iy++) {
+            const int pos = lat.positionFromXY(ix, iy);
+            for (Lattice *target : {&lat, &shifted}) {
+                const int to = target == &lat
+                                   ? pos
+                                   : lat.neighborPosition(ix + sx, iy + sy);
+                target->Ux[to] = Ux[pos];
+                target->Uy[to] = Uy[pos];
+                target->U[to] = E1[pos];
+                target->U2[to] = E2[pos];
+                target->Ux2[to] = pi[pos];
+                target->Uy2[to] = phi[pos];
+            }
+        }
+    }
+    EnergyMomentumTensor::compute(&lat, &param, it);
+    EnergyMomentumTensor::compute(&shifted, &param, it);
+
+    const double tau = it * param.run.dtau * param.lattice.L / N;
+    for (int ix = 0; ix < N; ix++) {
+        for (int iy = 0; iy < N; iy++) {
+            CAPTURE(ix);
+            CAPTURE(iy);
+            const Cell &cell = *lat.cells[lat.positionFromXY(ix, iy)];
+            const Cell &moved =
+                *shifted.cells[lat.neighborPosition(ix + sx, iy + sy)];
+            CHECK(cell.getEpsilon() > 0.);
+            CHECK(
+                cell.getTxx() + cell.getTyy() + tau * tau * cell.getTetaeta()
+                == doctest::Approx(cell.getTtautau()));
+            CHECK(cell.getTtaux() != 0.);
+            CHECK(cell.getTtauy() != 0.);
+            CHECK(moved.getEpsilon() == doctest::Approx(cell.getEpsilon()));
+            CHECK(moved.getTxx() == doctest::Approx(cell.getTxx()));
+            CHECK(moved.getTyy() == doctest::Approx(cell.getTyy()));
+            CHECK(moved.getTetaeta() == doctest::Approx(cell.getTetaeta()));
+            CHECK(moved.getTxy() == doctest::Approx(cell.getTxy()));
+            CHECK(moved.getTtaux() == doctest::Approx(cell.getTtaux()));
+            CHECK(moved.getTtauy() == doctest::Approx(cell.getTtauy()));
+            CHECK(moved.getTtaueta() == doctest::Approx(cell.getTtaueta()));
+            CHECK(moved.getTxeta() == doctest::Approx(cell.getTxeta()));
+            CHECK(moved.getTyeta() == doctest::Approx(cell.getTyeta()));
+        }
+    }
+}

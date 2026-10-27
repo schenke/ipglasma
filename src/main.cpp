@@ -249,8 +249,13 @@ int main(int argc, char *argv[]) {
         // Keep the lattice lifetime inside this block so destruction is timed
         // before the per-event profile is written.
         {
-            // allocate lattice
-            Lattice lat(param, param->lattice.size);
+            // allocate lattice; a constant color-charge density models an
+            // infinite target, whose periodic Wilson lines (from the FFT
+            // Poisson solve) get a periodic lattice
+            Lattice lat(
+                param, param->lattice.size,
+                param->collision.useNucleus ? LatticeBoundary::Clamped
+                                            : LatticeBoundary::Periodic);
             messager.info("[main::main]: Lattice generated.");
 
             param->event.success = 0;

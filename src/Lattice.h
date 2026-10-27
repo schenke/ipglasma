@@ -5,6 +5,7 @@
 #ifndef SRC_LATTICE_H_
 #define SRC_LATTICE_H_
 
+#include <algorithm>
 #include <string>
 #include <vector>
 
@@ -16,16 +17,31 @@
 #include "PrettyOstream.h"
 
 /**
+ * The boundary conditions of a Lattice's nearest-neighbor tables.
+ */
+enum class LatticeBoundary {
+    /// At an edge the neighbor is the site itself, for nuclei
+    /// (`useNucleus 1`), whose fields are not periodic: the shift by the
+    /// impact parameter fills the vacated cells with the identity.
+    Clamped,
+    /// The neighbor across an edge is the site on the opposite edge, for
+    /// the infinite target of a constant color-charge density
+    /// (`useNucleus 0`), whose Wilson lines are periodic.
+    Periodic
+};
+
+/**
  * The transverse lattice: every fundamental SU(3) matrix field (stored
  * structure-of-arrays, one contiguous `std::vector<Matrix>` per field)
  * plus the scalar Cell observables and precomputed nearest-neighbor
  * index tables.
  *
- * \note posmX/pospX/posmY/pospY/posmXpY/pospXmY use *clamped*
- * (Neumann-like) boundaries -- at an edge, the neighbor index is the
- * site itself, not a periodic wraparound. Code elsewhere that needs a
- * genuinely periodic neighbor (e.g. GaugeFix::fftChi()) computes its
- * own index instead of using these arrays.
+ * \note posmX/pospX/posmY/pospY/posmXpY/pospXmY use the boundary
+ * conditions given to the constructor (see LatticeBoundary). With the
+ * default *clamped* (Neumann-like) boundaries the neighbor index at an
+ * edge is the site itself, not a periodic wraparound; code that needs a
+ * genuinely periodic neighbor also then (e.g. GaugeFix::fftChi())
+ * computes its own index instead of using these arrays.
  */
 class Lattice {
   private:
@@ -34,8 +50,24 @@ class Lattice {
     int size_;
     /// Lattice side length (sites per dimension).
     int length_;
+    /// Boundary conditions of the neighbor tables.
+    LatticeBoundary boundary_;
     /// Log sink for progress/error messages.
     PrettyOstream messager_;
+
+    /**
+     * A site coordinate that may lie up to one side length outside the
+     * lattice, mapped onto it with the boundary conditions: wrapped around
+     * for LatticeBoundary::Periodic, clamped to the edge otherwise.
+     * \param[in] i Site index in \f$x\f$ or \f$y\f$.
+     * \return The index on the lattice, between 0 and `length - 1`.
+     */
+    int boundedCoordinate(int i) const {
+        if (boundary_ == LatticeBoundary::Periodic) {
+            return (i % length_ + length_) % length_;
+        }
+        return std::min(std::max(i, 0), length_ - 1);
+    }
 
     /**
      * Writes one \f$N\times N\f$ Matrix field to a text file, one line
@@ -57,8 +89,11 @@ class Lattice {
      * `param->run.MPIRank` are used (the side length comes from \p length).
      * \param[in] length Lattice side length; total site count is
      * \p length squared.
+     * \param[in] boundary Boundary conditions of the neighbor tables.
      */
-    Lattice(Parameters *param, int length);
+    Lattice(
+        Parameters *param, int length,
+        LatticeBoundary boundary = LatticeBoundary::Clamped);
     ~Lattice() = default;
     // Copying would either deep-copy several large per-site vectors for
     // no current caller, or (if left shallow) leave `cells` dangling
@@ -81,6 +116,11 @@ class Lattice {
      */
     int getLength() const { return length_; }
     /**
+     * Whether the neighbor tables wrap around at the edges.
+     * \return Whether the boundaries are LatticeBoundary::Periodic.
+     */
+    bool isPeriodic() const { return boundary_ == LatticeBoundary::Periodic; }
+    /**
      * Site index of the transverse position (\p ix, \p iy); see
      * latticeIndex().
      * \param[in] ix Site index in \f$x\f$.
@@ -102,6 +142,19 @@ class Lattice {
      * \return The site's \f$y\f$ index.
      */
     int yFromPosition(int pos) const { return latticeY(pos, length_); }
+    /**
+     * Site index of (\p ix, \p iy), which may lie up to one side length
+     * outside the lattice, with the boundary conditions of the neighbor
+     * tables: wrapped around to the opposite edge for periodic boundaries,
+     * clamped to the edge otherwise. For stencils that reach farther than
+     * the tables, such as two sites ahead.
+     * \param[in] ix Site index in \f$x\f$.
+     * \param[in] iy Site index in \f$y\f$.
+     * \return The index into the per-site vectors.
+     */
+    int neighborPosition(int ix, int iy) const {
+        return positionFromXY(boundedCoordinate(ix), boundedCoordinate(iy));
+    }
 
     // Fundamental matrix lattice fields. Logical aliases are:
     // U/E1, U2/E2, Ux1/g, Uy1/Uplaq, Ux2/pi, Uy2/phi.
@@ -136,14 +189,17 @@ class Lattice {
     /// Owns the per-site scalar observables \c cells points into.
     std::vector<Cell> cellStorage;
 
-    /// Site index one step in \f$-x\f$, clamped at the boundary (see
-    /// the class-level \note).
+    /// Site index one step in \f$-x\f$, clamped or periodic at the
+    /// boundary (see the class-level \note).
     std::vector<int> posmX;
-    /// Site index one step in \f$+x\f$, clamped at the boundary.
+    /// Site index one step in \f$+x\f$, clamped or periodic at the
+    /// boundary.
     std::vector<int> pospX;
-    /// Site index one step in \f$-y\f$, clamped at the boundary.
+    /// Site index one step in \f$-y\f$, clamped or periodic at the
+    /// boundary.
     std::vector<int> posmY;
-    /// Site index one step in \f$+y\f$, clamped at the boundary.
+    /// Site index one step in \f$+y\f$, clamped or periodic at the
+    /// boundary.
     std::vector<int> pospY;
 
     /**
@@ -159,10 +215,10 @@ class Lattice {
      */
     void writeSU3Matrices(std::string fileprefix, Parameters *param);
     /// Site index one step in \f$-x\f$ and one step in \f$+y\f$,
-    /// clamped at the boundary.
+    /// clamped or periodic at the boundary.
     std::vector<int> posmXpY;
     /// Site index one step in \f$+x\f$ and one step in \f$-y\f$,
-    /// clamped at the boundary.
+    /// clamped or periodic at the boundary.
     std::vector<int> pospXmY;
 };
 

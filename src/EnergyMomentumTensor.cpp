@@ -4,7 +4,6 @@
 
 #include "EnergyMomentumTensor.h"
 
-#include <algorithm>
 #include <cmath>
 
 #include "Instrumentation.h"
@@ -31,6 +30,21 @@ inline Matrix makeTmunuTracelessDifference(
     return out;
 }
 
+/**
+ * Whether cell (\p i, \p j) is in the guard region of the outermost
+ * ring, where \f$T^{\mu\nu}\f$ is set to 0 because its stencils would
+ * need neighbors outside the lattice. Only clamped boundaries have one;
+ * with periodic boundaries every cell is computed.
+ * \param[in] lat Lattice, for its boundary conditions.
+ * \param[in] i Site index in \f$x\f$.
+ * \param[in] j Site index in \f$y\f$.
+ * \param[in] N Lattice side length.
+ * \return Whether the cell is a guard cell.
+ */
+inline bool isGuardCell(const Lattice *lat, int i, int j, int N) {
+    return !lat->isPeriodic() && (i == 0 || j == 0 || i == N - 1 || j == N - 1);
+}
+
 /// Scratch matrices for tmunuPlaquetteTeam(), reused across cells to
 /// avoid reallocating.
 struct TmunuPlaquetteScratch {
@@ -45,10 +59,11 @@ struct TmunuPlaquetteScratch {
 /**
  * Precomputes the spatial plaquette \f$U_x(x)\,U_y(x+\hat x)\,
  * U_x(x+\hat y)^\dagger\,U_y(x)^\dagger\f$ at every cell into
- * \c lat->Uy1, consumed by tmunuDiagonalMagneticTeam() below. The
- * outermost ring is a nonphysical guard region (\f$T^{\mu\nu}\f$'s
- * stencils need a genuine one-cell neighborhood), so it gets the
- * identity instead of a clamped, gauge-noncovariant plaquette.
+ * \c lat->Uy1, consumed by tmunuDiagonalMagneticTeam() below. On a
+ * clamped lattice the outermost ring is a nonphysical guard region
+ * (\f$T^{\mu\nu}\f$'s stencils need a genuine one-cell neighborhood,
+ * see isGuardCell()), so it gets the identity instead of a clamped,
+ * gauge-noncovariant plaquette.
  * \param[in,out] lat Lattice to read `Ux`/`Uy` from and write \c Uy1
  * into.
  * \param[in] N Lattice side length.
@@ -62,7 +77,7 @@ void tmunuPlaquetteTeam(
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             pos = lat->positionFromXY(i, j);
-            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+            if (isGuardCell(lat, i, j, N)) {
                 lat->Uy1[pos] = one;
                 continue;
             }
@@ -108,8 +123,8 @@ struct TmunuDiagonalElectricScratch {
  * \f$T^{\eta\eta}\f$'s electric (\f$E\f$, \f$\pi\f$) contribution.
  * Sets each field outright (rather than adding to it) since this runs
  * before tmunuDiagonalMagneticTeam(), which adds the magnetic/gradient
- * contribution on top; zeroes all four at the nonphysical boundary
- * ring.
+ * contribution on top; zeroes all four at the nonphysical guard ring
+ * of a clamped lattice (isGuardCell()).
  * \param[in,out] lat Lattice to read `U`/`U2`/`Ux2` from and write
  * \f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/\f$T^{\eta\eta}\f$ into
  * (via `lat->cells`).
@@ -128,7 +143,7 @@ void tmunuDiagonalElectricTeam(
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             pos = lat->positionFromXY(i, j);
-            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+            if (isGuardCell(lat, i, j, N)) {
                 lat->cells[pos]->setTtautau(0.);
                 lat->cells[pos]->setTxx(0.);
                 lat->cells[pos]->setTyy(0.);
@@ -138,8 +153,7 @@ void tmunuDiagonalElectricTeam(
             posX = lat->pospX[pos];
             posY = lat->pospY[pos];
 
-            posXY = lat->positionFromXY(
-                std::min(N - 1, i + 1), std::min(N - 1, j + 1));
+            posXY = lat->neighborPosition(i + 1, j + 1);
 
             scratch.E1 = lat->U[pos];
             scratch.E2 = lat->U2[pos];
@@ -226,8 +240,8 @@ struct TmunuDiagonalMagneticScratch {
  * Adds \f$T^{\tau\tau}\f$, \f$T^{xx}\f$, \f$T^{yy}\f$,
  * \f$T^{\eta\eta}\f$'s magnetic (plaquette) and gradient (\f$\phi\f$)
  * contribution on top of whatever tmunuDiagonalElectricTeam() set
- * (`0` at the boundary, the electric part elsewhere); a no-op at the
- * nonphysical boundary ring.
+ * (`0` at the guard ring, the electric part elsewhere); a no-op at the
+ * nonphysical guard ring of a clamped lattice (isGuardCell()).
  * \param[in,out] lat Lattice to read `Uy1`/`Uy2`/`Ux`/`Uy` from
  * and add into
  * \f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/\f$T^{\eta\eta}\f$ (via
@@ -247,15 +261,14 @@ void tmunuDiagonalMagneticTeam(
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             pos = lat->positionFromXY(i, j);
-            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+            if (isGuardCell(lat, i, j, N)) {
                 continue;
             }
 
             posX = lat->pospX[pos];
             posY = lat->pospY[pos];
 
-            posXY = lat->positionFromXY(
-                std::min(N - 1, i + 1), std::min(N - 1, j + 1));
+            posXY = lat->neighborPosition(i + 1, j + 1);
 
             scratch.Uplaq = lat->Uy1[pos];
 
@@ -515,10 +528,11 @@ struct TmunuOffDiagonalScratch {
  * Computes the six off-diagonal energy-momentum tensor components
  * (\f$T^{\tau x}\f$, \f$T^{\tau y}\f$, \f$T^{\tau\eta}\f$,
  * \f$T^{xy}\f$, \f$T^{x\eta}\f$, \f$T^{y\eta}\f$) at every cell,
- * zeroing all six at the nonphysical boundary ring, and \f$T^{\tau x}\f$,
- * \f$T^{x\eta}\f$ (\f$T^{\tau y}\f$, \f$T^{y\eta}\f$) also on the last
- * interior column (row), where their stencil, which reaches two sites
- * ahead, leaves the lattice.
+ * zeroing all six at the nonphysical guard ring of a clamped lattice
+ * (isGuardCell()), and \f$T^{\tau x}\f$, \f$T^{x\eta}\f$
+ * (\f$T^{\tau y}\f$, \f$T^{y\eta}\f$) there also on the last interior
+ * column (row), where their stencil, which reaches two sites ahead,
+ * leaves the lattice. A periodic lattice wraps the stencils around.
  * \param[in,out] lat Lattice to read the fields from and write the
  * six components into (via `lat->cells`).
  * \param[in] N Lattice side length.
@@ -539,7 +553,7 @@ void tmunuOffDiagonalTeam(
     for (int i = 0; i < N; i++) {
         for (int j = 0; j < N; j++) {
             pos = lat->positionFromXY(i, j);
-            if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+            if (isGuardCell(lat, i, j, N)) {
                 lat->cells[pos]->setTtaux(0.);
                 lat->cells[pos]->setTtauy(0.);
                 lat->cells[pos]->setTtaueta(0.);
@@ -550,8 +564,7 @@ void tmunuOffDiagonalTeam(
             }
             posX = lat->pospX[pos];
             posY = lat->pospY[pos];
-            posXY = lat->positionFromXY(
-                std::min(N - 1, i + 1), std::min(N - 1, j + 1));
+            posXY = lat->neighborPosition(i + 1, j + 1);
 
             posmX = lat->posmX[pos];
             posmY = lat->posmY[pos];
@@ -559,13 +572,11 @@ void tmunuOffDiagonalTeam(
             posmXpY = lat->posmXpY[pos];
             pospXmY = lat->pospXmY[pos];
 
-            pos2X = lat->positionFromXY(std::min(N - 1, i + 2), j);
-            pos2Y = lat->positionFromXY(i, std::min(N - 1, j + 2));
+            pos2X = lat->neighborPosition(i + 2, j);
+            pos2Y = lat->neighborPosition(i, j + 2);
 
-            pos2XY = lat->positionFromXY(
-                std::min(N - 1, i + 2), std::min(N - 1, j + 1));
-            posX2Y = lat->positionFromXY(
-                std::min(N - 1, i + 1), std::min(N - 1, j + 2));
+            pos2XY = lat->neighborPosition(i + 2, j + 1);
+            posX2Y = lat->neighborPosition(i + 1, j + 2);
 
             scratch.E1 = lat->U[pos];
             scratch.E2 = lat->U2[pos];
@@ -836,15 +847,16 @@ void tmunuOffDiagonalTeam(
 
             // T^{tau x} and T^{x eta} need the plaquette and phi two sites
             // ahead in x, T^{tau y} and T^{y eta} two sites ahead in y. On
-            // the last interior column and row these lie outside the
-            // lattice (the clamped indices give an open loop and a link
-            // that leaves it), so the components are 0 there, like on the
-            // outermost ring (issue #112).
-            if (i == N - 2) {
+            // the last interior column and row of a clamped lattice these
+            // lie outside it (the clamped indices give an open loop and a
+            // link that leaves it), so the components are 0 there, like on
+            // the outermost ring (issue #112). A periodic lattice wraps
+            // around instead.
+            if (!lat->isPeriodic() && i == N - 2) {
                 lat->cells[pos]->setTtaux(0.);
                 lat->cells[pos]->setTxeta(0.);
             }
-            if (j == N - 2) {
+            if (!lat->isPeriodic() && j == N - 2) {
                 lat->cells[pos]->setTtauy(0.);
                 lat->cells[pos]->setTyeta(0.);
             }
@@ -868,7 +880,8 @@ void tmunuOffDiagonalTeam(
  * Sets \f$\epsilon = T^{\tau\tau}\f$ (before lattice-unit rescaling),
  * then rescales \f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/
  * \f$T^{\eta\eta}\f$ and \f$\epsilon\f$ from lattice to physical
- * units; zeroes all five at the nonphysical boundary ring.
+ * units; zeroes all five at the nonphysical guard ring of a clamped
+ * lattice (isGuardCell()).
  * \param[in,out] lat Lattice to read/write
  * \f$\epsilon\f$/\f$T^{\tau\tau}\f$/\f$T^{xx}\f$/\f$T^{yy}\f$/
  * \f$T^{\eta\eta}\f$ in place (via `lat->cells`).
@@ -880,7 +893,7 @@ void tmunuNormalizeDiagonalTeam(Lattice *lat, int N, double a) {
     for (int pos = 0; pos < N * N; pos++) {
         const int i = lat->xFromPosition(pos);
         const int j = pos - i * N;
-        if (i == 0 || j == 0 || i == N - 1 || j == N - 1) {
+        if (isGuardCell(lat, i, j, N)) {
             lat->cells[pos]->setEpsilon(0.);
             lat->cells[pos]->setTtautau(0.);
             lat->cells[pos]->setTxx(0.);

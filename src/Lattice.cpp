@@ -4,7 +4,6 @@
 
 #include "Lattice.h"
 
-#include <algorithm>
 #include <cstdlib>
 #include <fstream>
 #include <iomanip>
@@ -17,14 +16,16 @@
 
 using PhysConst::Nc;
 
-Lattice::Lattice(Parameters *param, int length) {
+Lattice::Lattice(Parameters *param, int length, LatticeBoundary boundary)
+    : boundary_(boundary) {
     IPG_PROFILE_SCOPE("lattice.allocate");
     size_ = length * length;
     length_ = length;
     const double a = param->lattice.L / static_cast<double>(length);
 
     messager_ << "[Lattice::Lattice]: Allocating square lattice of size "
-              << length << "x" << length << " with a=" << a << " fm ...";
+              << length << "x" << length << " with a=" << a << " fm and "
+              << (isPeriodic() ? "periodic" : "clamped") << " boundaries ...";
 
     // Each vector is one contiguous field of fixed 3x3 matrices.  Preserve the
     // original Cell constructor semantics: all eight matrices start as I_3.
@@ -51,11 +52,11 @@ Lattice::Lattice(Parameters *param, int length) {
     pospXmY.reserve(size_);
 
     for (int i = 0; i < length; ++i) {
-        const int im = std::max(0, i - 1);
-        const int ip = std::min(length - 1, i + 1);
+        const int im = boundedCoordinate(i - 1);
+        const int ip = boundedCoordinate(i + 1);
         for (int j = 0; j < length; ++j) {
-            const int jm = std::max(0, j - 1);
-            const int jp = std::min(length - 1, j + 1);
+            const int jm = boundedCoordinate(j - 1);
+            const int jp = boundedCoordinate(j + 1);
 
             pospX.push_back(latticeIndex(ip, j, length));
             pospY.push_back(latticeIndex(i, jp, length));

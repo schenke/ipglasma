@@ -234,6 +234,26 @@ InterpolationStencil interpolationStencil(
 }
 
 /**
+ * Whether the output point \f$(x, y)\f$ lies on the lattice, so the output
+ * writers interpolate the fields there; points outside are written as
+ * vacuum. A periodic lattice (`useNucleus 0`) covers
+ * \f$-L/2 \le x < L/2\f$, so the edge at \f$-L/2\f$, lattice site 0, is
+ * an ordinary point. On a clamped lattice the points on either edge are left
+ * out, where the cells are the guard ring of EnergyMomentumTensor.
+ * \param[in] lat Lattice, for its boundaries.
+ * \param[in] x Output point [fm].
+ * \param[in] y Output point [fm].
+ * \param[in] L Lattice size [fm].
+ * \return Whether the point is on the lattice.
+ */
+bool onOutputLattice(const Lattice *lat, double x, double y, double L) {
+    if (lat->isPeriodic()) {
+        return -L / 2. <= x && x < L / 2. && -L / 2. <= y && y < L / 2.;
+    }
+    return std::abs(x) < L / 2. && std::abs(y) < L / 2.;
+}
+
+/**
  * Solves for the local flow velocity \f$u^\mu\f$ and energy density at
  * one lattice cell by diagonalizing the mixed tensor \f$T^\mu_\nu\f$
  * (Landau matching: find its timelike eigenvector, normalized under
@@ -357,8 +377,9 @@ void solveFlowVelocityAtCell(
                 sqrt(abs(GSL_REAL(euklidiansquare) / GSL_REAL(square))), 0);
             if (GSL_REAL(square) > 0) {
                 eps = GSL_REAL(eval_i);
-                if (abs(GSL_IMAG(eval_i)) > 0.001 && si > 0 && sj > 0
-                    && si < N - 5 && sj < N - 5) {
+                if (abs(GSL_IMAG(eval_i)) > 0.001
+                    && (lat->isPeriodic()
+                        || (si > 0 && sj > 0 && si < N - 5 && sj < N - 5))) {
                     eps = lat->cells[pos]->getTtautau();
                 }
             }
@@ -421,8 +442,10 @@ void solveFlowVelocityAtCell(
                         else
                             ueta = 0.;
                     }
-                    if (abs(GSL_IMAG(z)) > 0.001 && eps > 0.001 && si > 10
-                        && sj > 10 && si < N - 10 && sj < N - 10) {
+                    if (abs(GSL_IMAG(z)) > 0.001 && eps > 0.001
+                        && (lat->isPeriodic()
+                            || (si > 10 && sj > 10 && si < N - 10
+                                && sj < N - 10))) {
                         utau = 1.;
                         ux = 0.;
                         uy = 0.;
@@ -842,7 +865,7 @@ void MyEigen::writeRawTmunu(
         for (int ix = 0; ix < hx; ix++) {
             x = -hL / 2. + ha * ix;
             y = -hL / 2. + ha * iy;
-            if (abs(x) < L / 2. && abs(y) < L / 2.) {
+            if (onOutputLattice(lat, x, y, L)) {
                 // the coupling factor is at the lattice sites, T^{mu nu} at
                 // the plaquette centers
                 const InterpolationStencil site =
@@ -964,8 +987,8 @@ void MyEigen::writeJazma(
     double ha) {
     if (!param->output.writeJazma) return;
 
-    int xpos, ypos, xposUp, yposUp, pos1, pos2, pos3, pos4;
-    double fracx, fracy, xlow, ylow, x, y;
+    int pos1, pos2, pos3, pos4;
+    double fracx, fracy, x, y;
     double g2mu2A, g2mu2B;
 
     double Jaztot = 0.;
@@ -979,32 +1002,16 @@ void MyEigen::writeJazma(
                 x = -hL / 2. + ha * ix;
                 y = -hL / 2. + ha * iy;
 
-                if (abs(x) < L / 2. && abs(y) < L / 2.) {
-                    xpos = static_cast<int>(
-                        floor((x + L / 2.) / a + 0.0000000001));
-                    ypos = static_cast<int>(
-                        floor((y + L / 2.) / a + 0.0000000001));
-
-                    if (xpos < N - 1)
-                        xposUp = xpos + 1;
-                    else
-                        xposUp = xpos;
-
-                    if (ypos < N - 1)
-                        yposUp = ypos + 1;
-                    else
-                        yposUp = ypos;
-
-                    xlow = -L / 2. + a * xpos;
-                    ylow = -L / 2. + a * ypos;
-
-                    fracx = (x - xlow) / a;
-                    fracy = (y - ylow) / a;
-
-                    pos1 = lat->positionFromXY(xpos, ypos);
-                    pos2 = lat->positionFromXY(xposUp, ypos);
-                    pos3 = lat->positionFromXY(xpos, yposUp);
-                    pos4 = lat->positionFromXY(xposUp, yposUp);
+                if (onOutputLattice(lat, x, y, L)) {
+                    // g^2 mu^2 is at the lattice sites
+                    const InterpolationStencil site =
+                        interpolationStencil(lat, x, y, L, a, N, 0.);
+                    pos1 = site.pos1;
+                    pos2 = site.pos2;
+                    pos3 = site.pos3;
+                    pos4 = site.pos4;
+                    fracx = site.fracx;
+                    fracy = site.fracy;
 
                     g2mu2A = interpolateCellField(
                         lat, pos1, pos2, pos3, pos4, N, fracx, fracy,
@@ -1040,32 +1047,16 @@ void MyEigen::writeJazma(
                 x = -hL / 2. + ha * ix;
                 y = -hL / 2. + ha * iy;
 
-                if (abs(x) < L / 2. && abs(y) < L / 2.) {
-                    xpos = static_cast<int>(
-                        floor((x + L / 2.) / a + 0.0000000001));
-                    ypos = static_cast<int>(
-                        floor((y + L / 2.) / a + 0.0000000001));
-
-                    if (xpos < N - 1)
-                        xposUp = xpos + 1;
-                    else
-                        xposUp = xpos;
-
-                    if (ypos < N - 1)
-                        yposUp = ypos + 1;
-                    else
-                        yposUp = ypos;
-
-                    xlow = -L / 2. + a * xpos;
-                    ylow = -L / 2. + a * ypos;
-
-                    fracx = (x - xlow) / a;
-                    fracy = (y - ylow) / a;
-
-                    pos1 = lat->positionFromXY(xpos, ypos);
-                    pos2 = lat->positionFromXY(xposUp, ypos);
-                    pos3 = lat->positionFromXY(xpos, yposUp);
-                    pos4 = lat->positionFromXY(xposUp, yposUp);
+                if (onOutputLattice(lat, x, y, L)) {
+                    // g^2 mu^2 is at the lattice sites
+                    const InterpolationStencil site =
+                        interpolationStencil(lat, x, y, L, a, N, 0.);
+                    pos1 = site.pos1;
+                    pos2 = site.pos2;
+                    pos3 = site.pos3;
+                    pos4 = site.pos4;
+                    fracx = site.fracx;
+                    fracy = site.fracy;
 
                     g2mu2A = interpolateCellField(
                         lat, pos1, pos2, pos3, pos4, N, fracx, fracy,

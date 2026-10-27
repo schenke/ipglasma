@@ -161,3 +161,13 @@ TEST_CASE(
         }
     }
 }
+
+TEST_CASE(
+    "latticeBoundary: periodic for a constant color-charge density, clamped "
+    "for nuclei") {
+    Parameters param;
+    param.collision.useNucleus = false;
+    CHECK(latticeBoundary(param) == LatticeBoundary::Periodic);
+    param.collision.useNucleus = true;
+    CHECK(latticeBoundary(param) == LatticeBoundary::Clamped);
+}

@@ -31,6 +31,19 @@ enum class LatticeBoundary {
 };
 
 /**
+ * The boundary conditions of the lattice of an event: periodic for the
+ * infinite target of a constant color-charge density (`useNucleus 0`),
+ * whose Wilson lines are periodic, clamped for nuclei.
+ * \param[in] param Simulation parameters; only `param.collision.useNucleus`
+ * is used.
+ * \return The boundary conditions for the Lattice constructor.
+ */
+inline LatticeBoundary latticeBoundary(const Parameters &param) {
+    return param.collision.useNucleus ? LatticeBoundary::Clamped
+                                      : LatticeBoundary::Periodic;
+}
+
+/**
  * The transverse lattice: every fundamental SU(3) matrix field (stored
  * structure-of-arrays, one contiguous `std::vector<Matrix>` per field)
  * plus the scalar Cell observables and precomputed nearest-neighbor

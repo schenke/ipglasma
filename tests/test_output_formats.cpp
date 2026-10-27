@@ -338,9 +338,10 @@ TEST_CASE(
     "after the last plaquette center is interpolated across the edge") {
     // As above, but with periodic boundaries (useNucleus 0) the plaquette
     // centers continue beyond the edges: the one after the last is the
-    // first. The profile jumps there, so the interpolation across the edge
-    // differs from the value of either edge plaquette.
-    const double e0 = 2., slope = 0.1;  // [fm^-4], [fm^-5]
+    // first. The profile is the sum of one in x and one in y, which
+    // bilinear interpolation reproduces term by term, and both jump at the
+    // edge, so the interpolation across it, in x, in y and at the corners,
+    // differs from the value of any edge plaquette.
     Parameters param;
     makeOutputTestParam(param);
     param.output.LOutput = 7.8;
@@ -349,15 +350,20 @@ TEST_CASE(
     const double a = L / N;
     const double tau = it * param.run.dtau * a;
     Lattice lat(&param, N, LatticeBoundary::Periodic);
-    std::vector<double> plaquette(N);
+    std::vector<double> profileX(N), profileY(N);
+    for (int i = 0; i < N; ++i) {
+        const double center = -L / 2. + a * (i + 0.5);  // [fm]
+        profileX[i] = 2. + 0.1 * center;                // [fm^-4]
+        profileY[i] = 1. - 0.07 * center;
+    }
     for (int ix = 0; ix < N; ++ix) {
-        plaquette[ix] = e0 + slope * (-L / 2. + a * (ix + 0.5));
         for (int iy = 0; iy < N; ++iy) {
+            const double eps = profileX[ix] + profileY[iy];
             Cell *cell = lat.cells[lat.positionFromXY(ix, iy)];
-            cell->setTtautau(plaquette[ix]);
-            cell->setTxx(plaquette[ix] / 3.);
-            cell->setTyy(plaquette[ix] / 3.);
-            cell->setTetaeta(plaquette[ix] / 3. / (tau * tau));
+            cell->setTtautau(eps);
+            cell->setTxx(eps / 3.);
+            cell->setTyy(eps / 3.);
+            cell->setTetaeta(eps / 3. / (tau * tau));
         }
     }
     param.output.writeTmunu = true;
@@ -369,23 +375,82 @@ TEST_CASE(
     REQUIRE(table.rows.size() == 39 * 39);
     const double dx = param.output.LOutput / param.output.sizeOutput;
     const double firstCenter = -L / 2. + a / 2., lastCenter = L / 2. - a / 2.;
-    int before = 0, after = 0;
-    for (const auto &row : table.rows) {
-        const double x = -param.output.LOutput / 2. + dx * std::stoi(row[0]);
-        CAPTURE(x);
-        if (x < firstCenter - 1e-9) before++;
-        if (x > lastCenter + 1e-9) after++;
+    // the profile interpolated linearly between the plaquette centers,
+    // periodically continued
+    auto interpolate = [&](const std::vector<double> &profile, double x) {
         const double s = (x - firstCenter) / a;
         const int low = static_cast<int>(std::floor(s + 1e-9));
         const double frac = s - low;
-        const double expected = (1. - frac) * plaquette[(low % N + N) % N]
-                                + frac * plaquette[(low + 1 + N) % N];
+        return (1. - frac) * profile[(low % N + N) % N]
+               + frac * profile[((low + 1) % N + N) % N];
+    };
+    auto outside = [&](double x) {
+        return x < firstCenter - 1e-9 || x > lastCenter + 1e-9;
+    };
+    int edgeX = 0, edgeY = 0, corners = 0;
+    for (const auto &row : table.rows) {
+        const double x = -param.output.LOutput / 2. + dx * std::stoi(row[0]);
+        const double y = -param.output.LOutput / 2. + dx * std::stoi(row[1]);
+        CAPTURE(x);
+        CAPTURE(y);
+        edgeX += outside(x);
+        edgeY += outside(y);
+        corners += outside(x) && outside(y);
         CHECK(
             std::stod(row[2])
-            == doctest::Approx(hbarc * expected).epsilon(1e-5));
+            == doctest::Approx(
+                   hbarc
+                   * (interpolate(profileX, x) + interpolate(profileY, y)))
+                   .epsilon(1e-5));
     }
-    CHECK(before > 0);
-    CHECK(after > 0);
+    CHECK(edgeX > 0);
+    CHECK(edgeY > 0);
+    CHECK(corners > 0);
+}
+
+TEST_CASE(
+    "Output format: on a periodic lattice, an output grid equal to the "
+    "lattice has no vacuum points, while a clamped lattice leaves out the "
+    "edge at -L/2") {
+    // With LOutput = L and sizeOutput = N, the output points are the lattice
+    // sites, from -L/2 to L/2 - a. On a periodic lattice the row and column
+    // at -L/2 are ordinary sites; on a clamped one they lie on the guard
+    // ring of T^{mu nu} and are written as vacuum.
+    for (const LatticeBoundary boundary :
+         {LatticeBoundary::Periodic, LatticeBoundary::Clamped}) {
+        const bool periodic = boundary == LatticeBoundary::Periodic;
+        CAPTURE(periodic);
+        Parameters param;
+        makeOutputTestParam(param);
+        param.output.LOutput = param.lattice.L;
+        param.output.sizeOutput = N;
+        const double tau = it * param.run.dtau * param.lattice.L / N;
+        Lattice lat(&param, N, boundary);
+        for (int pos = 0; pos < N * N; ++pos) {
+            Cell *cell = lat.cells[pos];
+            cell->setTtautau(e);
+            cell->setTxx(e / 3.);
+            cell->setTyy(e / 3.);
+            cell->setTetaeta(e / 3. / (tau * tau));
+        }
+        param.output.writeTmunu = true;
+        param.output.writeTmunuBinary = false;
+        MyEigen().writeTmunu4D(&lat, &param, it);
+        const std::string fileName = "Tmunu-t0.5-0.dat";
+        const TextTable table = readTextTable(fileName);
+        std::remove(fileName.c_str());
+        REQUIRE(table.rows.size() == static_cast<std::size_t>(N * N));
+        int vacuum = 0;
+        for (const auto &row : table.rows) {
+            const bool edge = std::stoi(row[0]) == 0 || std::stoi(row[1]) == 0;
+            const double value = std::stod(row[2]);
+            if (value < 1e-10) vacuum++;
+            if (periodic || !edge) {
+                CHECK(value == doctest::Approx(hbarc * e).epsilon(1e-5));
+            }
+        }
+        CHECK(vacuum == (periodic ? 0 : 2 * N - 1));
+    }
 }
 
 TEST_CASE(

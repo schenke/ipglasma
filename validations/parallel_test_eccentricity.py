@@ -120,9 +120,18 @@ def generate_temp_input(template_path, overrides, tag, working_dir):
 # running one event
 # --------------------------------------------------------------------------
 
+def threads_per_event():
+    """The OpenMP threads of one event: OMP_NUM_THREADS, default 1."""
+    try:
+        return max(1, int(os.environ.get("OMP_NUM_THREADS", "1")))
+    except ValueError:
+        return 1
+
+
 def run_command(cmd, cwd, log_path, slurm=False):
     if slurm:
-        cmd = ["srun", "--ntasks=1", "--cpus-per-task=1"] + list(cmd)
+        cmd = ["srun", "--ntasks=1",
+               "--cpus-per-task={0}".format(threads_per_event())] + list(cmd)
     result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
     with open(log_path, "w") as f:
         f.write("$ {0}\n".format(" ".join(cmd)))
@@ -528,7 +537,8 @@ def main():
                               "(including failed ones, which are always kept)")
     parser.add_argument("--slurm", action="store_true",
                          help="wrap each ipglasma invocation with "
-                              "'srun --ntasks=1 --cpus-per-task=1'")
+                              "'srun --ntasks=1 --cpus-per-task=N', N = "
+                              "OMP_NUM_THREADS (default 1)")
     parser.add_argument("--plot-only", action="store_true",
                          help="skip launching new ipglasma runs; instead "
                               "rebuild the eps2 distribution from the "

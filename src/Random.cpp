@@ -214,12 +214,14 @@ void Random::gaussBulk(
     const std::size_t pairCount = (remaining + 1) / 2;
 
     // First 3*pairCount doubles hold accepted (v1,v2,rsq) triples.  The final
-    // 2*pairCount doubles are temporary converted uniforms for one rejection
-    // round.  Raw MT words live in a reusable Random-owned buffer.
-    scratch.resize(5 * pairCount);
+    // 3*pairCount doubles hold the (v1,v2,rsq) candidates of one rejection
+    // round, with v = 2u - 1.  Raw MT words and the accept decisions live in
+    // reusable Random-owned buffers.
+    scratch.resize(6 * pairCount);
     double *accepted = scratch.data();
-    double *uniforms = scratch.data() + 3 * pairCount;
+    double *candidates = scratch.data() + 3 * pairCount;
     bulkRawScratch_.resize(2 * pairCount);
+    bulkAcceptScratch_.resize(pairCount);
 
     const bool profile = ipg::Profiler::instance().enabled();
     double phaseStart = profile ? ipg::wallSeconds() : 0.0;
@@ -235,10 +237,14 @@ void Random::gaussBulk(
 
         // Temper the words, test the candidate pairs and keep the accepted
         // ones in one parallel region (issue #121). Each thread handles a
-        // contiguous range of pairs: it counts its accepted pairs, a prefix
-        // sum over the threads gives each one its offset, and the accepted
-        // pairs are written in the original RNG order, so the rejection
-        // decisions and the order are exactly those of gauss().
+        // contiguous range of pairs: it computes and tests its candidates and
+        // counts the accepted ones, a prefix sum over the threads gives each
+        // one its offset, and the accepted pairs are copied in the original
+        // RNG order, so the rejection decisions and the order are exactly
+        // those of gauss(). The copy uses the stored decisions and values
+        // rather than recomputing them, so the offsets of the prefix sum
+        // cannot disagree with it, whatever the compiler does with the
+        // floating-point arithmetic of the two loops.
 #pragma omp parallel
         {
 #ifdef _OPENMP
@@ -254,16 +260,22 @@ void Random::gaussBulk(
             const std::size_t end = needed * (thread + 1) / threads;
             std::size_t acceptedHere = 0;
             for (std::size_t pair = begin; pair < end; ++pair) {
-                for (std::size_t q = 2 * pair; q < 2 * pair + 2; ++q) {
-                    const unsigned long long x = temperMT64(bulkRawScratch_[q]);
-                    uniforms[q] =
+                double v[2];
+                for (int k = 0; k < 2; ++k) {
+                    const unsigned long long x =
+                        temperMT64(bulkRawScratch_[2 * pair + k]);
+                    v[k] =
                         2.0 * (((x >> 12) + 0.5) * (1.0 / 4503599627370496.0))
                         - 1.0;
                 }
-                const double v1 = uniforms[2 * pair];
-                const double v2 = uniforms[2 * pair + 1];
-                const double rsq = v1 * v1 + v2 * v2;
-                if (rsq <= 1.0 && rsq != 0.0) acceptedHere++;
+                const double rsq = v[0] * v[0] + v[1] * v[1];
+                const bool accept = rsq <= 1.0 && rsq != 0.0;
+                double *candidate = candidates + 3 * pair;
+                candidate[0] = v[0];
+                candidate[1] = v[1];
+                candidate[2] = rsq;
+                bulkAcceptScratch_[pair] = accept;
+                acceptedHere += accept;
             }
             bulkCountScratch_[thread + 1] = acceptedHere;
 #pragma omp barrier
@@ -273,14 +285,10 @@ void Random::gaussBulk(
             }
             std::size_t next = acceptedPairs + bulkCountScratch_[thread];
             for (std::size_t pair = begin; pair < end; ++pair) {
-                const double v1 = uniforms[2 * pair];
-                const double v2 = uniforms[2 * pair + 1];
-                const double rsq = v1 * v1 + v2 * v2;
-                if (rsq <= 1.0 && rsq != 0.0) {
-                    const std::size_t base = 3 * next++;
-                    accepted[base] = v1;
-                    accepted[base + 1] = v2;
-                    accepted[base + 2] = rsq;
+                if (bulkAcceptScratch_[pair]) {
+                    std::memcpy(
+                        accepted + 3 * next++, candidates + 3 * pair,
+                        3 * sizeof(double));
                 }
             }
         }

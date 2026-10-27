@@ -48,6 +48,10 @@ class Random {
     /// Reusable scratch buffer for gaussBulk()'s per-thread counts of
     /// accepted pairs and their prefix sum.
     std::vector<std::size_t> bulkCountScratch_;
+    /// Reusable scratch buffer for gaussBulk()'s accept decision of each
+    /// candidate pair of a rejection round, made once in the counting pass
+    /// and reused by the writing pass.
+    std::vector<unsigned char> bulkAcceptScratch_;
     /// Index of the next unused word in \c mt_; `NN+1` means \c mt_ is
     /// not yet initialized (twist() will seed it with 5489 on first
     /// use).

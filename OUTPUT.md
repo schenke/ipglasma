@@ -510,6 +510,8 @@ writes the hydro or text T^μν file of one event back out of `RESULTS.h5`.
   - Appended per event, tab-separated, with the columns `rank`, `event`,
     `phase`, `seconds`, `calls`, `percent_event`, including an `event.total`
     row.
+  - With MPI, the last rows have the event `-1`: the time the rank waits at
+    the end of the run for the other ranks (`mpi.barrier`).
 - **`ipglasma_fingerprint_rank<rank>.tsv`:** with
   `IPGLASMA_FINGERPRINT=1`, also in `IPGLASMA_PROFILE_DIR`.
   - Per event and field (ε, the T^μν components, …), the columns `rank`,

@@ -108,6 +108,7 @@ writeOutputsToHDF5 0
 useJIMWLK 1
 jimwlkMu0 0.28
 jimwlkAlphaS 0
+jimwlkRunningCoupling 1
 jimwlkInitialX 0.01
 jimwlkDs 0.003
 jimwlkLambdaQCD 0.040

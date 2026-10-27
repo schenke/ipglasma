@@ -274,9 +274,12 @@ The JIMWLK evolution starts from a fixed $x$, `jimwlkInitialX`, and evolves the 
 - **jimwlkMass** (only used with `useJIMWLK 1`): Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkAlphaS** (only used with `useJIMWLK 1`): Coupling constant in the JIMWLK evolution
   - 0 (any value within $10^{-8}$ of 0): Use running coupling
-- **jimwlkLambdaQCD** (only used with `useJIMWLK 1`): $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
-- **jimwlkMu0** (only used with `useJIMWLK 1`): Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
-- **jimwlkC** (optional, default `0.2`, only used with `useJIMWLK 1`): parameter $c$ in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712); $N_f$ there is `nFlavors`
+- **jimwlkRunningCoupling** (optional, default `1`, only used with `useJIMWLK 1` and `jimwlkAlphaS 0`): where the running coupling enters the JIMWLK evolution, see [arXiv:1212.4825](https://arxiv.org/abs/1212.4825)
+  - 1: the "square root" coupling: the kernel is multiplied by $\sqrt{\alpha_s(r)}$, with $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
+  - 2: the "noise" coupling of Eqs. (24)-(25) of [arXiv:1212.4825](https://arxiv.org/abs/1212.4825): the kernel has no coupling, and the noise has the correlator $\langle \eta_x \eta_y \rangle = \int \frac{d^2k}{(2\pi)^2} e^{ik\cdot(x-y)} \alpha_s(k)$, with $\alpha_s(k) = \frac{4\pi}{\beta_0 c \ln[(\mu_0/\Lambda_\mathrm{QCD})^{2/c} + (k/\Lambda_\mathrm{QCD})^{2/c}]}$ (Eq. (39) there; $\mu_0$ = `jimwlkMu0`, $\Lambda_\mathrm{QCD}$ = `jimwlkLambdaQCD`, $c$ = `jimwlkC`, $\beta_0 = (11 N_c - 2 N_f)/3$) of the lattice momentum $k^2 = (2/a)^2[\sin^2(k_x a/2) + \sin^2(k_y a/2)]$. The evolution is slower than with `1` for the same parameters; the parameters of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712) were fitted with `1`
+- **jimwlkLambdaQCD** (only used with `useJIMWLK 1`): $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712), or in $\alpha_s(k)$ with `jimwlkRunningCoupling 2`
+- **jimwlkMu0** (only used with `useJIMWLK 1`): Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712), or in $\alpha_s(k)$ with `jimwlkRunningCoupling 2`
+- **jimwlkC** (optional, default `0.2`, only used with `useJIMWLK 1`): parameter $c$ in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712), or in $\alpha_s(k)$ with `jimwlkRunningCoupling 2`; $N_f$ there is `nFlavors`
 - **jimwlkDs** (only used with `useJIMWLK 1`): step size in JIMWLK evolution. Recommended values, for an evolution over up to about 5 units of rapidity with the IR regulator `jimwlkMass 0.4` and, with running coupling, the coupling parameters of the example input:
   - 0.003 with running coupling (the step of the example input and of arXiv:2502.05138)
   - 0.0005 with fixed coupling

@@ -4,6 +4,10 @@
 
 #include "Random.h"
 
+#ifdef _OPENMP
+#include <omp.h>
+#endif
+
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -210,12 +214,14 @@ void Random::gaussBulk(
     const std::size_t pairCount = (remaining + 1) / 2;
 
     // First 3*pairCount doubles hold accepted (v1,v2,rsq) triples.  The final
-    // 2*pairCount doubles are temporary converted uniforms for one rejection
-    // round.  Raw MT words live in a reusable Random-owned buffer.
-    scratch.resize(5 * pairCount);
+    // 3*pairCount doubles hold the (v1,v2,rsq) candidates of one rejection
+    // round, with v = 2u - 1.  Raw MT words and the accept decisions live in
+    // reusable Random-owned buffers.
+    scratch.resize(6 * pairCount);
     double *accepted = scratch.data();
-    double *uniforms = scratch.data() + 3 * pairCount;
+    double *candidates = scratch.data() + 3 * pairCount;
     bulkRawScratch_.resize(2 * pairCount);
+    bulkAcceptScratch_.resize(pairCount);
 
     const bool profile = ipg::Profiler::instance().enabled();
     double phaseStart = profile ? ipg::wallSeconds() : 0.0;
@@ -226,29 +232,67 @@ void Random::gaussBulk(
         const std::size_t uniformCount = 2 * needed;
 
         // Advance the MT state exactly as the scalar generator would, but copy
-        // the untempered state words out in bulk. Tempering is independent for
-        // every word and can therefore use the existing OpenMP team safely.
+        // the untempered state words out in bulk (the recurrence is serial).
         genrand64RawBulk(bulkRawScratch_.data(), uniformCount);
 
-#pragma omp parallel for
-        for (std::size_t q = 0; q < uniformCount; ++q) {
-            const unsigned long long x = temperMT64(bulkRawScratch_[q]);
-            uniforms[q] = ((x >> 12) + 0.5) * (1.0 / 4503599627370496.0);
-        }
-
-        // Scan candidates serially in original RNG order.  This preserves the
-        // precise rejection decisions and accepted-pair ordering of gauss().
-        for (std::size_t pair = 0; pair < needed; ++pair) {
-            const double v1 = 2.0 * uniforms[2 * pair] - 1.0;
-            const double v2 = 2.0 * uniforms[2 * pair + 1] - 1.0;
-            const double rsq = v1 * v1 + v2 * v2;
-            if (rsq <= 1.0 && rsq != 0.0) {
-                const std::size_t base = 3 * acceptedPairs++;
-                accepted[base] = v1;
-                accepted[base + 1] = v2;
-                accepted[base + 2] = rsq;
+        // Temper the words, test the candidate pairs and keep the accepted
+        // ones in one parallel region (issue #121). Each thread handles a
+        // contiguous range of pairs: it computes and tests its candidates and
+        // counts the accepted ones, a prefix sum over the threads gives each
+        // one its offset, and the accepted pairs are copied in the original
+        // RNG order, so the rejection decisions and the order are exactly
+        // those of gauss(). The copy uses the stored decisions and values
+        // rather than recomputing them, so the offsets of the prefix sum
+        // cannot disagree with it, whatever the compiler does with the
+        // floating-point arithmetic of the two loops.
+#pragma omp parallel
+        {
+#ifdef _OPENMP
+            const std::size_t thread = omp_get_thread_num();
+            const std::size_t threads = omp_get_num_threads();
+#else
+            const std::size_t thread = 0;
+            const std::size_t threads = 1;
+#endif
+#pragma omp single
+            bulkCountScratch_.assign(threads + 1, 0);
+            const std::size_t begin = needed * thread / threads;
+            const std::size_t end = needed * (thread + 1) / threads;
+            std::size_t acceptedHere = 0;
+            for (std::size_t pair = begin; pair < end; ++pair) {
+                double v[2];
+                for (int k = 0; k < 2; ++k) {
+                    const unsigned long long x =
+                        temperMT64(bulkRawScratch_[2 * pair + k]);
+                    v[k] =
+                        2.0 * (((x >> 12) + 0.5) * (1.0 / 4503599627370496.0))
+                        - 1.0;
+                }
+                const double rsq = v[0] * v[0] + v[1] * v[1];
+                const bool accept = rsq <= 1.0 && rsq != 0.0;
+                double *candidate = candidates + 3 * pair;
+                candidate[0] = v[0];
+                candidate[1] = v[1];
+                candidate[2] = rsq;
+                bulkAcceptScratch_[pair] = accept;
+                acceptedHere += accept;
+            }
+            bulkCountScratch_[thread + 1] = acceptedHere;
+#pragma omp barrier
+#pragma omp single
+            for (std::size_t t = 0; t < threads; ++t) {
+                bulkCountScratch_[t + 1] += bulkCountScratch_[t];
+            }
+            std::size_t next = acceptedPairs + bulkCountScratch_[thread];
+            for (std::size_t pair = begin; pair < end; ++pair) {
+                if (bulkAcceptScratch_[pair]) {
+                    std::memcpy(
+                        accepted + 3 * next++, candidates + 3 * pair,
+                        3 * sizeof(double));
+                }
             }
         }
+        acceptedPairs += bulkCountScratch_.back();
     }
 
     if (profile) {

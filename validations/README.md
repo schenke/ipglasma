@@ -16,6 +16,9 @@ parts of the code against exact or published results:
   checks the resulting ε₂ distribution against a saved baseline. This is the
   lighter-weight "did the physics silently change" check and is a good first
   thing to run after touching the code.
+- **`dipole_correlator/`** — the dipole correlator of the MV model (constant
+  color-charge density) against its exact lattice prediction, for a scan of
+  `g2muGeV`, `m` and `Ny`, optionally also of `UVDamp` (see below).
 - **`lattice_symmetries/`** — two exact symmetries of the lattice
   formulation, the transposition x ↔ y and the exchange of projectile and
   target, applied to the Wilson lines of a Pb+Pb event (see below).
@@ -84,6 +87,67 @@ Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 the exact command used to reproduce the run. The script exits non-zero if the
 new distribution's mean/std or KS test drifts beyond tolerance
 (`--mean-tol`, `--std-tol`) from the reference.
+
+### Dipole correlator of the MV model
+
+`dipole_correlator/dipole_correlator.py` (issue #123) tests the Wilson lines:
+the normalization of the color charges (and that `g` drops out), the
+momentum-space kernel with lattice momenta, IR regulator and UV damping,
+the FFT conventions and the product over the `Ny` layers.
+
+With a constant color-charge density (`useNucleus 0`), the layers are
+Gaussian with the two-point function, summed over the layers,
+
+G(r) = (g²μ a)²/N² Σ_k K(k)² cos(k·r),
+K(k) = exp(−|k̃| u)/[(k̃ a)² + (m a)²] (K(0) = 0 for m = 0),
+
+exactly on the periodic lattice, with the lattice momentum
+k̃² a² = 4[sin²(k_x a/2) + sin²(k_y a/2)] and the UV damping u. The dipole
+correlator D(r) = Re⟨tr V†(x) V(x+r)⟩/N_c therefore tends to
+D_G(r) = exp{−C_F [G(0) − G(r)]} for `Ny` → ∞, with corrections of order
+1/`Ny`; no continuum or infinite-volume approximation enters. The script
+runs IP-Glasma (`runEvolution 0`, `writeWilsonLines 2`, input template
+`dipole_correlator/input_dipole`) for each setting and seed, computes D(r)
+from the two nuclei of each run (two independent configurations) along the
+axes and the diagonal, averaged over all sites, and checks that
+
+- D approaches D_G for large `Ny`,
+- `Ny` (D − D_G) at the r where D_G = e^{−1/2} tends to a constant,
+- the extrapolation D − D_G = d_∞ + c/`Ny` (for `Ny` ≥ 5) gives a d_∞
+  consistent with 0,
+- a run with `g 2` gives the same D as with `g 1` (to rounding).
+
+It also reports Q_s/g²μ, with D(r_s) = e^{−1/2} and Q_s² = 2/r_s², to be
+compared with T. Lappi, Eur. Phys. J. C 55 (2008) 285
+([arXiv:0711.3039](https://arxiv.org/abs/0711.3039)).
+
+```bash
+cd dipole_correlator
+# quick test: 64², g²μ = 1 GeV, m = 0.2 GeV, Ny = 1...50, 2 seeds (seconds)
+python3 dipole_correlator.py --ipglasma-path ../.. --quick --max-workers 4
+# the scan for the paper: 512², L = 25.6 fm, g²μ = 0.5, 1, 2 GeV,
+# m = 0, 0.2, 0.4 GeV, Ny = 1...100, 4 seeds
+python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8
+# optionally also the UV-damped kernel, at g²μ = 1 GeV and m = 0.2 GeV
+python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 \
+    --uvdamp 0.1
+```
+
+The UV damping is off by default (`UVDamp 0`, the MV model used in
+practice); `--uvdamp` adds a `Ny` scan for each given value.
+
+`--ipglasma-path` is a directory with the `ipglasma` executable and
+`qs2Adj_vs_Tp_vs_Y_240.in`. The results (D(r) and D_G(r) for every setting,
+the fit, the checks, Q_s/g²μ) go to `<datadir>/dipole_summary.json`
+(default `./dipole_output`), with one figure per setting
+(`dipole_<setting>.pdf`: D(r) against D_G(r) for several `Ny`, and
+`Ny` (D − D_G) with its statistical error). Each run caches its D(r) in its
+working directory, so `--analyze-only` redoes the analysis, and a rerun only
+runs what is missing; `--keep-files` keeps the Wilson lines. The script exits
+non-zero if a check fails. At 256² with 8 configurations per `Ny`
+(`--size 256 --L 25.6 --g2mu 1 --m 0.2 --seeds 4`, 15 s with
+8 workers), D − D_G at r_s falls from 0.09 (`Ny 1`) to 0.002 (`Ny 100`),
+`Ny` (D − D_G) ≈ 0.1, and the extrapolation gives (1.2 ± 0.8)·10⁻³.
 
 ### Lattice symmetries
 
@@ -165,8 +229,9 @@ color-field (Tr V(x)) plots for a couple of representative events.
 
 ## Running on a computing cluster (SLURM)
 
-`runvalidation.sh` is a SLURM batch script template for
-`parallel_test_vector_meson_production.py`:
+`runvalidation_jpsi.sh` is a SLURM batch script template for
+`parallel_test_vector_meson_production.py` (`runvalidation_eccentricity.sh`
+is the same for `parallel_test_eccentricity.py`):
 
 ```bash
 #!/bin/bash
@@ -179,7 +244,11 @@ color-field (Tr V(x)) plots for a couple of representative events.
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=6000M
 
-# Each event runs single-threaded; the workers run the events in parallel
+# Each event runs single-threaded; the workers run the events in parallel.
+# For n threads per event, set --cpus-per-task=n (and --ntasks to the number
+# of events run at a time), OMP_NUM_THREADS=n, OMP_PROC_BIND=close instead of
+# spread, and OMP_WAIT_POLICY=active: with --slurm, each event then runs as
+# an srun step with n CPUs (see "Threads and MPI ranks" in the README).
 export OMP_NUM_THREADS=1
 
 # Place and bind threads to single cores
@@ -205,18 +274,20 @@ line for your cluster) and adjust
 `--ntasks`/`--maxevents`/`--time` to the scale of the run. Submit with:
 
 ```bash
-sbatch runvalidation.sh
+sbatch runvalidation_jpsi.sh
 ```
 
 Notes:
-- Each `--ntasks` maps to one `--max-workers` process; leave
-  `--cpus-per-task=1` and `OMP_NUM_THREADS=1` since each event runs
-  single-threaded and parallelism comes from running many events at once.
+- Each `--ntasks` maps to one `--max-workers` process. With
+  `--cpus-per-task=1` and `OMP_NUM_THREADS=1`, each event runs
+  single-threaded and the parallelism comes from running many events at
+  once; for several threads per event, see the comment in the template.
 - Both scripts accept a `--slurm` flag that wraps each
   `ipglasma`/`subnucleondiffraction` invocation with
-  `srun --ntasks=1 --cpus-per-task=1`, which can help binding/placement on
-  some clusters. `runvalidation.sh` above passes it; remove `--slurm` from the
-  `python3` invocation if your cluster runs the binaries directly.
+  `srun --ntasks=1 --cpus-per-task=N`, with N = `OMP_NUM_THREADS` (default
+  1), which can help binding/placement on some clusters. The templates pass
+  it; remove `--slurm` from the `python3` invocation if your cluster runs
+  the binaries directly.
 - The same pattern (a batch script that calls the script with
   `--max-workers "${SLURM_NTASKS:-1}"`) works for
   `parallel_test_eccentricity.py`; just swap the python invocation, e.g.:

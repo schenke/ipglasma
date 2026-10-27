@@ -45,6 +45,13 @@ class Random {
     /// Reusable scratch buffer for gaussBulk()'s untempered raw words,
     /// owned here so repeated calls don't reallocate.
     std::vector<unsigned long long> bulkRawScratch_;
+    /// Reusable scratch buffer for gaussBulk()'s per-thread counts of
+    /// accepted pairs and their prefix sum.
+    std::vector<std::size_t> bulkCountScratch_;
+    /// Reusable scratch buffer for gaussBulk()'s accept decision of each
+    /// candidate pair of a rejection round, made once in the counting pass
+    /// and reused by the writing pass.
+    std::vector<unsigned char> bulkAcceptScratch_;
     /// Index of the next unused word in \c mt_; `NN+1` means \c mt_ is
     /// not yet initialized (twist() will seed it with 5489 on first
     /// use).
@@ -157,7 +164,10 @@ class Random {
      * sequence repeated gauss() calls would produce -- including
      * consuming (or contributing) a cached Box-Muller partner via \c
      * iset_/\c gset_ -- but with the polar-method's uniform draws and
-     * rejection sampling batched and parallelized over OpenMP.
+     * rejection sampling batched: in each rejection round the raw MT words
+     * are drawn serially, and their tempering, the acceptance test and the
+     * compaction of the accepted pairs (with a prefix sum over the threads,
+     * in the original order) run in parallel over OpenMP.
      * \param[out] out Receives \p count standard-normal values.
      * \param[in] count Number of values to draw.
      * \param[in,out] scratch Reusable scratch buffer, resized as

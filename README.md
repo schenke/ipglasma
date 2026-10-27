@@ -56,6 +56,24 @@ mpirun -np <ranks> ./ipglasma [input file] [events per rank]
 ```
 The input file defaults to `input`, and the number of events per MPI rank to 1; with MPI, the run generates ranks × events per rank events. The number of events per rank also enters the names of the Wilson-line files. File names in the input file (e.g. `nucleusQsTableFileName`) are relative to the working directory, and the output files are written there, apart from the Wilson-line files (see `wilsonLinePath` and [OUTPUT.md](OUTPUT.md)).
 
+### Threads and MPI ranks
+Each event runs with `OMP_NUM_THREADS` OpenMP threads. The MPI ranks generate their events independently, with their own random numbers and output files, and only wait for each other at the end of the run (to combine the HDF5 files with `writeOutputsToHDF5 1`), so a run takes as long as its slowest rank.
+
+With several threads per event, use one thread per physical core and set
+```
+export OMP_WAIT_POLICY=active
+export OMP_PROC_BIND=close
+export OMP_PLACES=cores
+```
+Several steps (the Wilson lines, their random numbers and the FFTs, also those of the Coulomb gauge fixing) alternate short parallel loops with short serial sections. With the default wait policy of GCC's OpenMP runtime, idle threads soon fall asleep and have to be woken up for every loop, and their cores slow down meanwhile. For a central Pb+Pb event of the example input at 256² without JIMWLK (with hydro output, eccentricities and gluon multiplicity), 8 threads take 1.8–1.9 s with these settings and 2.0–2.5 s with the default policy (8 s with one thread); the results do not change. Active waiting keeps the idle cores busy during the serial sections, so do not use it when the threads of all ranks together exceed the number of cores. For single-threaded events (`OMP_NUM_THREADS=1`, as in the validation scripts) the setting makes no difference.
+
+With several MPI ranks of several threads on one node, each rank needs its own cores. `OMP_PROC_BIND` binds the threads within the cores the rank is given, so if the MPI launcher gives several ranks the same cores (e.g. a whole socket), their threads all land on the first cores of it, while the other cores stay idle. Bind each rank to as many cores as it has threads, e.g. for 4 ranks with 8 threads each:
+```
+export OMP_NUM_THREADS=8
+mpirun -np 4 --map-by slot:PE=8 --bind-to core ./ipglasma input   # Open MPI
+srun --ntasks=4 --cpus-per-task=8 ./ipglasma input                # SLURM
+```
+
 
 ## Input parameters
 Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
@@ -235,7 +253,7 @@ The JIMWLK evolution starts from a fixed $x$, `jimwlkInitialX`, and evolves the 
 - **useJIMWLK**: with JIMWLK (1), or no JIMWLK (0)
 - **jimwlkInitialX** (only used with `useJIMWLK 1`): Bjorken $x$ at the initial condition, at which $Q_s^2$ of both nuclei is read from the nuclear $Q_s$ table ($y = \ln(0.01/x)$, so it must not be larger than 0.01)
 - **jimwlkSaveSnapshots** (only used with `useJIMWLK 1`): `1` also writes the Wilson lines during the evolution, at the $x$ values in `jimwlkXSnapshotList`, in the format of `writeWilsonLines` (which must be 1 or 2); the initial Wilson lines are then written too (unless they were read from file)
-- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces), in any order, to save snapshots at, only used with `jimwlkSaveSnapshots 1`. Each is saved at the evolution step whose $x$ is closest to it in $\ln x$ (at most half a step away), in a file named with the requested value. A value more than half a step outside a nucleus' evolution (above its starting $x$, `jimwlkInitialX` or the `readWilsonLinesX` of read Wilson lines, or below its final $x$) is skipped with a warning
+- **jimwlkXSnapshotList**: comma-separated $x$ values (no spaces), in any order, to save snapshots at, only used with `jimwlkSaveSnapshots 1`. Each is saved at the evolution step whose $x$ is closest to it in $\ln x$ (at most half a step away), in a file named with the requested value. A value more than half a step outside a nucleus' evolution (above its starting $x$, `jimwlkInitialX` or the `readWilsonLinesX` of read Wilson lines, or below its final $x$) is skipped with a warning. A value at the initial or final $x$ whose file name is that of the Wilson lines before or after the evolution is not saved again, since those files are written (or were read) anyway
 - **jimwlkMass** (only used with `useJIMWLK 1`): Infrared regulator in GeV in the JIMWLK kernel, see (21) in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkAlphaS** (only used with `useJIMWLK 1`): Coupling constant in the JIMWLK evolution
   - 0 (any value within $10^{-8}$ of 0): Use running coupling
@@ -252,6 +270,7 @@ The JIMWLK evolution starts from a fixed $x$, `jimwlkInitialX`, and evolves the 
 Python scripts in `utilities/` for working with the output files (see [OUTPUT.md](OUTPUT.md)):
 - `read_tmunu.py`: reads the $T^{\mu\nu}$ files, binary (`.ipgt`) and text (`.dat`), into numpy arrays, e.g. the energy density with `get_energy_density()`.
 - `eccentricity.py`: the eccentricities $\epsilon_n$ of an energy-density grid, e.g. from `read_tmunu.py` (`eccentricity_from_tmunu_file()`).
+- `read_wilson_lines.py`: reads the Wilson-line files, binary and text, into a numpy array `V[ix, iy]` of 3×3 matrices (`read_wilson_lines()`); run as a script, it prints their header and checks their unitarity.
 - `combine_events_into_hdf5.py`: collects the text outputs of events into an HDF5 file. The program calls it after each event with `writeOutputsToHDF5 1`; it can also be run by hand on a results folder (`--help` lists the options).
 - `fetch_IPGlasma_event_from_hdf5_database.py`: writes the hydro file (the MUSIC input) or the text $T^{\mu\nu}$ file of one event at a given proper time back out of such an HDF5 file: `fetch_IPGlasma_event_from_hdf5_database.py RESULTS.h5 <event id> <0: hydro, 1: Tmunu> <tau>`. Without the proper time it lists the available ones.
 - `saveToBinaryFile.py`: an example of converting a text table of nucleon configurations into the binary format of the configuration files.

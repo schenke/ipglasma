@@ -165,11 +165,13 @@ void FFT::fftnArray(
 
 #pragma omp parallel
     {
-#pragma omp for schedule(static)
+        // over components and rows, so the work is balanced also when the
+        // number of threads does not divide mDim (issue #121)
+#pragma omp for collapse(2) schedule(static)
         for (int k = 0; k < mDim; ++k) {
-            fftw_complex *localInput =
-                inputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
+                fftw_complex *localInput =
+                    inputMany + static_cast<std::size_t>(k) * ntot;
                 for (int j = 0; j < nn[1]; ++j) {
                     const int pos = latticeIndex(i, j, nn[1]);
                     const double sign = ((i + j) & 1) ? -1.0 : 1.0;
@@ -192,11 +194,11 @@ void FFT::fftnArray(
                 fftw_execute_dft(pback_, localInput, localOutput);
         }
 
-#pragma omp for schedule(static)
+#pragma omp for collapse(2) schedule(static)
         for (int k = 0; k < mDim; ++k) {
-            fftw_complex *localOutput =
-                outputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
+                fftw_complex *localOutput =
+                    outputMany + static_cast<std::size_t>(k) * ntot;
                 for (int j = 0; j < nn[1]; ++j) {
                     const int pos = latticeIndex(i, j, nn[1]);
                     const double sign =
@@ -234,12 +236,14 @@ void FFT::fftnComplexArray(
 
 #pragma omp parallel
     {
-#pragma omp for schedule(static)
+        // over components and rows, so the work is balanced also when the
+        // number of threads does not divide mDim (issue #121)
+#pragma omp for collapse(2) schedule(static)
         for (int k = 0; k < mDim; ++k) {
-            fftw_complex *localInput =
-                inputMany + static_cast<std::size_t>(k) * ntot;
-            const complex<double> *plane = data[k];
             for (int i = 0; i < nn[0]; ++i) {
+                fftw_complex *localInput =
+                    inputMany + static_cast<std::size_t>(k) * ntot;
+                const complex<double> *plane = data[k];
                 for (int j = 0; j < nn[1]; ++j) {
                     const int pos = latticeIndex(i, j, nn[1]);
                     const double sign = ((i + j) & 1) ? -1.0 : 1.0;
@@ -262,12 +266,12 @@ void FFT::fftnComplexArray(
                 fftw_execute_dft(pback_, localInput, localOutput);
         }
 
-#pragma omp for schedule(static)
+#pragma omp for collapse(2) schedule(static)
         for (int k = 0; k < mDim; ++k) {
-            fftw_complex *localOutput =
-                outputMany + static_cast<std::size_t>(k) * ntot;
-            complex<double> *plane = outdata[k];
             for (int i = 0; i < nn[0]; ++i) {
+                fftw_complex *localOutput =
+                    outputMany + static_cast<std::size_t>(k) * ntot;
+                complex<double> *plane = outdata[k];
                 for (int j = 0; j < nn[1]; ++j) {
                     const int pos = latticeIndex(i, j, nn[1]);
                     const double sign =
@@ -325,11 +329,13 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
             if (profileMatrixFFT) segmentStart = ipg::wallSeconds();
         }
 
-#pragma omp for schedule(static)
+        // over components and rows, so the work is balanced also when the
+        // number of threads does not divide mDim (issue #121)
+#pragma omp for collapse(2) schedule(static)
         for (int k = 0; k < mDim; ++k) {
-            fftw_complex *localInput =
-                inputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
+                fftw_complex *localInput =
+                    inputMany + static_cast<std::size_t>(k) * ntot;
                 for (int j = 0; j < nn[1]; ++j) {
                     const int pos = latticeIndex(i, j, nn[1]);
                     const double sign = ((i + j) & 1) ? -1.0 : 1.0;
@@ -368,11 +374,11 @@ void FFT::fftn(T **data, T **outdata, const int nn[], const int isign) {
             }
         }
 
-#pragma omp for schedule(static)
+#pragma omp for collapse(2) schedule(static)
         for (int k = 0; k < mDim; ++k) {
-            fftw_complex *localOutput =
-                outputMany + static_cast<std::size_t>(k) * ntot;
             for (int i = 0; i < nn[0]; ++i) {
+                fftw_complex *localOutput =
+                    outputMany + static_cast<std::size_t>(k) * ntot;
                 for (int j = 0; j < nn[1]; ++j) {
                     const int pos = latticeIndex(i, j, nn[1]);
                     const double sign =

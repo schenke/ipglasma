@@ -275,13 +275,27 @@ of the example input are small (`BGq 0.3` GeV⁻², a width of 0.11 fm) and
 overlap in Pb to g²μ of up to 13 GeV; for `seed 3` the median is 5.2 GeV
 (1/g²μ = 0.038 fm), i.e. g²μ a = 6.2, 3.1, 1.5, 0.77, 0.58 and 0.46 for the
 default sizes, so that only the finest lattices resolve most of the event. As a
-reference, a fourth scan runs a constant g²μ (`useNucleus 0`,
-`--uniform-g2mu`, default 5 GeV, L = 3 fm) at the `Ny` and `m` of the
-input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512). There dN/dy is within about
-5% of its limit for g²μ a ≲ 1, while dE/dη converges only slowly (it still grows by 9% from g²μ
-a = 0.3 to 0.15): the perturbative 1/k⁴ tail of the gluon spectrum carries
-energy up to the lattice cutoff (the energy density at τ = 0 even diverges
-like ln² a, T. Lappi, Phys. Lett. B 643 (2006) 11).
+reference, a fourth scan runs a constant g²μ (`useNucleus 0`, on its
+periodic lattice, `--uniform-g2mu`, default 5 GeV, L = 3 fm) at the `Ny`
+and `m` of the input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512):
+
+| size | 32 | 64 | 128 | 256 | 512 |
+|---|---|---|---|---|---|
+| g²μ a | 2.38 | 1.19 | 0.59 | 0.30 | 0.15 |
+| dN/dy | 3616 | 4687 | 5061 | 5260 | 5133 |
+| dE/dη (0.4 fm) [GeV] | 12147 | 22022 | 28936 | 33240 | 34810 |
+
+dN/dy is within about 4% of its limit for g²μ a ≲ 0.6, while dE/dη still
+grows by 4.7% ± 1.4% from g²μ a = 0.3 to 0.15. The energy sits in modes up
+to several g²μ, where the gluon spectrum falls like 1/k⁴, and converges
+only like a: its deficit is about 0.3 g²μ a, so 5% needs g²μ a ≈ 0.15 (the
+energy density at τ = 0 even diverges like ln² a, T. Lappi, Phys. Lett. B
+643 (2006) 11). This is not an artifact of IP-Glasma: an independent
+classical Yang-Mills code (a version of S. Schlichting's), run on the same
+Wilson lines, gives dE/dη within 0.1–0.6% of IP-Glasma's and the same
+dependence on a (see the discussion of #134). With JIMWLK, the gluon
+spectrum falls less steeply (the anomalous dimension of the evolved Wilson
+lines), so the energy converges even more slowly.
 
 **Convergence check.** For each observable of the size scans, the script
 compares the two finest lattices: the relative change must be below
@@ -301,7 +315,7 @@ it under `not_converged` in the summary. With the defaults (25 minutes with
 dN/dy changes by +0.8% ± 2.0% in the last step, ε₂ and ε₃ by less than
 their errors, so they converge. dE/dη still grows by 4.2% ± 1.2%, and the
 linear extrapolation puts its value at a = 0 about 16% above the finest
-lattice (8% for the constant g²μ): converging the energy to the percent
+lattice (5% for the constant g²μ): converging the energy to the percent
 level would need lattice spacings far below 0.018 fm, so its dependence on
 a has to be quoted as a systematic uncertainty. The `Ny` scan (at 768²)
 converges for dN/dy by `Ny` ≈ 25–50 (21418 for `Ny 50`, 21174 for

@@ -42,13 +42,18 @@ multiplicity) and g^2 mu a for each size. For seed 3 the hot spots of the
 example input (BGq = 0.3 GeV^-2, a width of 0.11 fm) overlap to g^2 mu of
 up to 13 GeV, with a median of 5.2 GeV (1/g^2 mu = 0.038 fm), so that only
 the smallest lattice spacings resolve most of the event. As a reference,
-a fourth scan runs a constant g^2 mu (useNucleus 0, L = 3 fm) of about this
-median at the Ny and m of the input, against g^2 mu a: dN/dy is within
-about 5% of its limit for g^2 mu a below about 1, dE/deta converges only
-slowly (it still grows by 9% from g^2 mu a = 0.3 to 0.15), since the
-perturbative 1/k^4 tail of the gluon spectrum carries a part of the energy
-up to the lattice cutoff (the energy density at tau = 0 even diverges, as
-ln^2 a; T. Lappi, Phys. Lett. B 643 (2006) 11).
+a fourth scan runs a constant g^2 mu (useNucleus 0, L = 3 fm, on its
+periodic lattice) of about this median at the Ny and m of the input,
+against g^2 mu a: dN/dy is within about 4% of its limit for g^2 mu a below
+about 0.6, while dE/deta still grows by 5% from g^2 mu a = 0.3 to 0.15.
+The energy sits in modes up to several g^2 mu, where the gluon spectrum
+falls like 1/k^4, and converges only like a, with a deficit of about
+0.3 g^2 mu a (the energy density at tau = 0 even diverges, as ln^2 a;
+T. Lappi, Phys. Lett. B 643 (2006) 11). An independent classical
+Yang-Mills implementation gives the same dependence on a for the same
+Wilson lines. With JIMWLK the tail of the spectrum is less steep (the
+anomalous dimension of the evolved Wilson lines), so the energy converges
+even more slowly.
 
 The script checks the convergence in the lattice spacing for each
 observable: the relative change between the two finest lattices must be
@@ -545,9 +550,10 @@ def main():
                   f"an extrapolation linear in a puts a = 0 "
                   f"{100 * check['extrapolated_deviation']:+.0f}% away.")
         print("The gluon number converges like a^2 once g^2 mu a < 1, the "
-              "energy only like a\n(the 1/k^4 tail of the spectrum up to "
-              "the lattice cutoff), so these values\nstill depend on the "
-              "lattice spacing; see validations/README.md.\n" + line)
+              "energy only like a\n(a deficit of about 0.3 g^2 mu a from the "
+              "1/k^4 tail of the spectrum; with\nJIMWLK, whose tail is less "
+              "steep, even more slowly), so these values still\ndepend on "
+              "the lattice spacing; see validations/README.md.\n" + line)
     summary["not_converged"] = [f"{scan}: {name}"
                                 for scan, name, _ in not_converged]
     passed = all(summary["checks"].values())

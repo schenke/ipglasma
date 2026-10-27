@@ -356,6 +356,47 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Init::medianG2muA is the (g^2 mu)^2-weighted median of g^2 mu a = "
+    "g sqrt(g2mu2)") {
+    // a constant density gives its own value, for any g
+    CHECK(Init::medianG2muA({4., 4., 4.}, 1.) == doctest::Approx(2.));
+    CHECK(Init::medianG2muA({4., 4., 4.}, 0.5) == doctest::Approx(1.));
+    // the weights 1 and 4 of g^2 mu a = 1 and 2: the larger value carries
+    // 4/5 of the weight, so it is the median; cells without charge do not
+    // count
+    CHECK(Init::medianG2muA({0., 4., 1., 0.}, 1.) == doctest::Approx(2.));
+    // nine weak cells outweigh one strong one
+    CHECK(
+        Init::medianG2muA({1., 1., 1., 1., 1., 1., 1., 1., 1., 4.}, 1.)
+        == doctest::Approx(1.));
+    // no color charge at all
+    CHECK(Init::medianG2muA({0., 0.}, 1.) == 0.);
+    CHECK(Init::medianG2muA({}, 1.) == 0.);
+}
+
+TEST_CASE(
+    "Init::medianG2muA of a constant color-charge density is g2muGeV in "
+    "lattice units") {
+    const int N = 4;
+    Parameters param;
+    makeInitTestParam(param, N);
+    // a = 1 fm, so this is g2mu a = 0.6
+    param.collision.g2muGeV = 0.6 * PhysConst::hbarc;
+    param.coupling.g = 2.0;
+    Lattice lat(&param, N);
+
+    int nn[2] = {N, N};
+    Init init(nn);
+    init.setConstantColorChargeDensity(&lat, &param);
+    std::vector<double> g2mu2;
+    for (int pos = 0; pos < N * N; ++pos) {
+        g2mu2.push_back(lat.cells[pos]->getg2mu2A());
+        g2mu2.push_back(lat.cells[pos]->getg2mu2B());
+    }
+    CHECK(Init::medianG2muA(g2mu2, param.coupling.g) == doctest::Approx(0.6));
+}
+
+TEST_CASE(
     "Init::shiftFieldsWithImpactParameter leaves the fields unchanged at "
     "b = 0 and moves them by the lattice shifts otherwise") {
     // L = 16 fm, N = 48: truncating (x + L/2)/a, with x = -L/2 + a ix,

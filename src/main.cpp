@@ -252,10 +252,7 @@ int main(int argc, char *argv[]) {
             // allocate lattice; a constant color-charge density models an
             // infinite target, whose periodic Wilson lines (from the FFT
             // Poisson solve) get a periodic lattice
-            Lattice lat(
-                param, param->lattice.size,
-                param->collision.useNucleus ? LatticeBoundary::Clamped
-                                            : LatticeBoundary::Periodic);
+            Lattice lat(param, param->lattice.size, latticeBoundary(*param));
             messager.info("[main::main]: Lattice generated.");
 
             param->event.success = 0;

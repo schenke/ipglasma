@@ -471,6 +471,13 @@ struct JimwlkParameters {
     /// JIMWLK coupling: `0` (within PhysConst::inputTolerance) running
     /// coupling, a positive value fixed coupling.
     double alphaS = 0.;
+    /// Running-coupling prescription of JIMWLK (input
+    /// `jimwlkRunningCoupling`, only used with \c alphaS `0`): `1` the
+    /// "square root" coupling, \f$\sqrt{\alpha_s(r)}\f$ in the kernel;
+    /// `2` the coupling in the noise correlator,
+    /// \f$\langle\eta\eta\rangle \propto \alpha_s(k)\f$ (Eqs. (24)-(25)
+    /// of \cite Lappi:2012vw).
+    int runningCoupling = 1;
     /// JIMWLK evolution step size (recommended `0.003` with running
     /// coupling, `0.0005` with fixed coupling; see the README).
     double Ds = 0.;

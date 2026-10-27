@@ -24,6 +24,7 @@
 
 #include "InputFile.h"
 #include "Parameters.h"
+#include "PhysConst.h"
 
 namespace {
 
@@ -422,6 +423,15 @@ bool wilsonLinesWrittenOrRead(const Parameters &p) {
  * \return Whether `useJIMWLK` is set.
  */
 bool jimwlkEnabled(const Parameters &p) { return p.jimwlk.enabled; }
+
+/**
+ * Condition for the JIMWLK running-coupling prescription.
+ * \param[in] p The parameters read so far.
+ * \return Whether `useJIMWLK` is set and `jimwlkAlphaS` is 0.
+ */
+bool jimwlkCouplingRuns(const Parameters &p) {
+    return p.jimwlk.enabled && PhysConst::isClose(p.jimwlk.alphaS, 0.);
+}
 
 /**
  * Condition for the constant color-charge density.
@@ -987,6 +997,12 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("jimwlkAlphaS", &P::jimwlk, &JimwlkParameters::alphaS)
             .onlyIf(jimwlkEnabled)
             .check(nonNegative()),
+        param(
+            "jimwlkRunningCoupling", &P::jimwlk,
+            &JimwlkParameters::runningCoupling)
+            .onlyIf(jimwlkCouplingRuns)
+            .optional("1")
+            .check(oneOf({1, 2}, " (1: square root, 2: noise)")),
         // divisor of the step count and under a square root in the step
         param("jimwlkDs", &P::jimwlk, &JimwlkParameters::Ds)
             .onlyIf(jimwlkEnabled)

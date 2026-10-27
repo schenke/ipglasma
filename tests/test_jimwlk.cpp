@@ -2,6 +2,7 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <cstddef>
@@ -282,4 +283,96 @@ TEST_CASE(
         JIMWLK::noiseRandomSeed(5, 3)
         == splitmix64(Init::colorChargeRandomSeed(5, 3)));
     CHECK(JIMWLK::noiseRandomSeed(5, 3) != Init::colorChargeRandomSeed(5, 3));
+}
+
+TEST_CASE(
+    "JIMWLK::getAlphasMomentum: the noise coupling alpha_s(k) of the lattice "
+    "momentum matches an independently computed reference value") {
+    const int N = 8;
+    Parameters param;
+    makeJimwlkTestParam(param, N);  // L = 8 fm, so a = 1 fm
+    param.jimwlk.mu0 = 0.28;
+    param.jimwlk.LambdaQCD = 0.04;
+    param.jimwlk.alphaS = 0.0;
+    param.jimwlk.runningCoupling = 2;
+
+    Group group;
+    Random random;
+    random.init_genrand64(42ULL);
+    Lattice lat(&param, N);
+    JIMWLK jimwlk(param, &group, &lat, &random);
+
+    // k~^2 = (2/a)^2 [sin^2(pi x) + sin^2(pi y)]
+    CHECK(
+        jimwlk.getAlphasMomentum(0.25, -0.125)
+        == doctest::Approx(0.33305093593417584));
+    // alpha_s(-k) = alpha_s(k), so the filtered noise stays real
+    CHECK(
+        jimwlk.getAlphasMomentum(-0.25, 0.125)
+        == doctest::Approx(jimwlk.getAlphasMomentum(0.25, -0.125)));
+    // the infrared value, set by mu0
+    CHECK(
+        jimwlk.getAlphasMomentum(0., 0.)
+        == doctest::Approx(0.35876872379572905));
+    param.jimwlk.c = 0.25;
+    CHECK(
+        jimwlk.getAlphasMomentum(0.25, -0.125)
+        == doctest::Approx(0.3308474501922769));
+}
+
+TEST_CASE(
+    "JIMWLK: with a constant alpha_s the noise and the square-root running "
+    "couplings give the same evolution") {
+    // With mu0 far above every momentum on the lattice, alpha_s(r) and
+    // alpha_s(k) both freeze to 4 pi / (beta ln(mu0^2/Lambda^2)). The noise
+    // coupling then only multiplies the noise by sqrt(alpha_s), and the
+    // square-root coupling the kernel, so the two steps agree for the
+    // same random numbers.
+    const int N = 8;
+    std::vector<Matrix> start;
+    std::vector<Matrix> result[2];
+    for (const int prescription : {1, 2}) {
+        Parameters param;
+        makeJimwlkTestParam(param, N);
+        param.jimwlk.mu0 = 100.;
+        param.jimwlk.LambdaQCD = 0.2;
+        param.jimwlk.alphaS = 0.0;
+        param.jimwlk.Ds = 0.005;
+        param.jimwlk.runningCoupling = prescription;
+
+        Group group;
+        Random random;
+        random.init_genrand64(42ULL);
+        Lattice lat(&param, N);
+        // the identity is a fixed point of the evolution, so start from
+        // the same nontrivial SU(3) matrices exp(i w^a t^a) for both
+        Random initial;
+        initial.init_genrand64(7ULL);
+        for (int pos = 0; pos < N * N; ++pos) {
+            Matrix generator(0.);
+            for (int a = 0; a < 8; a++) {
+                generator += initial.gauss() * group.getT(a);
+            }
+            lat.U[pos] = (std::complex<double>(0., 1.) * generator).expm();
+        }
+        start = lat.U;
+        JIMWLK jimwlk(param, &group, &lat, &random);
+        for (int step = 0; step < 3; step++) {
+            jimwlk.evolutionStep(NucleusRole::Projectile);
+        }
+        result[prescription - 1] = lat.U;
+    }
+    double maxDiff = 0.;
+    double maxChange = 0.;
+    for (int pos = 0; pos < N * N; ++pos) {
+        for (int k = 0; k < 9; ++k) {
+            maxDiff = std::max(
+                maxDiff,
+                std::abs(result[0][pos].get(k) - result[1][pos].get(k)));
+            maxChange = std::max(
+                maxChange, std::abs(result[1][pos].get(k) - start[pos].get(k)));
+        }
+    }
+    CHECK(maxChange > 1e-3);  // the Wilson lines did evolve
+    CHECK(maxDiff < 1e-10);
 }

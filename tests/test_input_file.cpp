@@ -400,6 +400,13 @@ TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
     param3.writeInputParameters(used);
     CHECK(
         used.str().find("\nwriteWilsonLineGeometry 1\n") != std::string::npos);
+    // the example input has the JIMWLK running coupling (jimwlkAlphaS 0)
+    Parameters param4;
+    REQUIRE(param4
+                .readInput(inputFromText(
+                    exampleInputWith("jimwlkRunningCoupling", "")))
+                .empty());
+    CHECK(param4.jimwlk.runningCoupling == 1);
 }
 
 TEST_CASE("Parameters::readInput: values must have the parameter's type") {
@@ -452,6 +459,7 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"c", "-0.2", "must be positive"},
              {"jimwlkC", "0", "must be positive"},
              {"jimwlkLambdaQCD", "0", "must be positive"},
+             {"jimwlkRunningCoupling", "3", "must be one of 1, 2"},
              {"writeWilsonLines", "3", "must be one of 0, 1, 2"},
              {"readInitialWilsonLines", "3", "must be one of 0, 1, 2"},
              {"sqrtS", "0", "must be positive"},

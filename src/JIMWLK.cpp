@@ -77,8 +77,23 @@ void JIMWLK::initializeK() {
         K_[i] = &K_storage_[i];
     }
 
-    double mu0 = param_.jimwlk.mu0;
-    double Lambda2 = param_.jimwlk.LambdaQCD * param_.jimwlk.LambdaQCD;
+    // with the noise running coupling alpha_s(k) is in the noise instead
+    const bool alphasInKernel = param_.jimwlk.runningCoupling != 2
+                                || !isClose(param_.jimwlk.alphaS, 0.);
+    if (!alphasInKernel) {
+        sqrtAlphasNoise_.resize(Ncells_);
+#pragma omp parallel for
+        for (int pos = 0; pos < Ncells_; pos++) {
+            // same (shifted) site <-> momentum mapping as the FFT output
+            const double kx =
+                (latticeX(pos, Ngrid_) - static_cast<double>(Ngrid_) / 2.)
+                / Ngrid_;
+            const double ky =
+                (latticeY(pos, Ngrid_) - static_cast<double>(Ngrid_) / 2.)
+                / Ngrid_;
+            sqrtAlphasNoise_[pos] = sqrt(getAlphasMomentum(kx, ky));
+        }
+    }
 
     // set once here rather than on every getMassRegulator() call below
     gsl_set_error_handler_off();
@@ -94,7 +109,7 @@ void JIMWLK::initializeK() {
             continue;  // K_[pos] is already (0, 0)
         }
         double mass_regulator = getMassRegulator(x, y);
-        double alphas_sqroot = sqrt(getAlphas(x, y));
+        double alphas_sqroot = alphasInKernel ? sqrt(getAlphas(x, y)) : 1.;
         // discretization without singularities
         double tmpk1 = cos(M_PI * y) * sin(2. * M_PI * x) / (2. * M_PI);
         double tmpk2 = cos(M_PI * x) * sin(2. * M_PI * y) / (2. * M_PI);
@@ -175,6 +190,25 @@ double JIMWLK::getAlphas(const double x, const double y) const {
                pow(mu0 * mu0 / Lambda2, 1. / c)
                + pow(4. / (phys_r2 * Lambda2 * invHbarc * invHbarc), 1. / c))));
     return alphas;
+}
+
+double JIMWLK::getAlphasMomentum(const double x, const double y) const {
+    const double c = param_.jimwlk.c;
+    const int Nf = param_.coupling.nFlavors;
+    const double a = param_.lattice.L / Ngrid_;  // in fm
+    const double mu0 = param_.jimwlk.mu0;
+    const double Lambda2 = param_.jimwlk.LambdaQCD * param_.jimwlk.LambdaQCD;
+    const double sin_x = sin(M_PI * x);
+    const double sin_y = sin(M_PI * y);
+    // lattice momentum squared, in GeV^2
+    const double k2 =
+        4. * (sin_x * sin_x + sin_y * sin_y) / (a * a * invHbarc * invHbarc);
+
+    return 4. * M_PI
+           / ((11. * Nc - 2. * Nf) / 3. * c
+              * log(
+                  pow(mu0 * mu0 / Lambda2, 1. / c)
+                  + pow(k2 / Lambda2, 1. / c)));
 }
 
 void JIMWLK::initializeNoise() {
@@ -369,6 +403,28 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
     // the local xi now contains the Fourier transform of xi,
     // while the original xi is stored in the array xi2
     fft_ptr_->fftnArray(xi2_.data(), xi_.data(), nn_, 1, 2 * Nc2m1);
+
+    // noise running coupling: eta = F^{-1}(sqrt(alpha_s(k)) F(xi)), whose
+    // correlator is the Fourier transform of alpha_s(k) (Eq. (24) of
+    // Lappi:2012vw); xi then holds F(eta) and xi2 eta, which replaces the
+    // noise everywhere below
+    if (!sqrtAlphasNoise_.empty()) {
+        IPG_PROFILE_SCOPE("jimwlk.noise_coupling");
+#pragma omp parallel for
+        for (int i = 0; i < Ncells_; i++) {
+            for (int n = 0; n < 2 * Nc2m1; n++) {
+                xi_[i][n] *= sqrtAlphasNoise_[i];
+            }
+        }
+        fft_ptr_->fftnArray(xi_.data(), xi2_.data(), nn_, -1, 2 * Nc2m1);
+        // alpha_s(k) = alpha_s(-k), so eta is real up to rounding
+#pragma omp parallel for
+        for (int i = 0; i < Ncells_; i++) {
+            for (int n = 0; n < 2 * Nc2m1; n++) {
+                xi2_[i][n] = std::complex<double>(xi2_[i][n].real(), 0.);
+            }
+        }
+    }
 
     // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
     //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))

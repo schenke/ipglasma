@@ -16,6 +16,15 @@ The main categories for changes in this file are:
 * `Fixed` for any bug fixes;
 * `Removed` for now removed features.
 
+## Unreleased
+
+### Input / Output
+* Add the optional input parameter `jimwlkRunningCoupling` (default `1`, read with `useJIMWLK 1` and `jimwlkAlphaS 0`), which selects the running-coupling prescription of JIMWLK: `1` the "square root" coupling used so far, $\sqrt{\alpha_s(r)}$ in the kernel, `2` the "noise" coupling of Eqs. (24)-(25) of [arXiv:1212.4825](https://arxiv.org/abs/1212.4825), where the noise has the correlator $\int_k e^{ik\cdot(x-y)}\alpha_s(k)$.
+
+### Added
+* Add the JIMWLK noise running coupling (`jimwlkRunningCoupling 2`): each step filters the Gaussian noise with $\sqrt{\alpha_s(k)}$ in momentum space, with $\alpha_s(k)$ of Eq. (39) of arXiv:1212.4825 at the lattice momentum, and the kernel carries no coupling. A unit test checks that it gives the same evolution as the square-root coupling when $\alpha_s$ is constant.
+* Add the validation setup `validations/jimwlk_running_coupling/`, which compares the two prescriptions in the setup of Fig. 6 of arXiv:1212.4825: it evolves the MV model with both on the lattice of the paper and checks that the noise coupling evolves the saturation scale more slowly.
+
 ## 2.0.0
 
 The changes since b36b2a9, the last commit on the default branch (`main`, formerly `master`) before this release; see the 1.x section below. Input parameters are given by their new names; the first entries list the renames.

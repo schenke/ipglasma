@@ -31,6 +31,14 @@
  * exponentiated back onto the Wilson line. evolution() repeats this for
  * as many steps as the requested rapidity range requires, for both
  * nuclei in turn.
+ *
+ * With running coupling (`jimwlkAlphaS 0`), `jimwlkRunningCoupling`
+ * selects where \f$\alpha_s\f$ enters: `1` multiplies the kernel by
+ * \f$\sqrt{\alpha_s(r)}\f$ (the "square root" coupling), `2` keeps the
+ * kernel free of \f$\alpha_s\f$ and instead multiplies the Fourier
+ * transform of the noise by \f$\sqrt{\alpha_s(k)}\f$, so that its
+ * correlator is \f$\int_k e^{ik\cdot(x-y)}\alpha_s(k)\f$
+ * (Eqs. (24)-(25) of \cite Lappi:2012vw).
  */
 class JIMWLK {
   private:
@@ -80,6 +88,11 @@ class JIMWLK {
     /// (\f$x\f$, \f$y\f$) vector per site, built once by initializeK()
     /// and reused by every evolutionStep() call.
     std::vector<std::vector<std::complex<double> > *> K_;
+    /// \f$\sqrt{\alpha_s(k)}\f$ per momentum-space site, multiplying the
+    /// Fourier transform of the noise with the noise running coupling
+    /// (`jimwlkRunningCoupling 2`); empty otherwise. Built by
+    /// initializeK().
+    std::vector<double> sqrtAlphasNoise_;
 
     // xi_/xi2_/CKxi_ are pointer-per-cell views into one contiguous
     // backing buffer each (xi_data_/xi2_data_/CKxi_data_), so the hot
@@ -205,9 +218,23 @@ class JIMWLK {
      * \return `1.0` if `param_.jimwlk.alphaS` is positive (fixed
      * coupling, where \f$\alpha_s\f$ enters only through the step count
      * in evolution()); otherwise a one-loop running-coupling evaluation
-     * from the dipole size implied by \f$(x,y)\f$.
+     * from the dipole size implied by \f$(x,y)\f$. initializeK() puts
+     * it in the kernel only with `jimwlkRunningCoupling 1`.
      */
     double getAlphas(const double x, const double y) const;
+    /**
+     * Evaluates the running coupling \f$\alpha_s(k)\f$ of the noise
+     * correlator (`jimwlkRunningCoupling 2`) at one momentum-space
+     * point, used by initializeK() to build \c sqrtAlphasNoise_. It is
+     * Eq. (39) of \cite Lappi:2012vw, with the lattice momentum
+     * \f$\tilde{k}^2 = (2/a)^2 [\sin^2(\pi x) + \sin^2(\pi y)]\f$.
+     * \param[in] x Momentum-space \f$x\f$ coordinate, \f$k_x a/(2\pi)\f$,
+     * in \f$[-1/2, 1/2]\f$.
+     * \param[in] y Momentum-space \f$y\f$ coordinate, same units.
+     * \return \f$\alpha_s(\tilde{k})\f$; at \f$k=0\f$ the infrared
+     * value \f$\alpha_s(k \to 0)\f$ set by `jimwlkMu0`.
+     */
+    double getAlphasMomentum(const double x, const double y) const;
     /**
      * Allocates the per-step Gaussian-noise buffers `xi_`/`xi2_`/\c
      * CKxi_ (idempotent: a no-op if already allocated).
@@ -224,7 +251,9 @@ class JIMWLK {
     /**
      * Advances one nucleus' Wilson-line field by one JIMWLK Langevin
      * step: draws Gaussian noise per site/color (via
-     * Random::gaussBulk()), FFT-convolves it with \c K_, builds the
+     * Random::gaussBulk()), with the noise running coupling first
+     * filters it with \c sqrtAlphasNoise_ in momentum space,
+     * FFT-convolves it with \c K_, builds the
      * gauge-covariant combination \f$\sum_a \xi_i^a\, U t^a
      * U^\dagger\f$, FFT-convolves that with \c K_ again, and updates
      * the Wilson line as \f$U \to e^{L} U e^{R}\f$ for the resulting

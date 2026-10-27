@@ -175,8 +175,9 @@ color-field (Tr V(x)) plots for a couple of representative events.
 
 ## Running on a computing cluster (SLURM)
 
-`runvalidation.sh` is a SLURM batch script template for
-`parallel_test_vector_meson_production.py`:
+`runvalidation_jpsi.sh` is a SLURM batch script template for
+`parallel_test_vector_meson_production.py` (`runvalidation_eccentricity.sh`
+is the same for `parallel_test_eccentricity.py`):
 
 ```bash
 #!/bin/bash
@@ -189,7 +190,11 @@ color-field (Tr V(x)) plots for a couple of representative events.
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=6000M
 
-# Each event runs single-threaded; the workers run the events in parallel
+# Each event runs single-threaded; the workers run the events in parallel.
+# For n threads per event, set --cpus-per-task=n (and --ntasks to the number
+# of events run at a time), OMP_NUM_THREADS=n, OMP_PROC_BIND=close instead of
+# spread, and OMP_WAIT_POLICY=active: with --slurm, each event then runs as
+# an srun step with n CPUs (see "Threads and MPI ranks" in the README).
 export OMP_NUM_THREADS=1
 
 # Place and bind threads to single cores
@@ -215,18 +220,20 @@ line for your cluster) and adjust
 `--ntasks`/`--maxevents`/`--time` to the scale of the run. Submit with:
 
 ```bash
-sbatch runvalidation.sh
+sbatch runvalidation_jpsi.sh
 ```
 
 Notes:
-- Each `--ntasks` maps to one `--max-workers` process; leave
-  `--cpus-per-task=1` and `OMP_NUM_THREADS=1` since each event runs
-  single-threaded and parallelism comes from running many events at once.
+- Each `--ntasks` maps to one `--max-workers` process. With
+  `--cpus-per-task=1` and `OMP_NUM_THREADS=1`, each event runs
+  single-threaded and the parallelism comes from running many events at
+  once; for several threads per event, see the comment in the template.
 - Both scripts accept a `--slurm` flag that wraps each
   `ipglasma`/`subnucleondiffraction` invocation with
-  `srun --ntasks=1 --cpus-per-task=1`, which can help binding/placement on
-  some clusters. `runvalidation.sh` above passes it; remove `--slurm` from the
-  `python3` invocation if your cluster runs the binaries directly.
+  `srun --ntasks=1 --cpus-per-task=N`, with N = `OMP_NUM_THREADS` (default
+  1), which can help binding/placement on some clusters. The templates pass
+  it; remove `--slurm` from the `python3` invocation if your cluster runs
+  the binaries directly.
 - The same pattern (a batch script that calls the script with
   `--max-workers "${SLURM_NTASKS:-1}"`) works for
   `parallel_test_eccentricity.py`; just swap the python invocation, e.g.:

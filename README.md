@@ -67,6 +67,13 @@ export OMP_PLACES=cores
 ```
 Several steps (the Wilson lines, their random numbers and the FFTs, also those of the Coulomb gauge fixing) alternate short parallel loops with short serial sections. With the default wait policy of GCC's OpenMP runtime, idle threads soon fall asleep and have to be woken up for every loop, and their cores slow down meanwhile. For a central Pb+Pb event of the example input at 256² without JIMWLK (with hydro output, eccentricities and gluon multiplicity), 8 threads take 1.8–1.9 s with these settings and 2.0–2.5 s with the default policy (8 s with one thread); the results do not change. Active waiting keeps the idle cores busy during the serial sections, so do not use it when the threads of all ranks together exceed the number of cores. For single-threaded events (`OMP_NUM_THREADS=1`, as in the validation scripts) the setting makes no difference.
 
+With several MPI ranks of several threads on one node, each rank needs its own cores. `OMP_PROC_BIND` binds the threads within the cores the rank is given, so if the MPI launcher gives several ranks the same cores (e.g. a whole socket), their threads all land on the first cores of it, while the other cores stay idle. Bind each rank to as many cores as it has threads, e.g. for 4 ranks with 8 threads each:
+```
+export OMP_NUM_THREADS=8
+mpirun -np 4 --map-by slot:PE=8 --bind-to core ./ipglasma input   # Open MPI
+srun --ntasks=4 --cpus-per-task=8 ./ipglasma input                # SLURM
+```
+
 
 ## Input parameters
 Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.

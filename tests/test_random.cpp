@@ -61,7 +61,12 @@ TEST_CASE(
         expected.push_back(scalarRng.genrand64_real2());
     }
 #ifdef _OPENMP
-    const int maxThreads = omp_get_max_threads();
+    // restores the thread count of the other tests also when a REQUIRE
+    // below ends this test early
+    struct ThreadCountGuard {
+        const int threads = omp_get_max_threads();
+        ~ThreadCountGuard() { omp_set_num_threads(threads); }
+    } restoreThreadCount;
     for (const int threads : {1, 3, 8}) {
         omp_set_num_threads(threads);
 #else
@@ -84,9 +89,6 @@ TEST_CASE(
         }
         CHECK(mismatches == 0);
     }
-#ifdef _OPENMP
-    omp_set_num_threads(maxThreads);
-#endif
 }
 
 TEST_CASE("Random: gaussBulk output has ~zero mean and ~unit variance") {

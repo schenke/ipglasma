@@ -135,9 +135,17 @@ def ensure_wilson_line_file(base_dir, x_value, event_id):
     )
 
 
+def threads_per_event():
+    """The OpenMP threads of one event: OMP_NUM_THREADS, default 1."""
+    try:
+        return max(1, int(os.environ.get("OMP_NUM_THREADS", "1")))
+    except ValueError:
+        return 1
+
+
 def run_command(cmd, cwd, stdout_path=None, stderr_path=None, slurm=False):
     print(f"Running: {' '.join(str(part) for part in cmd)}", " stdout:", stdout_path, " stderr:", stderr_path)
-    srun_cmd = ["srun", "--ntasks=1", "--cpus-per-task=1"] + cmd
+    srun_cmd = ["srun", "--ntasks=1", f"--cpus-per-task={threads_per_event()}"] + cmd
     if not slurm:
         srun_cmd = cmd
     result = subprocess.run(srun_cmd, cwd=cwd, capture_output=True, text=True)
@@ -327,7 +335,7 @@ def main():
     parser.add_argument("--input-template", type=str, default="input_vm_proton", help="IP-Glasma input file to use as a template.")
     parser.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers. Defaults to the number of logical CPUs.")
     parser.add_argument("--keep-logs", action="store_true", help="Keep log files for each seed.")
-    parser.add_argument("--slurm", action="store_true", help="Wrap each ipglasma/subnucleondiffraction invocation with 'srun --ntasks=1 --cpus-per-task=1'.")
+    parser.add_argument("--slurm", action="store_true", help="Wrap each ipglasma/subnucleondiffraction invocation with 'srun --ntasks=1 --cpus-per-task=N', N = OMP_NUM_THREADS (default 1).")
     parser.add_argument("--xpom", type=float, default=default_xpom, help="Value of x_pom to use in the runs.")
     args = parser.parse_args()
 

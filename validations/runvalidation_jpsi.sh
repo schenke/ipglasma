@@ -13,8 +13,10 @@
 #SBATCH --mem-per-cpu=6000M
 
 # Each event runs single-threaded; the workers run the events in parallel.
-# (With several threads per event, also set OMP_WAIT_POLICY=active and
-# OMP_PROC_BIND=close; see "Threads and MPI ranks" in the README.)
+# For n threads per event, set --cpus-per-task=n (and --ntasks to the number
+# of events run at a time), OMP_NUM_THREADS=n, OMP_PROC_BIND=close instead of
+# spread, and OMP_WAIT_POLICY=active: with --slurm, each event then runs as
+# an srun step with n CPUs (see "Threads and MPI ranks" in the README).
 export OMP_NUM_THREADS=1
 
 # Place and bind threads to single cores

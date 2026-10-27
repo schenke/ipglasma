@@ -312,8 +312,15 @@ int main(int argc, char *argv[]) {
     // barrier after each event made every rank wait for the slowest event of
     // each round, issue #117). This is the only synchronization: every rank
     // must have finished appending its last event to its RESULTS_rank*.h5
-    // before rank 0 merges (and deletes) those files.
-    MPI_Barrier(MPI_COMM_WORLD);
+    // before rank 0 merges (and deletes) those files. It is profiled as the
+    // pseudo-event -1, so the time a rank waits for the slowest one shows up
+    // in its profile.
+    ipg::Profiler::instance().beginEvent(-1);
+    {
+        IPG_PROFILE_SCOPE("mpi.barrier");
+        MPI_Barrier(MPI_COMM_WORLD);
+    }
+    ipg::Profiler::instance().endEvent();
 #endif
 
     if (h5Flag == 1 && rank == 0) {

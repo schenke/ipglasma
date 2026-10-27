@@ -265,11 +265,30 @@ geometry is the same in all runs (N_part and N_coll lists, b) and that the
 color-charge seeds give different events. The change of the physical Q_s
 with `Ny` and `m` at fixed `QsMuRatio` is measured by the dipole setup.
 
+The lattice converges once it resolves the color-charge scale g²μ =
+Q_s/`QsMuRatio`, g²μ a well below 1. A run that only builds the Wilson
+lines (at the size of the `Ny` and `m` scans) gives g²μ of each site of the
+geometry; the script reports its median (weighted with (g²μ)², like the
+multiplicity) and maximum, and the median g²μ a of each size. The hot spots
+of the example input are small (`BGq 0.3` GeV⁻², a width of 0.11 fm) and
+overlap in Pb to g²μ of up to 13 GeV; for `seed 3` the median is 5.2 GeV
+(1/g²μ = 0.038 fm), i.e. g²μ a = 6.2, 3.1, 1.5 and 0.77 for the sizes 128
+to 1024, so that only the finest lattices resolve most of the event. As a
+reference, a fourth scan runs a constant g²μ (`useNucleus 0`,
+`--uniform-g2mu`, default 5 GeV, L = 3 fm) at the `Ny` and `m` of the
+input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512). There dN/dy is within about
+5% of its limit for g²μ a ≲ 1, while dE/dη converges only slowly (it still grows by 9% from g²μ
+a = 0.3 to 0.15): the perturbative 1/k⁴ tail of the gluon spectrum carries
+energy up to the lattice cutoff (the energy density at τ = 0 even diverges
+like ln² a, T. Lappi, Phys. Lett. B 643 (2006) 11).
+
 ```bash
 cd numerical_parameters
-# quick test: sizes 64 and 128, Ny and m scans at 64, 2 seeds (5 s with 8 workers)
+# quick test: sizes 64 and 128, Ny and m scans at 64, the constant g²μ at
+# sizes 32 and 64, 2 seeds (6 s with 8 workers)
 python3 numerical_parameters.py --ipglasma-path ../.. --quick --max-workers 8
-# the setup of the paper: sizes 128-1024, Ny 1-100, m 0.1-0.8 GeV, 4 seeds
+# the setup of the paper: sizes 128-1024, Ny 1-100, m 0.1-0.8 GeV, the
+# constant g²μ at sizes 32-512, 4 seeds
 python3 numerical_parameters.py --ipglasma-path ../.. --max-workers 4
 ```
 

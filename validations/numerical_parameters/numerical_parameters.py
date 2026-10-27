@@ -32,8 +32,25 @@ statistical error of each observable against a, Ny and m. The physical
 Q_s of the Wilson lines at fixed QsMuRatio, which changes with Ny and m,
 is measured by the dipole setup (validations/dipole_correlator, #123).
 
+The lattice converges once it resolves the color-charge scale, g^2 mu a
+well below 1. A run that only builds the Wilson lines gives the g^2 mu =
+Q_s/QsMuRatio of each site of the geometry, and the script reports its
+median and maximum (the median weighted with (g^2 mu)^2, i.e. with the
+multiplicity) and g^2 mu a for each size. For seed 3 the hot spots of the
+example input (BGq = 0.3 GeV^-2, a width of 0.11 fm) overlap to g^2 mu of
+up to 13 GeV, with a median of 5.2 GeV (1/g^2 mu = 0.038 fm), so that only
+the smallest lattice spacings resolve most of the event. As a reference,
+a fourth scan runs a constant g^2 mu (useNucleus 0, L = 3 fm) of about this
+median at the Ny and m of the input, against g^2 mu a: dN/dy is within
+about 5% of its limit for g^2 mu a below about 1, dE/deta converges only
+slowly (it still grows by 9% from g^2 mu a = 0.3 to 0.15), since the
+perturbative 1/k^4 tail of the gluon spectrum carries a part of the energy
+up to the lattice cutoff (the energy density at tau = 0 even diverges, as
+ln^2 a; T. Lappi, Phys. Lett. B 643 (2006) 11).
+
 Usage (from validations/numerical_parameters/):
-    # quick test: sizes 64 and 128, Ny and m scans at 64, 2 seeds
+    # quick test: sizes 64 and 128, Ny and m scans at 64, the constant
+    # g^2 mu at sizes 32 and 64, 2 seeds
     python3 numerical_parameters.py --ipglasma-path ../.. --quick
     # the setup of the paper
     python3 numerical_parameters.py --ipglasma-path ../.. --max-workers 4
@@ -63,6 +80,9 @@ from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
 
 OBSERVABLES = ["dE/deta(0.2)", "dE/deta(final)", "dN/dy", "eps_2", "eps_3",
                "Psi_2", "Psi_3"]
+# the constant g^2 mu has no geometry, so no eccentricities
+UNIFORM_OBSERVABLES = OBSERVABLES[:3]
+HBARC = 0.1973269804  # GeV fm
 
 
 def write_input(template, overrides, path):
@@ -82,12 +102,14 @@ def write_input(template, overrides, path):
 
 
 def run_tag(cfg):
-    return (f"size{cfg['size']}_ny{cfg['ny']}_m{cfg['m']:g}"
+    uniform = (f"uniform_g2mu{cfg['g2mu']:g}_L{cfg['L']:g}_"
+               if "g2mu" in cfg else "")
+    return (f"{uniform}size{cfg['size']}_ny{cfg['ny']}_m{cfg['m']:g}"
             f"_cc{cfg['color_seed']}")
 
 
-def read_run(workdir):
-    """The observables and the geometry of one run."""
+def read_run(workdir, with_geometry=True):
+    """The observables and (with_geometry) the geometry of one run."""
     out = {}
     for path in glob.glob(os.path.join(workdir, "Tmunu-t*-0.ipgt")):
         tmunu, meta = read_tmunu(path)
@@ -99,6 +121,8 @@ def read_run(workdir):
     with open(glob.glob(os.path.join(workdir, "NpartdNdy-t*-0.dat"))[0]) as f:
         values = f.read().split()
     out["dN/dy"] = float(values[1])
+    if not with_geometry:
+        return {k: float(v) for k, v in out.items()}, None
     ecc = np.loadtxt(os.path.join(workdir, "eccentricities0.dat"), ndmin=2)[-1]
     out.update({"eps_2": ecc[3], "Psi_2": ecc[4], "eps_3": ecc[5],
                 "Psi_3": ecc[6]})
@@ -114,20 +138,13 @@ def read_run(workdir):
     return {k: float(v) for k, v in out.items()}, geometry
 
 
-def run_one(cfg, settings):
-    workdir = os.path.join(settings["datadir"], run_tag(cfg))
-    cache = os.path.join(workdir, "result.json")
-    if os.path.exists(cache):
-        with open(cache) as f:
-            data = json.load(f)
-        return cfg, data["observables"], data["geometry"], None
+def run_ipglasma(settings, overrides, workdir):
+    """Runs ipglasma in workdir with the template and the overrides; the
+    error message if it failed, else None."""
     os.makedirs(workdir, exist_ok=True)
     tables = os.path.join(workdir, "tables")
     if os.path.isdir(settings["tables"]) and not os.path.exists(tables):
         os.symlink(settings["tables"], tables)
-    overrides = dict(settings["overrides"], size=cfg["size"],
-                     sizeOutput=cfg["size"], Ny=cfg["ny"], m=cfg["m"],
-                     colorChargeSeed=cfg["color_seed"])
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))
@@ -135,8 +152,75 @@ def run_one(cfg, settings):
         result = subprocess.run([settings["ipglasma"], "input"], cwd=workdir,
                                 stdout=log, stderr=subprocess.STDOUT, env=env)
     if result.returncode != 0:
-        return cfg, None, None, f"ipglasma failed (exit {result.returncode})"
-    observables, geometry = read_run(workdir)
+        return f"ipglasma failed (exit {result.returncode})"
+    return None
+
+
+def read_g2mu(path):
+    """g^2 mu [GeV] of each site of a WilsonLineGeometry file (OUTPUT.md)."""
+    with open(path, "rb") as f:
+        data = f.read()
+    if data[:8] != b"IPGGEO1\0":
+        raise ValueError(f"{path} is not a Wilson-line geometry file")
+    length = int.from_bytes(data[8:16], "little")
+    meta = json.loads(data[16:16 + length])
+    sites = meta["N"] * meta["N"]
+    # the nucleons (x, y, z, proton) come first, then g^2 mu^2 of each site,
+    # (g^2 mu a)^2 / g^2 in lattice units
+    g2mu2 = np.frombuffer(data, "<f8", sites,
+                          16 + length + meta["nucleons"] * 4 * 8)
+    return meta["g"] * np.sqrt(g2mu2) * HBARC / (meta["L_fm"] / meta["N"])
+
+
+def g2mu_scale(settings, size):
+    """The scale g^2 mu = Q_s/QsMuRatio of the geometry, from a run that
+    only builds the Wilson lines (one layer) and writes the geometry files:
+    the median weighted with (g^2 mu)^2 and the maximum, over the sites of
+    both nuclei."""
+    workdir = os.path.join(settings["datadir"], f"g2mu_size{size}")
+    cache = os.path.join(workdir, "g2mu.json")
+    if os.path.exists(cache):
+        with open(cache) as f:
+            return json.load(f)
+    overrides = dict(settings["overrides"], size=size, sizeOutput=size,
+                     Ny=1, runEvolution=0, writeWilsonLines=2,
+                     writeWilsonLineGeometry=1, colorChargeSeed=1)
+    error = run_ipglasma(settings, overrides, workdir)
+    if error:
+        print(f"FAILED: the g^2 mu run in {workdir}: {error}")
+        return None
+    g2mu = np.concatenate([read_g2mu(path) for path in glob.glob(
+        os.path.join(workdir, "WilsonLineGeometry_*"))])
+    order = np.argsort(g2mu)
+    weight = np.cumsum(g2mu[order] ** 2)
+    scale = {"median": float(g2mu[order][np.searchsorted(
+                 weight, 0.5 * weight[-1])]),
+             "max": float(g2mu.max())}
+    with open(cache, "w") as f:
+        json.dump(scale, f)
+    for path in glob.glob(os.path.join(workdir, "WilsonLine*")):
+        os.remove(path)
+    return scale
+
+
+def run_one(cfg, settings):
+    workdir = os.path.join(settings["datadir"], run_tag(cfg))
+    cache = os.path.join(workdir, "result.json")
+    if os.path.exists(cache):
+        with open(cache) as f:
+            data = json.load(f)
+        return cfg, data["observables"], data["geometry"], None
+    overrides = dict(settings["overrides"], size=cfg["size"],
+                     sizeOutput=cfg["size"], Ny=cfg["ny"], m=cfg["m"],
+                     colorChargeSeed=cfg["color_seed"])
+    uniform = "g2mu" in cfg
+    if uniform:
+        overrides.update(useNucleus=0, g2muGeV=cfg["g2mu"], L=cfg["L"],
+                         LOutput=cfg["L"], computeEccentricities=0)
+    error = run_ipglasma(settings, overrides, workdir)
+    if error:
+        return cfg, None, None, error
+    observables, geometry = read_run(workdir, with_geometry=not uniform)
     with open(cache, "w") as f:
         json.dump({"observables": observables, "geometry": geometry}, f)
     for path in glob.glob(os.path.join(workdir, "*.ipgt")):
@@ -156,25 +240,42 @@ def plot(summary, path):
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
-    scans = [("size", "a [fm]", lambda s: summary["L"] / s),
-             ("ny", r"$N_y$", float), ("m", r"$m$ [GeV]", float)]
+    scans = [("size", "a [fm]", lambda r: summary["L"] / r["value"]),
+             ("ny", r"$N_y$", lambda r: r["value"]),
+             ("m", r"$m$ [GeV]", lambda r: r["value"]),
+             ("uniform", r"$g^2\mu\, a$ (constant $g^2\mu$)",
+              lambda r: r["g2mu_a"])]
+    scans = [s for s in scans if summary["scans"].get(s[0])]
     names = ["dE/deta(0.2)", "dE/deta(final)", "dN/dy", "eps_2", "eps_3"]
-    fig, axes = plt.subplots(len(names), 3, figsize=(10, 2.2 * len(names)),
-                             sharex="col")
+    fig, axes = plt.subplots(len(names), len(scans),
+                             figsize=(3.4 * len(scans), 2.2 * len(names)),
+                             sharex="col", squeeze=False)
     for col, (scan, label, x_of) in enumerate(scans):
         rows = summary["scans"][scan]
-        x = np.array([x_of(r["value"]) for r in rows])
+        x = np.array([x_of(r) for r in rows])
         for row, name in enumerate(names):
             ax = axes[row, col]
+            if name not in rows[0]["observables"]:
+                ax.axis("off")
+                continue
             y = np.array([r["observables"][name]["mean"] for r in rows])
             e = np.array([r["observables"][name]["error"] for r in rows])
             ax.errorbar(x, y, yerr=e, fmt="o-", ms=4)
             if col == 0:
                 ax.set_ylabel(name)
-            if row == len(names) - 1:
+            # the constant g^2 mu has no eccentricity rows below dN/dy
+            if row == len(names) - 1 or (scan == "uniform" and row == 2):
                 ax.set_xlabel(label)
-            if scan == "ny":
+                ax.xaxis.set_tick_params(labelbottom=True)
+            if scan in ("ny", "uniform"):
                 ax.set_xscale("log")
+    scale = (summary["geometry"] or {}).get("g2mu_GeV")
+    if scale and scans[0][0] == "size":
+        # the median g^2 mu a of the geometry on top of the size scan
+        top = axes[0, 0].secondary_xaxis(
+            "top", functions=(lambda a: a * scale["median"] / HBARC,
+                              lambda x: x * HBARC / scale["median"]))
+        top.set_xlabel(r"median $g^2\mu\, a$")
     fig.tight_layout()
     fig.savefig(path)
     plt.close(fig)
@@ -202,7 +303,17 @@ def main():
     parser.add_argument("--m", type=float, nargs="+",
                         default=[0.1, 0.2, 0.4, 0.8], help="[GeV]")
     parser.add_argument("--scan-size", type=int, default=256,
-                        help="the size of the Ny and m scans")
+                        help="the size of the Ny and m scans, and of the "
+                             "run that gives g^2 mu of the geometry")
+    parser.add_argument("--uniform-g2mu", type=float, default=5.,
+                        help="the constant g^2 mu of the reference scan "
+                             "[GeV]")
+    parser.add_argument("--uniform-L", type=float, default=3.,
+                        help="L of the reference scan [fm]")
+    parser.add_argument("--uniform-sizes", type=int, nargs="*",
+                        default=[32, 64, 128, 256, 512],
+                        help="the sizes of the reference scan; none skips "
+                             "it")
     parser.add_argument("--color-seeds", type=int, default=4)
     parser.add_argument("--maxtime", type=float, default=0.4, help="[fm/c]")
     parser.add_argument("--threads", type=int, default=1,
@@ -210,11 +321,13 @@ def main():
     parser.add_argument("--max-workers", type=int, default=1)
     parser.add_argument("--quick", action="store_true",
                         help="sizes 64 and 128, Ny and m scans at 64 with "
-                             "three values each, 2 color-charge seeds")
+                             "three values each, the constant g^2 mu at "
+                             "sizes 32 and 64, 2 color-charge seeds")
     args = parser.parse_args()
     if args.quick:
         args.sizes, args.scan_size, args.color_seeds = [64, 128], 64, 2
         args.ny, args.m = [5, 25, 50], [0.2, 0.4, 0.8]
+        args.uniform_sizes = [32, 64]
 
     with open(args.template) as f:
         template_values = dict(line.split()[:2] for line in f
@@ -246,13 +359,17 @@ def main():
     color_seeds = range(1, args.color_seeds + 1)
     points = {"size": [dict(size=s, ny=ny0, m=m0) for s in args.sizes],
               "ny": [dict(size=args.scan_size, ny=n, m=m0) for n in args.ny],
-              "m": [dict(size=args.scan_size, ny=ny0, m=m) for m in args.m]}
+              "m": [dict(size=args.scan_size, ny=ny0, m=m) for m in args.m],
+              "uniform": [dict(size=s, ny=ny0, m=m0, g2mu=args.uniform_g2mu,
+                               L=args.uniform_L)
+                          for s in args.uniform_sizes]}
     configs = {}
     for scan in points.values():
         for point in scan:
             for cs in color_seeds:
                 cfg = dict(point, color_seed=cs)
                 configs[run_tag(cfg)] = cfg
+    scale = g2mu_scale(settings, args.scan_size)
     print(f"{len(configs)} runs (b = {args.b} fm, L = {args.L} fm, seed "
           f"{args.seed}) with up to {args.max_workers} workers ...",
           flush=True)
@@ -273,8 +390,9 @@ def main():
         print("FAILED:", failure)
 
     # the geometry must be the same in all runs: the N_part and N_coll lists
-    # and b (<Q_s> is averaged on the lattice, so it depends a little on a)
-    geometries = [g for _, _, g in results.values()]
+    # and b (<Q_s> is averaged on the lattice, so it depends a little on a);
+    # the constant g^2 mu has none
+    geometries = [g for _, _, g in results.values() if g is not None]
     keys = ("b", "NpartList0.dat", "NcollList0.dat")
     same_geometry = all(all(g[k] == geometries[0][k] for k in keys)
                         for g in geometries)
@@ -287,35 +405,55 @@ def main():
         else True
 
     summary = {"settings": vars(args), "L": args.L,
-               "geometry": geometries[0] if geometries else None,
+               "geometry": dict(geometries[0], g2mu_GeV=scale)
+               if geometries else None,
                "checks": {"same_geometry": bool(same_geometry),
                           "color_seeds_differ": bool(differ),
-                          "all_runs_succeeded": not failures},
+                          "all_runs_succeeded": not failures
+                          and scale is not None},
                "scans": {}}
     for scan, scan_points in points.items():
         rows = []
+        names = UNIFORM_OBSERVABLES if scan == "uniform" else OBSERVABLES
         for p in scan_points:
             runs = [results[run_tag(dict(p, color_seed=cs))][1]
                     for cs in color_seeds
                     if run_tag(dict(p, color_seed=cs)) in results]
             if not runs:
                 continue
-            rows.append({"value": p[scan],
-                         "observables": {name: statistics(
-                             [r[name] for r in runs]) for name in OBSERVABLES}})
+            row = {"value": p[scan] if scan != "uniform" else p["size"],
+                   "observables": {name: statistics([r[name] for r in runs])
+                                   for name in names}}
+            # g^2 mu a: of the constant g^2 mu, or the median of the geometry
+            if scan == "uniform":
+                row["g2mu_a"] = p["g2mu"] * p["L"] / p["size"] / HBARC
+            elif scale:
+                row["g2mu_a"] = scale["median"] * args.L / p["size"] / HBARC
+            rows.append(row)
         summary["scans"][scan] = rows
 
     print(f"\nGeometry (seed {args.seed}, b = {args.b} fm): <Q_s>(avg) = "
           f"{summary['geometry']['Qs_avg']} GeV")
+    if scale:
+        print(f"g^2 mu of the geometry: median {scale['median']:.3g} GeV "
+              f"(1/g^2 mu = {HBARC / scale['median']:.3g} fm, weighted with "
+              f"(g^2 mu)^2), max {scale['max']:.3g} GeV")
     for scan, rows in summary["scans"].items():
-        print(f"\n{scan} scan:")
-        print(f"  {scan:>6s}" + "".join(f"{n:>22s}" for n in OBSERVABLES[:5]))
+        if not rows:
+            continue
+        names = list(rows[0]["observables"])[:5]
+        title = {"uniform": f"constant g^2 mu = {args.uniform_g2mu:g} GeV, "
+                            f"L = {args.uniform_L:g} fm, size"}.get(scan, scan)
+        print(f"\n{title} scan:")
+        print(f"  {scan:>7s}{'g2mu a':>8s}"
+              + "".join(f"{n:>22s}" for n in names))
         for row in rows:
             cells = "".join(
                 f"{row['observables'][n]['mean']:13.5g} "
                 f"({row['observables'][n]['error']:.1g})"
-                for n in OBSERVABLES[:5])
-            print(f"  {row['value']:>6g}{cells}")
+                for n in names)
+            g2mu_a = f"{row['g2mu_a']:8.3g}" if "g2mu_a" in row else " " * 8
+            print(f"  {row['value']:>7g}{g2mu_a}{cells}")
     passed = all(summary["checks"].values())
     for name, ok in summary["checks"].items():
         print(f"{'OK  ' if ok else 'FAIL'} {name}")

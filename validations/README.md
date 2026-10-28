@@ -33,8 +33,9 @@ parts of the code against exact or published results:
 - **`performance/`** — the time per stage of an event and the peak memory
   against the lattice size and the number of threads (see below).
 - **`jimwlk_step_size/`** — the convergence of the JIMWLK evolution in its
-  step size `jimwlkDs`, and its error at the recommended step sizes (see
-  below).
+  step size `jimwlkDs`, and its error at the recommended step sizes, in the
+  setup of arXiv:1212.4825 (with BK and the curves of that paper) and in the
+  example input (see below).
 
 The two regression tests parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -587,17 +588,102 @@ speed d ln Q_s/dy (1.6% with fixed coupling at 0.0005). The recommended step
 sizes stay below the 3% of the acceptance over the evolution of the example
 input (from x = 0.01 to 10⁻⁴, y = 4.6).
 
-The error depends strongly on the setup. A separate check (see the
-discussion of #137) in the setup of arXiv:1212.4825 (1024², g²μL = 31,
-`Ny 100`, Λ_QCD L = 6, μ₀ L = 15, c = 0.2, running coupling without IR
-regulator, four configurations; `jimwlkLambdaQCD` and `jimwlkMu0` are
-e^{γ_E} times the Λ_QCD and μ₀ of the paper, whose coupling has the scale
-4e^{−2γ_E}/r² instead of 4/r²) also finds the error proportional to the
-step, but about 30 times larger per unit of step and of rapidity. Q_s/Λ_QCD
-grows from 3.7 to 33.2, 30.1 and 28.7 over y = 8 at `jimwlkDs` 0.001, 0.0005
-and 0.00025, and to 27.3 extrapolated to zero step. At 0.00025, Q_s and
-d ln Q_s²/dy agree within 1–2% with the JIMWLK results of the paper
-(Q_s/Λ_QCD = 27.4 at y = 7.8 in its Fig. 7, and its Fig. 8).
+The error depends strongly on the setup. Two more scripts measure it in
+other setups.
+
+**The setup of arXiv:1212.4825.** `lappi_mantysaari.py` runs the setup of
+Lappi and Mäntysaari, whose curves are in `lappi_mantysaari_2012/` (see the
+README there for how they were extracted):
+- **Initial condition:** the MV model with g²μL = 31, `Ny 100` and no
+  infrared regulator, on 1024².
+- **Evolution:** the square-root running coupling, the prescription
+  IP-Glasma implements (the noise prescription of the paper is #138), with
+  Λ_QCD L = 6, μ₀L = 15, c = 0.2, N_f = 3 and `jimwlkMass 0`. The coupling
+  of the paper has the scale 4e^{−2γ_E}/r² instead of 4/r², so
+  `jimwlkLambdaQCD` and `jimwlkMu0` are e^{γ_E} times its Λ_QCD and μ₀; the
+  coupling freezes at 0.76, against 0.36 in the example input.
+- **Runs:** `jimwlkDs` 0.001, 0.0005 and 0.00025 from the same initial Wilson
+  lines (two seeds, four configurations), to y = 8, with snapshots at every
+  unit of y.
+- **Analysis:** at each y, ln Q_s is fitted against the step as above and
+  extrapolated to zero step; the evolution speed λ = d ln Q_s²/dy comes from
+  successive snapshots.
+- **BK:** `bk_sqrt.py` solves the BK equation with the same kernel, the
+  mean-field limit of this JIMWLK evolution, from the mean dipole
+  correlator of the initial Wilson lines (RK4 on a logarithmic grid in r,
+  converged to 0.2%).
+- **Checks:** the initial Wilson lines agree, the step is of first order,
+  BK reproduces λ of Fig. 11 of the paper within 2%, JIMWLK at zero step is
+  slower than BK, and Q_s at zero step agrees with Fig. 6 within 10%.
+
+```bash
+cd jimwlk_step_size
+# quick test: 256², to y = 4, jimwlkDs 0.002, 0.001, 0.0005 (4 minutes)
+python3 lappi_mantysaari.py --ipglasma-path ../.. --quick --max-workers 3
+# the setup of the paper (several hours)
+python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 4 --max-workers 6
+```
+
+With the defaults, the step is again of first order, but its error per unit
+of step and of rapidity is about 30 times larger than above:
+
+| Q_s/Λ_QCD at y = 8 | |
+|---|---|
+| `jimwlkDs 0.001` | 33.2 |
+| `jimwlkDs 0.0005` | 30.1 |
+| `jimwlkDs 0.00025` | 28.7 |
+| zero step | 27.3 |
+| BK | 30.2 |
+| Fig. 6 of the paper | 28.5 |
+
+- **The paper matches a step of about 0.00025:** Q_s within 0.5% of its
+  Fig. 6 at y = 4 and 8, and λ along its Fig. 8.
+- **BK** reproduces λ of Fig. 11 within 0.5%.
+- **At zero step,** λ of JIMWLK is 4–9% below BK for Q_s/Λ_QCD = 10–25, so
+  JIMWLK is slower than BK, as in the paper (where the difference is about
+  5% in Q_s at y = 7.8, here 9%).
+
+**The example input.** `example_input_step_size.py` evolves the example
+input itself (Pb+Pb with hot spots, b = 0) from x₀ = 0.0098 to 10⁻⁴, exactly
+93 steps of 0.005, at `jimwlkDs` 0.005, 0.0025, 0.00125 and 0.000625, from
+the same initial Wilson lines:
+- **Q_s:** a nucleus is not translation invariant, so Q_s comes from the
+  dipole correlator averaged over a region: the thirds of each nucleus by
+  the initial g²μ (dilute, medium, dense) and all of them. The dilute
+  third includes the edges and the gaps between the hot spots, where the
+  coupling is strongest.
+- **Observables:** dE/dη, dN/dy, ε₂ and ε₃ after the Yang–Mills evolution.
+- **Analysis:** per configuration, a fit linear in the step; a quadratic fit
+  tests the first order.
+- **Checks:** the initial Wilson lines agree, the step is of first order,
+  Q_s of every region and dN/dy are within 3% of zero step at 0.005, and
+  dE/dη at 0.0025.
+
+```bash
+# quick test: 128², L = 30 fm, three step sizes, 2 seeds (20 s)
+python3 example_input_step_size.py --ipglasma-path ../.. --quick --max-workers 3
+# 768², L = 22.5 fm, 3 seeds (about an hour with 2 workers of 4 threads)
+python3 example_input_step_size.py --ipglasma-path ../.. --max-workers 2
+```
+
+With the defaults, the deviation from zero step at `jimwlkDs 0.005` is:
+
+| | 768², L = 22.5 fm | 256², L = 30 fm (the example input) |
+|---|---|---|
+| Q_s, all | +0.9% ± 0.6% | −0.4% ± 0.5% |
+| Q_s, dilute third | +1.2% ± 0.7% | −0.4% ± 0.8% |
+| Q_s, dense third | +0.5% ± 0.8% | −0.4% ± 0.4% |
+| dN/dy | +2.3% ± 1.3% | +2.3% ± 3.9% |
+| dE/dη | +5.4% ± 0.6% | +0.2% ± 1.6% |
+
+- **Q_s and dN/dy:** within 1–2% of zero step at 0.005, as in the
+  constant-g²μ setup above.
+- **dE/dη:** its step error grows on finer lattices. It sits in the hard
+  tail of the evolved spectrum, which the coarse lattice cuts off (the same
+  tail makes the energy converge slowly in the lattice spacing, see
+  `numerical_parameters/`). At 0.0025 it is 2.7% ± 0.3% at 768².
+- **ε₂ and ε₃:** consistent with no dependence on the step, within their
+  errors (about 6% and 11% at 768²).
 
 ### Vector meson production validation
 

@@ -1,16 +1,18 @@
 # Running the validation scripts
 
-This folder contains two parallel validation/regression scripts for IP-Glasma,
-and in subfolders the small validation setups of the code paper, which test
+This folder contains, each in its own subfolder, two regression tests for
+IP-Glasma and the small validation setups of the code paper, which test
 parts of the code against exact or published results:
 
-- **`parallel_test_vector_meson_production.py`** — runs many independent
+- **`vector_meson_production/`** (`parallel_test_vector_meson_production.py`)
+  — runs many independent
   IP-Glasma + JIMWLK events, feeds the resulting Wilson lines to the external
   [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
   code, and compares the resulting coherent/incoherent J/ψ cross section to a
   stored reference (`validation_spectra`) and to Fig. 1 ("CGC+shape fluct") of
   [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712).
-- **`parallel_test_eccentricity.py`** — runs many independent IP-Glasma
+- **`eccentricity_regression/`** (`parallel_test_eccentricity.py`) — runs
+  many independent IP-Glasma
   events (no external dependency), computes the energy-density-weighted
   eccentricity ε₂ of the final-state `Tmunu` snapshot for each event, and
   checks the resulting ε₂ distribution against a saved baseline. This is the
@@ -29,7 +31,7 @@ parts of the code against exact or published results:
 - **`constant_glasma/`** — the glasma of a constant color-charge density
   against the published classical Yang-Mills results of Lappi (see below).
 
-Both scripts parallelize over random seeds using
+The two regression tests parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
 working directory (`<datadir>/seed_<n>/`) and multiple events run
 simultaneously.
@@ -41,8 +43,8 @@ simultaneously.
    ./compile_IPGlasma.sh
    ```
    (dependencies: CMake, FFTW and GSL, see the main README). The scripts
-   locate the binary via `--ipglasma-path` (default `.` for the eccentricity
-   script and `..` for the vector-meson script), expecting it at
+   locate the binary via `--ipglasma-path` (default `../..`, the repository
+   root seen from the folder of the script), expecting it at
    `<ipglasma-path>/ipglasma`.
 2. For `parallel_test_vector_meson_production.py` only: build
    [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
@@ -52,20 +54,22 @@ simultaneously.
 
 ## Running interactively
 
-From the `validations/` directory (paths below assume the scripts are run
+From the folder of each script (paths below assume the scripts are run
 from there; both scripts also accept absolute paths for `--ipglasma-path`
-etc. if you invoke them from elsewhere):
+etc. if you invoke them from elsewhere; their input templates and
+references are found next to the script):
 
 ### Eccentricity regression test (quick sanity check)
 
 ```bash
+cd eccentricity_regression
 # One-time: record a baseline from a known-good build
 python3 parallel_test_eccentricity.py --input-template input_eccentricity \
-    --ipglasma-path .. --maxevents 40 --max-workers 8 --save-reference
+    --ipglasma-path ../.. --maxevents 40 --max-workers 8 --save-reference
 
 # Later, e.g. after changing the code: check nothing drifted
 python3 parallel_test_eccentricity.py --input-template input_eccentricity \
-    --ipglasma-path .. --maxevents 40 --max-workers 8
+    --ipglasma-path ../.. --maxevents 40 --max-workers 8
 ```
 
 Useful flags:
@@ -416,10 +420,11 @@ too large.
 ### Vector meson production validation
 
 ```bash
+cd vector_meson_production
 python3 parallel_test_vector_meson_production.py \
     --maxevents 200 \
     --datadir ./jpsi_test_run \
-    --ipglasma-path .. \
+    --ipglasma-path ../.. \
     --subnucleondiffraction-path /path/to/subnucleondiffraction \
     --max-workers 8
 ```
@@ -442,8 +447,8 @@ color-field (Tr V(x)) plots for a couple of representative events.
 
 ## Running on a computing cluster (SLURM)
 
-`runvalidation_jpsi.sh` is a SLURM batch script template for
-`parallel_test_vector_meson_production.py`:
+`vector_meson_production/runvalidation_jpsi.sh` is a SLURM batch script
+template for `parallel_test_vector_meson_production.py`:
 
 ```bash
 #!/bin/bash
@@ -483,9 +488,11 @@ python3 parallel_test_vector_meson_production.py --slurm \
 Before submitting, edit the placeholders (`--account`, `--datadir`,
 `--subnucleondiffraction-path`, `--ipglasma-path`, and the `module add`
 line for your cluster) and adjust
-`--ntasks`/`--maxevents`/`--time` to the scale of the run. Submit with:
+`--ntasks`/`--maxevents`/`--time` to the scale of the run. Submit it from
+its folder, where the job then runs:
 
 ```bash
+cd vector_meson_production
 sbatch runvalidation_jpsi.sh
 ```
 
@@ -500,9 +507,9 @@ Notes:
   1), which can help binding/placement on some clusters. The templates pass
   it; remove `--slurm` from the `python3` invocation if your cluster runs
   the binaries directly.
-- `runvalidation_eccentricity.sh` is the same template for
-  `parallel_test_eccentricity.py` (submit it with
-  `sbatch runvalidation_eccentricity.sh`); only the job name and the
+- `eccentricity_regression/runvalidation_eccentricity.sh` is the same
+  template for `parallel_test_eccentricity.py` (submit it from its folder
+  with `sbatch runvalidation_eccentricity.sh`); only the job name and the
   python invocation differ:
   ```bash
   python3 parallel_test_eccentricity.py --size 128 \

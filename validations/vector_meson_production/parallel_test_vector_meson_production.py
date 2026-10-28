@@ -21,7 +21,7 @@ The lattice size can be increased by modifying the input file "input_vm_proton".
 
 The script also generates plots  color field (tr V(x)) for selected events.
 
-Example usage:
+Example usage (from validations/vector_meson_production/):
     python3 parallel_test_vector_meson_production.py --maxevents 100 --datadir path_for_cross_sections --subnucleondiffraction-path path_to_subnucleondiffraction_directory
 
 Maximum number of parallel workers can be specified with --max-workers. By default, it uses the number of logical CPUs.
@@ -53,7 +53,7 @@ import numpy as np
 
 
 subnucleondiffraction_path = "./subnucleondiffraction/"
-ipglasma_path = "../"
+ipglasma_path = "../../"
 ipglasma_cmd = "ipglasma"
 plot_ids = [1, 5]
 default_xpom = "0.001705"
@@ -63,7 +63,7 @@ lattice_L = 4 # fm
 
 
 def _repo_root():
-    return os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
+    return os.path.abspath(os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".."))
 
 
 def _script_dir():

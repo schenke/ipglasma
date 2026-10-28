@@ -233,6 +233,35 @@ periodic, and dN/dy scale with exponent 4 within 1% over the dilute range
 how far the larger g²μ deviate (the onset of saturation) and a fit of the
 spectrum, k⁴ dN/d²k = B ln(k/k₀).
 
+**The leading-order spectrum.** The script also compares the gluon spectrum
+with its analytic leading-order value, which has no free parameter
+(`leading_order.py`):
+- **Formula:** to first order in each nucleus, the fields at τ = 0⁺ are the
+  longitudinal fields E^η_c = (1/g) f^{abc} ∂_iΛ_A^a ∂_iΛ_B^b and
+  B^η_c = (1/g) f^{abc} ε_ij ∂_iΛ_A^a ∂_jΛ_B^b, with
+  (−∇² + m²)Λ = gρ. They then evolve as free fields, the E^η mode as
+  E_z ∝ J₀(kτ), the B^η mode with a transverse electric field ∝ J₁(kτ).
+  Averaged over the color charges, with q = k − p,
+
+  dN/dy d²k = N_c(N_c² − 1)/g² (g²μ)⁴ /(2π)² (τ/k)
+  [I_E(k) J₀(kτ)² + I_B(k) J₁(kτ)²] per area,
+
+  I_E,B(k) = ∫ d²p/(2π)² {(p·q)², (p×q)²} / [(p² + m²)²(q² + m²)²].
+- **The time of the measurement:** the Bessel functions are there because
+  the code counts gluons with the electric fields, n = 2|E|²/ω, which
+  oscillate with kτ. At late times J₀², J₁² → 1/(πkτ) on average, and the
+  formula becomes the classical result of Kovner, McLerran and Weigert and of
+  Gyulassy and McLerran, N_c(N_c² − 1)/g² (g²μ)⁴ (I_E + I_B)/(4π³k²), which
+  falls like ln(k/m)/k⁴ for k ≫ m.
+- **Lattice:** the formula is binned like the spectrum of the code (the
+  modes of the periodic lattice in bins of the lattice momentum). It has no
+  lattice artifacts, so it holds for ka ≪ 1.
+- **Configurations:** the smallest g²μ is run for `--lo-seeds` (16)
+  color-charge configurations, whose spectra are averaged.
+- **Check:** the mean ratio of the lattice to the leading-order spectrum in
+  the window 2m < k < 0.3/a must be 1 within `--lo-tolerance` (2%) plus
+  two standard deviations.
+
 ```bash
 cd dilute_limit
 # quick test: 64², five g²μ (a few seconds)
@@ -241,11 +270,31 @@ python3 dilute_limit.py --ipglasma-path ../.. --quick --max-workers 6
 python3 dilute_limit.py --ipglasma-path ../.. --max-workers 8
 ```
 
-With the defaults (33 s with 4 workers of 2 threads), the exponents are
+With the defaults (2 minutes with 4 workers of 2 threads), the exponents are
 3.9997 ± 0.0002 (ε at τ → 0⁺), 4.014 ± 0.008 (τε) and 3.991 ± 0.002
 (dN/dy). At g²μ = 0.5, 1 and 2 GeV, τε falls 2%, 6% and 15% below the
 dilute scaling, and dN/dy 2.5%, 9% and 28%. In the window 2 GeV < k < 4.7 GeV
-the spectrum follows B ln(k/k₀) with k₀ = 1.5 m, within 8%.
+the spectrum follows B ln(k/k₀) with k₀ = 1.5 m, within 8%. Against the
+leading order, with 16 configurations at g²μ = 0.05 GeV:
+
+| k [GeV] | k a | lattice / leading order |
+|---|---|---|
+| 0.3–2 | < 0.13 | 1.045 ± 0.020 |
+| 2–4.7 (the window) | 0.13–0.3 | 1.005 ± 0.006 |
+| 4.7–9.5 | 0.3–0.6 | 1.026 ± 0.003 |
+| 9.5–19 | 0.6–1.2 | 1.041 ± 0.002 |
+
+- **The normalization agrees within 0.5% ± 0.6%** in the window, with no
+  free parameter. This tests every factor from the color charges to the
+  gluon number.
+- **Without the Bessel functions,** i.e. with the late-time formula, the
+  ratio oscillates between 0.87 and 1.32 below k ≈ 4 GeV, where kτ is only a
+  few units at τ = 0.5 fm.
+- **Above the window,** the lattice spectrum lies a few percent higher. These
+  are lattice artifacts; e.g. the estimator divides by the lattice ω = k̃ < k,
+  which alone gives about (ka)²/24.
+- **dN/dy** is 1.050 ± 0.024 times the leading-order sum over the lattice
+  modes; the few lowest modes, at k ≈ 2π/L, carry most of it.
 
 Before #139 the lattice of `useNucleus 0` had clamped edges. These turned
 the pure-gauge fields of the nuclei, of first order in g²μ, into physical

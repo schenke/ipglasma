@@ -207,8 +207,8 @@ TEST_CASE("parseValue: lists are comma-separated doubles") {
 
 TEST_CASE("Parameters::readInput: the shipped input files are valid") {
     for (const char *file :
-         {"input", "validations/input_eccentricity",
-          "validations/input_vm_proton"}) {
+         {"input", "validations/eccentricity_regression/input_eccentricity",
+          "validations/vector_meson_production/input_vm_proton"}) {
         CAPTURE(file);
         Parameters param;
         const std::vector<std::string> errors =

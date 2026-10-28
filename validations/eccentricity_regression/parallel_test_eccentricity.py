@@ -26,7 +26,7 @@ then rerun it (e.g. in CI, or after refactoring) without that flag -- the
 script compares the new distribution against the saved reference and
 exits non-zero if it drifts beyond the configured tolerance.
 
-Usage:
+Usage (from validations/eccentricity_regression/):
     # one-time: record a baseline from a known-good build
     python3 parallel_test_eccentricity.py --maxevents 40 --save-reference
 
@@ -513,9 +513,10 @@ def main():
                               "(random seeds) to run in parallel")
     parser.add_argument("--datadir", default="./eccentricity_test_output/",
                          help="directory for per-event working dirs and plots")
-    parser.add_argument("--ipglasma-path", default="..",
+    parser.add_argument("--ipglasma-path", default="../..",
                          help="directory containing the ipglasma binary, "
-                              "input template and Qs table")
+                              "the Qs table and utilities/ (default: the "
+                              "repository root, ../..)")
     parser.add_argument("--ipglasma-cmd", default="ipglasma")
     parser.add_argument("--input-template", default="input_eccentricity",
                          help="IP-Glasma input file to use as a template ")
@@ -581,7 +582,11 @@ def main():
 
     ipglasma_path = os.path.abspath(args.ipglasma_path)
     ipglasma_binary = os.path.join(ipglasma_path, args.ipglasma_cmd)
-    template_path = os.path.join(args.input_template)
+    # the template in the working directory, else next to the script
+    template_path = args.input_template
+    if not os.path.isfile(template_path):
+        template_path = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), args.input_template)
 
     qs_table_name = read_input_value(template_path, "nucleusQsTableFileName") \
         if os.path.isfile(template_path) else None

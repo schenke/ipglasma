@@ -265,7 +265,7 @@ written to `<datadir>/dipole_lappi_summary.json` and
 | 0.1 | 50 | 0.917 ± 0.006 | 0.855 ± 0.002 | 0.856 ± 0.002 | 0.814 ± 0.008 | 0.815 ± 0.010 | 1.151 ± 0.001 | 1.003 |
 | 0.1 | 150 | 0.931 ± 0.003 | 0.863 ± 0.001 | 0.868 ± 0.002 | 0.824 ± 0.007 | 0.814 ± 0.020 | 1.163 ± 0.001 | |
 
-With the adjoint correlator as defined, Q_s lies 4–8% above the values of
+With the adjoint correlator as defined, Q_s lies 4–9% above the values of
 Lappi (21% for `Ny 1` and m = 0). The factorized correlator reproduces
 them, within 1% for m = 0 at all `Ny`, and its spectrum reproduces the
 k̃² C(k̃) of his Fig. 1 for `Ny 1`; for m = 0, the fundamental Q̃_s agrees

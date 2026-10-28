@@ -265,9 +265,11 @@ struct SubnucleonParameters {
     /// (Init::computeWilsonLineMomentumKernel()).
     double UVDamp = 0.;
     /// Whether the \f$k = 0\f$ mode of the propagator is removed also with
-    /// \c m > 0, as in T. Lappi, Eur. Phys. J. C 55 (2008) 285 (with
-    /// \c m = 0 it always is). It is a color rotation of each layer that is
-    /// constant over the lattice.
+    /// \c m > 0, as the code of \cite Lappi:2007ku did (issue #148); with
+    /// \c m = 0 it always is. The mode is a shift of the color potential
+    /// \f$\Lambda\f$ of each layer that is constant over the lattice; added
+    /// before the exponentiation, it changes the Wilson lines, e.g.
+    /// \f$Q_s\f$ by 3% for one layer in the setup of that reference.
     bool removeZeroMode = false;
 };
 

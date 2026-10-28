@@ -29,19 +29,25 @@ Wilson lines along the axes and the diagonal, averaged over all sites and
 over the two nuclei of each run (two independent configurations), and
 checks, at the r_s where D_G = exp(-1/2), that
 
-  1. D approaches D_G for large Ny,
-  2. Ny (D - D_G) tends to a constant,
+  1. D approaches D_G for large Ny: |D - D_G| at the largest Ny is below a
+     fifth of that at the smallest,
+  2. Ny (D - D_G) tends to a constant: the two largest Ny agree within
+     three combined errors (plus 5%),
   3. the extrapolation of D - D_G = d_inf + c/Ny to Ny -> infinity, fitted
-     for Ny >= 2 G(0), vanishes within three statistical errors,
+     for Ny >= 2 G(0) (rounded to an integer), vanishes within three
+     statistical errors,
   4. g drops out: a run with g = 2 gives the same D as with g = 1.
 
-Where G(0) < 1, D - D_G at r_s stays below the statistical errors for all
-Ny, so checks 1 and 2 are skipped and the fit (over all Ny) tests that D
-agrees with D_G. Where fewer than three Ny of the scan satisfy
-Ny >= 2 G(0) (m = 0 at large g^2 mu L), the scan of that setting is
-extended by doubling the largest Ny (up to --ny-max), and settings in
-which D_G does not fall to exp(-1/2) within N/4 are skipped. Each Ny has
-its own seeds, so the configurations of different Ny are independent.
+A check that cannot be made (e.g. with fewer than three Ny in the fit
+range) counts as failed. For G(0) <~ 1, D - D_G changes sign near r_s and is
+not resolved there, while it is at smaller r; the checks are therefore made
+at r_s where D - D_G is resolved there at the smallest Ny (more than five
+standard errors), and otherwise at the r <= r_max where it is most
+significant. Where fewer than three Ny of the scan satisfy Ny >= 2 G(0)
+(m = 0 at large g^2 mu L), the scan of that setting is extended by
+doubling the largest Ny (up to --ny-max), and settings in which D_G does
+not fall to exp(-1/2) within N/4 are skipped. Each Ny has its own seeds,
+so the configurations of different Ny are independent.
 
 It also reports Q_s / g^2 mu, with D(r_s) = exp(-1/2) and Q_s^2 = 2/r_s^2,
 the fundamental-representation saturation scale in coordinate space.
@@ -52,14 +58,15 @@ and 0.1 g^2 mu) and compares Q_s / g^2 mu with his Fig. 4 and Fig. 7,
 with the definitions he used (issue #148):
   * the adjoint correlator in the factorized form, |S(r)|^2 - 1 with
     S(r) = sum_x tr V^+(x) V(x + r) / N^2 of each configuration (his code
-    takes 2|S|^2 - 1, which differs only at k = 0), and Q_s from the
-    maximum of k~^2 C(k~), averaged over the polar angle;
+    takes 2|S|^2 - 1, twice that plus a constant, with the same maximum of
+    k~^2 C(k~)), and Q_s from that maximum, averaged over the polar angle;
   * the k = 0 mode of the kernel removed also for m > 0
     (removeZeroMode 1); the runs with m > 0 are made with and without it;
   * in coordinate space, C(r_s) = C(0) exp(-1/2), Q_s^2 = 2/r_s^2, with
-    C(r) the 2D momentum integral of the binned spectrum, with k~ as the
-    momentum and the k = 0 mode by its magnitude, as in his spectrum files
-    (lappi_coordinate_profile()).
+    C(r) the 2D momentum integral of the binned spectrum of 2|S|^2 - 1,
+    with k~ as the momentum and the k = 0 mode by its magnitude, as in his
+    spectrum files (lappi_coordinate_profile()); that mode is negative, so
+    its magnitude adds about 1.9 to C(r) at every r.
 It checks that, for m = 0 and for m > 0 with the zero mode removed, the
 factorized Q_s agrees with Fig. 4 within --lappi-tolerance (2%) at every
 Ny and the coordinate-space Q_s with Fig. 7 within --lappi-coord-tolerance
@@ -75,7 +82,7 @@ The results go to <datadir>/dipole_summary.json (with --lappi,
 <datadir>/dipole_lappi_summary.json), the figures to <datadir>/dipole_*.pdf.
 
 Usage (from validations/dipole_correlator/):
-    # a quick test on small lattices, about a minute
+    # a quick test on small lattices, a few seconds
     python3 dipole_correlator.py --ipglasma-path ../.. --quick
     # the scan for the paper
     python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8
@@ -108,8 +115,9 @@ CA = 3.
 HBARC = 0.1973269804  # GeV fm
 NC = 3
 DA = NC * NC - 1
-# below this G(0), D - D_G at r_s is not resolved by the statistics
-G0_RESOLVED = 1.
+# D - D_G at r_s counts as resolved at the smallest Ny above this many
+# standard errors; otherwise the checks are made where it is most significant
+SIGNIFICANCE = 5.
 
 # the generators t^a = lambda^a / 2
 GELL_MANN = np.zeros((8, 3, 3), dtype=complex)
@@ -344,14 +352,15 @@ def lappi_observables(V, kt, index):
     # S(r) = sum_x tr V^+(x) V(x + r) / N^2, complex
     s = np.fft.ifft2(ckf)
     fact = np.abs(s) ** 2 - 1.
+    ck_fact = np.fft.fft2(fact).real
     out["adj_axis"], out["adj_diag"] = adj["axis"], adj["diag"]
     out["fact_axis"] = profiles(fact)["axis"]
     # the k = 0 modes, which k~^2 C(k~) does not show
     out["c0_adj"] = np.array(cka[0, 0])
-    out["c0_fact"] = np.array(np.fft.fft2(fact).real[0, 0])
+    out["c0_fact"] = np.array(ck_fact[0, 0])
     out["spec_adj"] = radial_spectrum(cka, kt, index)
     out["spec_fund"] = radial_spectrum(ckf, kt, index)
-    out["spec_fact"] = radial_spectrum(np.fft.fft2(fact).real, kt, index)
+    out["spec_fact"] = radial_spectrum(ck_fact, kt, index)
     return out
 
 
@@ -377,8 +386,9 @@ def run_one(cfg, settings):
         "g": cfg["g"], "seed": cfg["seed"],
         "nucleusQsTableFileName": settings["qs_table"],
         "writeWilsonLines": 2, "runEvolution": 0, "useNucleus": 0,
-        "removeZeroMode": int(bool(cfg.get("remove_zero_mode"))),
     }
+    if cfg.get("remove_zero_mode"):
+        overrides["removeZeroMode"] = 1
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))
@@ -483,24 +493,40 @@ def analyze_group(key, runs, settings):
         row["Qs_over_g2mu"] = row["Qs_GeV"] / g2mu
         rows.append(row)
 
-    resolved = g0 >= G0_RESOLVED
-    ny_from = max(1., settings["fit_from"] * g0)
+    # where the checks are made: at r_s if D - D_G is resolved there at the
+    # smallest Ny, else (for G(0) <~ 1, where it changes sign near r_s) at
+    # the r <= r_max where it is most significant
+    first = rows[0]["axis"]
+    with np.errstate(invalid="ignore", divide="ignore"):
+        significance = np.nan_to_num(np.abs(
+            np.array(first["D"]) - exact["axis"]) / np.array(first["error"]))
+    resolved = bool(significance[r_star] > SIGNIFICANCE)
+    r_check = r_star if resolved else \
+        int(1 + np.argmax(significance[1:r_max + 1]))
+    for row in rows:
+        row["dev_rcheck"] = float(row["axis"]["D"][r_check]
+                                  - exact["axis"][r_check])
+        row["error_rcheck"] = float(row["axis"]["error"][r_check])
+    # Ny >= fit_from G(0), rounded to an integer
+    ny_from = max(1., float(round(settings["fit_from"] * g0)))
     group = {"g2mu_GeV": g2mu, "m_GeV": m, "UVDamp_invGeV": uv,
              "a_fm": a, "G0": g0, "resolved": resolved,
-             "r_max": r_max, "r_star": r_star,
+             "significance_rstar": float(significance[r_star]),
+             "r_max": r_max, "r_star": r_star, "r_check": r_check,
              "exact": {d: exact[d].tolist() for d in exact},
              "Qs_exact_over_g2mu": float(
                  np.sqrt(2.) / (crossing(r, exact["axis"]) * a) * HBARC / g2mu),
              "rows": rows}
 
     # acceptance
+    # (a check that cannot be made is None, which counts as a failure)
     ny = np.array([row["ny"] for row in rows], dtype=float)
-    max_dev = np.array([row["axis"]["max_abs_dev"] for row in rows])
-    dev = np.array([row["dev_rstar"] for row in rows])
-    err = np.array([row["error_rstar"] for row in rows])
-    checks = {}
-    if resolved and len(rows) >= 2:
-        checks["approaches_exact"] = bool(max_dev[-1] < 0.2 * max_dev[0])
+    dev = np.array([row["dev_rcheck"] for row in rows])
+    err = np.array([row["error_rcheck"] for row in rows])
+    checks = {"approaches_exact": None, "ny_dev_constant": None,
+              "extrapolation_vanishes": None}
+    if len(rows) >= 2:
+        checks["approaches_exact"] = bool(abs(dev[-1]) < 0.2 * abs(dev[0]))
         # Ny (D - D_G) at the two largest Ny, within three combined errors
         a1, a2 = ny[-2] * dev[-2], ny[-1] * dev[-1]
         e = np.hypot(ny[-2] * err[-2], ny[-1] * err[-1])
@@ -523,7 +549,11 @@ def jackknife(samples, estimate):
     total = samples.sum(axis=0)
     value = estimate(total / n)
     partial = np.array([estimate((total - s) / (n - 1)) for s in samples])
-    return float(value), float(np.sqrt((n - 1) * np.nanvar(partial)))
+    # an estimate that fails (no maximum, no crossing) for one of the
+    # leave-one-out samples makes the error undefined
+    if np.isnan(partial).any():
+        return float(value), float("nan")
+    return float(value), float(np.sqrt((n - 1) * np.var(partial)))
 
 
 def analyze_lappi(key, runs, settings):
@@ -533,6 +563,8 @@ def analyze_lappi(key, runs, settings):
     g2mu_lat = g2mu * settings["L"] / settings["size"] / HBARC
     m_rel = round(m / g2mu, 6)
     r = np.arange(settings["size"] // 2 + 1)
+    count = np.bincount(settings["bin_index"].ravel()).astype(float)
+    n = settings["size"]
     rows = []
     for ny in sorted({cfg["ny"] for cfg, _ in runs}):
         outs = [out for cfg, out in runs if cfg["ny"] == ny]
@@ -561,8 +593,6 @@ def analyze_lappi(key, runs, settings):
             collect("fact_axis"), coordinate)
         # the coordinate space of Lappi: the 2D momentum integral of the
         # binned spectrum, normalized at r = 0
-        count = np.bincount(settings["bin_index"].ravel()).astype(float)
-        n = settings["size"]
 
         def coordinate_lappi(sample):
             c = lappi_coordinate_profile(k, count, sample[:-1], sample[-1],
@@ -645,7 +675,8 @@ def plot_lappi(groups, path):
                 ("Qs_fact", "s-", r"factorized, $|S|^2-1$"),
                 ("Qs_fund_scaled", "^-",
                  r"fundamental $\times\sqrt{C_A/C_F}$"),
-                ("Qs_coord_adj", "v-", "adjoint, coordinate space")):
+                ("Qs_coord_lappi", "v-",
+                 "coordinate space, momentum integral of $|S|^2-1$")):
             ax.errorbar(ny, [row[name] for row in rows],
                         yerr=[row[name + "_error"] for row in rows],
                         fmt=fmt, ms=4, lw=0.8, label=label)
@@ -664,9 +695,13 @@ def plot_lappi(groups, path):
         ax.set_xscale("log")
         ax.set_xlabel(r"$N_y$")
         ax.set_ylabel(r"$Q_s/g^2\mu$")
+        zero = "" if group["m_over_g2mu"] == 0. else (
+            ", zero mode removed" if group["remove_zero_mode"]
+            else ", zero mode kept")
         ax.set_title(fr"$g^2\mu L = {group['g2mu_L']:.0f}$, "
                      fr"$g^2\mu a = {group['g2mu_a']:.2f}$, "
-                     fr"$m = {group['m_over_g2mu']:g}\,g^2\mu$", fontsize=9)
+                     fr"$m = {group['m_over_g2mu']:g}\,g^2\mu${zero}",
+                     fontsize=9)
         ax.legend(fontsize=7)
     fig.tight_layout()
     fig.savefig(path)
@@ -754,12 +789,14 @@ def main_lappi(args, settings):
           "Q_s (Gaussian fits, their\nmean and half the range over the fit "
           "windows), and the coordinate space from the\n2D momentum "
           "integral of the binned spectrum:")
-    checks = {}
+    checks, deviations = {}, {}
     for group in summary["groups"]:
         lappi_like = (group["m_over_g2mu"] == 0.
                       or group["remove_zero_mode"])
-        label = (f"m = {group['m_over_g2mu']:g} g2mu"
-                 + ("" if lappi_like else ", zero mode kept"))
+        label = f"m = {group['m_over_g2mu']:g} g2mu" + (
+            "" if group["m_over_g2mu"] == 0. else
+            ", zero mode removed" if group["remove_zero_mode"]
+            else ", zero mode kept")
         print(f" {label}")
         for row in group["rows"]:
             ref = (f"{row['lappi_coord']:.4f}" if "lappi_coord" in row
@@ -777,20 +814,22 @@ def main_lappi(args, settings):
         coordinate = [abs(row["Qs_coord_lappi"] / row["lappi_coord"] - 1.)
                       for row in group["rows"] if "lappi_coord" in row]
         if momentum:
-            checks[f"{label}: the factorized Q_s is within "
-                   f"{args.lappi_tolerance:g} of Fig. 4 at every Ny "
-                   f"(largest deviation {max(momentum):.4f})"] = bool(
-                       max(momentum) < args.lappi_tolerance)
+            name = (f"{label}: the factorized Q_s is within "
+                    f"{args.lappi_tolerance:g} of Fig. 4 at every Ny")
+            checks[name] = bool(max(momentum) < args.lappi_tolerance)
+            deviations[name] = float(max(momentum))
         if coordinate:
-            checks[f"{label}: the coordinate-space Q_s is within "
-                   f"{args.lappi_coord_tolerance:g} of Fig. 7 (largest "
-                   f"deviation {max(coordinate):.4f})"] = bool(
-                       max(coordinate) < args.lappi_coord_tolerance)
+            name = (f"{label}: the coordinate-space Q_s is within "
+                    f"{args.lappi_coord_tolerance:g} of Fig. 7")
+            checks[name] = bool(max(coordinate) < args.lappi_coord_tolerance)
+            deviations[name] = float(max(coordinate))
     summary["checks"] = checks
+    summary["largest_deviations"] = deviations
     summary["passed"] = bool(all(checks.values()) and not failures)
     print()
     for name, ok in checks.items():
-        print(f"{'OK  ' if ok else 'FAIL'} {name}")
+        print(f"{'OK  ' if ok else 'FAIL'} {name} (largest deviation "
+              f"{deviations[name]:.4f})")
     plot_lappi(summary["groups"],
                os.path.join(settings["datadir"], "dipole_lappi.pdf"))
     path = os.path.join(settings["datadir"], "dipole_lappi_summary.json")
@@ -912,6 +951,9 @@ def main():
     g_check = {"g2mu": g2mu_ref, "m": m_ref, "uvdamp": 0., "ny": ny_ref,
                "g": 2., "seed": seed_of(ny_ref, 0, args.first_seed)}
     configs.append(g_check)
+    if (g2mu_ref, m_ref, 0.) not in groups:
+        # its setting is skipped: run the g = 1 reference on its own
+        configs.append(dict(g_check, g=1.))
     for s in skipped:
         print(f"skipped: g2mu = {s['g2mu_GeV']:g} GeV, m = {s['m_GeV']:g} "
               f"GeV, UVDamp = {s['UVDamp_invGeV']:g}/GeV (G(0) = "
@@ -940,6 +982,9 @@ def main():
                    for k in ("axis0", "axis1", "diag0", "diag1"))
         summary["g_check"] = {"max_abs_difference": diff,
                               "passed": bool(diff < 1e-10)}
+    else:
+        summary["g_check"] = {"max_abs_difference": None, "passed": None,
+                              "reason": "the runs with g = 1 and 2 failed"}
 
     # report
     print("\nDipole correlator against its exact lattice prediction:")
@@ -952,15 +997,18 @@ def main():
               f"r* = {group['r_star']} a, "
               f"Qs/g2mu exact = {group['Qs_exact_over_g2mu']:.4f})")
         if not group["resolved"]:
-            print(f"  G(0) < {G0_RESOLVED:g}: D - D_G at r* is below the "
-                  "statistical errors for all Ny; only the extrapolation "
-                  "is checked")
-        print("    Ny  max|D-D_G|  D-D_G at r*    Ny(D-D_G)   Qs/g2mu")
+            print(f"  D - D_G at r* is not resolved at the smallest Ny "
+                  f"({group['significance_rstar']:.1f} standard errors); "
+                  f"the checks are made at r = {group['r_check']} a, where "
+                  "it is most significant")
+        rc = group["r_check"]
+        print(f"    Ny  max|D-D_G|  D-D_G at r={rc:<3d}  Ny(D-D_G)   Qs/g2mu")
         for row in group["rows"]:
             mark = "*" if row["ny"] in fit["ny"] else " "
             print(f" {mark}{row['ny']:4d}  {row['axis']['max_abs_dev']:10.2e}  "
-                  f"{row['dev_rstar']:+.2e}({row['error_rstar']:.0e})  "
-                  f"{row['ny_dev_rstar']:+9.4f}  {row['Qs_over_g2mu']:.4f}")
+                  f"{row['dev_rcheck']:+.2e}({row['error_rcheck']:.0e})  "
+                  f"{row['ny'] * row['dev_rcheck']:+9.4f}  "
+                  f"{row['Qs_over_g2mu']:.4f}")
         if "d_inf" in fit:
             print(f"  extrapolation (* : Ny >= {fit['ny_from']:.3g}): "
                   f"D - D_G -> {fit['d_inf']:+.2e} +- {fit['error']:.1e}, "
@@ -969,13 +1017,17 @@ def main():
             print(f"  no extrapolation: fewer than three Ny >= "
                   f"{fit['ny_from']:.3g} (see --ny-max)")
         for name, ok in group["checks"].items():
-            print(f"  {'OK  ' if ok else 'FAIL'} {name}")
-            passed &= ok
-    if "g_check" in summary:
-        g = summary["g_check"]
+            status = "INCOMPLETE" if ok is None else ("OK  " if ok
+                                                      else "FAIL")
+            print(f"  {status} {name}")
+            passed &= ok is True
+    g = summary["g_check"]
+    if g["passed"] is None:
+        print(f"\n INCOMPLETE g drops out: {g['reason']}")
+    else:
         print(f"\n {'OK  ' if g['passed'] else 'FAIL'} g drops out: "
               f"max |D(g=2) - D(g=1)| = {g['max_abs_difference']:.1e}")
-        passed &= g["passed"]
+    passed &= g["passed"] is True
     summary["passed"] = bool(passed)
     with open(os.path.join(settings["datadir"], "dipole_summary.json"),
               "w") as f:

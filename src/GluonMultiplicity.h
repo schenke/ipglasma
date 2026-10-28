@@ -34,7 +34,13 @@ class GluonMultiplicity {
      * Fourier-transforming the gauge-fixed electric fields \c U, \c U2,
      * and \f$\pi\f$ (via the anonymous-namespace `prepareSpectrumField`/
      * `accumulateGluonSpectrum` helpers) and binning \f$dN/d^2k_T\f$ and
-     * \f$dE/d^2k_T\f$. Integrates these into \f$dN/dy\f$ (or
+     * \f$dE/d^2k_T\f$ with \f$2|E|^2/\omega\f$. With
+     * `gluonSpectrumEstimator 1` (the default), it then replaces the spectrum
+     * by that of the projection of the gauge-fixed potentials and momenta
+     * onto the free boost-invariant modes (bjorkenProjectionCoefficients(),
+     * via the anonymous-namespace `linkPotential`/`accumulateBjorkenSpectrum`
+     * helpers), keeping the totals of \f$2|E|^2/\omega\f$ for the JSON.
+     * Integrates these into \f$dN/dy\f$ (or
      * \f$dN/d\eta\f$) and \f$dE/dy\f$, with separate cut sums above
      * \f$k_T>3\f$ and \f$6\f$ GeV. At the final time step, optionally
      * hadronizes the spectrum (hadronizeAndWrite(), if

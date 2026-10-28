@@ -25,8 +25,9 @@ useNucleus 0 is periodic, as the lattices of the references. It computes
   * eps(tau -> 0+), at the first time step, against the lattice spacing,
   * f_N = g^2 (dN/dy) / (g^2 mu L)^2, the gluon number per unit rapidity
     and transverse area, from the multiplicity of the whole lattice at the
-    last time. IP-Glasma computes it in transverse Coulomb gauge with the
-    free lattice dispersion, as Eqs. (27) and (28) of Lappi 2003, the
+    last time. The runs compute it in transverse Coulomb gauge with the
+    free lattice dispersion and the electric fields
+    (gluonSpectrumEstimator 0), as Eqs. (27) and (28) of Lappi 2003, the
     definition of his Table I,
 
 and checks that
@@ -240,6 +241,8 @@ def main():
             "writeWilsonLines": 0, "writeWilsonLineGeometry": 0,
             "writeTmunu": 1, "writeTmunuBinary": 1, "writeHydro": 0,
             "computeGluonMultiplicity": 1, "computeEccentricities": 0,
+            # f_N of Lappi counts gluons with the electric fields
+            "gluonSpectrumEstimator": 0,
             "nucleusQsTableFileName": os.path.join(
                 path, "qs2Adj_vs_Tp_vs_Y_240.in"),
         },

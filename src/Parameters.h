@@ -372,10 +372,11 @@ struct OutputParameters {
     /// (needs \c computeGluonMultiplicity).
     bool writeHadronSpectrum = false;
     /// How the gluon spectrum counts gluons (needs
-    /// \c computeGluonMultiplicity): `0`, from the electric fields,
-    /// \f$2|E|^2/\omega\f$; `1`, from the projection of the potentials and
-    /// momenta onto the free boost-invariant modes (issue #140).
-    int gluonSpectrumEstimator = 0;
+    /// \c computeGluonMultiplicity): `1` (the default), from the projection
+    /// of the potentials and momenta onto the free boost-invariant modes
+    /// (issue #140); `0`, from the electric fields, \f$2|E|^2/\omega\f$, as
+    /// in IP-Glasma 1.x.
+    int gluonSpectrumEstimator = 1;
     /// Whether to write the binary snapshot `initialWilsonLines<id>.ipgw`
     /// of the initial Wilson lines (WilsonLineIO::writeTrainingData()).
     bool writeWilsonLineSnapshot = false;

@@ -917,7 +917,7 @@ const std::vector<ParameterSpec> &parameterTable() {
             "gluonSpectrumEstimator", &P::output,
             &OutputParameters::gluonSpectrumEstimator)
             .onlyIf(gluonMultiplicityComputed)
-            .optional("0")
+            .optional("1")
             .check(oneOf(
                 {0, 1},
                 " (0: 2|E|^2/omega, 1: projection onto the free "

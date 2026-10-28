@@ -60,7 +60,8 @@ simultaneously.
    separately and note its path (needed for `--subnucleondiffraction-path`).
 3. Python 3 with `numpy` and `matplotlib` (and optionally `scipy`, used for
    the two-sample KS test in the eccentricity script if available; the
-   JIMWLK step-size script needs it).
+   JIMWLK step-size script, the dilute limit and the `--lappi` mode of the
+   dipole correlator need it).
 
 ## Running interactively
 
@@ -136,29 +137,39 @@ each setting and seed, computes D(r) from the two nuclei of each run (two
 independent configurations) along the axes and the diagonal, averaged over
 all sites, and checks, at the r_s where D_G = e^{−1/2}, that
 
-- D approaches D_G for large `Ny`: the largest |D − D_G| (up to the r where
-  D_G = 0.05, at most N/4) falls by a factor of five from the smallest to
-  the largest `Ny`,
+- D approaches D_G for large `Ny`: |D − D_G| at the largest `Ny` is below a
+  fifth of that at the smallest,
 - `Ny` (D − D_G) at the two largest `Ny` agrees within three combined
   errors (plus 5%),
-- the extrapolation D − D_G = d_∞ + c/`Ny`, fitted for `Ny` ≥ 2 G(0)
-  (`--fit-from 2`), gives a d_∞ consistent with 0 within three errors,
+- the extrapolation D − D_G = d_∞ + c/`Ny`, fitted for `Ny` ≥ 2 G(0),
+  rounded to an integer (`--fit-from 2`), gives a d_∞ consistent with 0
+  within three errors,
 - a run with `g 2` gives the same D as with `g 1` (to rounding).
 
+A check that cannot be made, e.g. the extrapolation with fewer than three
+`Ny` in the fit range, counts as failed (`INCOMPLETE` in the printout,
+`null` in the summary).
+
 The fit starts at 2 G(0), not at G(0): there the 1/`Ny`² term still shifts
-d_∞ by about 10⁻³ (from `Ny` ≥ G(0), the default scan gives d_∞ = 1.1, 1.6
-and 1.1·10⁻³ for G(0) = 8, 65 and 260, 1.3 to 2 standard deviations), and
-from 2 G(0) on by a quarter of that. Where G(0) < 1, D − D_G at r_s stays
-within the statistical errors already for `Ny 1` (the deviation of D from
-D_G, up to 0.02 there, changes sign near r_s), so there is no approach to
-test: the first two checks are skipped, and the fit over all `Ny` tests
-that D agrees with D_G. Where fewer than three `Ny` of `--ny` lie in the
-fit range (m = 0), the scan of that setting is extended by doubling the
-largest `Ny`, up to `--ny-max` (3200). A setting in which D_G does not fall
-to e^{−1/2} within N/4 has no r_s and is skipped. Each `Ny` has its own
-seeds (1000 `Ny` + `--first-seed` + i), so the configurations of different
-`Ny`, and the points of the fit, are independent. The printout and the
-summary give G(0), the fit range (marked `*`) and the fit for each setting.
+d_∞ by about 10⁻³ (from `Ny` ≥ G(0), fitted to the same runs, the default
+scan gives d_∞ = 1.1, 1.6 and 1.1·10⁻³ for G(0) = 8, 65 and 260, 1.3 to 2
+standard deviations), and from 2 G(0) on by a quarter of that. (`--fit-from`
+also sets how far the scan is extended, so `--analyze-only --fit-from 1`
+fits fewer `Ny` and gives other values.)
+
+For G(0) ≲ 1, D − D_G changes sign near r_s and is not resolved there,
+while at smaller r it is (15 to 100 standard errors for `Ny 1` and r ≤ 10a
+in the two settings with G(0) = 0.5) and falls as 1/`Ny` from `Ny 1` on.
+The checks are therefore made at r_s where D − D_G is resolved there at the
+smallest `Ny` (more than five standard errors), and otherwise at the r ≤
+r_max where it is most significant. Where fewer than three `Ny` of `--ny`
+lie in the fit range (m = 0), the scan of that setting is extended by
+doubling the largest `Ny`, up to `--ny-max` (3200). A setting in which D_G
+does not fall to e^{−1/2} within N/4 has no r_s and is skipped. Each `Ny`
+has its own seeds (1000 `Ny` + `--first-seed` + i), so the configurations
+of different `Ny`, and the points of the fit, are independent. The printout
+and the summary give G(0), the r of the checks, the fit range (marked `*`)
+and the fit for each setting.
 
 It also reports Q_s/g²μ, with D(r_s) = e^{−1/2} and Q_s² = 2/r_s², the
 saturation scale of the fundamental representation in coordinate space.
@@ -192,34 +203,40 @@ check fails.
 
 With the defaults (8 configurations per `Ny`), all checks pass; the scan
 takes 43 minutes with 7 workers of one thread, most of it the four runs
-with `Ny 3200` (23 minutes each; `--ny-max 1600` halves the time, but
-leaves g²μ = 2 GeV, m = 0 without the extrapolation):
+with `Ny 3200` (23 minutes each; with `--ny-max 1600`, half the time, the
+extrapolation for g²μ = 2 GeV, m = 0 cannot be made and the script fails):
 
-| g²μ [GeV] | m [GeV] | G(0) | `Ny` | fit range | d_∞ [10⁻³] | checks |
+| g²μ [GeV] | m [GeV] | G(0) | `Ny` | r of the checks | fit range | d_∞ [10⁻³] |
 |---|---|---|---|---|---|---|
-| 0.5 | 0 | 16.3 | 1–200 | 50–200 | 3.5 ± 3.6 | all three |
-| 0.5 | 0.2 | 0.50 | 1–100 | 1–100 | 0.3 ± 1.5 | extrapolation |
+| 0.5 | 0 | 16.3 | 1–200 | r_s = 13a | 50–200 | 3.5 ± 3.6 |
+| 0.5 | 0.2 | 0.50 | 1–100 | a | 1–100 | 0.005 ± 0.003 |
 | 0.5 | 0.4 | 0.13 | | | | skipped (D_G > 0.84) |
-| 1 | 0 | 65.1 | 1–800 | 200–800 | 1.7 ± 2.2 | all three |
-| 1 | 0.2 | 1.99 | 1–100 | 5–100 | −0.2 ± 0.8 | all three |
-| 1 | 0.4 | 0.50 | 1–100 | 2–100 | −0.4 ± 0.8 | extrapolation |
-| 2 | 0 | 260 | 1–3200 | 800–3200 | 0.6 ± 1.3 | all three |
-| 2 | 0.2 | 7.98 | 1–100 | 25–100 | 0.5 ± 0.8 | all three |
-| 2 | 0.4 | 2.00 | 1–100 | 5–100 | −0.1 ± 0.3 | all three |
+| 1 | 0 | 65.1 | 1–800 | r_s = 6a | 200–800 | 1.7 ± 2.2 |
+| 1 | 0.2 | 1.99 | 1–100 | r_s = 10a | 5–100 | −0.2 ± 0.8 |
+| 1 | 0.4 | 0.50 | 1–100 | a | 1–100 | 0.021 ± 0.010 |
+| 2 | 0 | 260 | 1–3200 | r_s = 3a | 800–3200 | 0.6 ± 1.3 |
+| 2 | 0.2 | 7.98 | 1–100 | r_s = 4a | 25–100 | 0.5 ± 0.8 |
+| 2 | 0.4 | 2.00 | 1–100 | r_s = 5a | 5–100 | −0.1 ± 0.3 |
 
 D − D_G at r_s falls, e.g., from 0.09 (`Ny 1`) to 0.002 (`Ny 100`) for
 g²μ = 1 GeV and m = 0.2 GeV, and from 0.31 to 0.006 (`Ny 3200`) for
 g²μ = 2 GeV and m = 0; for G(0) = 0.5 it is at most 1.5 standard
-deviations at all `Ny`. Q_s/g²μ approaches its value for D_G accordingly,
-0.529 at `Ny 100` against 0.532, and 1.029 at `Ny 3200` against 1.039. The
-run with `g 2` agrees with `g 1` to 1·10⁻¹⁶.
+deviations at all `Ny` at r_s, while at r = a it falls from 4·10⁻⁴ and
+1.3·10⁻³ (70 and 110 standard errors) at `Ny 1` by a factor of 40 and 70.
+Q_s/g²μ approaches its value for D_G accordingly, 0.529 at `Ny 100` against
+0.532, and 1.029 at `Ny 3200` against 1.039. The run with `g 2` agrees with
+`g 1` to 1·10⁻¹⁶. With 8 configurations, the extrapolation check is weak
+where its bound, three errors of d_∞, is as large as the deviation left at
+the largest `Ny` of the fit (g²μ = 0.5 GeV with m = 0, and 1 GeV with m = 0
+and 0.2 GeV); more configurations tighten it.
 
 #### Comparison with Lappi (2008)
 
 ```bash
 # N = 200, g²μL = 100, g²μa = 0.5, m = 0 and 0.1 g²μ (with and without the
-# zero mode), Ny = 1...150, 32 seeds (about 20 minutes with 4 workers)
-python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 --lappi
+# zero mode), Ny = 1...150, 32 seeds (about 20 minutes with 4 workers;
+# needs scipy)
+python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 4 --lappi
 ```
 
 `--lappi` runs, instead of the scan, the setup of T. Lappi, Eur. Phys. J.
@@ -229,8 +246,9 @@ these combinations enter), m = 0 and 0.1 g²μ, and `Ny` = 1, 2, 4, 10, 20,
 50, 100 and 150, with 64 configurations each. It uses the definitions of his
 code (#148):
 - **The adjoint correlator** is the factorized form |S(r)|² − 1, with
-  S(r) = Σ_x tr V†(x) V(x+r)/N² of each configuration (his code takes
-  2|S|² − 1, which differs only at k = 0). Q_s is the k̃ of the maximum of
+  S(r) = Σ_x tr V†(x) V(x+r)/N² of each configuration. His code takes
+  2|S|² − 1, twice that plus a constant, which has the same maximum of
+  k̃² C(k̃) but not the same C(r). Q_s is the k̃ of the maximum of
   k̃² C(k̃), with C averaged over the polar angle in bins of k̃ of width
   2π/L; the script takes the vertex of the parabola through the largest bin
   and two bins on either side.
@@ -239,7 +257,11 @@ code (#148):
 - **In coordinate space,** C(r) is the 2D momentum integral of the binned
   spectrum, Σ_bins (modes) C(k̃) J₀(k̃r)/N², with k̃ as the momentum and the
   k = 0 mode by its magnitude, as in the spectrum files of his code, and
-  C(r_s) = C(0) e^{−1/2}, Q_s² = 2/r_s².
+  C(r_s) = C(0) e^{−1/2}, Q_s² = 2/r_s². The k = 0 mode of 2|S|² − 1 is
+  negative (2c₀ + N² ≈ −36 000 to −39 000 for N² = 40 000), so its
+  magnitude adds about 1.9 to C(r) at every r (C(0) ≈ 18.9 instead of 17).
+  Fig. 7 is reproduced with this offset, a property of the procedure rather
+  than of a definition of Q_s.
 
 The script checks that, for m = 0 and for m > 0 with the zero mode removed,
 the factorized Q_s agrees with his Fig. 4 within `--lappi-tolerance` (2%)
@@ -250,7 +272,7 @@ has none) and are listed in the script. The errors are from the jackknife
 over the configurations. The results, written to
 `<datadir>/dipole_lappi_summary.json` and `<datadir>/dipole_lappi.pdf`:
 
-| m/g²μ | `Ny` | factorized | Lappi, Fig. 4 | Gaussian fits | ⟨\|tr V†V\|²⟩ − 1 | coordinate | Lappi, Fig. 7 |
+| m/g²μ | `Ny` | factorized | Lappi, Fig. 4 | Gaussian fits (mean ± half range) | ⟨\|tr V†V\|²⟩ − 1 | coordinate | Lappi, Fig. 7 |
 |---|---|---|---|---|---|---|---|
 | 0 | 1 | 0.569 ± 0.003 | 0.570 ± 0.002 | 0.590 ± 0.024 | 0.689 ± 0.007 | 0.633 ± 0.003 | 0.637 |
 | 0 | 2 | 0.615 ± 0.003 | 0.620 ± 0.002 | 0.634 ± 0.022 | 0.652 ± 0.004 | 0.683 ± 0.003 |  |
@@ -274,18 +296,22 @@ over the configurations. The results, written to
 - **The zero mode:** with it kept, as IP-Glasma does by default, Q_s at
   m = 0.1 g²μ lies 1–4% lower for `Ny` ≤ 10 (0.506, 0.593, 0.688 at `Ny` =
   1, 2, 4); for large `Ny` the two agree.
-- **Coordinate space:** Fig. 7 is reproduced within 2%. Most of the
-  difference to the lattice correlator comes from the momentum integral
-  with k̃ (about 5% in Q_s) and from the magnitude of the k = 0 mode (about
-  8%).
+- **Coordinate space:** Fig. 7 is reproduced within 2%. Against |S|² − 1
+  on the lattice with C(r_s) = 8 e^{−1/2}, about 4.5% of Q_s comes from the
+  correlator 2|S|² − 1 normalized to its own C(0) = 17, and about 8% from
+  the magnitude of its k = 0 mode; the momentum integral with k̃, instead of
+  the lattice Fourier transform, changes Q_s by less than 1%.
 - **The definition of the paper,** ⟨|tr V†V|²⟩ − 1, gives Q_s 5–8% higher
   (21% and 12% for `Ny 1` at m = 0 and 0.1 g²μ); for `Ny` → ∞, where both are Gaussian, the two
   forms differ essentially by C_A = 3 against 2C_F = 8/3.
 - **The peak estimator:** Gaussian fits of the maximum, his method (a
-  parabola in ln k̃²C over 2 to 6 bins on either side; the table gives their
-  mean and half their range), give Q_s 1–3% above the parabola through
-  five bins, depending on the fit window; the parabola is closer to his
-  values.
+  parabola in ln k̃²C over n = 2 to 6 bins on either side; the table gives
+  their mean and half their range over n, not a statistical error), lie on
+  average 0.7–3.7% (m = 0) and 1.9–5.0% (m = 0.1 g²μ) above the parabola
+  through five bins, so their mean deviates from Fig. 4 by up to 3.6% and
+  5.7%. The narrowest window, n = 2, agrees with the five-bin parabola
+  within 0.1%; the widest, n = 6, is up to 8% and 11% higher, at `Ny 1`.
+  Fig. 4 agrees with the narrowest window.
 
 ### Lattice symmetries
 

@@ -96,6 +96,8 @@ class GluonMultiplicity {
      * \param[in] longitudinal Whether the longitudinal (\f$\phi\f$) mode.
      * \param[out] cq Coefficient of the potential.
      * \param[out] cp Coefficient of the momentum.
+     * \throw std::invalid_argument unless \p k > 0 and \p tau > 0, where
+     * \f$Y_0\f$ and \f$Y_1\f$ diverge.
      */
     static void bjorkenProjectionCoefficients(
         double k, double tau, bool longitudinal, std::complex<double> &cq,

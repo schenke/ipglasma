@@ -43,6 +43,11 @@ using std::stringstream;
 void GluonMultiplicity::bjorkenProjectionCoefficients(
     double k, double tau, bool longitudinal, std::complex<double> &cq,
     std::complex<double> &cp) {
+    // Y_0 and Y_1 diverge at 0, where GSL's error handler would abort
+    if (!(k > 0.) || !(tau > 0.)) {
+        throw std::invalid_argument(
+            "bjorkenProjectionCoefficients needs k > 0 and tau > 0");
+    }
     const double x = k * tau;
     const std::complex<double> H0(gsl_sf_bessel_J0(x), -gsl_sf_bessel_Y0(x));
     const std::complex<double> H1(gsl_sf_bessel_J1(x), -gsl_sf_bessel_Y1(x));
@@ -449,18 +454,40 @@ int GluonMultiplicity::compute(
     for (int i = 0; i < N * N; i++) {
         E1[i] = &E1Storage[i];
     }
+    // with the projection onto the free Bjorken modes (issue #140), the
+    // electric passes transform E^x, E^y and pi into three more scratch
+    // fields, which the projection then reuses
+    const bool bjorken = param->output.gluonSpectrumEstimator == 1;
+    std::vector<Matrix> BStorage, CStorage, DStorage;
+    std::vector<Matrix *> B, C, D;
+    if (bjorken) {
+        BStorage.assign(N * N, Matrix(0.));
+        CStorage.assign(N * N, Matrix(0.));
+        DStorage.assign(N * N, Matrix(0.));
+        B.resize(N * N);
+        C.resize(N * N);
+        D.resize(N * N);
+        for (int i = 0; i < N * N; i++) {
+            B[i] = &BStorage[i];
+            C[i] = &CStorage[i];
+            D[i] = &DStorage[i];
+        }
+    }
+    std::vector<Matrix *> &Ex = bjorken ? C : E1;
+    std::vector<Matrix *> &Ey = bjorken ? D : E1;
+    std::vector<Matrix *> &Pi = bjorken ? B : E1;
     addPhaseAndRestart(
         "observables.gluon_multiplicity.allocate", multiplicityPhaseStart);
 
     double c = param->coupling.c;
     double muZero = param->coupling.mu0;
 
-    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, E1);
+    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, Ex);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E1", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft_.fftn(E1.data(), E1.data(), nn, 1);
+    fft_.fftn(Ex.data(), Ex.data(), nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E1", multiplicityPhaseStart);
 
@@ -478,7 +505,7 @@ int GluonMultiplicity::compute(
         "observables.gluon_multiplicity.setup_bins", multiplicityPhaseStart);
 
     accumulateGluonSpectrum(
-        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, true, dNdeta,
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, Ex, true, true, dNdeta,
         dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
@@ -486,16 +513,16 @@ int GluonMultiplicity::compute(
 
     /// -------- 2 ---------
 
-    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U2, E1);
+    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U2, Ey);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_E2", multiplicityPhaseStart);
 
-    fft_.fftn(E1.data(), E1.data(), nn, 1);
+    fft_.fftn(Ey.data(), Ey.data(), nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_E2", multiplicityPhaseStart);
 
     accumulateGluonSpectrum(
-        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, true, false, dNdeta,
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, Ey, true, false, dNdeta,
         dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
@@ -503,17 +530,17 @@ int GluonMultiplicity::compute(
 
     /// ------3 --------
 
-    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Ux2, E1);
+    prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Ux2, Pi);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.prepare_pi", multiplicityPhaseStart);
 
     // do Fourier transforms
-    fft_.fftn(E1.data(), E1.data(), nn, 1);
+    fft_.fftn(Pi.data(), Pi.data(), nn, 1);
     addPhaseAndRestart(
         "observables.gluon_multiplicity.fft_pi", multiplicityPhaseStart);
 
     accumulateGluonSpectrum(
-        param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, false, false,
+        param, N, it, dtau, g, a, c, muZero, dkt, bins, Pi, false, false,
         dNdeta, dEdeta, n, E, n2, counter);
 
     addPhaseAndRestart(
@@ -528,7 +555,7 @@ int GluonMultiplicity::compute(
     // replace the spectrum
     double dNdetaOther = std::nan("");
     double dEdetaOther = std::nan("");
-    if (param->output.gluonSpectrumEstimator == 1) {
+    if (bjorken) {
         dNdetaOther = dNdeta;
         dEdetaOther = dEdeta;
         dNdeta = 0.;
@@ -539,16 +566,17 @@ int GluonMultiplicity::compute(
             n2[ik] = 0.;
             counter[ik] = 0;
         }
-        // three more scratch fields: A_x, A_y, E^x and E^y at once
-        std::vector<Matrix> BStorage(N * N, Matrix(0.));
-        std::vector<Matrix> CStorage(N * N, Matrix(0.));
-        std::vector<Matrix> DStorage(N * N, Matrix(0.));
-        std::vector<Matrix *> B(N * N), C(N * N), D(N * N);
-        for (int i = 0; i < N * N; i++) {
-            B[i] = &BStorage[i];
-            C[i] = &CStorage[i];
-            D[i] = &DStorage[i];
-        }
+        double longitudinalNorm = 0.;
+        double transverseNorm = 0.;
+        // the longitudinal mode first, phi with pi, while B holds pi
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Uy2, E1);
+        fft_.fftn(E1.data(), E1.data(), nn, 1);
+        accumulateBjorkenSpectrum(
+            param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, B, B, B, true,
+            dNdeta, dEdeta, n, E, n2, counter, longitudinalNorm,
+            transverseNorm);
+        // the transverse mode: A_x and A_y from the links, with E^x and E^y
+        // as transformed by the electric passes (C, D)
         for (int i = 0; i < N * N; i++) {
             E1Storage[i] = linkPotential(lat->Ux[i], g);
             BStorage[i] = linkPotential(lat->Uy[i], g);
@@ -556,27 +584,11 @@ int GluonMultiplicity::compute(
         // in place: the running-coupling factor, as for the other fields
         prepareSpectrumField(lat, param, N, a, g, c, muZero, E1Storage, E1);
         prepareSpectrumField(lat, param, N, a, g, c, muZero, BStorage, B);
-        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, C);
-        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U2, D);
-        for (std::vector<Matrix *> *field : {&E1, &B, &C, &D}) {
-            fft_.fftn(field->data(), field->data(), nn, 1);
-        }
-        addPhaseAndRestart(
-            "observables.gluon_multiplicity.bjorken_fft_transverse",
-            multiplicityPhaseStart);
-        double longitudinalNorm = 0.;
-        double transverseNorm = 0.;
-        accumulateBjorkenSpectrum(
-            param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, B, C, D, false,
-            dNdeta, dEdeta, n, E, n2, counter, longitudinalNorm,
-            transverseNorm);
-        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Uy2, E1);
-        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Ux2, B);
         for (std::vector<Matrix *> *field : {&E1, &B}) {
             fft_.fftn(field->data(), field->data(), nn, 1);
         }
         accumulateBjorkenSpectrum(
-            param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, B, B, B, true,
+            param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, B, C, D, false,
             dNdeta, dEdeta, n, E, n2, counter, longitudinalNorm,
             transverseNorm);
         addPhaseAndRestart(
@@ -699,8 +711,7 @@ int GluonMultiplicity::compute(
         foutNN << param->event.Npart << " " << dNdeta << " " << param->event.Tpp
                << " " << param->event.b << " " << dEdeta << " "
                << param->run.randomSeed << " "
-               << "N/A"
-               << " "
+               << param->output.gluonSpectrumEstimator << " "
                << "N/A"
                << " "
                << "N/A"

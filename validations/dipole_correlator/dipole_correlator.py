@@ -48,20 +48,28 @@ the fundamental-representation saturation scale in coordinate space.
 
 With --lappi, the script instead runs the setup of T. Lappi, Eur. Phys. J.
 C 55 (2008) 285, arXiv:0711.3039 (g^2 mu L = 100, g^2 mu a = 0.5, m = 0
-and 0.1 g^2 mu) and compares Q_s / g^2 mu with his Fig. 4 and Fig. 7. He
-defines Q_s with the adjoint correlator C(r) = < |tr V^+(x) V(x + r)|^2 >
-- 1 (d_A = 8 at r = 0), from the maximum of k~^2 C(k~) in momentum space
-and from C(r_s) = d_A exp(-1/2), Q_s^2 = 2/r_s^2, in coordinate space.
-C(r) is the correlator of the adjoint Wilson lines
-U_ab = 2 tr(t^a V^+ t^b V), so it is computed with Fourier transforms like
-D. The script also reports the fundamental sqrt(C_A/C_F) Q~_s from the
-maximum of k~^2 C~(k~), and the momentum-space Q_s of the factorized
-correlator |S(r)|^2 - 1, S(r) = sum_x tr V^+(x) V(x + r) / N^2 of each
-configuration (the large-Nc form, about Nc^2 D^2 - 1), which reproduces
-the adjoint values of his Fig. 4 for m = 0 (for m > 0 he presumably left
-out the k = 0 mode of the kernel, which IP-Glasma keeps). The comparison
-is reported, not checked; the open questions on his definitions are in
-issue #148.
+and 0.1 g^2 mu) and compares Q_s / g^2 mu with his Fig. 4 and Fig. 7,
+with the definitions he used (issue #148):
+  * the adjoint correlator in the factorized form, |S(r)|^2 - 1 with
+    S(r) = sum_x tr V^+(x) V(x + r) / N^2 of each configuration (his code
+    takes 2|S|^2 - 1, which differs only at k = 0), and Q_s from the
+    maximum of k~^2 C(k~), averaged over the polar angle;
+  * the k = 0 mode of the kernel removed also for m > 0
+    (removeZeroMode 1); the runs with m > 0 are made with and without it;
+  * in coordinate space, C(r_s) = C(0) exp(-1/2), Q_s^2 = 2/r_s^2, with
+    C(r) the 2D momentum integral of the binned spectrum, with k~ as the
+    momentum and the k = 0 mode by its magnitude, as in his spectrum files
+    (lappi_coordinate_profile()).
+It checks that, for m = 0 and for m > 0 with the zero mode removed, the
+factorized Q_s agrees with Fig. 4 within --lappi-tolerance (2%) at every
+Ny and the coordinate-space Q_s with Fig. 7 within --lappi-coord-tolerance
+(3%). It also reports the adjoint correlator as written in his paper,
+< |tr V^+(x) V(x + r)|^2 > - 1, from the adjoint Wilson lines
+U_ab = 2 tr(t^a V^+ t^b V) with Fourier transforms like D, the coordinate
+space of the lattice correlators, the fundamental sqrt(C_A/C_F) Q~_s, and
+Q_s from Gaussian fits of the maximum (a parabola in ln k~^2 C over 2 to 6
+bins on either side, his method), with half their range as a measure of
+the dependence on the fit window.
 
 The results go to <datadir>/dipole_summary.json (with --lappi,
 <datadir>/dipole_lappi_summary.json), the figures to <datadir>/dipole_*.pdf.
@@ -256,6 +264,42 @@ def peak_momentum(k, f):
     return float(-c[1] / (2. * c[0]))
 
 
+def peak_gaussian(k, f, half_widths=(2, 3, 4, 5, 6)):
+    """The k~ of the maximum of the binned k~^2 C from Gaussian fits, as in
+    arXiv:0711.3039: a parabola in ln f through the largest bin and n bins
+    on either side, for each n of half_widths; the mean and half the range
+    of the fitted maxima, the latter a measure of the dependence on the
+    fit range."""
+    ok = np.isfinite(f) & (f > 0.)
+    k, f = k[ok][1:], f[ok][1:]
+    i = int(np.argmax(f))
+    peaks = []
+    for n in half_widths:
+        s = slice(max(i - n, 0), i + n + 1)
+        c = np.polyfit(k[s], np.log(f[s]), 2)
+        if c[0] < 0.:
+            peaks.append(-c[1] / (2. * c[0]))
+    if not peaks:
+        return float("nan"), float("nan")
+    return float(np.mean(peaks)), float(0.5 * (max(peaks) - min(peaks)))
+
+
+def lappi_coordinate_profile(k, count, spectrum, c0, n, r):
+    """The coordinate-space adjoint correlator as arXiv:0711.3039 computes
+    it (#148): the 2D momentum integral of the binned spectrum of
+    2|S(r)|^2 - 1, with the lattice momentum k~ as the momentum,
+    sum_bins count C(k~) J_0(k~ r) / n^2, and the k = 0 mode by its
+    magnitude, as in the spectrum files of that code. spectrum is the
+    binned k~^2 C of |S|^2 - 1 (lappi_observables), c0 its k = 0 mode."""
+    from scipy.special import j0
+    with np.errstate(invalid="ignore", divide="ignore"):
+        c = np.where(k > 0., spectrum / k ** 2, 0.)
+    c = np.nan_to_num(c)
+    integral = (count[1:, None] * c[1:, None]
+                * j0(k[1:, None] * r[None, :])).sum(axis=0)
+    return (abs(2. * c0 + n * n) + 2. * integral) / (n * n)
+
+
 # --------------------------------------------------------------------------
 # running IP-Glasma
 # --------------------------------------------------------------------------
@@ -286,7 +330,8 @@ def seed_of(ny, i, first_seed):
 def run_tag(cfg, settings):
     return (f"N{settings['size']}_L{settings['L']:g}"
             f"_g2mu{cfg['g2mu']:g}_m{cfg['m']:g}_uv{cfg['uvdamp']:g}"
-            f"_ny{cfg['ny']}_g{cfg['g']:g}_seed{cfg['seed']}")
+            f"_ny{cfg['ny']}_g{cfg['g']:g}_seed{cfg['seed']}"
+            + ("_nozero" if cfg.get("remove_zero_mode") else ""))
 
 
 def lappi_observables(V, kt, index):
@@ -300,6 +345,10 @@ def lappi_observables(V, kt, index):
     s = np.fft.ifft2(ckf)
     fact = np.abs(s) ** 2 - 1.
     out["adj_axis"], out["adj_diag"] = adj["axis"], adj["diag"]
+    out["fact_axis"] = profiles(fact)["axis"]
+    # the k = 0 modes, which k~^2 C(k~) does not show
+    out["c0_adj"] = np.array(cka[0, 0])
+    out["c0_fact"] = np.array(np.fft.fft2(fact).real[0, 0])
     out["spec_adj"] = radial_spectrum(cka, kt, index)
     out["spec_fund"] = radial_spectrum(ckf, kt, index)
     out["spec_fact"] = radial_spectrum(np.fft.fft2(fact).real, kt, index)
@@ -315,7 +364,7 @@ def run_one(cfg, settings):
     if os.path.exists(cache):
         with np.load(cache) as data:
             cached = {k: data[k] for k in data.files}
-        if not settings["lappi"] or "spec_adj0" in cached:
+        if not settings["lappi"] or "fact_axis0" in cached:
             return cfg, cached, None
     if settings["analyze_only"]:
         return cfg, None, "no cached result (--analyze-only)"
@@ -328,6 +377,7 @@ def run_one(cfg, settings):
         "g": cfg["g"], "seed": cfg["seed"],
         "nucleusQsTableFileName": settings["qs_table"],
         "writeWilsonLines": 2, "runEvolution": 0, "useNucleus": 0,
+        "removeZeroMode": int(bool(cfg.get("remove_zero_mode"))),
     }
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
@@ -477,8 +527,9 @@ def jackknife(samples, estimate):
 
 
 def analyze_lappi(key, runs, settings):
-    """Q_s / g^2 mu of the Lappi setup for one m, for each Ny."""
-    g2mu, m, uv = key
+    """Q_s / g^2 mu of the Lappi setup for one m (and removeZeroMode), for
+    each Ny."""
+    g2mu, m, uv, removed = key
     g2mu_lat = g2mu * settings["L"] / settings["size"] / HBARC
     m_rel = round(m / g2mu, 6)
     r = np.arange(settings["size"] // 2 + 1)
@@ -506,6 +557,29 @@ def analyze_lappi(key, runs, settings):
         row["Qs_fund_scaled_error"] = float(np.sqrt(CA / CF) * e)
         row["Qs_coord_adj"], row["Qs_coord_adj_error"] = jackknife(
             collect("adj_axis"), coordinate)
+        row["Qs_coord_fact"], row["Qs_coord_fact_error"] = jackknife(
+            collect("fact_axis"), coordinate)
+        # the coordinate space of Lappi: the 2D momentum integral of the
+        # binned spectrum, normalized at r = 0
+        count = np.bincount(settings["bin_index"].ravel()).astype(float)
+        n = settings["size"]
+
+        def coordinate_lappi(sample):
+            c = lappi_coordinate_profile(k, count, sample[:-1], sample[-1],
+                                         n, r)
+            return np.sqrt(2.) / crossing(r, c / c[0]) / g2mu_lat
+
+        samples = [np.append(out[f"spec_fact{i}"], out[f"c0_fact{i}"])
+                   for out in outs for i in (0, 1)]
+        row["Qs_coord_lappi"], row["Qs_coord_lappi_error"] = jackknife(
+            samples, coordinate_lappi)
+        # the Gaussian fits of Lappi, with the dependence on the fit range
+        spectra = np.array(collect("spec_fact"))
+        q, spread = peak_gaussian(k, spectra.mean(axis=0))
+        row["Qs_fact_gauss"] = q / g2mu_lat
+        row["Qs_fact_gauss_range"] = spread / g2mu_lat
+        row["Qs_fact_gauss_error"] = jackknife(
+            spectra, lambda f: peak_gaussian(k, f)[0] / g2mu_lat)[1]
         for name, table in (("adj", LAPPI_FIG4_ADJ),
                             ("fund", LAPPI_FIG4_FUND)):
             if ny in table.get(m_rel, {}):
@@ -514,6 +588,7 @@ def analyze_lappi(key, runs, settings):
             row["lappi_coord"] = LAPPI_FIG7_COORD[m_rel][ny]
         rows.append(row)
     return {"g2mu_GeV": g2mu, "m_GeV": m, "m_over_g2mu": m_rel,
+            "remove_zero_mode": bool(removed),
             "g2mu_L": g2mu * settings["L"] / HBARC, "g2mu_a": g2mu_lat,
             "rows": rows}
 
@@ -629,17 +704,23 @@ def run_all(configs, settings, max_workers):
 def main_lappi(args, settings):
     """The setup of arXiv:0711.3039: g^2 mu L = 100, g^2 mu a = 0.5,
     m = 0 and 0.1 g^2 mu."""
-    groups = [(args.g2mu[0], m, 0.) for m in args.m]
+    # for m > 0 with and without the zero mode of the kernel, which
+    # arXiv:0711.3039 leaves out also there (#148)
+    groups = [(args.g2mu[0], m, 0., removed) for m in args.m
+              for removed in ((False, True) if m > 0. else (False,))]
     configs = [{"g2mu": g, "m": m, "uvdamp": uv, "ny": ny, "g": 1.,
+                "remove_zero_mode": removed,
                 "seed": seed_of(ny, i, args.first_seed)}
-               for (g, m, uv), ny, i in itertools.product(
+               for (g, m, uv, removed), ny, i in itertools.product(
                    groups, args.ny, range(args.seeds))]
     results, failures = run_all(configs, settings, args.max_workers)
+    settings["bin_index"] = momentum_bins(args.size)[1]
     summary = {"settings": {k: v for k, v in vars(args).items()},
                "groups": [], "failures": failures}
     for key in groups:
         runs = [(cfg, out) for cfg, out in results.values()
-                if (cfg["g2mu"], cfg["m"], cfg["uvdamp"]) == key]
+                if (cfg["g2mu"], cfg["m"], cfg["uvdamp"],
+                    cfg.get("remove_zero_mode", False)) == key]
         if runs:
             summary["groups"].append(analyze_lappi(key, runs, settings))
 
@@ -648,7 +729,9 @@ def main_lappi(args, settings):
           "exp(-1/2), Q_s^2 = 2/r_s^2, along the axes:")
     for group in summary["groups"]:
         print(f"\n g2mu L = {group['g2mu_L']:.1f}, g2mu a = "
-              f"{group['g2mu_a']:.3f}, m = {group['m_over_g2mu']:g} g2mu")
+              f"{group['g2mu_a']:.3f}, m = {group['m_over_g2mu']:g} g2mu"
+              + (", zero mode removed" if group["remove_zero_mode"]
+                 and group["m_over_g2mu"] > 0. else ""))
         print("    Ny conf  adjoint         factorized      Lappi Fig. 4 adj"
               "  sqrt(CA/CF) fund  Lappi Fig. 4 fund  adj, coordinate"
               "  Lappi Fig. 7")
@@ -667,14 +750,55 @@ def main_lappi(args, settings):
                   f"{lappi('lappi_adj')}   {entry('Qs_fund_scaled')}   "
                   f"{lappi('lappi_fund')}    {entry('Qs_coord_adj')}  "
                   f"{coord:>12}")
+    print("\nWith the definitions of arXiv:0711.3039 (#148): the factorized "
+          "Q_s (Gaussian fits, their\nmean and half the range over the fit "
+          "windows), and the coordinate space from the\n2D momentum "
+          "integral of the binned spectrum:")
+    checks = {}
+    for group in summary["groups"]:
+        lappi_like = (group["m_over_g2mu"] == 0.
+                      or group["remove_zero_mode"])
+        label = (f"m = {group['m_over_g2mu']:g} g2mu"
+                 + ("" if lappi_like else ", zero mode kept"))
+        print(f" {label}")
+        for row in group["rows"]:
+            ref = (f"{row['lappi_coord']:.4f}" if "lappi_coord" in row
+                   else "-")
+            print(f"  {row['ny']:4d}  factorized {row['Qs_fact']:.4f}, "
+                  f"Gaussian fits {row['Qs_fact_gauss']:.4f} +- "
+                  f"{row['Qs_fact_gauss_range']:.4f};  coordinate "
+                  f"{row['Qs_coord_lappi']:.4f}"
+                  f"({row['Qs_coord_lappi_error']:.4f}), Fig. 7 {ref}")
+        if not lappi_like:
+            continue
+        # the checks, where the definitions are those of arXiv:0711.3039
+        momentum = [abs(row["Qs_fact"] / row["lappi_adj"][0] - 1.)
+                    for row in group["rows"] if "lappi_adj" in row]
+        coordinate = [abs(row["Qs_coord_lappi"] / row["lappi_coord"] - 1.)
+                      for row in group["rows"] if "lappi_coord" in row]
+        if momentum:
+            checks[f"{label}: the factorized Q_s is within "
+                   f"{args.lappi_tolerance:g} of Fig. 4 at every Ny "
+                   f"(largest deviation {max(momentum):.4f})"] = bool(
+                       max(momentum) < args.lappi_tolerance)
+        if coordinate:
+            checks[f"{label}: the coordinate-space Q_s is within "
+                   f"{args.lappi_coord_tolerance:g} of Fig. 7 (largest "
+                   f"deviation {max(coordinate):.4f})"] = bool(
+                       max(coordinate) < args.lappi_coord_tolerance)
+    summary["checks"] = checks
+    summary["passed"] = bool(all(checks.values()) and not failures)
+    print()
+    for name, ok in checks.items():
+        print(f"{'OK  ' if ok else 'FAIL'} {name}")
     plot_lappi(summary["groups"],
                os.path.join(settings["datadir"], "dipole_lappi.pdf"))
     path = os.path.join(settings["datadir"], "dipole_lappi_summary.json")
     with open(path, "w") as f:
         json.dump(summary, f, indent=1)
-    print(f"\n{'FAILED' if failures else 'done'}; summary in {path} "
-          "(the comparison is reported, not checked)")
-    return 1 if failures else 0
+    print(f"\n{'PASSED' if summary['passed'] else 'FAILED'}; summary in "
+          f"{path}")
+    return 0 if summary["passed"] else 1
 
 
 def main():
@@ -719,6 +843,13 @@ def main():
                         help="the setup of arXiv:0711.3039 instead of the "
                              "scan: size 200, g2mu 1, g2mu L = 100, m = 0 "
                              "and 0.1 g2mu, Ny 1..150, 32 seeds")
+    parser.add_argument("--lappi-tolerance", type=float, default=0.02,
+                        help="with --lappi: the largest relative deviation "
+                             "of the factorized Q_s from Fig. 4 of "
+                             "arXiv:0711.3039")
+    parser.add_argument("--lappi-coord-tolerance", type=float, default=0.03,
+                        help="with --lappi: the same for the "
+                             "coordinate-space Q_s and its Fig. 7")
     parser.add_argument("--analyze-only", action="store_true",
                         help="only analyze the results in --datadir")
     parser.add_argument("--keep-files", action="store_true",

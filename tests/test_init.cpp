@@ -154,6 +154,15 @@ TEST_CASE(
     CHECK(
         kernel[latticeIndex(N / 2, N / 2, N)]
         == doctest::Approx(1.0 / (m * m)));
+    // with removeZeroMode, only K(0) changes, to 0
+    std::vector<double> removed = init.computeWilsonLineMomentumKernel(
+        N, N * N, m, /*UVdamp=*/0.0, /*removeZeroMode=*/true);
+    for (int pos = 0; pos < N * N; pos++) {
+        CAPTURE(pos);
+        CHECK(
+            removed[pos]
+            == (pos == latticeIndex(N / 2, N / 2, N) ? 0. : kernel[pos]));
+    }
 }
 
 TEST_CASE(

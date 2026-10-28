@@ -264,6 +264,11 @@ struct SubnucleonParameters {
     /// multiplied by \f$e^{-|k|\,\text{UVDamp}}\f$, also with \c m = 0
     /// (Init::computeWilsonLineMomentumKernel()).
     double UVDamp = 0.;
+    /// Whether the \f$k = 0\f$ mode of the propagator is removed also with
+    /// \c m > 0, as in T. Lappi, Eur. Phys. J. C 55 (2008) 285 (with
+    /// \c m = 0 it always is). It is a color rotation of each layer that is
+    /// constant over the lattice.
+    bool removeZeroMode = false;
 };
 
 /// Saturation scale, color charges and rapidity/x of the nuclei.

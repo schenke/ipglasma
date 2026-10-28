@@ -812,6 +812,10 @@ const std::vector<ParameterSpec> &parameterTable() {
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp)
             .check(nonNegative()),
         param(
+            "removeZeroMode", &P::subnucleon,
+            &SubnucleonParameters::removeZeroMode)
+            .optional("0"),
+        param(
             "minimumQs2ST", &P::colorCharge,
             &ColorChargeParameters::minimumQs2ST)
             .check(nonNegative()),

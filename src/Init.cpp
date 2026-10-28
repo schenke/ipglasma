@@ -344,7 +344,7 @@ void Init::computeThicknessFromNucleons(
 }
 
 std::vector<double> Init::computeWilsonLineMomentumKernel(
-    int N, int sites, double m, double UVdamp) {
+    int N, int sites, double m, double UVdamp, bool removeZeroMode) {
     std::vector<double> momentumKernel(static_cast<std::size_t>(sites));
 #pragma omp parallel for
     for (int pos = 0; pos < sites; ++pos) {
@@ -366,6 +366,8 @@ std::vector<double> Init::computeWilsonLineMomentumKernel(
             // without a regulator, the zero mode is removed: K(0) = 0
             momentumKernel[static_cast<std::size_t>(pos)] =
                 (kt2 != 0.) ? (1. / kt2) * damping : 0.;
+        } else if (removeZeroMode && kt2 == 0.) {
+            momentumKernel[static_cast<std::size_t>(pos)] = 0.;
         } else {
             momentumKernel[static_cast<std::size_t>(pos)] =
                 (1. / (kt2 + m * m)) * damping;
@@ -413,8 +415,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
     // The lattice Poisson/UV kernel depends only on transverse momentum and
     // run parameters.  The historical implementation recomputed the same
     // sin/sqrt/exp expressions for every longitudinal sheet of both nuclei.
-    std::vector<double> momentumKernel =
-        computeWilsonLineMomentumKernel(N, sites, m, UVdamp);
+    std::vector<double> momentumKernel = computeWilsonLineMomentumKernel(
+        N, sites, m, UVdamp, param->subnucleon.removeZeroMode);
 
     // rhoACoeffData owns the Nc2m1*sites backing storage; rhoACoeff is a
     // pointer-per-component view over it for FFT::fftnComplexArray's T**

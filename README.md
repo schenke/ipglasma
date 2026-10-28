@@ -117,6 +117,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **sqrtS** (only used with `useFluctuatingX 1` or `usePseudoRapidity 1`): center-of-mass energy per nucleon pair $\sqrt{s}$ in GeV. It enters Bjorken $x$ with `useFluctuatingX 1` (see `xQsFactor`) and the pseudorapidity Jacobian (see `usePseudoRapidity`); it does not set `sigmaNN`
 - **m**: infrared regulator in GeV of the propagator $1/(k^2+m^2)$ (see `UVDamp`); with `0`, the $k = 0$ mode is removed instead
 - **UVDamp**: UV damping length in GeV⁻¹, not negative: the propagator $1/(k^2+m^2)$ that gives the gauge field of the color charges is multiplied by $e^{-|k| \cdot \mathrm{UVDamp}}$, also with `m` = 0, where the $k = 0$ mode is removed; `0` for no damping
+- **removeZeroMode** (optional, default `0`): `1` removes the $k = 0$ mode of the propagator also with `m` > 0, as T. Lappi, Eur. Phys. J. C 55 (2008) 285 does; with `m` = 0 it is always removed. The mode is a color rotation of each layer that is constant over the lattice
 - **BG**: nucleon width in GeV⁻². With `nucleonModel gaussian` the nucleon's thickness is $T \sim e^{-b^2/(2B_G)}$; with `hotspots` and `strings` it is the width of the hot-spot position distribution (see `omega`)
 - **nucleonModel**: transverse structure of a nucleon
   - `gaussian`: a single Gaussian of width `BG` (optionally elongated by `protonAnisotropy`)

@@ -183,6 +183,7 @@ void JIMWLK::initializeNoise() {
 }
 
 void JIMWLK::evolution() {
+    IPG_PROFILE_SCOPE("jimwlk.evolution");
     initializeNoise();
 
     // Calculate evolution steps for different nuclei, from the x of the

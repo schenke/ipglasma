@@ -62,6 +62,7 @@ target Pb
 bMin 0
 bMax 20
 computeGluonMultiplicity 0
+gluonSpectrumEstimator 0
 computeEccentricities 0
 rotateReactionPlane 1
 nucleonPositionsFromFile 0

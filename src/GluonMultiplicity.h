@@ -5,6 +5,8 @@
 #ifndef SRC_GLUONMULTIPLICITY_H_
 #define SRC_GLUONMULTIPLICITY_H_
 
+#include <complex>
+
 #include "FFT.h"
 #include "Group.h"
 #include "Lattice.h"
@@ -12,10 +14,38 @@
 #include "PrettyOstream.h"
 
 /**
+ * Coefficients of the projection of one Fourier mode of the Coulomb-gauge
+ * fields onto the free boost-invariant gluon modes (issue #140). The
+ * positive-frequency Wronskian of the potential q and its momentum p with
+ * the Hankel functions \f$H_n = H_n^{(2)}(x) = J_n(x) - i Y_n(x)\f$,
+ * \f$x = \tilde k \tau\f$, is \f$W = c_q q + c_p p\f$ with
+ * - transverse (\f$q = A_T\f$, \f$p = \tau\, \partial_\tau q\f$):
+ *   \f$c_q = -\frac{\sqrt\pi}{2} x H_1^*\f$,
+ *   \f$c_p = -\frac{\sqrt\pi}{2} H_0^*\f$;
+ * - longitudinal (\f$q = \phi\f$, \f$p = \partial_\tau q/\tau\f$):
+ *   \f$c_q = -\frac{\sqrt\pi}{2} \tilde k H_0^*\f$,
+ *   \f$c_p = \frac{\sqrt\pi}{2} \tau H_1^*\f$.
+ *
+ * \f$|W|^2\f$ is the number of gluons in the mode. For free fields it does
+ * not depend on \f$\tau\f$, and it is \f$1/\pi\f$ for the modes regular
+ * at \f$\tau = 0\f$, \f$q = J_0(x)\f$, \f$p = -x J_1(x)\f$ and
+ * \f$q = \tau J_1(x)\f$, \f$p = \tilde k J_0(x)\f$.
+ * \param[in] k Lattice momentum \f$\tilde k > 0\f$ [lattice units].
+ * \param[in] tau Proper time \f$\tau > 0\f$ [lattice units].
+ * \param[in] longitudinal Whether the longitudinal (\f$\phi\f$) mode.
+ * \param[out] cq Coefficient of the potential.
+ * \param[out] cp Coefficient of the momentum.
+ */
+void bjorkenProjectionCoefficients(
+    double k, double tau, bool longitudinal, std::complex<double> &cq,
+    std::complex<double> &cp);
+
+/**
  * The gluon transverse-momentum spectrum and multiplicity of the evolved
  * classical fields (in transverse Coulomb gauge), with the optional
  * hadronization and the per-event output files.
  */
+
 class GluonMultiplicity {
   public:
     /**
@@ -118,13 +148,17 @@ class GluonMultiplicity {
      * averaged into each bin, length \p bins.
      * \param[in] bins Number of spectrum bins.
      * \param[in] dkt Momentum-bin width [lattice units].
+     * \param[in] dNOther \f$dN/dy\f$ of the estimator not used for the
+     * spectrum (the 2|E|^2/omega estimator when the Bjorken-mode
+     * projection is used), NaN if it was not computed.
+     * \param[in] dEOther Its \f$dE/dy\f$ [GeV], or NaN.
      */
     void writeTarget(
         Parameters *param, int it, double a, double dtau, double dNPrimary,
         double dNBinned, double dEPrimary, double dEBinned, double dNCut3,
         double dECut3, double dNCut6, double dECut6, const double *spectrumN,
         const double *spectrumE, const int *spectrumCounts, int bins,
-        double dkt);
+        double dkt, double dNOther, double dEOther);
     /// FFT used to Fourier-transform the gauge-fixed fields (and by the
     /// Coulomb gauge fixing).
     FFT fft_;

@@ -6,6 +6,7 @@
 
 #include <gsl/gsl_errno.h>
 #include <gsl/gsl_interp.h>
+#include <gsl/gsl_sf_bessel.h>
 #include <gsl/gsl_spline.h>
 
 #include <algorithm>
@@ -32,11 +33,28 @@ using PhysConst::m_kaon;
 using PhysConst::m_pion;
 using PhysConst::m_proton;
 
+using std::complex;
 using std::endl;
 using std::ifstream;
 using std::ofstream;
 using std::string;
 using std::stringstream;
+
+void bjorkenProjectionCoefficients(
+    double k, double tau, bool longitudinal, std::complex<double> &cq,
+    std::complex<double> &cp) {
+    const double x = k * tau;
+    const std::complex<double> H0(gsl_sf_bessel_J0(x), -gsl_sf_bessel_Y0(x));
+    const std::complex<double> H1(gsl_sf_bessel_J1(x), -gsl_sf_bessel_Y1(x));
+    const double half = 0.5 * std::sqrt(M_PI);
+    if (longitudinal) {
+        cq = -half * k * std::conj(H0);
+        cp = half * tau * std::conj(H1);
+    } else {
+        cq = -half * x * std::conj(H1);
+        cp = -half * std::conj(H0);
+    }
+}
 
 namespace {
 
@@ -214,6 +232,124 @@ void accumulateGluonSpectrum(
 }
 
 /**
+ * The potential \f$q = \theta/g\f$ of a link \f$U = e^{i\theta}\f$ to
+ * leading order in \f$\theta\f$: the traceless part of
+ * \f$(U - U^\dagger)/(2i)\f$, divided by \f$g\f$.
+ * \param[in] U The gauge-fixed link.
+ * \param[in] g Coupling \f$g\f$.
+ * \return \f$q\f$ [lattice units].
+ */
+Matrix linkPotential(const Matrix &U, double g) {
+    Matrix adjoint = U;
+    adjoint.conjg();
+    Matrix theta = complex<double>(0., -0.5) * (U - adjoint);
+    theta -= (theta.trace() / 3.) * Matrix(1.);
+    return (1. / g) * theta;
+}
+
+/**
+ * Accumulates the gluon spectrum of the projection onto the free
+ * boost-invariant modes (bjorkenProjectionCoefficients(), issue #140) into
+ * `dNdeta`/`dEdeta` and the \f$k_T\f$ bins, like accumulateGluonSpectrum():
+ * the transverse mode from the potentials \p q1, \p q2 (\f$A_x\f$, \f$A_y\f$)
+ * and the electric fields \p p1, \p p2 (\f$E^x\f$, \f$E^y\f$, times \f$g\f$),
+ * projected on the direction transverse to the lattice momentum of the
+ * backward-difference Coulomb condition, or the longitudinal mode from
+ * \f$\phi\f$ (\p q1) and \f$\pi\f$ (\p p1). The fields are Fourier
+ * transformed (FFT::fftn() with sign 1, \f$e^{-ik\cdot x}\f$).
+ * \param[in] param Simulation parameters.
+ * \param[in] N Lattice side length.
+ * \param[in] it Current time step index.
+ * \param[in] dtau Time step [lattice units].
+ * \param[in] g Coupling \f$g\f$.
+ * \param[in] a Lattice spacing [fm].
+ * \param[in] c Running-coupling shape parameter.
+ * \param[in] muZero \f$\mu_0\f$ in the running-coupling formula.
+ * \param[in] dkt Momentum-bin width [lattice units].
+ * \param[in] bins Number of \f$k_T\f$ bins.
+ * \param[in] q1 \f$A_x\f$ or \f$\phi\f$, Fourier transformed.
+ * \param[in] q2 \f$A_y\f$ (transverse mode only).
+ * \param[in] p1 \f$E^x\f$ or \f$\pi\f$, Fourier transformed.
+ * \param[in] p2 \f$E^y\f$ (transverse mode only).
+ * \param[in] longitudinal Whether the longitudinal mode.
+ * \param[in,out] dNdeta Running \f$dN/dy\f$ total.
+ * \param[in,out] dEdeta Running \f$dE/dy\f$ total [GeV].
+ * \param[in,out] n Per-bin \f$dN/dy\,d^2k\f$ sums [lattice units].
+ * \param[in,out] E Per-bin energy sums.
+ * \param[in,out] n2 Per-bin \f$dN/dy\,d^2k\f$ with the bin Jacobian.
+ * \param[in,out] counter Modes per bin, incremented in the transverse pass.
+ * \param[in,out] longitudinalNorm Sum of the squared longitudinal part of
+ * the gauge-fixed potential (transverse pass only), a check of the gauge
+ * fixing and of the momentum convention: it must be small.
+ * \param[in,out] transverseNorm Sum of the squared transverse part.
+ */
+void accumulateBjorkenSpectrum(
+    Parameters *param, int N, int it, double dtau, double g, double a, double c,
+    double muZero, double dkt, int bins, const std::vector<Matrix *> &q1,
+    const std::vector<Matrix *> &q2, const std::vector<Matrix *> &p1,
+    const std::vector<Matrix *> &p2, bool longitudinal, double &dNdeta,
+    double &dEdeta, double *n, double *E, double *n2, int *counter,
+    double &longitudinalNorm, double &transverseNorm) {
+    const double tauN = it * dtau;
+    const complex<double> I(0., 1.);
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            const int pos = latticeIndex(i, j, N);
+            const double kx = 2. * M_PI * (-0.5 + static_cast<double>(i) / N);
+            const double ky = 2. * M_PI * (-0.5 + static_cast<double>(j) / N);
+            const double kt2 =
+                4.
+                * (sin(kx / 2.) * sin(kx / 2.) + sin(ky / 2.) * sin(ky / 2.));
+            if (kt2 == 0.) continue;
+            const double kt = sqrt(kt2);
+            Matrix q(0.), p(0.);
+            if (longitudinal) {
+                q = *q1[pos];
+                p = *p1[pos];
+            } else {
+                // sum_j (1 - e^{-i k_j}) A_j(k) = 0 in Coulomb gauge; the
+                // transverse unit vector is (-c_y, c_x)/k~
+                const complex<double> cx = 1. - std::exp(-I * kx);
+                const complex<double> cy = 1. - std::exp(-I * ky);
+                q = (1. / kt)
+                    * (-std::conj(cy) * *q1[pos] + std::conj(cx) * *q2[pos]);
+                p = (g / kt)
+                    * (-std::conj(cy) * *p1[pos] + std::conj(cx) * *p2[pos]);
+                Matrix qL = (1. / kt) * (cx * *q1[pos] + cy * *q2[pos]);
+                Matrix qLd = qL, qd = q;
+                qLd.conjg();
+                qd.conjg();
+                longitudinalNorm += (qL * qLd).trace().real();
+                transverseNorm += (q * qd).trace().real();
+            }
+            complex<double> cq, cp;
+            bjorkenProjectionCoefficients(kt, tauN, longitudinal, cq, cp);
+            Matrix W = cq * q + cp * p;
+            Matrix Wd = W;
+            Wd.conjg();
+            // sum_a |W^a|^2 = 2 Tr(W W^dagger)
+            double nkt = 2. * (W * Wd).trace().real() / static_cast<double>(N)
+                         / static_cast<double>(N);
+            if (param->coupling.runWithKt) {
+                nkt *= computeRunningCouplingGfactorFromScale(
+                    g, muZero, c, param->coupling.LambdaQCD,
+                    param->coupling.nFlavors,
+                    param->coupling.runningCouplingQsFactor * kt * hbarc / a);
+            }
+            dNdeta += nkt;
+            dEdeta += nkt * kt * hbarc / a;
+            const int ik = static_cast<int>(std::ceil(kt / dkt)) - 1;
+            if (ik >= 0 && ik < bins && kt > ik * dkt && kt <= (ik + 1) * dkt) {
+                n[ik] += nkt * N * N / M_PI / M_PI / 4.;
+                E[ik] += kt * hbarc / a * nkt * N * N / M_PI / M_PI / 4.;
+                n2[ik] += nkt / dkt / 2 / M_PI / kt;
+                if (!longitudinal) counter[ik] += 1;
+            }
+        }
+    }
+}
+
+/**
  * GluonMultiplicity::compute()'s per-bin \f$dN/dy\f$, \f$dE/dy\f$
  * weight: the phase-space factor \f$(ik+0.5)\,dk_T^2\,2\pi\f$, times
  * a Jacobian ratio when the rapidity input is actually a
@@ -382,6 +518,75 @@ int GluonMultiplicity::compute(
     m = param->colorCharge.jacobianMass;                           // in GeV
     P = 0.13 + 0.32 * pow(param->collision.sqrtS / 1000., 0.115);  // in GeV
 
+    // the projection onto the free boost-invariant modes (issue #140): the
+    // bins and totals above are those of 2|E|^2/omega; keep its totals and
+    // replace the spectrum
+    double dNdetaOther = std::nan("");
+    double dEdetaOther = std::nan("");
+    if (param->output.gluonSpectrumEstimator == 1) {
+        dNdetaOther = dNdeta;
+        dEdetaOther = dEdeta;
+        dNdeta = 0.;
+        dEdeta = 0.;
+        for (int ik = 0; ik < bins; ik++) {
+            n[ik] = 0.;
+            E[ik] = 0.;
+            n2[ik] = 0.;
+            counter[ik] = 0;
+        }
+        // three more scratch fields: A_x, A_y, E^x and E^y at once
+        std::vector<Matrix> BStorage(N * N, Matrix(0.));
+        std::vector<Matrix> CStorage(N * N, Matrix(0.));
+        std::vector<Matrix> DStorage(N * N, Matrix(0.));
+        std::vector<Matrix *> B(N * N), C(N * N), D(N * N);
+        for (int i = 0; i < N * N; i++) {
+            B[i] = &BStorage[i];
+            C[i] = &CStorage[i];
+            D[i] = &DStorage[i];
+        }
+        for (int i = 0; i < N * N; i++) {
+            E1Storage[i] = linkPotential(lat->Ux[i], g);
+            BStorage[i] = linkPotential(lat->Uy[i], g);
+        }
+        // in place: the running-coupling factor, as for the other fields
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, E1Storage, E1);
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, BStorage, B);
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U, C);
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->U2, D);
+        for (std::vector<Matrix *> *field : {&E1, &B, &C, &D}) {
+            fft_.fftn(field->data(), field->data(), nn, 1);
+        }
+        addPhaseAndRestart(
+            "observables.gluon_multiplicity.bjorken_fft_transverse",
+            multiplicityPhaseStart);
+        double longitudinalNorm = 0.;
+        double transverseNorm = 0.;
+        accumulateBjorkenSpectrum(
+            param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, B, C, D, false,
+            dNdeta, dEdeta, n, E, n2, counter, longitudinalNorm,
+            transverseNorm);
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Uy2, E1);
+        prepareSpectrumField(lat, param, N, a, g, c, muZero, lat->Ux2, B);
+        for (std::vector<Matrix *> *field : {&E1, &B}) {
+            fft_.fftn(field->data(), field->data(), nn, 1);
+        }
+        accumulateBjorkenSpectrum(
+            param, N, it, dtau, g, a, c, muZero, dkt, bins, E1, B, B, B, true,
+            dNdeta, dEdeta, n, E, n2, counter, longitudinalNorm,
+            transverseNorm);
+        addPhaseAndRestart(
+            "observables.gluon_multiplicity.bjorken_projection",
+            multiplicityPhaseStart);
+        messager_ << "[GluonMultiplicity::compute]: projection onto the free "
+                     "Bjorken modes: dN/dy = "
+                  << dNdeta << " (2|E|^2/omega: " << dNdetaOther
+                  << "); longitudinal part of the gauge-fixed potential: "
+                  << sqrt(
+                         longitudinalNorm
+                         / std::max(transverseNorm + longitudinalNorm, 1e-300));
+        messager_.flush("info");
+    }
+
     for (int ik = 0; ik < bins; ik++) {
         if (counter[ik] > 0) {
             n[ik] = n[ik] / static_cast<double>(counter[ik]);
@@ -485,7 +690,8 @@ int GluonMultiplicity::compute(
         foutNN.close();
         writeTarget(
             param, it, a, dtau, dNdeta, dNdeta2, dEdeta, dEdeta2, dNdetaCut,
-            dEdetaCut, dNdetaCut2, dEdetaCut2, n, E, counter, bins, dkt);
+            dEdetaCut, dNdetaCut2, dEdetaCut2, n, E, counter, bins, dkt,
+            dNdetaOther, dEdetaOther);
     }
     addPhaseAndRestart("output.gluon_multiplicity", multiplicityPhaseStart);
 
@@ -590,7 +796,8 @@ void GluonMultiplicity::writeTarget(
     Parameters *param, int it, double a, double dtau, double dNPrimary,
     double dNBinned, double dEPrimary, double dEBinned, double dNCut3,
     double dECut3, double dNCut6, double dECut6, const double *spectrumN,
-    const double *spectrumE, const int *spectrumCounts, int bins, double dkt) {
+    const double *spectrumE, const int *spectrumCounts, int bins, double dkt,
+    double dNOther, double dEOther) {
     IPG_PROFILE_SCOPE("output.gluon_target");
     stringstream filename;
     filename << "gluonMultiplicity" << param->event.eventId << ".json";
@@ -625,8 +832,20 @@ void GluonMultiplicity::writeTarget(
            << "  \"Tpp\": " << param->event.Tpp << ",\n"
            << "  \"impact_parameter_fm\": " << param->event.b << ",\n"
            << "  \"random_seed\": " << param->run.randomSeed << ",\n"
-           << "  \"spectrum_definition\": \"azimuthally averaged Coulomb-gauge "
-              "gluon spectrum used by GluonMultiplicity::compute\",\n"
+           << "  \"estimator\": \""
+           << (param->output.gluonSpectrumEstimator == 1 ? "bjorken_projection"
+                                                         : "electric")
+           << "\",\n";
+    if (param->output.gluonSpectrumEstimator == 1) {
+        output << "  \"dN_electric_estimator\": " << dNOther << ",\n"
+               << "  \"dE_electric_estimator_GeV\": " << dEOther << ",\n";
+    }
+    output << "  \"spectrum_definition\": \"azimuthally averaged Coulomb-gauge "
+           << (param->output.gluonSpectrumEstimator == 1
+                   ? "gluon spectrum from the projection of the potentials and "
+                     "momenta onto the free boost-invariant modes"
+                   : "gluon spectrum from the electric fields, 2|E|^2/omega")
+           << "\",\n"
            << "  \"kt_GeV\": [";
 
     for (int ik = 0; ik < bins; ++ik) {

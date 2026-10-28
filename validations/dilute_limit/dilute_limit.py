@@ -110,7 +110,8 @@ def run_one(cfg, settings):
     # the extra configurations of the leading-order comparison have a seed
     # of their own
     seed = f"_seed{cfg['seed']}" if "seed" in cfg else ""
-    tag = f"g2mu{cfg['g2mu']:g}_g{cfg['g']:g}{seed}"
+    estimator = "_bjorken" if settings["estimator"] == 1 else ""
+    tag = f"g2mu{cfg['g2mu']:g}_g{cfg['g']:g}{seed}{estimator}"
     workdir = os.path.join(settings["datadir"], tag)
     cache = os.path.join(workdir, "result.json")
     if os.path.exists(cache):
@@ -184,6 +185,13 @@ def main():
     parser.add_argument("--k-min-over-m", type=float, default=2.)
     parser.add_argument("--k-max-times-a", type=float, default=0.3,
                         help="k_max a / hbar c of the spectrum window")
+    parser.add_argument("--gluon-spectrum-estimator", type=int, default=0,
+                        choices=[0, 1],
+                        help="gluonSpectrumEstimator: 0, 2|E|^2/omega, "
+                             "compared with the leading order at the time "
+                             "of the measurement; 1, the projection onto "
+                             "the free Bjorken modes, compared with the "
+                             "late-time leading order")
     parser.add_argument("--lo-seeds", type=int, default=16,
                         help="configurations of the smallest g^2 mu for the "
                              "comparison with the leading-order spectrum")
@@ -210,6 +218,7 @@ def main():
         "datadir": os.path.abspath(args.datadir),
         "tables": os.path.join(path, "tables"),
         "threads": args.threads, "L": args.L,
+        "estimator": args.gluon_spectrum_estimator,
         "overrides": {
             "size": args.size, "L": args.L, "sizeOutput": args.size,
             "LOutput": args.L, "useNucleus": 0, "m": args.m,
@@ -220,6 +229,7 @@ def main():
             "outputTimes": f"{1.5 * a / 10:.6g}",
             "timeStepsPerLatticeSpacing": 10,
             "computeGluonMultiplicity": 1, "computeEccentricities": 0,
+            "gluonSpectrumEstimator": args.gluon_spectrum_estimator,
             "nucleusQsTableFileName": os.path.join(
                 path, "qs2Adj_vs_Tp_vs_Y_240.in"),
         },
@@ -301,12 +311,18 @@ def main():
     # the leading-order spectrum against the mean of the configurations
     seeds = sorted(s for kind, s in results if kind == "seed")
     if seeds:
-        kt, lo_tau, lo_late, lo_dn = leading_order.lattice_prediction(
-            args.size, args.L, args.m, args.maxtime)
+        kt, lo_tau, lo_late, lo_dn_tau, lo_dn_late = \
+            leading_order.lattice_prediction(args.size, args.L, args.m,
+                                             args.maxtime)
+        lo_dn = lo_dn_late if args.gluon_spectrum_estimator == 1 \
+            else lo_dn_tau
         scale = lo_g2mu ** 4
         spectra_lo = np.array([results[("seed", s)]["dN_d2k"]
                                for s in seeds])
-        ratios = spectra_lo / (lo_tau[None, :] * scale)
+        # the projection counts gluons independent of the time: compare it
+        # with the late-time leading order
+        lo_used = lo_late if args.gluon_spectrum_estimator == 1 else lo_tau
+        ratios = spectra_lo / (lo_used[None, :] * scale)
         mean = ratios.mean(axis=0)
         error = ratios.std(axis=0, ddof=1) / np.sqrt(len(seeds)) \
             if len(seeds) > 1 else np.full_like(mean, np.nan)
@@ -335,9 +351,11 @@ def main():
             "dN_dy_ratio": float(dn.mean()),
             "dN_dy_ratio_error": float(dn.std(ddof=1) / np.sqrt(len(dn)))
             if len(dn) > 1 else None}
+        when = "at late times (projection onto the free Bjorken modes)" \
+            if args.gluon_spectrum_estimator == 1 else \
+            f"at tau = {args.maxtime:g} fm (2|E|^2/omega)"
         print(f"\nSpectrum against the leading order (g^2 mu = {lo_g2mu:g} "
-              f"GeV, {len(seeds)} configurations, at tau = "
-              f"{args.maxtime:g} fm):")
+              f"GeV, {len(seeds)} configurations, {when}):")
         for name, r in means.items():
             print(f"  {name:17s} {r['k_GeV'][0]:5.2f}-{r['k_GeV'][1]:5.2f} "
                   f"GeV: lattice/LO = {r['ratio']:.4f} +- {r['error']:.4f} "

@@ -94,8 +94,9 @@ def lattice_prediction(size, L, m, tau, nc=3, g=1., grid_points=120):
     [GeV^-2] at the time tau [fm] and at late times, binned like the code
     (the modes of the periodic lattice binned in the lattice momentum k~,
     the modes on the lines k_x = -pi/a or k_y = -pi/a left out, and the
-    average over the modes of a bin), and dN/dy per area [fm^-2] at tau,
-    the sum over the same modes without the zero mode."""
+    average over the modes of a bin), and dN/dy per area [fm^-2] at tau
+    and at late times, the sums over the same modes without the zero
+    mode."""
     a = L / size
     area = (L / HBARC) ** 2                  # GeV^-2
     index = np.arange(size)
@@ -127,6 +128,6 @@ def lattice_prediction(size, L, m, tau, nc=3, g=1., grid_points=120):
             for name in at:
                 binned[name][ik] = at[name][inside].mean()
     # each mode is a cell (2 pi/L)^2 of k space
-    dn_dy = float(at["tau"].sum() * (2. * np.pi / (L / HBARC)) ** 2
-                  / area / HBARC ** 2)   # fm^-2
-    return kt, binned["tau"], binned["late"], dn_dy
+    cell = (2. * np.pi / (L / HBARC)) ** 2 / area / HBARC ** 2   # -> fm^-2
+    return (kt, binned["tau"], binned["late"], float(at["tau"].sum() * cell),
+            float(at["late"].sum() * cell))

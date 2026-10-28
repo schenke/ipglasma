@@ -31,10 +31,21 @@ dN/dy per area and the spectrum. It checks that
 
   1. the exponents of eps(0+), tau eps and dN/dy in g^2 mu are 4 within
      --exponent-tolerance (1%) over the dilute range,
-  2. eps(0+) g^2 does not depend on g.
+  2. eps(0+) g^2 does not depend on g,
+  3. the gluon spectrum agrees with the analytic leading-order spectrum
+     (leading_order.py) in the window [--k-min-over-m m,
+     --k-max-times-a / a]: the mean ratio there is 1 within
+     --lo-tolerance plus two standard deviations.
 
-The spectrum, a fit k^4 dN/d^2k = B ln(k/k0) in the window
-[--k-min-over-m m, --k-max-times-a / a], is only reported.
+For check 3, the script also runs the smallest g^2 mu for --lo-seeds
+color-charge configurations (seeds 1, 2, ...) and averages their spectra.
+The leading-order spectrum has no free parameter; it is evaluated at the
+time of the measurement, for the electric estimator of the gluon number
+(n = 2 |E|^2/omega, which oscillates with k tau around its late-time
+value), and binned like the spectrum of the code. With the defaults, the
+mean ratio is 1.00 in the window; above it, the lattice artifacts raise
+the lattice spectrum by a few percent at k a ~ 1. The fit
+k^4 dN/d^2k = B ln(k/k0) in the window is also reported.
 
 Before the lattice of useNucleus 0 was periodic (#139), its clamped edges
 turned the pure-gauge fields of the nuclei, which are of first order in
@@ -67,6 +78,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
 from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
+sys.path.insert(0, HERE)
+import leading_order  # noqa: E402
 
 HBARC = 0.1973269804
 
@@ -94,7 +107,10 @@ def lattice_mean(tmunu):
 
 
 def run_one(cfg, settings):
-    tag = f"g2mu{cfg['g2mu']:g}_g{cfg['g']:g}"
+    # the extra configurations of the leading-order comparison have a seed
+    # of their own
+    seed = f"_seed{cfg['seed']}" if "seed" in cfg else ""
+    tag = f"g2mu{cfg['g2mu']:g}_g{cfg['g']:g}{seed}"
     workdir = os.path.join(settings["datadir"], tag)
     cache = os.path.join(workdir, "result.json")
     if os.path.exists(cache):
@@ -104,8 +120,10 @@ def run_one(cfg, settings):
     tables = os.path.join(workdir, "tables")
     if os.path.isdir(settings["tables"]) and not os.path.exists(tables):
         os.symlink(settings["tables"], tables)
-    write_input(settings["template"],
-                dict(settings["overrides"], g2muGeV=cfg["g2mu"], g=cfg["g"]),
+    overrides = dict(settings["overrides"], g2muGeV=cfg["g2mu"], g=cfg["g"])
+    if "seed" in cfg:
+        overrides["seed"] = cfg["seed"]
+    write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))
     with open(os.path.join(workdir, "run.log"), "w") as log:
@@ -166,6 +184,13 @@ def main():
     parser.add_argument("--k-min-over-m", type=float, default=2.)
     parser.add_argument("--k-max-times-a", type=float, default=0.3,
                         help="k_max a / hbar c of the spectrum window")
+    parser.add_argument("--lo-seeds", type=int, default=16,
+                        help="configurations of the smallest g^2 mu for the "
+                             "comparison with the leading-order spectrum")
+    parser.add_argument("--lo-tolerance", type=float, default=0.02,
+                        help="largest deviation from 1 of the mean ratio "
+                             "to the leading-order spectrum in the window "
+                             "(plus two standard deviations)")
     parser.add_argument("--threads", type=int, default=2)
     parser.add_argument("--max-workers", type=int, default=1)
     parser.add_argument("--quick", action="store_true",
@@ -175,6 +200,7 @@ def main():
     if args.quick:
         args.size, args.maxtime = 64, 0.4
         args.g2mu = [0.01, 0.03, 0.1, 0.3, 1.]
+        args.lo_seeds = 4
 
     a = args.L / args.size
     path = os.path.abspath(args.ipglasma_path)
@@ -201,7 +227,11 @@ def main():
     os.makedirs(settings["datadir"], exist_ok=True)
     dilute = [g for g in args.g2mu if g <= args.dilute_max]
     configs = [{"g2mu": g, "g": 1.} for g in args.g2mu]
-    configs.append({"g2mu": dilute[len(dilute) // 2], "g": 2.})
+    g_check = dilute[len(dilute) // 2]        # the run with g = 2
+    configs.append({"g2mu": g_check, "g": 2.})
+    lo_g2mu = min(dilute)
+    configs += [{"g2mu": lo_g2mu, "g": 1., "seed": s}
+                for s in range(1, args.lo_seeds + 1)]
     print(f"{len(configs)} runs of size {args.size}, L = {args.L} fm "
           f"(a = {a:.4f} fm, hbar c/a = {HBARC / a:.1f} GeV), m = {args.m} "
           f"GeV ...", flush=True)
@@ -211,7 +241,10 @@ def main():
         for future in as_completed(futures):
             cfg, out, error = future.result()
             if error:
-                failures.append(f"g2mu {cfg['g2mu']}, g {cfg['g']}: {error}")
+                failures.append(f"g2mu {cfg['g2mu']}, g {cfg['g']}"
+                                f"{', seed ' + str(cfg['seed']) if 'seed' in cfg else ''}: {error}")
+            elif "seed" in cfg:
+                results[("seed", cfg["seed"])] = out
             else:
                 results[(cfg["g2mu"], cfg["g"])] = out
     print(f"done in {time.time() - start:.0f} s")
@@ -265,7 +298,64 @@ def main():
               f"({window.sum()} bins)")
     summary["spectra"] = spectra
 
-    gc = configs[-1]["g2mu"]
+    # the leading-order spectrum against the mean of the configurations
+    seeds = sorted(s for kind, s in results if kind == "seed")
+    if seeds:
+        kt, lo_tau, lo_late, lo_dn = leading_order.lattice_prediction(
+            args.size, args.L, args.m, args.maxtime)
+        scale = lo_g2mu ** 4
+        spectra_lo = np.array([results[("seed", s)]["dN_d2k"]
+                               for s in seeds])
+        ratios = spectra_lo / (lo_tau[None, :] * scale)
+        mean = ratios.mean(axis=0)
+        error = ratios.std(axis=0, ddof=1) / np.sqrt(len(seeds)) \
+            if len(seeds) > 1 else np.full_like(mean, np.nan)
+        ranges = {"below the window": (0.3, k_lo), "window": (k_lo, k_hi),
+                  "k a = 0.3-0.6": (k_hi, 2. * k_hi),
+                  "k a = 0.6-1.2": (2. * k_hi, 4. * k_hi)}
+        means = {}
+        for name, (lo, hi) in ranges.items():
+            inside = (kt > lo) & (kt < hi) & np.isfinite(mean) \
+                & (error > 0)
+            if inside.sum() == 0:
+                continue
+            w = 1. / error[inside] ** 2
+            means[name] = {"k_GeV": [lo, hi], "bins": int(inside.sum()),
+                           "ratio": float((mean[inside] * w).sum() / w.sum()),
+                           "error": float(1. / np.sqrt(w.sum()))}
+        dn = np.array([results[("seed", s)]["dN_dy_per_area"]
+                       for s in seeds]) / (lo_dn * scale)
+        summary["leading_order"] = {
+            "g2mu": lo_g2mu, "seeds": seeds, "kt_GeV": kt.tolist(),
+            "dN_d2k_tau": (lo_tau * scale).tolist(),
+            "dN_d2k_late": (lo_late * scale).tolist(),
+            "lattice_dN_d2k": spectra_lo.mean(axis=0).tolist(),
+            "ratio": mean.tolist(), "ratio_error": error.tolist(),
+            "ranges": means,
+            "dN_dy_ratio": float(dn.mean()),
+            "dN_dy_ratio_error": float(dn.std(ddof=1) / np.sqrt(len(dn)))
+            if len(dn) > 1 else None}
+        print(f"\nSpectrum against the leading order (g^2 mu = {lo_g2mu:g} "
+              f"GeV, {len(seeds)} configurations, at tau = "
+              f"{args.maxtime:g} fm):")
+        for name, r in means.items():
+            print(f"  {name:17s} {r['k_GeV'][0]:5.2f}-{r['k_GeV'][1]:5.2f} "
+                  f"GeV: lattice/LO = {r['ratio']:.4f} +- {r['error']:.4f} "
+                  f"({r['bins']} bins)")
+        print(f"  dN/dy over the LO sum over the lattice modes: "
+              f"{dn.mean():.4f}")
+        window = means.get("window")
+        if window and window["bins"] >= 2:
+            ok = abs(window["ratio"] - 1.) <= args.lo_tolerance \
+                + 2. * window["error"]
+            summary["checks"]["leading_order_spectrum"] = bool(ok)
+            print(f"  {'OK  ' if ok else 'FAIL'} the mean ratio in the "
+                  f"window is 1 within {args.lo_tolerance:g} plus two "
+                  f"standard deviations")
+        else:
+            print("  info: fewer than 2 bins in the window, not checked")
+
+    gc = g_check
     if (gc, 2.) in results and (gc, 1.) in results:
         ratio = 4. * results[(gc, 2.)]["eps0"] / results[(gc, 1.)]["eps0"]
         ok = abs(ratio - 1.) < 1e-3
@@ -297,6 +387,12 @@ def main():
         good = dn > 0
         right.plot(k[good], k[good] ** 4 * dn[good] / g ** 4, "-",
                    label=fr"$g^2\mu = {g:g}$ GeV")
+    lo_summary = summary.get("leading_order")
+    if lo_summary:
+        kt = np.array(lo_summary["kt_GeV"])
+        lo = np.array(lo_summary["dN_d2k_tau"]) / lo_summary["g2mu"] ** 4
+        right.plot(kt, kt ** 4 * lo, "k--", lw=1,
+                   label="leading order (at the final time)")
     right.axvspan(k_lo, k_hi, color="0.9")
     right.set_xscale("log")
     right.set_xlabel(r"$k$ [GeV]")

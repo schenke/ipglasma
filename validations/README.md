@@ -653,8 +653,12 @@ the same initial Wilson lines:
   third includes the edges and the gaps between the hot spots, where the
   coupling is strongest.
 - **Observables:** dE/dη, dN/dy, ε₂ and ε₃ after the Yang–Mills evolution.
-- **Analysis:** per configuration, a fit linear in the step; a quadratic fit
-  tests the first order.
+- **Analysis:** a fit linear in the step to the averages over the
+  configurations. All step sizes start from the same initial Wilson lines,
+  so the error comes from the spread of the same fit over the
+  configurations: the fluctuations of the initial condition cancel in it,
+  while those of the Langevin noise, which differs between step sizes,
+  remain in the error. A quadratic fit tests the first order.
 - **Checks:** the initial Wilson lines agree, the step is of first order,
   Q_s of every region and dN/dy are within 3% of zero step at 0.005, and
   dE/dη at 0.0025.

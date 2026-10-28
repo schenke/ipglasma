@@ -25,11 +25,16 @@ axes, and Q_s = sqrt(2)/r_s with D(r_s) = e^{-1/2}. After the Yang-Mills
 evolution, the script reads dE/deta at 0.2 fm and at the final time, dN/dy,
 eps_2 and eps_3 (with the functions of validations/numerical_parameters).
 
-Per configuration, ln Q_s and ln O (eps_n itself) are fitted linearly in
-the step, which gives the deviation at each step from zero step, with its
-mean and error over the configurations (three runs give only three
+ln Q_s and ln O (eps_n itself) are fitted linearly in the step, which gives
+the deviation at each step from zero step. The fit is linear in the data,
+so the fit of the averages over the configurations is the average of the
+fits of the single configurations, and the spread of the latter gives the
+error. All step sizes start from the same initial Wilson lines, so the
+fluctuations of the initial condition cancel in this error, while those of
+the Langevin noise, which differs between step sizes, remain part of it
+and are not taken for a step-size effect. (Three runs give only three
 configurations of the observables, too few for the covariance of
-jimwlk_step_size.py); a quadratic fit tests the first order. The script
+jimwlk_step_size.py.) A quadratic fit tests the first order. The script
 checks that
 
   1. the initial Wilson lines are the same for all step sizes,
@@ -186,10 +191,11 @@ def run_one(cfg, settings):
 
 
 def fit_linear(values, ds):
-    """values[configuration, ds]: per configuration a fit linear in the
-    step; the deviation from zero step at each step (mean and error over
-    the configurations), zero step, and the quadratic term at the largest
-    step from a quadratic fit (mean and error)."""
+    """values[configuration, ds]: the fit linear in the step of the
+    averages over the configurations, with the error from the spread of the
+    fits of the single configurations (which share the initial Wilson
+    lines): the deviation from zero step at each step, zero step, and the
+    quadratic term at the largest step from a quadratic fit."""
     ds = np.asarray(ds, dtype=float)
     v = np.asarray(values, dtype=float)
     n = len(v)

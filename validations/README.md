@@ -287,7 +287,8 @@ the method he describes; neither the factorized form nor the other
 variants we tried reproduce his values. Since the definitions differ and
 the peak position depends on the estimator by 1–2% (a parabola through
 seven instead of five bins moves it up by up to 2%), the comparison is
-reported, not checked.
+reported, not checked. The open questions on the definitions of Lappi are
+in #148.
 
 ### Lattice symmetries
 

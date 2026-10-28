@@ -184,7 +184,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "bjorkenProjectionCoefficients: the regular free modes hold 1/pi gluons "
+    "GluonMultiplicity::bjorkenProjectionCoefficients: the regular free modes "
+    "hold 1/pi gluons "
     "at every k tau") {
     // the boost-invariant modes regular at tau = 0: transverse
     // q = J0(k tau), p = tau dq/dtau = -x J1(x); longitudinal
@@ -196,10 +197,10 @@ TEST_CASE(
         CAPTURE(x);
         const double tau = x / k;
         std::complex<double> cq, cp;
-        bjorkenProjectionCoefficients(k, tau, false, cq, cp);
+        GluonMultiplicity::bjorkenProjectionCoefficients(k, tau, false, cq, cp);
         const double qT = gsl_sf_bessel_J0(x), pT = -x * gsl_sf_bessel_J1(x);
         CHECK(std::norm(cq * qT + cp * pT) == doctest::Approx(1. / M_PI));
-        bjorkenProjectionCoefficients(k, tau, true, cq, cp);
+        GluonMultiplicity::bjorkenProjectionCoefficients(k, tau, true, cq, cp);
         const double qL = tau * gsl_sf_bessel_J1(x);
         const double pL = k * gsl_sf_bessel_J0(x);
         CHECK(std::norm(cq * qL + cp * pL) == doctest::Approx(1. / M_PI));

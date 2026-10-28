@@ -14,37 +14,6 @@
 #include "PrettyOstream.h"
 
 /**
- * Coefficients of the projection of one Fourier mode of the Coulomb-gauge
- * fields onto the free boost-invariant gluon modes (issue #140), the
- * definition of the gluon number of J. Berges, K. Boguslavski,
- * S. Schlichting and R. Venugopalan, Phys. Rev. D 89 (2014) 074011
- * [arXiv:1303.5650] and 114007 [arXiv:1311.3005], for boost-invariant
- * fields (rapidity wave number 0). The
- * positive-frequency Wronskian of the potential q and its momentum p with
- * the Hankel functions \f$H_n = H_n^{(2)}(x) = J_n(x) - i Y_n(x)\f$,
- * \f$x = \tilde k \tau\f$, is \f$W = c_q q + c_p p\f$ with
- * - transverse (\f$q = A_T\f$, \f$p = \tau\, \partial_\tau q\f$):
- *   \f$c_q = -\frac{\sqrt\pi}{2} x H_1^*\f$,
- *   \f$c_p = -\frac{\sqrt\pi}{2} H_0^*\f$;
- * - longitudinal (\f$q = \phi\f$, \f$p = \partial_\tau q/\tau\f$):
- *   \f$c_q = -\frac{\sqrt\pi}{2} \tilde k H_0^*\f$,
- *   \f$c_p = \frac{\sqrt\pi}{2} \tau H_1^*\f$.
- *
- * \f$|W|^2\f$ is the number of gluons in the mode. For free fields it does
- * not depend on \f$\tau\f$, and it is \f$1/\pi\f$ for the modes regular
- * at \f$\tau = 0\f$, \f$q = J_0(x)\f$, \f$p = -x J_1(x)\f$ and
- * \f$q = \tau J_1(x)\f$, \f$p = \tilde k J_0(x)\f$.
- * \param[in] k Lattice momentum \f$\tilde k > 0\f$ [lattice units].
- * \param[in] tau Proper time \f$\tau > 0\f$ [lattice units].
- * \param[in] longitudinal Whether the longitudinal (\f$\phi\f$) mode.
- * \param[out] cq Coefficient of the potential.
- * \param[out] cp Coefficient of the momentum.
- */
-void bjorkenProjectionCoefficients(
-    double k, double tau, bool longitudinal, std::complex<double> &cq,
-    std::complex<double> &cp);
-
-/**
  * The gluon transverse-momentum spectrum and multiplicity of the evolved
  * classical fields (in transverse Coulomb gauge), with the optional
  * hadronization and the per-event output files.
@@ -97,6 +66,35 @@ class GluonMultiplicity {
      * \param[in] param Simulation parameters.
      */
     static void readNkt(Parameters *param);
+    /**
+     * Coefficients of the projection of one Fourier mode of the
+     * Coulomb-gauge fields onto the free boost-invariant gluon modes (issue
+     * #140), the definition of the gluon number of \cite Berges:2013eia and
+     * \cite Berges:2013fga, for boost-invariant fields (rapidity wave
+     * number 0). The positive-frequency Wronskian of the potential q and its
+     * momentum p with the Hankel functions
+     * \f$H_n = H_n^{(2)}(x) = J_n(x) - i Y_n(x)\f$, \f$x = \tilde k \tau\f$,
+     * is \f$W = c_q q + c_p p\f$ with
+     * - transverse (\f$q = A_T\f$, \f$p = \tau\, \partial_\tau q\f$):
+     *   \f$c_q = -\frac{\sqrt\pi}{2} x H_1^*\f$,
+     *   \f$c_p = -\frac{\sqrt\pi}{2} H_0^*\f$;
+     * - longitudinal (\f$q = \phi\f$, \f$p = \partial_\tau q/\tau\f$):
+     *   \f$c_q = -\frac{\sqrt\pi}{2} \tilde k H_0^*\f$,
+     *   \f$c_p = \frac{\sqrt\pi}{2} \tau H_1^*\f$.
+     *
+     * \f$|W|^2\f$ is the number of gluons in the mode. For free fields it
+     * does not depend on \f$\tau\f$, and it is \f$1/\pi\f$ for the modes
+     * regular at \f$\tau = 0\f$, \f$q = J_0(x)\f$, \f$p = -x J_1(x)\f$ and
+     * \f$q = \tau J_1(x)\f$, \f$p = \tilde k J_0(x)\f$.
+     * \param[in] k Lattice momentum \f$\tilde k > 0\f$ [lattice units].
+     * \param[in] tau Proper time \f$\tau > 0\f$ [lattice units].
+     * \param[in] longitudinal Whether the longitudinal (\f$\phi\f$) mode.
+     * \param[out] cq Coefficient of the potential.
+     * \param[out] cp Coefficient of the momentum.
+     */
+    static void bjorkenProjectionCoefficients(
+        double k, double tau, bool longitudinal, std::complex<double> &cq,
+        std::complex<double> &cp);
 
   private:
     /**

@@ -60,7 +60,8 @@ correlator |S(r)|^2 - 1, S(r) = sum_x tr V^+(x) V(x + r) / N^2 of each
 configuration (the large-Nc form, about Nc^2 D^2 - 1), which reproduces
 the adjoint values of his Fig. 4 for m = 0 (for m > 0 he presumably left
 out the k = 0 mode of the kernel, which IP-Glasma keeps). The comparison
-is reported, not checked.
+is reported, not checked; the open questions on his definitions are in
+issue #148.
 
 The results go to <datadir>/dipole_summary.json (with --lappi,
 <datadir>/dipole_lappi_summary.json), the figures to <datadir>/dipole_*.pdf.

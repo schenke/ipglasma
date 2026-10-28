@@ -152,6 +152,8 @@ def run_one(cfg, settings):
     if "dN_electric_estimator" in gluons:
         out["dN_dy_electric_per_area"] = \
             gluons["dN_electric_estimator"] / settings["L"] ** 2
+        out["pi_line_fraction"] = leading_order.pi_line_fraction(
+            gluons, settings["overrides"]["size"], settings["L"])
     out["kt_GeV"] = gluons["kt_GeV"]
     out["dN_d2k"] = gluons["dN_d2k_GeV_minus2"]
     with open(cache, "w") as f:
@@ -369,6 +371,13 @@ def main():
                 "dN_dy_electric_over_projection_error":
                 float(electric.std(ddof=1) / np.sqrt(len(electric)))
                 if len(electric) > 1 else None})
+            # the modes on the lines k = -pi/a, which only the projection
+            # counts (estimated from the spectrum)
+            lines = [results[("seed", s)].get("pi_line_fraction")
+                     for s in seeds]
+            if all(f is not None for f in lines):
+                summary["leading_order"]["pi_line_fraction_max"] = \
+                    float(max(lines))
         when = "at late times (projection onto the free Bjorken modes)" \
             if args.gluon_spectrum_estimator == 1 else \
             f"at tau = {args.maxtime:g} fm (2|E|^2/omega)"
@@ -386,6 +395,9 @@ def main():
             print(f"  dN/dy of 2|E|^2/omega over the projection: "
                   f"{lo_summary['dN_dy_electric_over_projection']:.4f} +- "
                   f"{spread:.4f}")
+            if "pi_line_fraction_max" in lo_summary:
+                print(f"  part of dN/dy on the lines k = -pi/a (estimate): "
+                      f"at most {lo_summary['pi_line_fraction_max']:.1e}")
         window = means.get("window")
         if window and window["bins"] >= 2:
             ok = abs(window["ratio"] - 1.) <= args.lo_tolerance \

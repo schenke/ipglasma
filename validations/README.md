@@ -273,8 +273,9 @@ with its analytic leading-order value, which has no free parameter
   15.0 ± 0.9%, 20.4 ± 0.4% and 0.6 ± 0.6% more (the mean over the 16
   configurations, `dN_dy_electric_over_projection` in the summary). The
   projection also counts the modes on the lines k_x = −π/a and k_y = −π/a,
-  which 2|E|²/ω and the leading-order sum leave out; at 256² they carry a
-  negligible part of dN/dy.
+  which 2|E|²/ω and the leading-order sum leave out. Giving each of their
+  modes the mean spectrum of its k̃ bin, they carry at most 3.7 × 10⁻⁵ of
+  dN/dy here (`pi_line_fraction_max` in the summary), far below the errors.
 
 ```bash
 cd dilute_limit
@@ -367,6 +368,9 @@ With the defaults, 2|E|²/ω over the projection, for the two configurations:
   ⟨k_T⟩. The fields are still strongly nonlinear, and no estimator gives a
   well-defined particle number yet.
 - **The longitudinal part** of the gauge-fixed potential is 2–6%.
+- **The lines k = −π/a,** which only the projection counts, carry about
+  10⁻⁴ of dN/dy (0.9–1.4 × 10⁻⁴, `pi_line_fraction` in the summary,
+  estimated from the mean spectrum of their k̃ bins).
 
 ### Dependence on a, Ny and m at a fixed geometry
 

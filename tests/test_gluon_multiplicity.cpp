@@ -11,6 +11,7 @@
 #include <fstream>
 #include <random>
 #include <sstream>
+#include <stdexcept>
 #include <string>
 #include <utility>
 
@@ -101,10 +102,11 @@ TEST_CASE(
     in >> Npart >> dNdy >> Tpp >> b >> dEdy;
     CHECK(dNdy > 0.);
     CHECK(dEdy > 0.);
-    // the 14 columns documented in OUTPUT.md, with placeholders in 7-9
-    std::string seed, na1, na2, na3;
-    in >> seed >> na1 >> na2 >> na3;
-    CHECK(na1 == "N/A");
+    // the 14 columns documented in OUTPUT.md: the estimator in 7 (the
+    // default, the projection), placeholders in 8 and 9
+    std::string seed, estimator, na2, na3;
+    in >> seed >> estimator >> na2 >> na3;
+    CHECK(estimator == "1");
     CHECK(na2 == "N/A");
     CHECK(na3 == "N/A");
     int rest = 0;
@@ -224,4 +226,85 @@ TEST_CASE(
     CHECK(
         M_PI * 4. * std::pow(gsl_sf_bessel_J1(4.), 2)
         == doctest::Approx(0.0547).epsilon(1e-2));
+}
+
+TEST_CASE(
+    "bjorkenProjectionCoefficients: k = 0 or tau = 0, where Y_0 diverges, "
+    "throw") {
+    std::complex<double> cq, cp;
+    CHECK_THROWS_AS(
+        GluonMultiplicity::bjorkenProjectionCoefficients(1., 0., false, cq, cp),
+        std::invalid_argument);
+    CHECK_THROWS_AS(
+        GluonMultiplicity::bjorkenProjectionCoefficients(0., 1., true, cq, cp),
+        std::invalid_argument);
+}
+
+TEST_CASE(
+    "GluonMultiplicity::compute with the projection counts 1/pi gluons per "
+    "unit amplitude in free plane waves") {
+    // A transverse plane wave in the links and E^i and a longitudinal one in
+    // phi and pi, each the free mode regular at tau = 0 at tau_n = it dtau,
+    // in one color direction: the projection gives N^2 |a|^2/pi gluons in
+    // each of the modes k and -k of a wave of amplitude a. A wrong sign of
+    // the Coulomb momentum c_j = 1 - e^{-i k_j} or a wrong momentum label of
+    // the FFT would move the transverse wave into the longitudinal part.
+    Parameters param;
+    makeMultiplicityTestParam(param);
+    param.output.gluonSpectrumEstimator = 1;
+    Lattice lat(&param, N);
+    setVacuum(lat);
+    Group group;
+    const Matrix &T = group.getT(0);
+    const double g = param.coupling.g;
+    const double tau = it * param.run.dtau;
+    const std::complex<double> I(0., 1.);
+    const double a = 1e-3, b = 2e-3;
+    // transverse: the mode (2, 1), A = t a e^{ik.x} + c.c.,
+    // t = (-c_y, c_x)/k~
+    const double kx = 2. * M_PI * 2. / N, ky = 2. * M_PI * 1. / N;
+    const std::complex<double> cx = 1. - std::exp(-I * kx);
+    const std::complex<double> cy = 1. - std::exp(-I * ky);
+    const double kt = std::sqrt(std::norm(cx) + std::norm(cy));
+    const double x = kt * tau;
+    // longitudinal: the mode (1, 3)
+    const double lx = 2. * M_PI * 1. / N, ly = 2. * M_PI * 3. / N;
+    const double lt =
+        2.
+        * std::sqrt(
+            std::pow(std::sin(lx / 2.), 2) + std::pow(std::sin(ly / 2.), 2));
+    const double xl = lt * tau;
+    for (int i = 0; i < N; i++) {
+        for (int j = 0; j < N; j++) {
+            const int pos = lat.positionFromXY(i, j);
+            const std::complex<double> wave =
+                a * std::exp(I * (kx * i + ky * j));
+            const double Ax = 2. * std::real(-cy / kt * wave);
+            const double Ay = 2. * std::real(cx / kt * wave);
+            // q = J_0(x), p = g E = -x J_1(x)
+            lat.Ux[pos] =
+                Matrix::expiHermitian(g * Ax * gsl_sf_bessel_J0(x) * T);
+            lat.Uy[pos] =
+                Matrix::expiHermitian(g * Ay * gsl_sf_bessel_J0(x) * T);
+            lat.U[pos] = (-x * gsl_sf_bessel_J1(x) * Ax / g) * T;
+            lat.U2[pos] = (-x * gsl_sf_bessel_J1(x) * Ay / g) * T;
+            // q = phi = tau J_1(x), p = pi = k~ J_0(x)
+            const double l = 2. * b * std::cos(lx * i + ly * j);
+            lat.Uy2[pos] = (l * tau * gsl_sf_bessel_J1(xl)) * T;
+            lat.Ux2[pos] = (l * lt * gsl_sf_bessel_J0(xl)) * T;
+        }
+    }
+    int nn[2] = {N, N};
+    GluonMultiplicity multiplicity(nn);
+    removeOutput();
+    REQUIRE(multiplicity.compute(&lat, &group, &param, it) == 1);
+    std::ifstream in("NpartdNdy-t0.4-0.dat");
+    REQUIRE(in.good());
+    double Npart, dNdy;
+    in >> Npart >> dNdy;
+    in.close();
+    removeOutput();
+    CHECK(
+        dNdy
+        == doctest::Approx(2. * N * N * (a * a + b * b) / M_PI).epsilon(1e-6));
 }

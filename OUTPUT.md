@@ -430,7 +430,8 @@ no gluons (dN/dy = 0), which ends the event. One line:
 | 4 | b [fm] |
 | 5 | dE/dy [GeV] |
 | 6 | random seed |
-| 7–9 | `N/A` (placeholders) |
+| 7 | `gluonSpectrumEstimator` (1: the projection onto the free Bjorken modes; 0: 2\|E\|²/ω, as the `N/A` of earlier versions) |
+| 8, 9 | `N/A` (placeholders) |
 | 10, 11 | dN/dy, dE/dy [GeV] for k_T > 3 GeV |
 | 12, 13 | dN/dy, dE/dy [GeV] for k_T > 6 GeV |
 | 14 | g²/(4π α_s) at `runningCouplingQsFactor` × the ⟨Q_s⟩ that `runWithQs` selects; 1 with `runningCoupling 0`. With `runWithLocalQs 1` or `runWithKt 1`, the factor applied to the spectrum varies per cell or k_T bin, and this is the one at the event-averaged ⟨Q_s⟩ |

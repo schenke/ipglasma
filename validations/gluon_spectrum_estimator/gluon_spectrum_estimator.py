@@ -52,6 +52,8 @@ import numpy as np
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "numerical_parameters"))
 from numerical_parameters import write_input  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "..", "dilute_limit"))
+from leading_order import pi_line_fraction  # noqa: E402
 
 LONGITUDINAL_RE = re.compile(
     r"longitudinal part of the gauge-fixed potential: ([0-9.eE+-]+)")
@@ -99,7 +101,11 @@ def run_one(cfg, settings):
                           "dE/dy": gluons["dE_GeV"]},
            "electric": {"dN/dy": gluons["dN_electric_estimator"],
                         "dE/dy": gluons["dE_electric_estimator_GeV"]},
-           "longitudinal_part": float(match[1]) if match else None}
+           "longitudinal_part": float(match[1]) if match else None,
+           # the modes on the lines k = -pi/a, which only the projection
+           # counts (estimated from the spectrum)
+           "pi_line_fraction": pi_line_fraction(
+               gluons, settings["size"], settings["L"])}
     for which in ("projection", "electric"):
         out[which]["<k_T>"] = out[which]["dE/dy"] / out[which]["dN/dy"]
     with open(cache, "w") as f:
@@ -123,7 +129,9 @@ def analyze(runs, settings):
         if not outs:
             continue
         entry = {"tau_fm": tau, "configurations": len(outs),
-                 "longitudinal_part": [o["longitudinal_part"] for o in outs]}
+                 "longitudinal_part": [o["longitudinal_part"] for o in outs],
+                 "pi_line_fraction": [o.get("pi_line_fraction")
+                                      for o in outs]}
         for name in QUANTITIES:
             projection = [o["projection"][name] for o in outs]
             electric = [o["electric"][name] for o in outs]
@@ -171,6 +179,10 @@ def print_result(result):
         if longitudinal:
             print("  longitudinal part of the gauge-fixed potential: "
                   + " ".join(f"{v:.4f}" for v in longitudinal))
+        lines = [v for v in entry["pi_line_fraction"] if v is not None]
+        if lines:
+            print("  part of dN/dy on the lines k = -pi/a (estimate): "
+                  + " ".join(f"{v:.1e}" for v in lines))
 
 
 def plot(result, path):

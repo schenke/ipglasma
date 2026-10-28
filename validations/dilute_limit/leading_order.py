@@ -88,6 +88,25 @@ def spectrum(k, ie, ib, tau=None, nc=3, g=1.):
         * (ie * j0(k * tau) ** 2 + ib * j1(k * tau) ** 2)
 
 
+def pi_line_fraction(gluons, size, L):
+    """An estimate of the part of dN/dy that the projection onto the free
+    Bjorken modes (gluonSpectrumEstimator 1) counts on the lines
+    k_x = -pi/a and k_y = -pi/a, which 2|E|^2/omega and lattice_prediction()
+    leave out: each of their 2 size - 1 modes is given the mean
+    dN/dy d^2k of its k~ bin. gluons is the content of
+    gluonMultiplicity<id>.json of a size^2 lattice of side L [fm]."""
+    index = np.arange(size)
+    k = 2. * np.pi * (-0.5 + index / size)
+    KX, KY = np.meshgrid(k, k, indexing="ij")
+    line = (index[:, None] == 0) | (index[None, :] == 0)
+    ktilde = 2. * np.sqrt(np.sin(KX / 2.) ** 2 + np.sin(KY / 2.) ** 2)[line]
+    ik = np.ceil(ktilde / BIN_WIDTH).astype(int) - 1
+    dn = np.asarray(gluons["dN_d2k_GeV_minus2"])
+    ik = ik[(ik >= 0) & (ik < len(dn))]
+    cell = (2. * np.pi * HBARC / L) ** 2      # GeV^2 per mode
+    return float(dn[ik].sum() * cell / gluons["dN"])
+
+
 def lattice_prediction(size, L, m, tau, nc=3, g=1., grid_points=120):
     """The prediction for one lattice, per (g^2 mu_A)^2 (g^2 mu_B)^2: the
     k_T bins of GluonMultiplicity [GeV], dN/dy d^2k of the whole lattice

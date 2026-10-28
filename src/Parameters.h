@@ -371,6 +371,11 @@ struct OutputParameters {
     /// Whether to write the hadron spectrum `multiplicityHadrons<id>.dat`
     /// (needs \c computeGluonMultiplicity).
     bool writeHadronSpectrum = false;
+    /// How the gluon spectrum counts gluons (needs
+    /// \c computeGluonMultiplicity): `0`, from the electric fields,
+    /// \f$2|E|^2/\omega\f$; `1`, from the projection of the potentials and
+    /// momenta onto the free boost-invariant modes (issue #140).
+    int gluonSpectrumEstimator = 0;
     /// Whether to write the binary snapshot `initialWilsonLines<id>.ipgw`
     /// of the initial Wilson lines (WilsonLineIO::writeTrainingData()).
     bool writeWilsonLineSnapshot = false;

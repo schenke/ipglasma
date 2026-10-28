@@ -2,7 +2,11 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <gsl/gsl_sf_bessel.h>
+
 #include <algorithm>
+#include <cmath>
+#include <complex>
 #include <cstdio>
 #include <fstream>
 #include <random>
@@ -177,4 +181,42 @@ TEST_CASE(
     CHECK(
         electric.second / pi.second
         == doctest::Approx(g2 / (tauN * tauN)).epsilon(1e-4));
+}
+
+TEST_CASE(
+    "bjorkenProjectionCoefficients: the regular free modes hold 1/pi gluons "
+    "at every k tau") {
+    // the boost-invariant modes regular at tau = 0: transverse
+    // q = J0(k tau), p = tau dq/dtau = -x J1(x); longitudinal
+    // q = tau J1(k tau), p = (1/tau) dq/dtau = k J0(x). The projection gives
+    // 1/pi independent of tau, while 2|E|^2/omega (|p|^2/(k tau) and
+    // tau |p|^2/k) gives pi x J1(x)^2 and pi x J0(x)^2 times that.
+    const double k = 1.7;
+    for (const double x : {0.25, 0.5, 1., 1.5, 2., 3., 4., 6., 10.}) {
+        CAPTURE(x);
+        const double tau = x / k;
+        std::complex<double> cq, cp;
+        bjorkenProjectionCoefficients(k, tau, false, cq, cp);
+        const double qT = gsl_sf_bessel_J0(x), pT = -x * gsl_sf_bessel_J1(x);
+        CHECK(std::norm(cq * qT + cp * pT) == doctest::Approx(1. / M_PI));
+        bjorkenProjectionCoefficients(k, tau, true, cq, cp);
+        const double qL = tau * gsl_sf_bessel_J1(x);
+        const double pL = k * gsl_sf_bessel_J0(x);
+        CHECK(std::norm(cq * qL + cp * pL) == doctest::Approx(1. / M_PI));
+        // the electric estimator against the exact number
+        CHECK(
+            M_PI * pT * pT / (k * tau)
+            == doctest::Approx(M_PI * x * std::pow(gsl_sf_bessel_J1(x), 2)));
+        CHECK(
+            M_PI * tau * pL * pL / k
+            == doctest::Approx(M_PI * x * std::pow(gsl_sf_bessel_J0(x), 2)));
+    }
+    // two values of the table of #140: the longitudinal mode at x = 2 and
+    // the transverse one at x = 4 are counted 0.315 and 0.055 times
+    CHECK(
+        M_PI * 2. * std::pow(gsl_sf_bessel_J0(2.), 2)
+        == doctest::Approx(0.3150).epsilon(1e-3));
+    CHECK(
+        M_PI * 4. * std::pow(gsl_sf_bessel_J1(4.), 2)
+        == doctest::Approx(0.0547).epsilon(1e-2));
 }

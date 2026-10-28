@@ -914,6 +914,15 @@ const std::vector<ParameterSpec> &parameterTable() {
             .onlyIf(gluonMultiplicityComputed)
             .optional("0"),
         param(
+            "gluonSpectrumEstimator", &P::output,
+            &OutputParameters::gluonSpectrumEstimator)
+            .onlyIf(gluonMultiplicityComputed)
+            .optional("0")
+            .check(oneOf(
+                {0, 1},
+                " (0: 2|E|^2/omega, 1: projection onto the free "
+                "Bjorken modes)")),
+        param(
             "writeWilsonLineSnapshot", &P::output,
             &OutputParameters::writeWilsonLineSnapshot)
             .optional("0"),

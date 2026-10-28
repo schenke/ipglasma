@@ -11,7 +11,6 @@ import sys
 import h5py
 from os import path, remove
 from glob import glob
-from multiprocessing import Pool
 import argparse
 
 import numpy as np

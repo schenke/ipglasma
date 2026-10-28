@@ -40,7 +40,6 @@ Before running this, make sure you have downloaded and built the subnucleondiffr
 """
 
 import argparse
-import fnmatch
 import os
 import shutil
 import subprocess

@@ -26,6 +26,8 @@ parts of the code against exact or published results:
   target, applied to the Wilson lines of a Pb+Pb event (see below).
 - **`dilute_limit/`** — the dilute limit of the glasma: the (g²μ)⁴/g²
   scaling of the energy density and the gluon number (see below).
+- **`gluon_spectrum_estimator/`** — the two definitions of the gluon number
+  (`gluonSpectrumEstimator`) in the example input (see below).
 - **`numerical_parameters/`** — how the observables of a Pb+Pb event depend
   on the lattice spacing, `Ny` and `m` at a fixed geometry (see below).
 - **`constant_glasma/`** — the glasma of a constant color-charge density
@@ -267,7 +269,8 @@ with its analytic leading-order value, which has no free parameter
   late-time formula, without Bessel functions. With the defaults, the ratio
   in the window is 1.008 ± 0.006 at τ = 0.5, 0.2 and 0.1 fm alike, and
   dN/dy is the same to six digits at all three times, while 2|E|²/ω gives
-  17%, 22% and 0.6% more.
+  15.0 ± 0.9%, 20.4 ± 0.4% and 0.6 ± 0.6% more (the mean over the 16
+  configurations, `dN_dy_electric_over_projection` in the summary).
 
 ```bash
 cd dilute_limit
@@ -315,6 +318,51 @@ enough (e.g. g²μ = 0.01 GeV at a = 0.0125 fm), the field produced in the
 collision falls below what the light-cone solver resolves with its tolerance
 (ε at τ → 0⁺ comes out 13% low), and the late energy density below the floor
 of the T^μν output (10⁻¹⁶ GeV/fm³).
+
+### The two definitions of the gluon number
+
+`gluon_spectrum_estimator/gluon_spectrum_estimator.py` (issue #140) compares
+the two values of `gluonSpectrumEstimator` in the example input: Pb+Pb with
+JIMWLK from x = 0.01 to 10⁻⁴, b = 0, `seed 3`, 768² at L = 22.5 fm, and two
+color-charge configurations (`colorChargeSeed 1` and `2`).
+- **Runs:** the gluon multiplicity is measured at the final time, so each
+  time (default τ = 0.2, 0.4 and 1 fm) and configuration is a run of its
+  own. The runs use `gluonSpectrumEstimator 1`, whose
+  `gluonMultiplicity<id>.json` also gives dN/dy and dE/dy of `0`, from the
+  same gauge-fixed fields.
+- **Output:** dN/dy and ⟨k_T⟩ = (dE/dy)/(dN/dy) of both, their ratio, and
+  the longitudinal part of the gauge-fixed potential from the log, a check
+  of the gauge fixing.
+- **Check:** 2|E|²/ω counts the gluons of a mode only on average over the
+  oscillation of its fields, i.e. for kτ ≫ 1. From `--agree-from` (0.4 fm)
+  on, the mean ratio of dN/dy and of ⟨k_T⟩ must therefore be 1 within
+  `--tolerance` (3%).
+
+```bash
+cd gluon_spectrum_estimator
+# quick test: 128², one configuration at 0.2 and 0.4 fm
+python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --quick
+# the setup of the paper: 6 runs of about 5 minutes with 10 threads
+python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --threads 10
+```
+
+With the defaults, 2|E|²/ω over the projection, for the two configurations:
+
+| τ [fm] | dN/dy | ⟨k_T⟩ |
+|---|---|---|
+| 0.2 | 0.860, 0.928 | 1.164, 1.078 |
+| 0.4 | 1.007, 1.004 | 0.999, 1.001 |
+| 1.0 | 1.013, 1.003 | 0.988, 0.997 |
+
+- **From τ = 0.4 fm on,** the two agree within about 1%. The spectrum peaks
+  near Q_s ≈ 2 GeV, where kτ ≈ 4 at 0.4 fm, and integrated over k the
+  oscillation averages out. In the dilute limit, in contrast, the lowest
+  modes dominate, and 2|E|²/ω is off by tens of percent at all times (see
+  the dilute limit above).
+- **At τ = 0.2 fm,** they differ by 7–14% in dN/dy and by 0.2–0.4 GeV in
+  ⟨k_T⟩. The fields are still strongly nonlinear, and no estimator gives a
+  well-defined particle number yet.
+- **The longitudinal part** of the gauge-fixed potential is 2–6%.
 
 ### Dependence on a, Ny and m at a fixed geometry
 

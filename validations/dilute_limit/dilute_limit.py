@@ -48,7 +48,9 @@ the lattice spectrum by a few percent at k a ~ 1. The fit
 k^4 dN/d^2k = B ln(k/k0) in the window is also reported. With
 --gluon-spectrum-estimator 1, the runs count gluons by the projection onto
 the free Bjorken modes (gluonSpectrumEstimator 1), which does not depend on
-the time, and the spectrum is compared with the late-time leading order.
+the time, and the spectrum is compared with the late-time leading order;
+the summary then also gives dN/dy of 2|E|^2/omega over that of the
+projection, for the configurations of the comparison.
 
 Before the lattice of useNucleus 0 was periodic (#139), its clamped edges
 turned the pure-gauge fields of the nuclei, which are of first order in
@@ -147,6 +149,9 @@ def run_one(cfg, settings):
     with open(os.path.join(workdir, "gluonMultiplicity0.json")) as f:
         gluons = json.load(f)
     out["dN_dy_per_area"] = gluons["dN"] / settings["L"] ** 2  # 1/fm^2
+    if "dN_electric_estimator" in gluons:
+        out["dN_dy_electric_per_area"] = \
+            gluons["dN_electric_estimator"] / settings["L"] ** 2
     out["kt_GeV"] = gluons["kt_GeV"]
     out["dN_d2k"] = gluons["dN_d2k_GeV_minus2"]
     with open(cache, "w") as f:
@@ -354,6 +359,16 @@ def main():
             "dN_dy_ratio": float(dn.mean()),
             "dN_dy_ratio_error": float(dn.std(ddof=1) / np.sqrt(len(dn)))
             if len(dn) > 1 else None}
+        if args.gluon_spectrum_estimator == 1:
+            # 2|E|^2/omega of the same runs, over the projection
+            electric = np.array([
+                results[("seed", s)]["dN_dy_electric_per_area"]
+                / results[("seed", s)]["dN_dy_per_area"] for s in seeds])
+            summary["leading_order"].update({
+                "dN_dy_electric_over_projection": float(electric.mean()),
+                "dN_dy_electric_over_projection_error":
+                float(electric.std(ddof=1) / np.sqrt(len(electric)))
+                if len(electric) > 1 else None})
         when = "at late times (projection onto the free Bjorken modes)" \
             if args.gluon_spectrum_estimator == 1 else \
             f"at tau = {args.maxtime:g} fm (2|E|^2/omega)"
@@ -365,6 +380,12 @@ def main():
                   f"({r['bins']} bins)")
         print(f"  dN/dy over the LO sum over the lattice modes: "
               f"{dn.mean():.4f}")
+        if args.gluon_spectrum_estimator == 1:
+            lo_summary = summary["leading_order"]
+            spread = lo_summary["dN_dy_electric_over_projection_error"] or 0.
+            print(f"  dN/dy of 2|E|^2/omega over the projection: "
+                  f"{lo_summary['dN_dy_electric_over_projection']:.4f} +- "
+                  f"{spread:.4f}")
         window = means.get("window")
         if window and window["bins"] >= 2:
             ok = abs(window["ratio"] - 1.) <= args.lo_tolerance \

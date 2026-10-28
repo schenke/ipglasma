@@ -18,7 +18,6 @@
  * classical fields (in transverse Coulomb gauge), with the optional
  * hadronization and the per-event output files.
  */
-
 class GluonMultiplicity {
   public:
     /**

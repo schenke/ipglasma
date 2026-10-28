@@ -235,6 +235,9 @@ void accumulateGluonSpectrum(
  * The potential \f$q = \theta/g\f$ of a link \f$U = e^{i\theta}\f$ to
  * leading order in \f$\theta\f$: the traceless part of
  * \f$(U - U^\dagger)/(2i)\f$, divided by \f$g\f$.
+ * The potential is of leading order in the link angle (sin theta for
+ * theta); in dense events the links at high k are not close to 1, and this
+ * O(theta^3) ambiguity is part of the definition.
  * \param[in] U The gauge-fixed link.
  * \param[in] g Coupling \f$g\f$.
  * \return \f$q\f$ [lattice units].
@@ -579,14 +582,17 @@ int GluonMultiplicity::compute(
         addPhaseAndRestart(
             "observables.gluon_multiplicity.bjorken_projection",
             multiplicityPhaseStart);
-        messager_ << "[GluonMultiplicity::compute]: projection onto the free "
-                     "Bjorken modes: dN/dy = "
-                  << dNdeta << " (2|E|^2/omega: " << dNdetaOther
-                  << "); longitudinal part of the gauge-fixed potential: "
-                  << sqrt(
-                         longitudinalNorm
-                         / std::max(transverseNorm + longitudinalNorm, 1e-300));
-        messager_.flush("info");
+        if (param->run.MPIRank == 0) {
+            messager_
+                << "[GluonMultiplicity::compute]: projection onto the free "
+                   "Bjorken modes: dN/dy = "
+                << dNdeta << " (2|E|^2/omega: " << dNdetaOther
+                << "); longitudinal part of the gauge-fixed potential: "
+                << sqrt(
+                       longitudinalNorm
+                       / std::max(transverseNorm + longitudinalNorm, 1e-300));
+            messager_.flush("info");
+        }
     }
 
     for (int ik = 0; ik < bins; ik++) {
@@ -642,6 +648,15 @@ int GluonMultiplicity::compute(
             cosh(param->colorCharge.rapidity)
             / (sqrt(
                 pow(cosh(param->colorCharge.rapidity), 2.) + m * m / (P * P)));
+        // the totals of 2|E|^2/omega in the JSON, in the same units
+        dNdetaOther *=
+            cosh(param->colorCharge.rapidity)
+            / (sqrt(
+                pow(cosh(param->colorCharge.rapidity), 2.) + m * m / (P * P)));
+        dEdetaOther *=
+            cosh(param->colorCharge.rapidity)
+            / (sqrt(
+                pow(cosh(param->colorCharge.rapidity), 2.) + m * m / (P * P)));
 
         if (param->run.MPIRank == 0) {
             messager_ << "[GluonMultiplicity::compute]: dN/deta 1 = " << dNdeta
@@ -665,7 +680,10 @@ int GluonMultiplicity::compute(
     addPhaseAndRestart(
         "observables.gluon_multiplicity.report", multiplicityPhaseStart);
 
-    if (dNdeta == 0.) {
+    // no collision leaves E exactly 0; the projection then still counts
+    // the residual pure gauge of the gauge fixing, so test 2|E|^2/omega
+    if ((param->output.gluonSpectrumEstimator == 1 ? dNdetaOther : dNdeta)
+        == 0.) {
         messager_ << "[GluonMultiplicity::compute]: No collision happened on "
                      "rank "
                   << param->run.MPIRank

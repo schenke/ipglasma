@@ -271,7 +271,10 @@ with its analytic leading-order value, which has no free parameter
   in the window is 1.008 ± 0.006 at τ = 0.5, 0.2 and 0.1 fm alike, and
   dN/dy is the same to six digits at all three times, while 2|E|²/ω gives
   15.0 ± 0.9%, 20.4 ± 0.4% and 0.6 ± 0.6% more (the mean over the 16
-  configurations, `dN_dy_electric_over_projection` in the summary).
+  configurations, `dN_dy_electric_over_projection` in the summary). The
+  projection also counts the modes on the lines k_x = −π/a and k_y = −π/a,
+  which 2|E|²/ω and the leading-order sum leave out; at 256² they carry a
+  negligible part of dN/dy.
 
 ```bash
 cd dilute_limit

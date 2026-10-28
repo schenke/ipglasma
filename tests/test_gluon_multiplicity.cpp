@@ -119,7 +119,9 @@ TEST_CASE(
     const std::string content = text.str();
     for (const char *key :
          {"\"format\": \"ipglasma-gluon-target\"", "\"dN\":", "\"dE_GeV\":",
-          "\"tau_fm\":", "\"rapidity_variable\": \"y\""}) {
+          "\"tau_fm\":", "\"rapidity_variable\": \"y\"",
+          "\"estimator\": \"bjorken_projection\"",
+          "\"dN_electric_estimator\":"}) {
         CAPTURE(key);
         CHECK(content.find(key) != std::string::npos);
     }
@@ -147,6 +149,8 @@ TEST_CASE(
     auto multiplicityOf = [](bool asPi) {
         Parameters param;
         makeMultiplicityTestParam(param);
+        // the electric estimator, 2|E|^2/omega, whose two terms are tested
+        param.output.gluonSpectrumEstimator = 0;
         Lattice lat(&param, N);
         setVacuum(lat);
         Group group;

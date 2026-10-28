@@ -250,8 +250,9 @@ with its analytic leading-order value, which has no free parameter
 
   I_E,B(k) = ∫ d²p/(2π)² {(p·q)², (p×q)²} / [(p² + m²)²(q² + m²)²].
 - **The time of the measurement:** the Bessel functions are there because
-  the code counts gluons with the electric fields, n = 2|E|²/ω, which
-  oscillate with kτ. At late times J₀², J₁² → 1/(πkτ) on average, and the
+  the runs count gluons with the electric fields, n = 2|E|²/ω
+  (`gluonSpectrumEstimator 0`, the default of the script, unlike the code's),
+  which oscillate with kτ. At late times J₀², J₁² → 1/(πkτ) on average, and the
   formula becomes the classical result of Kovner, McLerran and Weigert and of
   Gyulassy and McLerran, N_c(N_c² − 1)/g² (g²μ)⁴ (I_E + I_B)/(4π³k²), which
   falls like ln(k/m)/k⁴ for k ≫ m.
@@ -520,9 +521,10 @@ computes, averaged over the seeds,
 - P_L/ε = τ²T^ηη/T^ττ and P_T/ε = (T^xx + T^yy)/(2T^ττ) against τ;
 - ε(τ → 0⁺), at the first time step, against the lattice spacing;
 - f_N = g²(dN/dy)/(g²μL)², the gluon number per unit rapidity and
-  transverse area, at the last time. IP-Glasma computes the multiplicity in
-  transverse Coulomb gauge with the free lattice dispersion, as Eqs. (27)
-  and (28) of Lappi, the definition of his Table I.
+  transverse area, at the last time. The runs compute the multiplicity in
+  transverse Coulomb gauge with the free lattice dispersion and the electric
+  fields (`gluonSpectrumEstimator 0`), as Eqs. (27) and (28) of Lappi, the
+  definition of his Table I.
 
 It checks that P_L/ε = −1 and P_T/ε = 1 within 0.02 at the first time step
 (purely longitudinal fields) and about 0 and 1/2 at the last time

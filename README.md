@@ -264,11 +264,13 @@ The JIMWLK evolution starts from a fixed $x$, `jimwlkInitialX`, and evolves the 
 - **jimwlkLambdaQCD** (only used with `useJIMWLK 1`): $\Lambda_\mathrm{QCD}$ in $\alpha_s(r)$ in GeV as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkMu0** (only used with `useJIMWLK 1`): Regulator in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 - **jimwlkC** (optional, default `0.2`, only used with `useJIMWLK 1`): parameter $c$ in $\alpha_s(r)$ as in Eq. (22) of [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712); $N_f$ there is `nFlavors`
-- **jimwlkDs** (only used with `useJIMWLK 1`): step size in JIMWLK evolution. Recommended values
+- **jimwlkDs** (only used with `useJIMWLK 1`): step size in JIMWLK evolution. Recommended values, for an evolution over up to about 5 units of rapidity with the IR regulator `jimwlkMass 0.4` and, with running coupling, the coupling parameters of the example input
   - 0.005 with running coupling
   - 0.0005 with fixed coupling
 
   The step is of first order, and a finite step makes the evolution too fast. For the MV model with a constant color-charge density ($g^2\mu$ = 2 GeV) evolved from $x$ = 0.01, $Q_s$ comes out 1.9% too large after 4.7 units of rapidity at 0.005 with running coupling, and 0.5% after 2 units at 0.0005 with fixed coupling ($\alpha_s$ = 0.2); the error is proportional to the step and grows about linearly with the rapidity (see `validations/jimwlk_step_size`)
+
+  Other setups can need much smaller steps, so check the convergence in `jimwlkDs` there, or extrapolate to zero step (the error is proportional to the step). In the setup of [arXiv:1212.4825](https://arxiv.org/pdf/1212.4825), with no IR regulator, a running coupling that freezes at $\alpha_s$ = 0.76 (0.36 in the example input) and $Q_s/\Lambda_{\rm QCD}$ = 3.7 to 30, the error per unit of step and of rapidity is about 30 times larger: after 8 units of rapidity, $Q_s$ comes out 22% too large at 0.001, 11% at 0.0005 and 5% at 0.00025
 
   Default parameters for the JIMWLK evolution with fluctuating proton at initial $x=0.01$ fitted to HERA vector meson production data are reported in [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712)
 

@@ -261,6 +261,13 @@ with its analytic leading-order value, which has no free parameter
 - **Check:** the mean ratio of the lattice to the leading-order spectrum in
   the window 2m < k < 0.3/a must be 1 within `--lo-tolerance` (2%) plus
   two standard deviations.
+- **The projection onto the free Bjorken modes:** with
+  `--gluon-spectrum-estimator 1`, the runs count gluons with
+  `gluonSpectrumEstimator 1`, and the spectrum is compared with the
+  late-time formula, without Bessel functions. With the defaults, the ratio
+  in the window is 1.008 ± 0.006 at τ = 0.5, 0.2 and 0.1 fm alike, and
+  dN/dy is the same to six digits at all three times, while 2|E|²/ω gives
+  17%, 22% and 0.6% more.
 
 ```bash
 cd dilute_limit

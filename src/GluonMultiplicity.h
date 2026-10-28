@@ -15,7 +15,11 @@
 
 /**
  * Coefficients of the projection of one Fourier mode of the Coulomb-gauge
- * fields onto the free boost-invariant gluon modes (issue #140). The
+ * fields onto the free boost-invariant gluon modes (issue #140), the
+ * definition of the gluon number of J. Berges, K. Boguslavski,
+ * S. Schlichting and R. Venugopalan, Phys. Rev. D 89 (2014) 074011
+ * [arXiv:1303.5650] and 114007 [arXiv:1311.3005], for boost-invariant
+ * fields (rapidity wave number 0). The
  * positive-frequency Wronskian of the potential q and its momentum p with
  * the Hankel functions \f$H_n = H_n^{(2)}(x) = J_n(x) - i Y_n(x)\f$,
  * \f$x = \tilde k \tau\f$, is \f$W = c_q q + c_p p\f$ with

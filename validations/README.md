@@ -433,7 +433,12 @@ threads:
   (`initialization.wilson_lines`), the JIMWLK evolution
   (`jimwlk.evolution`), the light-cone fields, the Yang–Mills evolution
   with the observables at the final time (`evolution.total`), and the whole
-  event. The summary has every phase of the profile.
+  event. The summary has every phase of the profile, with its number of
+  calls.
+- **Time per step:** of the JIMWLK evolution (`jimwlk.step`) and of the
+  Yang–Mills evolution (`evolution.parallel_step`), the time of the phase
+  divided by its calls. The number of JIMWLK steps does not depend on N
+  (93 per nucleus), that of the Yang–Mills steps grows like N.
 - **Memory:** the peak resident memory of each run, from the operating
   system.
 - **Repeats:** the runs are sequential and repeated (`--repeats`, default

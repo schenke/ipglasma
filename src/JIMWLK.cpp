@@ -317,6 +317,7 @@ std::vector<int> JIMWLK::snapshotSteps(
 }
 
 void JIMWLK::evolutionStep(NucleusRole nucleus) {
+    IPG_PROFILE_SCOPE("jimwlk.step");
     const bool evolveProjectile = (nucleus == NucleusRole::Projectile);
     std::vector<Matrix> &wilsonLines =
         evolveProjectile ? lat_ptr_->U : lat_ptr_->U2;

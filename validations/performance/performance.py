@@ -22,11 +22,14 @@ IPGLASMA_PROFILE=1. Two scans:
 The runs are sequential, and each is repeated --repeats times; the fastest
 repeat is kept, since a shared machine can only make a run slower. From
 the profile of the event (ipglasma_profile_rank0.tsv, see OUTPUT.md), the
-script takes the time of every phase; the figure shows the main stages
-(the Wilson lines, the JIMWLK evolution, the light-cone fields, the
-Yang-Mills evolution with the observables at the final time) and the
-whole event. The peak resident memory of each run comes from the
-operating system (wait4).
+script takes the time and the number of calls of every phase. The
+figure shows the main stages (the Wilson lines, the JIMWLK evolution, the
+light-cone fields, the Yang-Mills evolution with the observables at the
+final time) and the whole event, and the time of one step of the JIMWLK
+evolution (jimwlk.step) and of the Yang-Mills evolution
+(evolution.parallel_step): the number of JIMWLK steps does not depend on
+N, that of the Yang-Mills steps grows like N. The peak resident memory of
+each run comes from the operating system (wait4).
 
 Timings depend on the machine and on what else runs on it: run the script
 on an otherwise idle machine. The summary records the CPU model, the
@@ -63,20 +66,31 @@ STAGES = [("initialization.wilson_lines", "Wilson lines"),
           ("initialization.forward_light_cone", "light-cone fields"),
           ("evolution.total", "Yang-Mills evolution and observables"),
           ("event.total", "event")]
+# the phases entered once per step: the time per step is seconds/calls
+STEPS = [("jimwlk.step", "JIMWLK step"),
+         ("evolution.parallel_step", "Yang-Mills step")]
 
 
 def read_profile(path, event=0):
-    """{phase: seconds} of one event of a profile file."""
-    phases = {}
+    """{phase: seconds} and {phase: calls} of one event of a profile
+    file."""
+    phases, calls = {}, {}
     with open(path) as f:
         header = f.readline().split("\t")
         index = {name.strip(): i for i, name in enumerate(header)}
         for line in f:
             cells = line.rstrip("\n").split("\t")
             if int(cells[index["event"]]) == event:
-                phases[cells[index["phase"]]] = float(
-                    cells[index["seconds"]])
-    return phases
+                phase = cells[index["phase"]]
+                phases[phase] = float(cells[index["seconds"]])
+                calls[phase] = int(cells[index["calls"]])
+    return phases, calls
+
+
+def per_step(result, phase):
+    """The time of one call of a phase, NaN without it."""
+    calls = result.get("calls", {}).get(phase, 0)
+    return result["phases"][phase] / calls if calls else float("nan")
 
 
 def run_tag(cfg):
@@ -114,10 +128,11 @@ def run_one(cfg, settings):
     returncode = os.waitstatus_to_exitcode(status)
     if returncode != 0 or not os.path.exists(profile):
         return None, f"ipglasma failed (exit {returncode}), see {workdir}"
+    phases, calls = read_profile(profile)
     result = dict(cfg, wall_s=wall,
                   # ru_maxrss is in kilobytes on Linux
                   max_rss_MiB=usage.ru_maxrss / 1024.,
-                  phases=read_profile(profile))
+                  phases=phases, calls=calls)
     with open(cache, "w") as f:
         json.dump(result, f, indent=1)
     for name in os.listdir(workdir):
@@ -157,7 +172,8 @@ def plot(summary, path):
     import matplotlib.pyplot as plt
     import numpy as np
     colors = ["#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#1f1f1e"]
-    fig, (left, middle, right) = plt.subplots(1, 3, figsize=(13, 3.8))
+    fig, ((left, steps), (middle, right)) = plt.subplots(2, 2,
+                                                          figsize=(10, 7))
     sizes = summary["size_scan"]
     n = np.array([r["size"] for r in sizes])
     for (phase, label), color in zip(STAGES, colors):
@@ -169,6 +185,14 @@ def plot(summary, path):
     left.set_ylabel("time per event [s]")
     left.set_title(f"{summary['settings']['threads']} threads", fontsize=9)
     left.legend(fontsize=7)
+    for (phase, label), color in zip(STEPS, colors[1::2]):
+        steps.plot(n, [per_step(r, phase) for r in sizes], "o-",
+                   color=color, ms=3, label=label)
+    steps.set_xscale("log")
+    steps.set_yscale("log")
+    steps.set_xlabel("N")
+    steps.set_ylabel("time per step [s]")
+    steps.legend(fontsize=7)
     threads = summary["thread_scan"]
     p = np.array([r["threads"] for r in threads])
     for (phase, label), color in zip(STAGES, colors):
@@ -279,11 +303,14 @@ def main():
                               "event.total" in r["phases"] for r in runs)}}
     print(f"\nfastest of {args.repeats} repeat(s) [s]:")
     print(f"  {'N':>5s} {'threads':>7s}" + "".join(
-        f"{label[:18]:>20s}" for _, label in STAGES) + f"{'memory [GiB]':>14s}")
+        f"{label[:18]:>20s}" for _, label in STAGES + STEPS)
+        + f"{'memory [GiB]':>14s}")
     for r in summary["size_scan"] + summary["thread_scan"]:
         print(f"  {r['size']:5d} {r['threads']:7d}" + "".join(
             f"{r['phases'].get(phase, float('nan')):20.2f}"
-            for phase, _ in STAGES) + f"{r['max_rss_MiB'] / 1024.:14.2f}")
+            for phase, _ in STAGES) + "".join(
+            f"{per_step(r, phase):20.4f}" for phase, _ in STEPS)
+            + f"{r['max_rss_MiB'] / 1024.:14.2f}")
     passed = all(summary["checks"].values())
     summary["passed"] = passed
     for name, ok in summary["checks"].items():

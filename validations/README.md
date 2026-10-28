@@ -124,29 +124,52 @@ exactly on the periodic lattice, with the lattice momentum
 k̃² a² = 4[sin²(k_x a/2) + sin²(k_y a/2)] and the UV damping u. The dipole
 correlator D(r) = Re⟨tr V†(x) V(x+r)⟩/N_c therefore tends to
 D_G(r) = exp{−C_F [G(0) − G(r)]} for `Ny` → ∞, with corrections of order
-1/`Ny`; no continuum or infinite-volume approximation enters. The script
-runs IP-Glasma (`runEvolution 0`, `writeWilsonLines 2`, input template
-`dipole_correlator/input_dipole`) for each setting and seed, computes D(r)
-from the two nuclei of each run (two independent configurations) along the
-axes and the diagonal, averaged over all sites, and checks that
+1/`Ny`; no continuum or infinite-volume approximation enters. The
+corrections are of order G(0)/`Ny`, not [G(0) − G(r)]/`Ny`: each layer also
+carries the local fluctuations of the field, which cancel in D only for
+`Ny` → ∞. D therefore approaches D_G as 1/`Ny` only for `Ny` ≳ G(0). With
+an infrared regulator, G(0) ≈ (g²μ/m)²/(4π); without one, it grows with the
+lattice as (g²μL)². The script runs IP-Glasma (`runEvolution 0`,
+`writeWilsonLines 2`, input template `dipole_correlator/input_dipole`) for
+each setting and seed, computes D(r) from the two nuclei of each run (two
+independent configurations) along the axes and the diagonal, averaged over
+all sites, and checks, at the r_s where D_G = e^{−1/2}, that
 
-- D approaches D_G for large `Ny`,
-- `Ny` (D − D_G) at the r where D_G = e^{−1/2} tends to a constant,
-- the extrapolation D − D_G = d_∞ + c/`Ny` (for `Ny` ≥ 5) gives a d_∞
-  consistent with 0,
+- D approaches D_G for large `Ny`: the largest |D − D_G| (up to the r where
+  D_G = 0.05, at most N/4) falls by a factor of five from the smallest to
+  the largest `Ny`,
+- `Ny` (D − D_G) at the two largest `Ny` agrees within three combined
+  errors (plus 5%),
+- the extrapolation D − D_G = d_∞ + c/`Ny`, fitted for `Ny` ≥ 2 G(0)
+  (`--fit-from 2`), gives a d_∞ consistent with 0 within three errors,
 - a run with `g 2` gives the same D as with `g 1` (to rounding).
 
-It also reports Q_s/g²μ, with D(r_s) = e^{−1/2} and Q_s² = 2/r_s², to be
-compared with T. Lappi, Eur. Phys. J. C 55 (2008) 285
-([arXiv:0711.3039](https://arxiv.org/abs/0711.3039)).
+The fit starts at 2 G(0), not at G(0): there the 1/`Ny`² term still shifts
+d_∞ by about 10⁻³ (from `Ny` ≥ G(0), the default scan gives d_∞ = 1.1, 1.6
+and 1.1·10⁻³ for G(0) = 8, 65 and 260, 1.3 to 2 standard deviations), and
+from 2 G(0) on by a quarter of that. Where G(0) < 1, D − D_G at r_s stays
+within the statistical errors already for `Ny 1` (the deviation of D from
+D_G, up to 0.02 there, changes sign near r_s), so there is no approach to
+test: the first two checks are skipped, and the fit over all `Ny` tests
+that D agrees with D_G. Where fewer than three `Ny` of `--ny` lie in the
+fit range (m = 0), the scan of that setting is extended by doubling the
+largest `Ny`, up to `--ny-max` (3200). A setting in which D_G does not fall
+to e^{−1/2} within N/4 has no r_s and is skipped. Each `Ny` has its own
+seeds (1000 `Ny` + `--first-seed` + i), so the configurations of different
+`Ny`, and the points of the fit, are independent. The printout and the
+summary give G(0), the fit range (marked `*`) and the fit for each setting.
+
+It also reports Q_s/g²μ, with D(r_s) = e^{−1/2} and Q_s² = 2/r_s², the
+saturation scale of the fundamental representation in coordinate space.
 
 ```bash
 cd dipole_correlator
 # quick test: 64², g²μ = 1 GeV, m = 0.2 GeV, Ny = 1...50, 2 seeds (seconds)
 python3 dipole_correlator.py --ipglasma-path ../.. --quick --max-workers 4
 # the scan for the paper: 512², L = 25.6 fm, g²μ = 0.5, 1, 2 GeV,
-# m = 0, 0.2, 0.4 GeV, Ny = 1...100, 4 seeds
-python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8
+# m = 0, 0.2, 0.4 GeV, Ny = 1...100 (for m = 0 up to 200, 800 and 3200),
+# 4 seeds (about 45 minutes with 7 workers)
+python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 7
 # optionally also the UV-damped kernel, at g²μ = 1 GeV and m = 0.2 GeV
 python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 \
     --uvdamp 0.1
@@ -162,11 +185,33 @@ the fit, the checks, Q_s/g²μ) go to `<datadir>/dipole_summary.json`
 (`dipole_<setting>.pdf`: D(r) against D_G(r) for several `Ny`, and
 `Ny` (D − D_G) with its statistical error). Each run caches its D(r) in its
 working directory, so `--analyze-only` redoes the analysis, and a rerun only
-runs what is missing; `--keep-files` keeps the Wilson lines. The script exits
-non-zero if a check fails. At 256² with 8 configurations per `Ny`
-(`--size 256 --L 25.6 --g2mu 1 --m 0.2 --seeds 4`, 15 s with
-8 workers), D − D_G at r_s falls from 0.09 (`Ny 1`) to 0.002 (`Ny 100`),
-`Ny` (D − D_G) ≈ 0.1, and the extrapolation gives (1.2 ± 0.8)·10⁻³.
+runs what is missing; `--keep-files` keeps the Wilson lines; `--threads`
+sets the OpenMP threads per run (default 1). The script exits non-zero if a
+check fails.
+
+With the defaults (8 configurations per `Ny`), all checks pass; the scan
+takes 43 minutes with 7 workers of one thread, most of it the four runs
+with `Ny 3200` (23 minutes each; `--ny-max 1600` halves the time, but
+leaves g²μ = 2 GeV, m = 0 without the extrapolation):
+
+| g²μ [GeV] | m [GeV] | G(0) | `Ny` | fit range | d_∞ [10⁻³] | checks |
+|---|---|---|---|---|---|---|
+| 0.5 | 0 | 16.3 | 1–200 | 50–200 | 3.5 ± 3.6 | all three |
+| 0.5 | 0.2 | 0.50 | 1–100 | 1–100 | 0.3 ± 1.5 | extrapolation |
+| 0.5 | 0.4 | 0.13 | | | | skipped (D_G > 0.84) |
+| 1 | 0 | 65.1 | 1–800 | 200–800 | 1.7 ± 2.2 | all three |
+| 1 | 0.2 | 1.99 | 1–100 | 5–100 | −0.2 ± 0.8 | all three |
+| 1 | 0.4 | 0.50 | 1–100 | 2–100 | −0.4 ± 0.8 | extrapolation |
+| 2 | 0 | 260 | 1–3200 | 800–3200 | 0.6 ± 1.3 | all three |
+| 2 | 0.2 | 7.98 | 1–100 | 25–100 | 0.5 ± 0.8 | all three |
+| 2 | 0.4 | 2.00 | 1–100 | 5–100 | −0.1 ± 0.3 | all three |
+
+D − D_G at r_s falls, e.g., from 0.09 (`Ny 1`) to 0.002 (`Ny 100`) for
+g²μ = 1 GeV and m = 0.2 GeV, and from 0.31 to 0.006 (`Ny 3200`) for
+g²μ = 2 GeV and m = 0; for G(0) = 0.5 it is at most 1.5 standard
+deviations at all `Ny`. Q_s/g²μ approaches its value for D_G accordingly,
+0.529 at `Ny 100` against 0.532, and 1.029 at `Ny 3200` against 1.039. The
+run with `g 2` agrees with `g 1` to 1·10⁻¹⁶.
 
 ### Lattice symmetries
 

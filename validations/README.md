@@ -341,6 +341,53 @@ python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \
     --max-workers 2
 ```
 
+**Where the energy sits in k_T.** For each lattice of the size scans, the
+script also reads the gluon spectrum (`gluonMultiplicity0.json`) and
+reports, in the summary and in a table:
+- **The energy split:** the energy below and above 2 and 4 times the g²μ
+  scale (the median of the geometry, or the constant g²μ). The part below
+  is the binned energy, and the part above is the total dE minus it, so it
+  includes the modes beyond the largest bin.
+- **A continuum estimate:** the binned energy below k_c plus a tail
+  k⁴ dN/d²k = C beyond it, 2πC/k_c, for k_c = 0.3 and 0.4 times the largest
+  k_T. It is meaningful only once k_c lies in the 1/k⁴ tail, i.e. on fine
+  lattices.
+- **The tail exponent:** p of k⁴ dN/d²k ∝ k^p, fitted between 6 and 12 GeV
+  (`--tail-fit`); p = 0 is the 1/k⁴ tail.
+
+The mean spectra are in the summary, and `numerical_parameters_spectra.pdf`
+shows k⁴ dN/d²k of each lattice. For the constant g²μ, the energy below
+2g²μ does not grow on finer lattices; all of the growth is above. The two
+estimates agree on the two finest lattices, which puts the deficit at about
+0.3 g²μ a (discussion of #134).
+
+**With JIMWLK, and at another x.**
+- **`--jimwlk`:** evolves the Wilson lines of all runs with the JIMWLK
+  parameters of the template, i.e. the example input from x = 0.01 to 10⁻⁴.
+  The g²μ scale is then that of the initial Wilson lines.
+- **`--x X`:** sets `projectileX` and `targetX`. Without `--jimwlk`, this is
+  the x of the Wilson lines; with it, the x the evolution ends at.
+- **Separate results:** runs and summaries of these variants are tagged
+  (`jimwlk_`, `x0.01_`, `numerical_parameters_jimwlk_summary.json`), so they
+  never mix with the default ones.
+- **Skipping scans:** `--ny` and `--m` with no values skip those scans, and
+  `--uniform-sizes` with no values the constant g²μ, which does not depend
+  on x.
+
+In the discussion of #134 (τ = 0.5 fm, 2 seeds, N = 768 to 1536):
+- **With JIMWLK:** dN/dy converges (+1.4% in the last step). dE/dη grows by
+  about 12% per step, because the evolution hardens the tail to p ≈ 1.3.
+- **At x = 0.01 without JIMWLK:** p ≈ 0.3, and dE/dη is converged within
+  about 1% from N = 1024 on.
+
+```bash
+# the size scan with JIMWLK, and the Wilson lines at x = 0.01 without it
+python3 numerical_parameters.py --ipglasma-path ../.. --jimwlk \
+    --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 2
+python3 numerical_parameters.py --ipglasma-path ../.. --x 0.01 \
+    --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 2
+```
+
 `--ipglasma-path` is a directory with the `ipglasma` executable,
 `qs2Adj_vs_Tp_vs_Y_240.in`, `nucleusConfigurations/` and `tables/`. Runs are
 cached in their directories, so a rerun only runs what is missing.

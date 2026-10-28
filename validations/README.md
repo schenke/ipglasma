@@ -217,8 +217,8 @@ run with `g 2` agrees with `g 1` to 1·10⁻¹⁶.
 #### Comparison with Lappi (2008)
 
 ```bash
-# N = 200, g²μL = 100, g²μa = 0.5, m = 0 and 0.1 g²μ, Ny = 1...150,
-# 32 seeds (33 minutes with one worker)
+# N = 200, g²μL = 100, g²μa = 0.5, m = 0 and 0.1 g²μ (with and without the
+# zero mode), Ny = 1...150, 32 seeds (about 20 minutes with 4 workers)
 python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 --lappi
 ```
 
@@ -226,69 +226,66 @@ python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 --lappi
 C 55 (2008) 285 ([arXiv:0711.3039](https://arxiv.org/abs/0711.3039)), that of
 his Fig. 4: a 200² lattice with g²μL = 100 and g²μa = 0.5 (`g2muGeV 1`; only
 these combinations enter), m = 0 and 0.1 g²μ, and `Ny` = 1, 2, 4, 10, 20,
-50, 100 and 150, with 64 configurations each. Lappi defines Q_s with the
-adjoint correlator C(r) = ⟨|tr V†(x) V(x+r)|²⟩ − 1, C(0) = d_A = 8: in
-momentum space as the k̃ of the maximum of k̃² C(k̃), with the lattice
-momentum k̃ and C averaged over the polar angle, and in coordinate space
-from C(r_s) = d_A e^{−1/2}, Q_s² = 2/r_s² (his Fig. 7). Since
-|tr W|² − 1 is the trace of W in the adjoint representation, C(r) is the
-correlator Σ_ab U_ab(x) U_ab(x+r) of the adjoint Wilson lines
-U_ab = 2 tr(t^a V† t^b V), which the script computes with Fourier
-transforms like D. The spectra are averaged in bins of k̃ of width 2π/L,
-and Q_s is the vertex of the parabola through the largest bin and two bins
-on either side; the coordinate-space Q_s is taken along the axes. The script
-also gives the fundamental √(C_A/C_F) Q̃_s from the maximum of
-k̃² C̃(k̃), which Lappi plots with Q_s, and Q_s of the factorized
-correlator |S(r)|² − 1, with S(r) = Σ_x tr V†(x) V(x+r)/N² of each
-configuration (about N_c² D² − 1, the large-N_c form of C). The errors are
-from the jackknife over the configurations. Lappi's values were read off
-the vector graphics of his Figs. 4 and 7 (marker centres and, in Fig. 4,
-error bars; Fig. 7 has none) and are listed in the script. The results,
-written to `<datadir>/dipole_lappi_summary.json` and
-`<datadir>/dipole_lappi.pdf`:
+50, 100 and 150, with 64 configurations each. It uses the definitions of his
+code (#148):
+- **The adjoint correlator** is the factorized form |S(r)|² − 1, with
+  S(r) = Σ_x tr V†(x) V(x+r)/N² of each configuration (his code takes
+  2|S|² − 1, which differs only at k = 0). Q_s is the k̃ of the maximum of
+  k̃² C(k̃), with C averaged over the polar angle in bins of k̃ of width
+  2π/L; the script takes the vertex of the parabola through the largest bin
+  and two bins on either side.
+- **The zero mode** of the kernel is removed also for m > 0
+  (`removeZeroMode 1`). The runs with m > 0 are made with and without it.
+- **In coordinate space,** C(r) is the 2D momentum integral of the binned
+  spectrum, Σ_bins (modes) C(k̃) J₀(k̃r)/N², with k̃ as the momentum and the
+  k = 0 mode by its magnitude, as in the spectrum files of his code, and
+  C(r_s) = C(0) e^{−1/2}, Q_s² = 2/r_s².
 
-| m/g²μ | `Ny` | adjoint | factorized | Lappi, Fig. 4 | √(C_A/C_F) Q̃_s | Lappi, Fig. 4 | adjoint, coordinate | Lappi, Fig. 7 |
-|---|---|---|---|---|---|---|---|---|
-| 0 | 1 | 0.689 ± 0.007 | 0.569 ± 0.003 | 0.570 ± 0.002 | 0.577 ± 0.005 | 0.583 ± 0.005 | 0.674 ± 0.003 | 0.637 |
-| 0 | 2 | 0.652 ± 0.004 | 0.615 ± 0.003 | 0.620 ± 0.002 | 0.606 ± 0.004 | 0.623 ± 0.006 | 0.751 ± 0.003 | |
-| 0 | 4 | 0.735 ± 0.005 | 0.695 ± 0.002 | 0.695 ± 0.002 | 0.687 ± 0.004 | 0.690 ± 0.010 | 0.854 ± 0.002 | |
-| 0 | 10 | 0.899 ± 0.003 | 0.843 ± 0.001 | 0.842 ± 0.001 | 0.845 ± 0.005 | 0.845 ± 0.006 | 1.040 ± 0.001 | 0.921 |
-| 0 | 20 | 1.017 ± 0.003 | 0.957 ± 0.002 | 0.961 ± 0.001 | 0.956 ± 0.004 | 0.972 ± 0.007 | 1.183 ± 0.002 | |
-| 0 | 50 | 1.148 ± 0.004 | 1.072 ± 0.002 | 1.077 ± 0.001 | 1.089 ± 0.008 | 1.075 ± 0.008 | 1.331 ± 0.002 | 1.166 |
-| 0 | 100 | 1.198 ± 0.004 | 1.122 ± 0.002 | 1.126 ± 0.002 | 1.129 ± 0.006 | 1.134 ± 0.013 | 1.400 ± 0.002 | |
-| 0 | 150 | 1.219 ± 0.005 | 1.144 ± 0.002 | 1.143 ± 0.002 | 1.147 ± 0.006 | 1.147 ± 0.014 | 1.428 ± 0.002 | |
-| 0.1 | 1 | 0.563 ± 0.004 | 0.506 ± 0.002 | 0.519 ± 0.002 | 0.490 ± 0.004 | 0.502 ± 0.009 | 0.665 ± 0.003 | 0.623 |
-| 0.1 | 2 | 0.641 ± 0.002 | 0.593 ± 0.001 | 0.617 ± 0.001 | 0.572 ± 0.003 | 0.592 ± 0.004 | 0.796 ± 0.002 | |
-| 0.1 | 4 | 0.732 ± 0.007 | 0.688 ± 0.001 | 0.703 ± 0.002 | 0.657 ± 0.005 | 0.674 ± 0.008 | 0.924 ± 0.002 | |
-| 0.1 | 10 | 0.847 ± 0.006 | 0.782 ± 0.001 | 0.794 ± 0.001 | 0.746 ± 0.005 | 0.755 ± 0.012 | 1.053 ± 0.001 | 0.934 |
-| 0.1 | 20 | 0.894 ± 0.003 | 0.825 ± 0.001 | 0.831 ± 0.002 | 0.794 ± 0.005 | 0.794 ± 0.010 | 1.109 ± 0.001 | |
-| 0.1 | 50 | 0.917 ± 0.006 | 0.855 ± 0.002 | 0.856 ± 0.002 | 0.814 ± 0.008 | 0.815 ± 0.010 | 1.151 ± 0.001 | 1.003 |
-| 0.1 | 150 | 0.931 ± 0.003 | 0.863 ± 0.001 | 0.868 ± 0.002 | 0.824 ± 0.007 | 0.814 ± 0.020 | 1.163 ± 0.001 | |
+The script checks that, for m = 0 and for m > 0 with the zero mode removed,
+the factorized Q_s agrees with his Fig. 4 within `--lappi-tolerance` (2%)
+at every `Ny`, and the coordinate-space Q_s with his Fig. 7 within
+`--lappi-coord-tolerance` (3%). His values were read off the vector
+graphics of Figs. 4 and 7 (marker centres and, in Fig. 4, error bars; Fig. 7
+has none) and are listed in the script. The errors are from the jackknife
+over the configurations. The results, written to
+`<datadir>/dipole_lappi_summary.json` and `<datadir>/dipole_lappi.pdf`:
 
-With the adjoint correlator as defined, Q_s lies 4–9% above the values of
-Lappi (21% for `Ny 1` and m = 0). The factorized correlator reproduces
-them, within 1% for m = 0 at all `Ny`, and its spectrum reproduces the
-k̃² C(k̃) of his Fig. 1 for `Ny 1`; for m = 0, the fundamental Q̃_s agrees
-with his within 2.3 standard deviations. His adjoint values thus
-correspond to the factorized form C ≈ |C̃|² − 1, C̃ = ⟨tr V†V⟩, which his
-Eq. (15) gives for large N_c, rather than to ⟨|tr V†V|²⟩ − 1; for
-`Ny` → ∞, where both are Gaussian, they differ essentially by the
-Casimir, C_A = 3 against 2C_F = 8/3, i.e. by 6–8% in Q_s. For m = 0.1 g²μ and `Ny` ≤ 10,
-the factorized and fundamental Q_s lie 1–4% below his. IP-Glasma keeps the
-k = 0 mode of the kernel for m > 0 (K(0) = 1/m², a constant color rotation
-of each layer), which Lappi leaves out for m = 0: Wilson lines generated
-separately in numpy with the conventions of IP-Glasma give the same
-factorized Q_s for `Ny` = 1, 2 and 4 (0.506, 0.595 and 0.684), and without
-the k = 0 mode 0.519, 0.604 ± 0.008 and 0.709, close to his 0.519, 0.617
-and 0.703, so he presumably left it out for m > 0 as well. In coordinate
-space, our Q_s lies 6–15% above his Fig. 7, along the axes and the
-diagonal alike (within 1%), and also from a Hankel transform of C(k̃),
-the method he describes; neither the factorized form nor the other
-variants we tried reproduce his values. Since the definitions differ and
-the peak position depends on the estimator by 1–2% (a parabola through
-seven instead of five bins moves it up by up to 2%), the comparison is
-reported, not checked. The open questions on the definitions of Lappi are
-in #148.
+| m/g²μ | `Ny` | factorized | Lappi, Fig. 4 | Gaussian fits | ⟨\|tr V†V\|²⟩ − 1 | coordinate | Lappi, Fig. 7 |
+|---|---|---|---|---|---|---|---|
+| 0 | 1 | 0.569 ± 0.003 | 0.570 ± 0.002 | 0.590 ± 0.024 | 0.689 ± 0.007 | 0.633 ± 0.003 | 0.637 |
+| 0 | 2 | 0.615 ± 0.003 | 0.620 ± 0.002 | 0.634 ± 0.022 | 0.652 ± 0.004 | 0.683 ± 0.003 |  |
+| 0 | 4 | 0.695 ± 0.002 | 0.695 ± 0.002 | 0.711 ± 0.018 | 0.735 ± 0.005 | 0.767 ± 0.002 |  |
+| 0 | 10 | 0.843 ± 0.001 | 0.842 ± 0.001 | 0.855 ± 0.014 | 0.899 ± 0.003 | 0.927 ± 0.001 | 0.921 |
+| 0 | 20 | 0.957 ± 0.002 | 0.961 ± 0.001 | 0.968 ± 0.012 | 1.017 ± 0.003 | 1.054 ± 0.001 |  |
+| 0 | 50 | 1.072 ± 0.002 | 1.077 ± 0.001 | 1.081 ± 0.010 | 1.148 ± 0.004 | 1.181 ± 0.001 | 1.166 |
+| 0 | 100 | 1.122 ± 0.002 | 1.126 ± 0.002 | 1.130 ± 0.009 | 1.198 ± 0.004 | 1.238 ± 0.001 |  |
+| 0 | 150 | 1.144 ± 0.002 | 1.143 ± 0.002 | 1.151 ± 0.009 | 1.219 ± 0.005 | 1.261 ± 0.002 |  |
+| 0.1 | 1 | 0.522 ± 0.002 | 0.519 ± 0.002 | 0.548 ± 0.029 | 0.584 ± 0.003 | 0.627 ± 0.002 | 0.623 |
+| 0.1 | 2 | 0.614 ± 0.001 | 0.617 ± 0.001 | 0.637 ± 0.026 | 0.661 ± 0.003 | 0.733 ± 0.001 |  |
+| 0.1 | 4 | 0.705 ± 0.001 | 0.703 ± 0.002 | 0.724 ± 0.021 | 0.760 ± 0.003 | 0.837 ± 0.001 |  |
+| 0.1 | 10 | 0.793 ± 0.001 | 0.794 ± 0.001 | 0.811 ± 0.020 | 0.860 ± 0.011 | 0.946 ± 0.001 | 0.934 |
+| 0.1 | 20 | 0.830 ± 0.001 | 0.831 ± 0.002 | 0.846 ± 0.018 | 0.896 ± 0.003 | 0.990 ± 0.001 |  |
+| 0.1 | 50 | 0.857 ± 0.002 | 0.856 ± 0.002 | 0.873 ± 0.019 | 0.919 ± 0.004 | 1.022 ± 0.001 | 1.003 |
+| 0.1 | 100 | 0.863 ± 0.001 |  | 0.879 ± 0.018 | 0.926 ± 0.005 | 1.030 ± 0.001 |  |
+| 0.1 | 150 | 0.863 ± 0.001 | 0.868 ± 0.002 | 0.879 ± 0.018 | 0.929 ± 0.004 | 1.030 ± 0.001 |  |
+
+- **Momentum space:** the factorized Q_s agrees with Fig. 4 within 0.9% at
+  every `Ny`, for m = 0 and for m = 0.1 g²μ with the zero mode removed.
+- **The zero mode:** with it kept, as IP-Glasma does by default, Q_s at
+  m = 0.1 g²μ lies 1–4% lower for `Ny` ≤ 10 (0.506, 0.593, 0.688 at `Ny` =
+  1, 2, 4); for large `Ny` the two agree.
+- **Coordinate space:** Fig. 7 is reproduced within 2%. Most of the
+  difference to the lattice correlator comes from the momentum integral
+  with k̃ (about 5% in Q_s) and from the magnitude of the k = 0 mode (about
+  8%).
+- **The definition of the paper,** ⟨|tr V†V|²⟩ − 1, gives Q_s 5–8% higher
+  (21% and 12% for `Ny 1` at m = 0 and 0.1 g²μ); for `Ny` → ∞, where both are Gaussian, the two
+  forms differ essentially by C_A = 3 against 2C_F = 8/3.
+- **The peak estimator:** Gaussian fits of the maximum, his method (a
+  parabola in ln k̃²C over 2 to 6 bins on either side; the table gives their
+  mean and half their range), give Q_s 1–3% above the parabola through
+  five bins, depending on the fit window; the parabola is closer to his
+  values.
 
 ### Lattice symmetries
 

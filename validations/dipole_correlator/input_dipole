@@ -45,6 +45,7 @@ shiftConstituentQuarkProtonOrigin 1
 QsMuRatio 0.643
 smearQs 0
 UVDamp 0
+removeZeroMode 0
 minimumQs2ST 0
 nucleusQsTableFileName qs2Adj_vs_Tp_vs_Y_240.in
 rapidity 0

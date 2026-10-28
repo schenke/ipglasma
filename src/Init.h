@@ -392,10 +392,12 @@ class Init {
      * \param[in] sites Total number of lattice sites (`N*N`).
      * \param[in] m Infrared mass regulator [lattice units].
      * \param[in] UVdamp UV damping parameter [lattice units].
+     * \param[in] removeZeroMode Whether \f$K(0) = 0\f$ also for \p m > 0
+     * (`removeZeroMode`); for \p m = 0 it always is.
      * \return The per-site kernel value, length \p sites.
      */
     std::vector<double> computeWilsonLineMomentumKernel(
-        int N, int sites, double m, double UVdamp);
+        int N, int sites, double m, double UVdamp, bool removeZeroMode = false);
     /**
      * setV()'s per-site \f$\sqrt{g^2\mu^2/N_y}\f$ scale, cached once per
      * nucleus instead of being recomputed in every longitudinal sheet.

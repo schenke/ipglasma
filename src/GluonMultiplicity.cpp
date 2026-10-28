@@ -40,7 +40,7 @@ using std::ofstream;
 using std::string;
 using std::stringstream;
 
-void bjorkenProjectionCoefficients(
+void GluonMultiplicity::bjorkenProjectionCoefficients(
     double k, double tau, bool longitudinal, std::complex<double> &cq,
     std::complex<double> &cp) {
     const double x = k * tau;
@@ -249,12 +249,13 @@ Matrix linkPotential(const Matrix &U, double g) {
 
 /**
  * Accumulates the gluon spectrum of the projection onto the free
- * boost-invariant modes (bjorkenProjectionCoefficients(), issue #140) into
- * `dNdeta`/`dEdeta` and the \f$k_T\f$ bins, like accumulateGluonSpectrum():
- * the transverse mode from the potentials \p q1, \p q2 (\f$A_x\f$, \f$A_y\f$)
- * and the electric fields \p p1, \p p2 (\f$E^x\f$, \f$E^y\f$, times \f$g\f$),
- * projected on the direction transverse to the lattice momentum of the
- * backward-difference Coulomb condition, or the longitudinal mode from
+ * boost-invariant modes (GluonMultiplicity::bjorkenProjectionCoefficients(),
+ * issue #140) into `dNdeta`/`dEdeta` and the \f$k_T\f$ bins, like
+ * accumulateGluonSpectrum(): the transverse mode from the potentials \p q1, \p
+ * q2 (\f$A_x\f$, \f$A_y\f$) and the electric fields \p p1, \p p2 (\f$E^x\f$,
+ * \f$E^y\f$, times \f$g\f$), projected on the direction transverse to the
+ * lattice momentum of the backward-difference Coulomb condition, or the
+ * longitudinal mode from
  * \f$\phi\f$ (\p q1) and \f$\pi\f$ (\p p1). The fields are Fourier
  * transformed (FFT::fftn() with sign 1, \f$e^{-ik\cdot x}\f$).
  * \param[in] param Simulation parameters.
@@ -323,7 +324,8 @@ void accumulateBjorkenSpectrum(
                 transverseNorm += (q * qd).trace().real();
             }
             complex<double> cq, cp;
-            bjorkenProjectionCoefficients(kt, tauN, longitudinal, cq, cp);
+            GluonMultiplicity::bjorkenProjectionCoefficients(
+                kt, tauN, longitudinal, cq, cp);
             Matrix W = cq * q + cp * p;
             Matrix Wd = W;
             Wd.conjg();

@@ -28,6 +28,8 @@ parts of the code against exact or published results:
   on the lattice spacing, `Ny` and `m` at a fixed geometry (see below).
 - **`constant_glasma/`** — the glasma of a constant color-charge density
   against the published classical Yang-Mills results of Lappi (see below).
+- **`performance/`** — the time per stage of an event and the peak memory
+  against the lattice size and the number of threads (see below).
 
 Both scripts parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -412,6 +414,46 @@ On a lattice with clamped boundaries, as `useNucleus 0` had before #139,
 the pure-gauge fields of the nuclei become physical fields along the
 edges; averaged over the whole lattice, f_E and f_N on 512² were then 20–43%
 too large.
+
+### Performance
+
+`performance/performance.py` measures the time per stage of an event and
+the peak memory, against the lattice size and the number of OpenMP
+threads:
+- **Event:** the example input (Pb+Pb with hot spots, JIMWLK from
+  x = 0.01 to 10⁻⁴, the Yang–Mills evolution to τ = 0.5 fm, the gluon
+  multiplicity and the eccentricities) at a fixed geometry (`seed 3`,
+  b = 0), without writing Wilson lines or fields.
+- **Scans:** N = 256 to 1536 at L = 30 fm with 8 threads, and 1 to 16
+  threads at N = 512. With fixed L, the lattice spacing shrinks with N, so
+  the Yang–Mills evolution, whose time step is a/10, needs N times more
+  steps.
+- **Times:** from the profile IP-Glasma writes with `IPGLASMA_PROFILE=1`
+  (`ipglasma_profile_rank0.tsv`, see `OUTPUT.md`): the Wilson lines
+  (`initialization.wilson_lines`), the JIMWLK evolution
+  (`jimwlk.evolution`), the light-cone fields, the Yang–Mills evolution
+  with the observables at the final time (`evolution.total`), and the whole
+  event. The summary has every phase of the profile.
+- **Memory:** the peak resident memory of each run, from the operating
+  system.
+- **Repeats:** the runs are sequential and repeated (`--repeats`, default
+  2), and the fastest repeat is kept.
+
+The timings depend on the machine and on what else runs on it: run the
+script on an otherwise idle machine. The summary records the CPU model, the
+number of CPUs and the load average, and the script warns if the load is
+above 1.
+
+```bash
+cd performance
+# quick test: N = 64 and 128, 1 and 2 threads, one repeat (20 s)
+python3 performance.py --ipglasma-path ../.. --quick
+# the setup of the paper (about 1.5 hours)
+python3 performance.py --ipglasma-path ../..
+```
+
+The results go to `performance_summary.json` and `performance.pdf` in
+`--datadir` (default `./performance_output`).
 
 ### Vector meson production validation
 

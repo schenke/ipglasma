@@ -587,6 +587,18 @@ speed d ln Q_s/dy (1.6% with fixed coupling at 0.0005). The recommended step
 sizes stay below the 3% of the acceptance over the evolution of the example
 input (from x = 0.01 to 10⁻⁴, y = 4.6).
 
+The error depends strongly on the setup. A separate check (see the
+discussion of #137) in the setup of arXiv:1212.4825 (1024², g²μL = 31,
+`Ny 100`, Λ_QCD L = 6, μ₀ L = 15, c = 0.2, running coupling without IR
+regulator, four configurations; `jimwlkLambdaQCD` and `jimwlkMu0` are
+e^{γ_E} times the Λ_QCD and μ₀ of the paper, whose coupling has the scale
+4e^{−2γ_E}/r² instead of 4/r²) also finds the error proportional to the
+step, but about 30 times larger per unit of step and of rapidity. Q_s/Λ_QCD
+grows from 3.7 to 33.2, 30.1 and 28.7 over y = 8 at `jimwlkDs` 0.001, 0.0005
+and 0.00025, and to 27.3 extrapolated to zero step. At 0.00025, Q_s and
+d ln Q_s²/dy agree within 1–2% with the JIMWLK results of the paper
+(Q_s/Λ_QCD = 27.4 at y = 7.8 in its Fig. 7, and its Fig. 8).
+
 ### Vector meson production validation
 
 ```bash

@@ -45,7 +45,10 @@ time of the measurement, for the electric estimator of the gluon number
 value), and binned like the spectrum of the code. With the defaults, the
 mean ratio is 1.00 in the window; above it, the lattice artifacts raise
 the lattice spectrum by a few percent at k a ~ 1. The fit
-k^4 dN/d^2k = B ln(k/k0) in the window is also reported.
+k^4 dN/d^2k = B ln(k/k0) in the window is also reported. With
+--gluon-spectrum-estimator 1, the runs count gluons by the projection onto
+the free Bjorken modes (gluonSpectrumEstimator 1), which does not depend on
+the time, and the spectrum is compared with the late-time leading order.
 
 Before the lattice of useNucleus 0 was periodic (#139), its clamped edges
 turned the pure-gauge fields of the nuclei, which are of first order in

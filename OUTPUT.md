@@ -448,6 +448,12 @@ together with the multiplicity summary. A JSON object with:
 - `mean_kT_GeV`;
 - `dN_kT_gt_3_GeV`, `dE_kT_gt_3_GeV`, `dN_kT_gt_6_GeV`, `dE_kT_gt_6_GeV`;
 - `Npart`, `Tpp`, `impact_parameter_fm`, `random_seed`;
+- `estimator`: `electric` (n = 2|E|²/ω) or `bjorken_projection` (the
+  projection onto the free boost-invariant modes, as in Berges, Boguslavski,
+  Schlichting, Venugopalan, Phys. Rev. D 89 (2014) 074011), set by
+  `gluonSpectrumEstimator`;
+- with `bjorken_projection` also `dN_electric_estimator` and
+  `dE_electric_estimator_GeV`, the totals of the electric estimator;
 - `spectrum_definition` (a description);
 - four arrays of 100 k_T bins:
   - `kt_GeV`: the bin centres;
@@ -455,7 +461,9 @@ together with the multiplicity summary. A JSON object with:
   - `dE_d2k_GeV_minus1`: dE/(dy d²k_T) [GeV⁻¹];
   - `lattice_bin_counts`: the number of lattice momentum modes in each bin.
 
-The gluon spectrum is measured in transverse Coulomb gauge.
+The gluon spectrum is measured in transverse Coulomb gauge. With
+`gluonSpectrumEstimator 1`, it includes the modes on the lines
+k_x = −π/a and k_y = −π/a, which the electric estimator leaves out.
 
 ## Hadron spectrum
 

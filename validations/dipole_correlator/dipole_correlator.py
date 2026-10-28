@@ -46,14 +46,32 @@ its own seeds, so the configurations of different Ny are independent.
 It also reports Q_s / g^2 mu, with D(r_s) = exp(-1/2) and Q_s^2 = 2/r_s^2,
 the fundamental-representation saturation scale in coordinate space.
 
-The results go to <datadir>/dipole_summary.json, the figures to
-<datadir>/dipole_*.pdf.
+With --lappi, the script instead runs the setup of T. Lappi, Eur. Phys. J.
+C 55 (2008) 285, arXiv:0711.3039 (g^2 mu L = 100, g^2 mu a = 0.5, m = 0
+and 0.1 g^2 mu) and compares Q_s / g^2 mu with his Fig. 4 and Fig. 7. He
+defines Q_s with the adjoint correlator C(r) = < |tr V^+(x) V(x + r)|^2 >
+- 1 (d_A = 8 at r = 0), from the maximum of k~^2 C(k~) in momentum space
+and from C(r_s) = d_A exp(-1/2), Q_s^2 = 2/r_s^2, in coordinate space.
+C(r) is the correlator of the adjoint Wilson lines
+U_ab = 2 tr(t^a V^+ t^b V), so it is computed with Fourier transforms like
+D. The script also reports the fundamental sqrt(C_A/C_F) Q~_s from the
+maximum of k~^2 C~(k~), and the momentum-space Q_s of the factorized
+correlator |S(r)|^2 - 1, S(r) = sum_x tr V^+(x) V(x + r) / N^2 of each
+configuration (the large-Nc form, about Nc^2 D^2 - 1), which reproduces
+the adjoint values of his Fig. 4 for m = 0 (for m > 0 he presumably left
+out the k = 0 mode of the kernel, which IP-Glasma keeps). The comparison
+is reported, not checked.
+
+The results go to <datadir>/dipole_summary.json (with --lappi,
+<datadir>/dipole_lappi_summary.json), the figures to <datadir>/dipole_*.pdf.
 
 Usage (from validations/dipole_correlator/):
     # a quick test on small lattices, about a minute
     python3 dipole_correlator.py --ipglasma-path ../.. --quick
     # the scan for the paper
     python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8
+    # the comparison with Lappi (2008)
+    python3 dipole_correlator.py --ipglasma-path ../.. --max-workers 8 --lappi
 
 --ipglasma-path is a directory with the ipglasma executable and
 qs2Adj_vs_Tp_vs_Y_240.in (e.g. the repository root after
@@ -77,10 +95,51 @@ sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
 from read_wilson_lines import read_wilson_lines  # noqa: E402
 
 CF = 4. / 3.
+CA = 3.
 HBARC = 0.1973269804  # GeV fm
 NC = 3
+DA = NC * NC - 1
 # below this G(0), D - D_G at r_s is not resolved by the statistics
 G0_RESOLVED = 1.
+
+# the generators t^a = lambda^a / 2
+GELL_MANN = np.zeros((8, 3, 3), dtype=complex)
+GELL_MANN[0][0, 1] = GELL_MANN[0][1, 0] = 1.
+GELL_MANN[1][0, 1], GELL_MANN[1][1, 0] = -1j, 1j
+GELL_MANN[2][0, 0], GELL_MANN[2][1, 1] = 1., -1.
+GELL_MANN[3][0, 2] = GELL_MANN[3][2, 0] = 1.
+GELL_MANN[4][0, 2], GELL_MANN[4][2, 0] = -1j, 1j
+GELL_MANN[5][1, 2] = GELL_MANN[5][2, 1] = 1.
+GELL_MANN[6][1, 2], GELL_MANN[6][2, 1] = -1j, 1j
+GELL_MANN[7] = np.diag([1., 1., -2.]) / np.sqrt(3.)
+TA = GELL_MANN / 2.
+
+# Q_s / g^2 mu of arXiv:0711.3039 (g^2 mu L = 100, g^2 mu a = 0.5), read
+# off the vector graphics of its figures: the marker centres and, for
+# Fig. 4, the error bars (half their length). Fig. 4: momentum space,
+# adjoint Q_s and fundamental sqrt(C_A/C_F) Q~_s, {Ny: (value, error)};
+# Fig. 7: coordinate space, adjoint, {Ny: value} (no error bars drawn).
+# Keys: m / g^2 mu.
+LAPPI_FIG4_ADJ = {
+    0.: {1: (0.5697, 0.0019), 2: (0.6200, 0.0020), 4: (0.6949, 0.0017),
+         10: (0.8422, 0.0011), 20: (0.9605, 0.0011), 50: (1.0765, 0.0011),
+         100: (1.1264, 0.0016), 150: (1.1434, 0.0015)},
+    0.1: {1: (0.5190, 0.0021), 2: (0.6167, 0.0008), 4: (0.7034, 0.0016),
+          10: (0.7939, 0.0014), 20: (0.8308, 0.0017), 50: (0.8563, 0.0017),
+          150: (0.8678, 0.0022)},
+}
+LAPPI_FIG4_FUND = {
+    0.: {1: (0.5833, 0.0055), 2: (0.6228, 0.0060), 4: (0.6901, 0.0101),
+         10: (0.8449, 0.0057), 20: (0.9724, 0.0066), 50: (1.0748, 0.0081),
+         100: (1.1341, 0.0134), 150: (1.1475, 0.0141)},
+    0.1: {1: (0.5024, 0.0088), 2: (0.5922, 0.0041), 4: (0.6738, 0.0076),
+          10: (0.7548, 0.0123), 20: (0.7936, 0.0098), 50: (0.8152, 0.0103),
+          150: (0.8142, 0.0199)},
+}
+LAPPI_FIG7_COORD = {
+    0.: {1: 0.6367, 10: 0.9209, 50: 1.1659},
+    0.1: {1: 0.6227, 10: 0.9340, 50: 1.0031},
+}
 
 
 # --------------------------------------------------------------------------
@@ -98,6 +157,33 @@ def dipole_correlator(V):
             # ifft2(|f_k|^2)[r] = sum_x conj(V(x)) V(x + r)
             total += np.fft.ifft2(np.conj(f) * f).real
     return total / (NC * n * n)
+
+
+def fundamental_spectrum(V):
+    """C~(k) = sum_ij |sum_x e^{-ik.x} V_ij(x)|^2 / N^2, the Fourier
+    transform of tr V^+(x) V(x + r) averaged over x (lattice units)."""
+    n = V.shape[0]
+    f = np.fft.fft2(V, axes=(0, 1))
+    return (np.abs(f) ** 2).sum(axis=(2, 3)) / (n * n)
+
+
+def adjoint_lines(V):
+    """The adjoint Wilson lines U_ab(x) = 2 tr[t^a V^+(x) t^b V(x)], real
+    orthogonal 8x8 matrices; shape (N, N, 8, 8)."""
+    Vd = np.conj(np.swapaxes(V, -1, -2))
+    # V^+ t^b V for all b, shape (N, N, 8, 3, 3)
+    M = np.matmul(Vd[:, :, None], np.matmul(TA, V[:, :, None]))
+    return 2. * np.einsum("aji,xybij->xyab", TA, M).real
+
+
+def adjoint_spectrum(V):
+    """C(k) = sum_ab |sum_x e^{-ik.x} U_ab(x)|^2 / N^2, the Fourier
+    transform of sum_ab U_ab(x) U_ab(x + r) = |tr V^+(x) V(x + r)|^2 - 1
+    averaged over x (lattice units)."""
+    U = adjoint_lines(V)
+    n = U.shape[0]
+    f = np.fft.fft2(U, axes=(0, 1))
+    return (np.abs(f) ** 2).sum(axis=(2, 3)) / (n * n)
 
 
 def lattice_two_point(n, g2mu_lat, m_lat, uv_lat):
@@ -135,6 +221,40 @@ def crossing(r, d, level=np.exp(-0.5)):
     return float(r[i - 1] + (d[i - 1] - level) / (d[i - 1] - d[i]))
 
 
+def momentum_bins(n):
+    """The lattice momentum k~ a = 2 [sin^2(kx a/2) + sin^2(ky a/2)]^(1/2)
+    of all modes, their bin (width 2 pi/N, centred on multiples of it)
+    and the mean k~ a of each bin; bin 0 is k = 0."""
+    k = 2. * np.pi * np.fft.fftfreq(n)
+    kx, ky = np.meshgrid(k, k, indexing="ij")
+    kt = 2. * np.sqrt(np.sin(kx / 2.) ** 2 + np.sin(ky / 2.) ** 2)
+    index = np.floor(kt * n / (2. * np.pi) + 0.5).astype(int)
+    count = np.bincount(index.ravel())
+    with np.errstate(invalid="ignore"):
+        mean = np.bincount(index.ravel(), kt.ravel()) / count
+    return kt, index, mean
+
+
+def radial_spectrum(ck, kt, index):
+    """k~^2 C(k), averaged over the modes of each bin (polar angle)."""
+    count = np.bincount(index.ravel())
+    with np.errstate(invalid="ignore"):
+        return np.bincount(index.ravel(), (kt ** 2 * ck).ravel()) / count
+
+
+def peak_momentum(k, f):
+    """The k~ of the maximum of the binned k~^2 C: the vertex of the
+    parabola through the largest bin and two bins on either side."""
+    ok = np.isfinite(f)
+    k, f = k[ok][1:], f[ok][1:]
+    i = int(np.argmax(f))
+    s = slice(max(i - 2, 0), i + 3)
+    c = np.polyfit(k[s], f[s], 2)
+    if c[0] >= 0.:
+        return float("nan")
+    return float(-c[1] / (2. * c[0]))
+
+
 # --------------------------------------------------------------------------
 # running IP-Glasma
 # --------------------------------------------------------------------------
@@ -168,14 +288,34 @@ def run_tag(cfg, settings):
             f"_ny{cfg['ny']}_g{cfg['g']:g}_seed{cfg['seed']}")
 
 
+def lappi_observables(V, kt, index):
+    """The adjoint correlator of one configuration (profiles in r) and the
+    binned k~^2 C(k~) of the adjoint, factorized and fundamental ones."""
+    out = {}
+    cka = adjoint_spectrum(V)
+    adj = profiles(np.fft.ifft2(cka).real)
+    ckf = fundamental_spectrum(V)
+    # S(r) = sum_x tr V^+(x) V(x + r) / N^2, complex
+    s = np.fft.ifft2(ckf)
+    fact = np.abs(s) ** 2 - 1.
+    out["adj_axis"], out["adj_diag"] = adj["axis"], adj["diag"]
+    out["spec_adj"] = radial_spectrum(cka, kt, index)
+    out["spec_fund"] = radial_spectrum(ckf, kt, index)
+    out["spec_fact"] = radial_spectrum(np.fft.fft2(fact).real, kt, index)
+    return out
+
+
 def run_one(cfg, settings):
     """Run IP-Glasma for one configuration and return the D(r) profiles of
-    its two nuclei (cached in <workdir>/profiles.npz)."""
+    its two nuclei (cached in <workdir>/profiles.npz); with --lappi also
+    the correlators of lappi_observables."""
     workdir = os.path.join(settings["datadir"], run_tag(cfg, settings))
     cache = os.path.join(workdir, "profiles.npz")
     if os.path.exists(cache):
         with np.load(cache) as data:
-            return cfg, {k: data[k] for k in data.files}, None
+            cached = {k: data[k] for k in data.files}
+        if not settings["lappi"] or "spec_adj0" in cached:
+            return cfg, cached, None
     if settings["analyze_only"]:
         return cfg, None, "no cached result (--analyze-only)"
     os.makedirs(workdir, exist_ok=True)
@@ -199,12 +339,18 @@ def run_one(cfg, settings):
         return cfg, None, (f"ipglasma failed (exit {result.returncode}, "
                            f"{len(files)} Wilson-line files), see {workdir}")
     out = {}
+    if settings["lappi"]:
+        kt, index, kmean = momentum_bins(settings["size"])
+        out["k_bins"] = kmean
     for i, path in enumerate(files):
         V, meta = read_wilson_lines(path)
         prof = profiles(dipole_correlator(V))
         out[f"axis{i}"] = prof["axis"]
         out[f"diag{i}"] = prof["diag"]
         out["a_fm"] = np.array(meta["a_fm"])
+        if settings["lappi"]:
+            for name, value in lappi_observables(V, kt, index).items():
+                out[f"{name}{i}"] = value
         if not settings["keep_files"]:
             os.remove(path)
     np.savez(cache, **out)
@@ -318,6 +464,59 @@ def analyze_group(key, runs, settings):
     return group
 
 
+def jackknife(samples, estimate):
+    """estimate(mean of samples) and its delete-one jackknife error;
+    samples has the configurations along axis 0."""
+    samples = np.asarray(samples)
+    n = len(samples)
+    total = samples.sum(axis=0)
+    value = estimate(total / n)
+    partial = np.array([estimate((total - s) / (n - 1)) for s in samples])
+    return float(value), float(np.sqrt((n - 1) * np.nanvar(partial)))
+
+
+def analyze_lappi(key, runs, settings):
+    """Q_s / g^2 mu of the Lappi setup for one m, for each Ny."""
+    g2mu, m, uv = key
+    g2mu_lat = g2mu * settings["L"] / settings["size"] / HBARC
+    m_rel = round(m / g2mu, 6)
+    r = np.arange(settings["size"] // 2 + 1)
+    rows = []
+    for ny in sorted({cfg["ny"] for cfg, _ in runs}):
+        outs = [out for cfg, out in runs if cfg["ny"] == ny]
+        k = outs[0]["k_bins"]
+
+        def collect(name):
+            return [out[f"{name}{i}"] for out in outs for i in (0, 1)]
+
+        def momentum(f):
+            return peak_momentum(k, f) / g2mu_lat
+
+        def coordinate(c):
+            return np.sqrt(2.) / crossing(r, c / DA) / g2mu_lat
+
+        row = {"ny": ny, "configurations": 2 * len(outs)}
+        row["Qs_adj"], row["Qs_adj_error"] = jackknife(
+            collect("spec_adj"), momentum)
+        row["Qs_fact"], row["Qs_fact_error"] = jackknife(
+            collect("spec_fact"), momentum)
+        q, e = jackknife(collect("spec_fund"), momentum)
+        row["Qs_fund_scaled"] = float(np.sqrt(CA / CF) * q)
+        row["Qs_fund_scaled_error"] = float(np.sqrt(CA / CF) * e)
+        row["Qs_coord_adj"], row["Qs_coord_adj_error"] = jackknife(
+            collect("adj_axis"), coordinate)
+        for name, table in (("adj", LAPPI_FIG4_ADJ),
+                            ("fund", LAPPI_FIG4_FUND)):
+            if ny in table.get(m_rel, {}):
+                row[f"lappi_{name}"] = list(table[m_rel][ny])
+        if ny in LAPPI_FIG7_COORD.get(m_rel, {}):
+            row["lappi_coord"] = LAPPI_FIG7_COORD[m_rel][ny]
+        rows.append(row)
+    return {"g2mu_GeV": g2mu, "m_GeV": m, "m_over_g2mu": m_rel,
+            "g2mu_L": g2mu * settings["L"] / HBARC, "g2mu_a": g2mu_lat,
+            "rows": rows}
+
+
 def plot_group(group, path):
     import matplotlib
     matplotlib.use("Agg")
@@ -356,6 +555,48 @@ def plot_group(group, path):
     plt.close(fig)
 
 
+def plot_lappi(groups, path):
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    fig, axes = plt.subplots(1, len(groups), figsize=(5. * len(groups), 4.),
+                             squeeze=False)
+    for ax, group in zip(axes[0], groups):
+        rows = group["rows"]
+        ny = np.array([row["ny"] for row in rows])
+        for name, fmt, label in (
+                ("Qs_adj", "o-", r"adjoint, $\langle|\mathrm{tr}|^2\rangle-1$"),
+                ("Qs_fact", "s-", r"factorized, $|S|^2-1$"),
+                ("Qs_fund_scaled", "^-",
+                 r"fundamental $\times\sqrt{C_A/C_F}$"),
+                ("Qs_coord_adj", "v-", "adjoint, coordinate space")):
+            ax.errorbar(ny, [row[name] for row in rows],
+                        yerr=[row[name + "_error"] for row in rows],
+                        fmt=fmt, ms=4, lw=0.8, label=label)
+        for name, fmt, label in (("lappi_adj", "k*", "Lappi Fig. 4, adjoint"),
+                                 ("lappi_fund", "kx",
+                                  "Lappi Fig. 4, fundamental")):
+            sel = [row for row in rows if name in row]
+            ax.errorbar([row["ny"] for row in sel],
+                        [row[name][0] for row in sel],
+                        yerr=[row[name][1] for row in sel], fmt=fmt, ms=6,
+                        label=label)
+        sel = [row for row in rows if "lappi_coord" in row]
+        ax.plot([row["ny"] for row in sel],
+                [row["lappi_coord"] for row in sel], "k+", ms=8,
+                label="Lappi Fig. 7, coordinate space")
+        ax.set_xscale("log")
+        ax.set_xlabel(r"$N_y$")
+        ax.set_ylabel(r"$Q_s/g^2\mu$")
+        ax.set_title(fr"$g^2\mu L = {group['g2mu_L']:.0f}$, "
+                     fr"$g^2\mu a = {group['g2mu_a']:.2f}$, "
+                     fr"$m = {group['m_over_g2mu']:g}\,g^2\mu$", fontsize=9)
+        ax.legend(fontsize=7)
+    fig.tight_layout()
+    fig.savefig(path)
+    plt.close(fig)
+
+
 # --------------------------------------------------------------------------
 # main
 # --------------------------------------------------------------------------
@@ -382,6 +623,57 @@ def run_all(configs, settings, max_workers):
     for failure in failures:
         print("FAILED:", failure)
     return results, failures
+
+
+def main_lappi(args, settings):
+    """The setup of arXiv:0711.3039: g^2 mu L = 100, g^2 mu a = 0.5,
+    m = 0 and 0.1 g^2 mu."""
+    groups = [(args.g2mu[0], m, 0.) for m in args.m]
+    configs = [{"g2mu": g, "m": m, "uvdamp": uv, "ny": ny, "g": 1.,
+                "seed": seed_of(ny, i, args.first_seed)}
+               for (g, m, uv), ny, i in itertools.product(
+                   groups, args.ny, range(args.seeds))]
+    results, failures = run_all(configs, settings, args.max_workers)
+    summary = {"settings": {k: v for k, v in vars(args).items()},
+               "groups": [], "failures": failures}
+    for key in groups:
+        runs = [(cfg, out) for cfg, out in results.values()
+                if (cfg["g2mu"], cfg["m"], cfg["uvdamp"]) == key]
+        if runs:
+            summary["groups"].append(analyze_lappi(key, runs, settings))
+
+    print("\nQ_s / g^2 mu in the setup of Lappi, arXiv:0711.3039; momentum "
+          "space: maximum of k~^2 C(k~),\ncoordinate space: C(r_s) = 8 "
+          "exp(-1/2), Q_s^2 = 2/r_s^2, along the axes:")
+    for group in summary["groups"]:
+        print(f"\n g2mu L = {group['g2mu_L']:.1f}, g2mu a = "
+              f"{group['g2mu_a']:.3f}, m = {group['m_over_g2mu']:g} g2mu")
+        print("    Ny conf  adjoint         factorized      Lappi Fig. 4 adj"
+              "  sqrt(CA/CF) fund  Lappi Fig. 4 fund  adj, coordinate"
+              "  Lappi Fig. 7")
+        for row in group["rows"]:
+            def entry(name):
+                return f"{row[name]:.4f}({row[name + '_error']:.4f})"
+
+            def lappi(name):
+                if name not in row:
+                    return f"{'-':>15}"
+                return f"{row[name][0]:.4f}({row[name][1]:.4f})"
+            coord = (f"{row['lappi_coord']:.4f}" if "lappi_coord" in row
+                     else "-")
+            print(f"  {row['ny']:4d} {row['configurations']:4d}  "
+                  f"{entry('Qs_adj')}  {entry('Qs_fact')}  "
+                  f"{lappi('lappi_adj')}   {entry('Qs_fund_scaled')}   "
+                  f"{lappi('lappi_fund')}    {entry('Qs_coord_adj')}  "
+                  f"{coord:>12}")
+    plot_lappi(summary["groups"],
+               os.path.join(settings["datadir"], "dipole_lappi.pdf"))
+    path = os.path.join(settings["datadir"], "dipole_lappi_summary.json")
+    with open(path, "w") as f:
+        json.dump(summary, f, indent=1)
+    print(f"\n{'FAILED' if failures else 'done'}; summary in {path} "
+          "(the comparison is reported, not checked)")
+    return 1 if failures else 0
 
 
 def main():
@@ -422,6 +714,10 @@ def main():
     parser.add_argument("--quick", action="store_true",
                         help="small test: size 64, L 8, g2mu 1, m 0.2, "
                              "Ny 1..50, 2 seeds")
+    parser.add_argument("--lappi", action="store_true",
+                        help="the setup of arXiv:0711.3039 instead of the "
+                             "scan: size 200, g2mu 1, g2mu L = 100, m = 0 "
+                             "and 0.1 g2mu, Ny 1..150, 32 seeds")
     parser.add_argument("--analyze-only", action="store_true",
                         help="only analyze the results in --datadir")
     parser.add_argument("--keep-files", action="store_true",
@@ -430,6 +726,14 @@ def main():
     if args.quick:
         args.size, args.L, args.g2mu, args.m = 64, 8., [1.], [0.2]
         args.ny, args.seeds = [1, 2, 5, 10, 25, 50], 2
+    if args.lappi:
+        # g^2 mu a = 0.5 and g^2 mu L = 100; only these combinations enter
+        args.size, args.g2mu = 200, [1.]
+        args.L = 100. * HBARC / args.g2mu[0]
+        args.m = [f * args.g2mu[0] for f in sorted(LAPPI_FIG4_ADJ)]
+        args.ny = [1, 2, 4, 10, 20, 50, 100, 150]
+        if args.seeds == parser.get_default("seeds"):
+            args.seeds = 32
     if args.seeds > 1000:
         sys.exit("--seeds must be at most 1000 (see seed_of)")
 
@@ -440,7 +744,7 @@ def main():
         "template": os.path.abspath(args.template),
         "datadir": os.path.abspath(args.datadir),
         "size": args.size, "L": args.L, "fit_from": args.fit_from,
-        "threads": args.threads,
+        "threads": args.threads, "lappi": args.lappi,
         "analyze_only": args.analyze_only, "keep_files": args.keep_files,
     }
     if not args.analyze_only:
@@ -448,6 +752,8 @@ def main():
             if not os.path.exists(path):
                 sys.exit(f"not found: {path} (see --ipglasma-path)")
     os.makedirs(settings["datadir"], exist_ok=True)
+    if args.lappi:
+        return main_lappi(args, settings)
 
     m_ref = 0.2 if 0.2 in args.m else args.m[0]
     g2mu_ref = sorted(args.g2mu)[len(args.g2mu) // 2]

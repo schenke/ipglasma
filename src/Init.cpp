@@ -31,7 +31,6 @@ double Init::computeFluctuatingXG2mu2(
     Parameters *param, double a, double rapidity, double Tp, double qsmuRatio,
     double ySign, bool &converged) {
     // Q_s as a function of \sum T_p and y
-    const double exponent = 5.6;  // see 1212.2974 Eq. (17)
     double Qs = 1.;
     double xVal = 0.;
     double g2mu2 = 0.;
@@ -47,13 +46,11 @@ double Init::computeFluctuatingXG2mu2(
         } else {
             xVal = Qs * param->colorCharge.xQsFactor / param->collision.sqrtS
                    * exp(ySign * yIn);
+            // no color charge at x = 0 (Q_s = 0) or x >= 1 (no gluons)
             if (xVal == 0)
                 Qs = 0.;
             else
-                Qs = sqrt(qsTable_.qs2(Tp, 0.01))
-                     * sqrt(
-                         pow((1 - xVal) / (1 - 0.01), exponent)
-                         * pow((0.01 / xVal), 0.2));
+                Qs = sqrt(qsTable_.qs2(Tp, 0.01) * largeXQs2Factor(xVal));
         }
         if (Qs == 0) {
             Ydeviation = 0;

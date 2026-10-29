@@ -66,7 +66,7 @@ gluonSpectrumEstimator 1
 computeEccentricities 0
 rotateReactionPlane 1
 nucleonPositionsFromFile 0
-lightNucleusOption 5
+lightNucleusOption 0
 nuclearConfigurationsPath ./nucleusConfigurations
 polarizationProjectile 0
 polarizationTarget 0

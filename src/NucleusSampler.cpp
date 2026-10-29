@@ -87,6 +87,10 @@ std::string lightNucleusOptionError(int nucleusA, int lightNucleusOption) {
     return message.str();
 }
 
+int configurationProtonNumber(int nucleusA, int lightNucleusOption, int Z) {
+    return (nucleusA == 3 && lightNucleusOption == 1) ? 1 : Z;
+}
+
 void NucleusSampler::readConfigurations(
     Parameters *param, Glauber *glauber, Random *random) {
     // configurations that are already loaded are kept
@@ -155,12 +159,14 @@ std::vector<ReturnValue> NucleusSampler::samplePositions(
     if (!param->nucleus.nucleonPositionsFromFile) {
         return sampleWoodsSaxon(random, glauber, role);
     }
-    if (role == NucleusRole::Projectile) {
-        return sampleFromConfigurations(
-            random, glauber->getGlauberData().projectile, configsA_);
-    }
+    const bool projectile = role == NucleusRole::Projectile;
+    Nucleus data = projectile ? glauber->getGlauberData().projectile
+                              : glauber->getGlauberData().target;
+    // the triton file is read for the species He3, with one proton
+    data.Z = configurationProtonNumber(
+        data.A, param->nucleus.lightNucleusOption, data.Z);
     return sampleFromConfigurations(
-        random, glauber->getGlauberData().target, configsB_);
+        random, data, projectile ? configsA_ : configsB_);
 }
 
 std::vector<ReturnValue> NucleusSampler::sampleWoodsSaxon(

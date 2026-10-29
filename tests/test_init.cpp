@@ -733,3 +733,19 @@ TEST_CASE(
     CHECK_FALSE(same(wilsonLines(1, -1, 0), wilsonLines(1, 5, 0)));
     CHECK(Init::colorChargeRandomSeed(5, 3) == 5ULL + (3ULL << 32));
 }
+
+TEST_CASE(
+    "Init::largeXQs2Factor: the extrapolation of Q_s^2 to x > 0.01 with "
+    "useFluctuatingX 1 is 1 at x = 0.01, falls with x and is 0 for x >= 1") {
+    CHECK(Init::largeXQs2Factor(0.01) == doctest::Approx(1.));
+    CHECK(
+        Init::largeXQs2Factor(0.1)
+        == doctest::Approx(std::pow(0.9 / 0.99, 5.6) * std::pow(0.1, 0.2)));
+    CHECK(Init::largeXQs2Factor(0.5) < Init::largeXQs2Factor(0.1));
+    CHECK(Init::largeXQs2Factor(0.999) > 0.);
+    // no gluons at x >= 1: zero, not NaN, so that the cell gets no color
+    // charge and the fluctuating-x iteration ends there
+    CHECK(Init::largeXQs2Factor(1.) == 0.);
+    CHECK(Init::largeXQs2Factor(1.5) == 0.);
+    CHECK(Init::largeXQs2Factor(40.) == 0.);
+}

@@ -28,6 +28,20 @@ Maximum number of parallel workers can be specified with --max-workers. By defau
 
 The comparison plot will be saved in the specified directory as "cross_section.pdf". The color field plots will be saved as "output_<event_id>.pdf".
 
+Seeds: the run uses the seeds --first-seed, --first-seed + 1, ... (two events,
+projectile and target, per seed). The default, 10000, keeps a test run
+independent of the reference, which was made with the seeds from 0 (and must
+be, for a new one: --first-seed 0). The spectra are copied to the data
+directory as spectra_1 ... spectra_<maxevents>, whatever the seeds, and
+cross_section.dat records the seeds in its header.
+
+Check: the coherent and incoherent cross sections integrated over
+|t| <= --check-tmax are compared with those of the reference. Their error is
+that of a bootstrap over the events of the run (--bootstrap resamplings)
+combined with the error of the reference; the check fails, and the script
+exits with 1, if a ratio differs from 1 by more than --n-sigma errors, or if
+the seeds of the run overlap those of the reference.
+
 Use --plot-only to skip the simulation and only generate the comparison plots from existing data files in the specified directory.
 
 The IP-Glasma input file used as a template can be specified with --input-template (default: input_vm_proton). The Qs table file
@@ -40,6 +54,7 @@ Before running this, make sure you have downloaded and built the subnucleondiffr
 """
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
@@ -54,9 +69,13 @@ import numpy as np
 subnucleondiffraction_path = "./subnucleondiffraction/"
 ipglasma_path = "../../"
 ipglasma_cmd = "ipglasma"
-plot_ids = [1, 5]
+plot_ids = [1, 5]  # run-local event numbers, see run_seed()
 default_xpom = "0.001705"
 reference_cross_section_file = "validation_spectra"
+default_first_seed = 10000
+# dsigma/dt = |A|^2/(16 pi) in mb/GeV^2, as in python/cross_section.py of
+# subnucleondiffraction
+GEVSQ_TO_MB = 1.0e7 / (5.068 * 5.068) * 1e-6 / (16.0 * np.pi)
 lattice_N = 512 # N*N lattice
 lattice_L = 4 # fm
 
@@ -158,14 +177,117 @@ def run_command(cmd, cwd, stdout_path=None, stderr_path=None, slurm=False):
     return result
 
 
-def PlotComparison(datadir="", subnucleondiffraction_path="", reference_cross_section_file="", x_pom="0.001705"):
+def spectra_files(datadir):
+    """The run-local numbers of the spectra_<n> files in datadir."""
+    numbers = []
+    for name in os.listdir(datadir):
+        if name.startswith("spectra_") and name[len("spectra_"):].isdigit():
+            numbers.append(int(name[len("spectra_"):]))
+    return sorted(numbers)
+
+
+def reference_seeds(reference_path):
+    """The seeds (first, last) of a reference: from its "# seeds: a-b" line,
+    else, for a reference written before that line, the seeds from 0 that
+    its "events included" need (two events per seed)."""
+    events = None
+    with open(reference_path) as f:
+        for line in f:
+            if line.startswith("# seeds:"):
+                first, last = line.split(":")[1].split("-")
+                return int(first), int(last)
+            if line.startswith("#") and "events included" in line:
+                events = int(line.split(":")[-1].strip())
+    if events is None:
+        return None
+    return 0, (events + 1) // 2 - 1
+
+
+def check_against_reference(datadir, reference_path, tmax, n_sigma, n_bootstrap, seeds=None):
+    """Compare the coherent and incoherent cross sections of the run,
+    integrated over |t| <= tmax, with those of the reference, with the
+    error of a bootstrap over the events and that of the reference.
+    Returns (passed, summary)."""
+    spectra = []
+    for number in spectra_files(datadir):
+        try:
+            data = np.loadtxt(os.path.join(datadir, f"spectra_{number}"))
+        except ValueError:
+            continue
+        if data.ndim == 2 and data.shape[1] >= 3 and np.isfinite(data).all():
+            spectra.append(data)
+    if len(spectra) < 2:
+        print("Fewer than two valid spectra: no check against the reference", flush=True)
+        return False, {"passed": False, "events": len(spectra)}
+    t = spectra[0][:, 0]
+    spectra = np.array([d for d in spectra if d.shape == spectra[0].shape and np.allclose(d[:, 0], t, atol=1e-5)])
+    real, imag = spectra[:, :, 1], spectra[:, :, 2]
+
+    # trapezoid weights on |t| <= tmax
+    inside = t <= tmax + 1e-9
+    tt = t[inside]
+    weights = np.zeros(len(tt))
+    weights[1:] += 0.5 * np.diff(tt)
+    weights[:-1] += 0.5 * np.diff(tt)
+
+    def integrals(events):
+        # as python/cross_section.py: coherent |<Re A>|^2, incoherent the
+        # variance of Re A and Im A
+        coherent = np.mean(real[events], axis=0) ** 2
+        incoherent = np.var(real[events], axis=0) + np.var(imag[events], axis=0)
+        return np.array([weights @ coherent[inside], weights @ incoherent[inside]]) * GEVSQ_TO_MB
+
+    n_events = len(real)
+    value = integrals(np.arange(n_events))
+    rng = np.random.default_rng(1)
+    bootstrap = np.array([integrals(rng.integers(0, n_events, n_events)) for _ in range(n_bootstrap)])
+    error = bootstrap.std(axis=0)
+
+    reference = np.loadtxt(reference_path)
+    columns = ((1, 2), (3, 4))  # coherent, incoherent: value, error
+    ref_value = np.array([weights @ np.interp(tt, reference[:, 0], reference[:, c]) for c, _ in columns])
+    ref_error = np.array([np.sqrt(np.sum((weights * np.interp(tt, reference[:, 0], reference[:, e])) ** 2)) for _, e in columns])
+
+    ratio = value / ref_value
+    ratio_error = ratio * np.hypot(error / value, ref_error / ref_value)
+    summary = {"events": n_events, "tmax": tmax, "n_sigma": n_sigma, "bootstrap": n_bootstrap,
+               "seeds": seeds, "reference_seeds": reference_seeds(reference_path), "checks": {}}
+    print(f"Integrated over |t| <= {tmax:g} GeV^2, {n_events} events against the reference "
+          f"(bootstrap with {n_bootstrap} resamplings):", flush=True)
+    for name, r, e, v, rv in zip(("coherent", "incoherent"), ratio, ratio_error, value, ref_value):
+        ok = bool(abs(r - 1.0) <= n_sigma * e)
+        summary["checks"][f"{name} cross section agrees with the reference within {n_sigma:g} sigma"] = ok
+        summary[name] = {"sigma_mb": float(v), "reference_mb": float(rv), "ratio": float(r), "ratio_error": float(e)}
+        print(f"  {'OK  ' if ok else 'FAIL'} {name}: ratio {r:.3f} +- {e:.3f} ({(r - 1.0) / e:+.1f} sigma)", flush=True)
+    if seeds is not None and summary["reference_seeds"] is not None:
+        ref_first, ref_last = summary["reference_seeds"]
+        independent = bool(seeds[1] < ref_first or seeds[0] > ref_last)
+        summary["checks"]["seeds independent of the reference"] = independent
+        print(f"  {'OK  ' if independent else 'FAIL'} seeds {seeds[0]}-{seeds[1]}, reference {ref_first}-{ref_last}", flush=True)
+    passed = all(summary["checks"].values())
+    summary["passed"] = passed
+    with open(os.path.join(datadir, "jpsi_check.json"), "w") as f:
+        json.dump(summary, f, indent=2)
+    return passed, summary
+
+
+def PlotComparison(datadir="", subnucleondiffraction_path="", reference_cross_section_file="", x_pom="0.001705", maxconf=None, seeds=None):
     print("Reading data from", datadir, "and comparing to reference cross section data in", reference_cross_section_file)
+    if maxconf is None:
+        maxconf = max(spectra_files(datadir), default=0)
     run_command(
-        ["python3", os.path.join(subnucleondiffraction_path, "python", "cross_section.py"), "-maxconf", "1999", "-dir", datadir, "-ds", "0.005", "-steps", "36"],
+        ["python3", os.path.join(subnucleondiffraction_path, "python", "cross_section.py"), "-maxconf", str(maxconf), "-dir", datadir, "-ds", "0.005", "-steps", "36"],
         cwd=os.getcwd(),
         stdout_path=os.path.join(datadir, "cross_section.dat"),
         slurm=False
     )
+    if seeds is not None:
+        # the seeds of the run, so that the file can serve as a reference
+        path = os.path.join(datadir, "cross_section.dat")
+        with open(path) as f:
+            content = f.read()
+        with open(path, "w") as f:
+            f.write(f"# seeds: {seeds[0]}-{seeds[1]}\n" + content)
     print("Cross section saved to", os.path.join(datadir, "cross_section.dat"), flush=True)
 
     events_included = None
@@ -240,7 +362,7 @@ def PlotComparison(datadir="", subnucleondiffraction_path="", reference_cross_se
     plt.close(fig)
 
 
-def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma_binary, input_file_path, reference_file_path, ipglasma_path, qs_table_path, xpom, slurm=False):
+def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma_binary, input_file_path, reference_file_path, ipglasma_path, qs_table_path, xpom, slurm=False, first_seed=0):
     worker_dir = os.path.join(datadir, f"seed_{seed}")
     os.makedirs(worker_dir, exist_ok=True)
 
@@ -253,8 +375,13 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     print("Removing temp files", temp_input_path, flush=True)
     remove_temp_input(temp_input_path)
     print("Done", seed, flush=True)
+    # IP-Glasma numbers the Wilson-line files of a seed 2 seed + 1 and
+    # 2 seed + 2; the spectra in datadir are numbered within the run, 1 to
+    # maxevents, so that cross_section.py reads them for any seeds
     id1 = 2 * seed + 1
     id2 = 2 * seed + 2
+    local1 = 2 * (seed - first_seed) + 1
+    local2 = 2 * (seed - first_seed) + 2
 
     # Canonicalize Wilson line file names once and reuse paths throughout.
     wilson_1 = ensure_wilson_line_file(worker_dir, xpom, id1)
@@ -266,15 +393,15 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson_1], cwd=worker_dir, stdout_path=spectra_1_path, stderr_path=spectra_1_path + ".err", slurm=slurm)
     run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson_2], cwd=worker_dir, stdout_path=spectra_2_path, stderr_path=spectra_2_path + ".err", slurm=slurm)
 
-    for file_name in [f"spectra_{id1}", f"spectra_{id2}"]:
-        src = os.path.join(worker_dir, file_name)
-        dst = os.path.join(datadir, file_name)
+    for file_id, local_id in ((id1, local1), (id2, local2)):
+        src = os.path.join(worker_dir, f"spectra_{file_id}")
+        dst = os.path.join(datadir, f"spectra_{local_id}")
         if os.path.exists(src):
             shutil.copy2(src, dst)
 
-    if id1 in plot_ids or id2 in plot_ids:
-        plot_id = id1 if id1 in plot_ids else id2
-        final_file = wilson_line_path(worker_dir, xpom, plot_id)
+    if local1 in plot_ids or local2 in plot_ids:
+        plot_id = local1 if local1 in plot_ids else local2
+        final_file = wilson_1 if plot_id == local1 else wilson_2
         plot_path = os.path.join(datadir, f"output_{plot_id}.pdf")
         tmp_output_path = os.path.join(worker_dir, f"tmp_output_{plot_id}")
         run_command(
@@ -336,6 +463,10 @@ def main():
     parser.add_argument("--keep-logs", action="store_true", help="Keep log files for each seed.")
     parser.add_argument("--slurm", action="store_true", help="Wrap each ipglasma/subnucleondiffraction invocation with 'srun --ntasks=1 --cpus-per-task=N', N = OMP_NUM_THREADS (default 1).")
     parser.add_argument("--xpom", type=float, default=default_xpom, help="Value of x_pom to use in the runs.")
+    parser.add_argument("--first-seed", type=int, default=None, help=f"First random seed (default {default_first_seed}, beyond the seeds of the reference; use 0 for a new reference). With --plot-only, the seeds recorded in run_info.json.")
+    parser.add_argument("--check-tmax", type=float, default=2.0, help="Largest |t| [GeV^2] of the integrated cross sections compared with the reference.")
+    parser.add_argument("--n-sigma", type=float, default=3.0, help="Allowed deviation from the reference in units of the combined error.")
+    parser.add_argument("--bootstrap", type=int, default=1000, help="Bootstrap resamplings of the events for the error.")
     args = parser.parse_args()
 
     repo_root = _repo_root()
@@ -345,6 +476,7 @@ def main():
     ipglasma_path = os.path.abspath(args.ipglasma_path)
     max_workers = args.max_workers or min(cpu_count(), max(1, int(args.maxevents / 2)))
     maxseed = int(args.maxevents / 2)
+    first_seed = default_first_seed if args.first_seed is None else args.first_seed
     keep_logs = args.keep_logs
     xpom = args.xpom
 
@@ -356,9 +488,19 @@ def main():
     if not os.path.isfile(input_file_path):
         input_file_path = os.path.join(script_dir, args.input_template)
 
+    reference_file_path = os.path.join(script_dir, reference_cross_section_file)
+    run_info_path = os.path.join(datadir, "run_info.json")
+
     if args.plot_only:
-        PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=os.path.join(script_dir, reference_cross_section_file), x_pom=xpom)
-        raise SystemExit(0)
+        seeds = None
+        if args.first_seed is not None:
+            seeds = (args.first_seed, args.first_seed + len(spectra_files(datadir)) // 2 - 1)
+        elif os.path.exists(run_info_path):
+            with open(run_info_path) as f:
+                seeds = tuple(json.load(f)["seeds"])
+        PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=reference_file_path, x_pom=xpom, seeds=seeds)
+        passed, _ = check_against_reference(datadir, reference_file_path, args.check_tmax, args.n_sigma, args.bootstrap, seeds=seeds)
+        raise SystemExit(0 if passed else 1)
 
     print("PID =", os.getpid())
     if hasattr(os, "sched_getaffinity"):
@@ -373,6 +515,9 @@ def main():
 
     os.makedirs(datadir, exist_ok=True)
     shutil.copy2(input_file_path, os.path.join(datadir, "input_vm_proton"))
+    seeds = (first_seed, first_seed + maxseed - 1)
+    with open(run_info_path, "w") as f:
+        json.dump({"seeds": seeds, "maxevents": 2 * maxseed}, f)
 
     ipglasma_binary = os.path.join(ipglasma_path, "ipglasma")
     subnucleondiffraction_binary = os.path.join(subnucleondiffraction_path, "build", "bin", "subnucleondiffraction")
@@ -404,11 +549,9 @@ def main():
         "-mcintpoints", "5e5",
     ]
 
-    reference_file_path = os.path.join(script_dir, reference_cross_section_file)
-
     failures=[]
 
-    print(f"Running {maxseed} seeds in parallel with {max_workers} workers")
+    print(f"Running {maxseed} seeds ({seeds[0]} to {seeds[1]}) in parallel with {max_workers} workers")
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = [
             executor.submit(
@@ -425,8 +568,9 @@ def main():
                 qs_table_path,
                 xpom,
                 args.slurm,
+                first_seed,
             )
-            for seed in range(maxseed)
+            for seed in range(first_seed, first_seed + maxseed)
         ]
         for future in as_completed(futures):
             try:
@@ -438,7 +582,8 @@ def main():
                 failures.append(outcome)
                 continue
 
-    PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=reference_file_path, x_pom=xpom)
+    PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=reference_file_path, x_pom=xpom, maxconf=2 * maxseed, seeds=seeds)
+    passed, _ = check_against_reference(datadir, reference_file_path, args.check_tmax, args.n_sigma, args.bootstrap, seeds=seeds)
 
     if failures:
         failure_file = os.path.join(datadir, "failed_seeds.txt")
@@ -448,11 +593,14 @@ def main():
         print(f"{len(failures)} seed(s) failed; details: {failure_file}", flush=True)
 
     if not keep_logs:
-        for seed in range(maxseed):
+        for seed in range(first_seed, first_seed + maxseed):
             worker_dir = os.path.join(datadir, f"seed_{seed}")
             if os.path.exists(worker_dir):
                 shutil.rmtree(worker_dir)
                 print(f"Removed temporary directory for seed {seed}: {worker_dir}", flush=True)
+
+    print("PASSED" if passed else "FAILED: the cross sections differ from the reference, or the seeds overlap", flush=True)
+    raise SystemExit(0 if passed else 1)
 
 if __name__ == "__main__":
     main()

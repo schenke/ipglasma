@@ -119,13 +119,26 @@ Useful flags:
   saved `Tmunu` snapshots, then exit.
 - `--keep-logs` — keep the per-event working directories after the run
   instead of deleting them (failed events are always kept).
+- `--first-seed S` — the events use the seeds S, S + 1, ...: by default 10000,
+  so that a check is independent of the reference, and 0 with
+  `--save-reference`.
+- `--n-sigma`, `--bootstrap` — the allowed deviation in errors (default 3)
+  and the bootstrap resamplings for the errors (default 1000).
+- `--mean-tol`, `--std-tol` — optional fixed relative tolerances in
+  addition.
 
 Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 `eccentricity_results.json` (or, with `--save-reference`, an updated
-`eccentricity_reference.json` next to the script) recording the ε₂ values and
-the exact command used to reproduce the run. The script exits non-zero if the
-new distribution's mean/std or KS test drifts beyond tolerance
-(`--mean-tol`, `--std-tol`) from the reference.
+`eccentricity_reference.json` next to the script) recording the ε₂ values, the
+seeds and the exact command used to reproduce the run.
+
+The check: the mean and the width of the ε₂ distribution must agree with the
+reference within `--n-sigma` combined errors, from a bootstrap of the run and
+of the reference, and the two-sample Kolmogorov–Smirnov test must give
+p > 0.01. The seeds of the run must not overlap those of the reference: with
+the same code, the same seeds give the same events, so the check would not be
+independent. A reference saved before the seeds were recorded used the seeds
+from 0, one per event. The script exits non-zero if a check fails.
 
 ### Dipole correlator of the MV model
 
@@ -1034,12 +1047,34 @@ Useful flags:
 - `--max-workers N` — number of events to run in parallel (default: the
   number of logical CPUs).
 - `--plot-only` — skip the simulation and only regenerate the comparison
-  plot from data files already in `--datadir`.
+  plot and the check from the spectra already in `--datadir`; the seeds are
+  taken from its `run_info.json`, or from `--first-seed`.
 - `--keep-logs` — keep per-seed log files instead of deleting them.
+- `--first-seed S` — the events use the seeds S, S + 1, ..., two events
+  (projectile and target) per seed: by default 10000, so that a check is
+  independent of the reference; a new reference is made with
+  `--first-seed 0`.
+- `--check-tmax`, `--n-sigma`, `--bootstrap` — the range of |t| of the
+  check (default 2 GeV²), the allowed deviation in errors (default 3) and
+  the bootstrap resamplings for the errors (default 1000).
 
 Output: `cross_section.dat`/`.pdf` in `--datadir` (coherent/incoherent cross
 section vs. reference, with a ratio panel), plus `output_1.pdf`/`output_5.pdf`
-color-field (Tr V(x)) plots for a couple of representative events.
+color-field (Tr V(x)) plots for a couple of representative events. The
+spectra of the events are copied to `--datadir` as `spectra_1` to
+`spectra_<maxevents>`, whatever the seeds, and `cross_section.dat` records
+the seeds in its header (`# seeds: first-last`), so that it can serve as a
+new `validation_spectra`.
+
+The check (`jpsi_check.json`): the coherent and incoherent cross sections,
+integrated over |t| ≤ `--check-tmax`, must agree with those of the reference
+within `--n-sigma` combined errors. The error of the run is that of a
+bootstrap over its events. The coherent cross section is the square of the
+mean amplitude, which fluctuates by about 40% between events at t = 0, and
+the incoherent one is its variance, so 200 events give errors of about 8%
+and 9%, and 1000 events about 4%. The seeds of the run must not overlap
+those of the reference (a reference without a `# seeds` line used the seeds
+from 0). The script exits non-zero if a check fails.
 
 ## Running on a computing cluster (SLURM)
 

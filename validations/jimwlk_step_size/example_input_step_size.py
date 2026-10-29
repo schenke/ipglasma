@@ -42,7 +42,7 @@ checks that
      the recommended step (0.005),
   3. dE/deta deviates by less than --max-deviation at --energy-ds (0.0025):
      its step error grows on finer lattices, since it sits in the hard tail
-     of the evolved spectrum (0.2% at 256^2, 5% at 768^2 with 0.005),
+     of the evolved spectrum (0.2% at 256^2, 5.6% at 768^2 with 0.005),
   4. ln Q_s of the whole nucleus is consistent with first order (the
      quadratic term within three standard deviations of zero).
 
@@ -51,10 +51,10 @@ Checks 2 and 3 are skipped with --quick.
 Usage (from validations/jimwlk_step_size/):
     # quick test: 128^2, L = 30 fm, three step sizes, 2 seeds
     python3 example_input_step_size.py --ipglasma-path ../.. --quick
-    # 768^2 at L = 22.5 fm, 3 seeds (about an hour with 3 workers of 5
+    # 768^2 at L = 22.5 fm, 3 seeds (52 minutes with 2 workers of 8
     # threads)
-    python3 example_input_step_size.py --ipglasma-path ../.. --threads 5 \\
-        --max-workers 3
+    python3 example_input_step_size.py --ipglasma-path ../.. --threads 8 \\
+        --max-workers 2
     # 256^2 at L = 30 fm, the lattice of the example input: 16 seeds (with
     # four, the error of dN/dy is 6%, twice the tolerance)
     python3 example_input_step_size.py --ipglasma-path ../.. --size 256 \\

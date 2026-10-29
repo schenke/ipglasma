@@ -562,9 +562,8 @@ dN/dy is within about 4% of its limit for g²μ a ≲ 0.6, while dE/dη still
 grows by 4.7% ± 1.4% from g²μ a = 0.3 to 0.15. The energy sits in modes up
 to several g²μ, where the gluon spectrum falls like 1/k⁴, and converges
 only like a: its deficit is about 0.2–0.3 g²μ a, so 5% needs g²μ a ≈
-0.15–0.25 (the
-energy density at τ = 0 even diverges like ln² a, T. Lappi, Phys. Lett. B
-643 (2006) 11). This is not an artifact of IP-Glasma: an independent
+0.15–0.25 (the energy density at τ = 0 even diverges like ln² a, T. Lappi,
+Phys. Lett. B 643 (2006) 11). This is not an artifact of IP-Glasma: an independent
 classical Yang-Mills code (a version of S. Schlichting's), run on the same
 Wilson lines, gives dE/dη within 0.1–0.6% of IP-Glasma's and the same
 dependence on a (see the discussion of #134). With JIMWLK, the gluon
@@ -645,11 +644,11 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.3.
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.
 
-With the commands below (two seeds, N = 768 to 1536, 26 and 7 minutes with
-2 workers of 12 threads):
+With the commands below (two seeds, N = 768 to 1536; 26 and 7 minutes with
+`--threads 12 --max-workers 2`):
 - **With JIMWLK:** dN/dy converges (+2.1% ± 3.1% in the last step). dE/dη
-  grows by about 12% per step (+11.8% ± 3.1% in the last), because the
-  evolution hardens the tail to p ≈ 1.4.
+  grows by 22%, 13% and 12% in the three steps (+11.8% ± 3.1% in the
+  last), because the evolution hardens the tail to p ≈ 1.4.
 - **At x = 0.01 without JIMWLK:** p ≈ 0.3, and dE/dη is converged within
   about 1% from N = 1024 on (+1.0% ± 2.7% in the last step). In this dilute
   event, dN/dy differs by up to 18% between the two seeds of one lattice
@@ -741,11 +740,10 @@ the coarser lattices:
 g²ε(0⁺)/(g²μ)⁴ grows from 0.59 to 0.82 and 1.07 (g²μL = 72), from 0.39
 to 0.59 and 0.77 (120) and from 0.27 to 0.49 and 0.67 (192) as a is
 halved, while f_N changes by less than 4% for g²μa < 1 and by less than
-1% for g²μa ≤ 0.75. P_L/ε is between
-−0.994 and −0.985 at the first time step and +0.016 to +0.027 at
-g²μτ = 20 (Lappi's Fig. 5 gives about +0.025), and f_E decreases by
-2.4–2.9% between g²μτ = 10 and 20. The errors are those of the mean over
-the 16 seeds, comparable to Lappi's. The defaults of the script (g²μL = 72
+1% for g²μa ≤ 0.75. P_L/ε is between −0.994 and −0.985 at the first time
+step and +0.016 to +0.027 at g²μτ = 20 (Lappi's Fig. 5 gives about
++0.025), and f_E decreases by 2.4–2.9% between g²μτ = 10 and 20. The
+errors are those of the mean over the 16 seeds, comparable to Lappi's. The defaults of the script (g²μL = 72
 and 120, four seeds) take 9 minutes with 2 workers of 4 threads.
 
 On a lattice with clamped boundaries, as `useNucleus 0` had before #139,

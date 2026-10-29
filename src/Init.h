@@ -237,10 +237,8 @@ class Init {
      * fluctuating-\f$x\f$ iteration starts from (see
      * computeEffectiveRapidity()); not used with a fixed \f$x\f$, which
      * is Parameters::initialX().
-     * \return `false` if the fluctuating-\f$x\f$ iteration did not converge
-     * for one of the nuclei, `true` otherwise.
      */
-    bool computeCellColorCharge(
+    void computeCellColorCharge(
         Lattice *lat, Parameters *param, int ipos, double a, double rapidity);
     /**
      * computeCellColorCharge()'s `useFluctuatingX` iterative solve
@@ -249,7 +247,10 @@ class Init {
      * \f$x\f$-dependent \f$Q_s\f$ suppression of \cite Rezaeian:2012ji
      * Eq. (17)) until the rapidity estimate converges to within
      * \f$10^{-3}\f$, for at most 1000 steps; where it jumps to
-     * \f$x \geq 1\f$ or does not converge, it finds the root by bisection
+     * \f$x \geq 1\f$, does not converge, or, at a negative \p rapidity,
+     * stops after its first step (which takes \f$Q_s\f$ at the \f$x\f$
+     * of the start value \f$Q_s\f$ = 1 GeV, so that its deviation does not
+     * test self-consistency), it finds the root by bisection
      * (solveFluctuatingXQs()).
      * \param[in] param Simulation parameters.
      * \param[in] a Lattice spacing [fm].
@@ -260,15 +261,12 @@ class Init {
      * \param[in] ySign `+1` for nucleus A, `-1` for nucleus B -- the
      * only sign difference between the two originally-copy-pasted
      * solves.
-     * \param[out] converged `true`: a cell where the iteration does not
-     * converge is solved by bisection (kept for the check in
-     * setColorChargeDensity()).
      * \return The \f$g^2\mu^2\f$ of the self-consistent \f$x\f$
      * [lattice units] (`0` if the cell has no charge, or for NaN).
      */
     double computeFluctuatingXG2mu2(
         Parameters *param, double a, double rapidity, double Tp,
-        double qsmuRatio, double ySign, bool &converged);
+        double qsmuRatio, double ySign);
     /**
      * The saturation scale of the fluctuating-\f$x\f$ solve at a given
      * \f$x\f$: from the table up to \f$x = 0.01\f$, extrapolated with

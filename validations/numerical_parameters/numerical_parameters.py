@@ -48,7 +48,7 @@ against g^2 mu a: dN/dy is within about 4% of its limit for g^2 mu a below
 about 0.6, while dE/deta still grows by 5% from g^2 mu a = 0.3 to 0.15.
 The energy sits in modes up to several g^2 mu, where the gluon spectrum
 falls like 1/k^4, and converges only like a, with a deficit of about
-0.3 g^2 mu a (the energy density at tau = 0 even diverges, as ln^2 a;
+0.2-0.3 g^2 mu a (the energy density at tau = 0 even diverges, as ln^2 a;
 T. Lappi, Phys. Lett. B 643 (2006) 11). An independent classical
 Yang-Mills implementation gives the same dependence on a for the same
 Wilson lines. With JIMWLK the tail of the spectrum is less steep (the
@@ -752,10 +752,10 @@ def main():
                   f"an extrapolation linear in a puts a = 0 "
                   f"{100 * check['extrapolated_deviation']:+.0f}% away.")
         print("The gluon number converges like a^2 once g^2 mu a < 1, the "
-              "energy only like a\n(a deficit of about 0.3 g^2 mu a from the "
-              "1/k^4 tail of the spectrum; with\nJIMWLK, whose tail is less "
-              "steep, even more slowly), so these values still\ndepend on "
-              "the lattice spacing; see validations/README.md.\n" + line)
+              "energy only like a\n(a deficit of about 0.2-0.3 g^2 mu a from "
+              "the 1/k^4 tail of the spectrum;\nwith JIMWLK, whose tail is "
+              "less steep, even more slowly), so these values\nstill depend "
+              "on the lattice spacing; see validations/README.md.\n" + line)
     summary["not_converged"] = [f"{scan}: {name}"
                                 for scan, name, _ in not_converged]
     passed = all(summary["checks"].values())

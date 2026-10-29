@@ -39,7 +39,7 @@ if the load is above 1.
 Usage (from validations/performance/):
     # quick test: N = 64 and 128, 1 and 2 threads, one repeat
     python3 performance.py --ipglasma-path ../.. --quick
-    # the setup of the paper (about 1.5 hours on 16 cores)
+    # the setup of the paper (33 minutes on 16 cores)
     python3 performance.py --ipglasma-path ../..
 
 --ipglasma-path is a directory with the ipglasma executable,

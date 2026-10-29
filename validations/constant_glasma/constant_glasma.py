@@ -55,6 +55,9 @@ information; their lattice spacing is not quoted, so they are not checked.
 Usage (from validations/constant_glasma/):
     python3 constant_glasma.py --ipglasma-path ../.. --quick
     python3 constant_glasma.py --ipglasma-path ../.. --max-workers 2
+    # the setup of the paper: g^2 mu L = 72, 120 and 192, 16 seeds
+    python3 constant_glasma.py --ipglasma-path ../.. --g2muL 72 120 192 \\
+        --seeds 16 --threads 4 --max-workers 6
 """
 
 import argparse

@@ -561,7 +561,8 @@ and `m` of the input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512):
 dN/dy is within about 4% of its limit for g²μ a ≲ 0.6, while dE/dη still
 grows by 4.7% ± 1.4% from g²μ a = 0.3 to 0.15. The energy sits in modes up
 to several g²μ, where the gluon spectrum falls like 1/k⁴, and converges
-only like a: its deficit is about 0.3 g²μ a, so 5% needs g²μ a ≈ 0.15 (the
+only like a: its deficit is about 0.2–0.3 g²μ a, so 5% needs g²μ a ≈
+0.15–0.25 (the
 energy density at τ = 0 even diverges like ln² a, T. Lappi, Phys. Lett. B
 643 (2006) 11). This is not an artifact of IP-Glasma: an independent
 classical Yang-Mills code (a version of S. Schlichting's), run on the same
@@ -627,8 +628,9 @@ reports, in the summary and in a table:
 The mean spectra are in the summary, and `numerical_parameters_spectra.pdf`
 shows k⁴ dN/d²k of each lattice. For the constant g²μ, the energy below
 2g²μ does not grow on finer lattices; all of the growth is above. The two
-estimates agree on the two finest lattices, which puts the deficit at about
-0.3 g²μ a (discussion of #134).
+estimates agree within about 1% on the two finest lattices, which puts the
+deficit at about 0.2 g²μ a with the projection (0.3 with 2|E|²/ω in the
+discussion of #134); the extrapolation of dE/dη linear in a gives 0.3.
 
 **With JIMWLK, and at another x.**
 - **`--jimwlk`:** evolves the Wilson lines of all runs with the JIMWLK

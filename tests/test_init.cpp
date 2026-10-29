@@ -375,8 +375,8 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Init::medianG2muA of a constant color-charge density is g2muGeV in "
-    "lattice units") {
+    "Init::nucleiMedianG2muA of a constant color-charge density is g2muGeV "
+    "in lattice units, over the cells of both nuclei") {
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);
@@ -388,12 +388,17 @@ TEST_CASE(
     int nn[2] = {N, N};
     Init init(nn);
     init.setConstantColorChargeDensity(&lat, &param);
-    std::vector<double> g2mu2;
+    CHECK(Init::nucleiMedianG2muA(&lat, &param) == doctest::Approx(0.6));
+
+    // nucleus B with twice the g2mu a carries 4/5 of the weight
+    const double g2mu2 = lat.cells[0]->getg2mu2A();
     for (int pos = 0; pos < N * N; ++pos) {
-        g2mu2.push_back(lat.cells[pos]->getg2mu2A());
-        g2mu2.push_back(lat.cells[pos]->getg2mu2B());
+        lat.cells[pos]->setg2mu2B(4. * g2mu2);
     }
-    CHECK(Init::medianG2muA(g2mu2, param.coupling.g) == doctest::Approx(0.6));
+    CHECK(Init::nucleiMedianG2muA(&lat, &param) == doctest::Approx(1.2));
+    // nucleus A alone, B without charge
+    for (int pos = 0; pos < N * N; ++pos) lat.cells[pos]->setg2mu2B(0.);
+    CHECK(Init::nucleiMedianG2muA(&lat, &param) == doctest::Approx(0.6));
 }
 
 TEST_CASE(

@@ -684,7 +684,7 @@ double Init::medianG2muA(std::vector<double> g2mu2, double g) {
     return g * sqrt(g2mu2.back());
 }
 
-void Init::reportColorChargeResolution(Lattice *lat, Parameters *param) {
+double Init::nucleiMedianG2muA(Lattice *lat, Parameters *param) {
     const int cells = param->lattice.size * param->lattice.size;
     std::vector<double> g2mu2;
     g2mu2.reserve(2 * cells);
@@ -692,12 +692,18 @@ void Init::reportColorChargeResolution(Lattice *lat, Parameters *param) {
         g2mu2.push_back(lat->cells[pos]->getg2mu2A());
         g2mu2.push_back(lat->cells[pos]->getg2mu2B());
     }
-    const double median = medianG2muA(std::move(g2mu2), param->coupling.g);
+    return medianG2muA(std::move(g2mu2), param->coupling.g);
+}
+
+void Init::reportColorChargeResolution(Lattice *lat, Parameters *param) {
+    const double median = nucleiMedianG2muA(lat, param);
     if (median <= 0.) return;
     const double a = param->lattice.L / param->lattice.size;  // fm
     messager_ << "[Init::init]: median g^2 mu a = " << median
               << " (g^2 mu = " << median * hbarc / a << " GeV, a = " << a
               << " fm), weighted with (g^2 mu)^2";
+    // the color charges are those of the initial condition
+    if (param->jimwlk.enabled) messager_ << ", before the JIMWLK evolution";
     messager_.flush("info");
     if (median > 1.) {
         messager_ << "[Init::init]: the lattice does not resolve the "

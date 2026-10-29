@@ -597,7 +597,7 @@ def main():
             worker_dir = os.path.join(datadir, f"seed_{seed}")
             if os.path.exists(worker_dir):
                 shutil.rmtree(worker_dir)
-                print(f"Removed temporary directory for seed {seed}: {worker_dir}", flush=True)
+        print(f"Removed temporary directories in {datadir}", flush=True)
 
     print("PASSED" if passed else "FAILED: the cross sections differ from the reference, or the seeds overlap", flush=True)
     raise SystemExit(0 if passed else 1)

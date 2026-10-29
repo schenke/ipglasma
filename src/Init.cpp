@@ -46,11 +46,12 @@ double Init::computeFluctuatingXG2mu2(
         } else {
             xVal = Qs * param->colorCharge.xQsFactor / param->collision.sqrtS
                    * exp(ySign * yIn);
-            // no color charge at x = 0 (Q_s = 0) or x >= 1 (no gluons)
+            // no color charge at x = 0 (Q_s = 0) or x >= 1 (no gluons);
+            // two square roots, as before, keep x < 1 bitwise the same
             if (xVal == 0)
                 Qs = 0.;
             else
-                Qs = sqrt(qsTable_.qs2(Tp, 0.01) * largeXQs2Factor(xVal));
+                Qs = sqrt(qsTable_.qs2(Tp, 0.01)) * sqrt(largeXQs2Factor(xVal));
         }
         if (Qs == 0) {
             Ydeviation = 0;

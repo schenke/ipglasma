@@ -495,6 +495,47 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "NucleusSampler::sample gives the triton configurations of He3 "
+    "(lightNucleusOption 1) one proton, the He3 configurations two") {
+    Parameters param;
+    makeInitTestParam(param, 4);
+    param.collision.nucleiToAverage = 1;
+    param.nucleus.nucleonPositionsFromFile = true;
+    const std::string dir = "test_triton_configs_tmp";
+    REQUIRE(std::system(("mkdir -p " + dir).c_str()) == 0);
+    // one configuration of 3 nucleons per file
+    for (const std::string file : {"/He3.bin.in", "/triton.bin.in"}) {
+        std::ofstream out(dir + file, std::ios::binary);
+        for (int k = 0; k < 3 * 3; k++) {
+            const float v = static_cast<float>(k);
+            out.write(reinterpret_cast<const char *>(&v), sizeof(v));
+        }
+    }
+    param.nucleus.nuclearConfigurationsPath = dir;
+    Glauber glauber;
+    glauber.initGlauber(
+        42., "He3", "He3", /*inb=*/0.0, /*setWSDeformParams=*/false, 0., 0., 0.,
+        0., 0., 0., /*forceDminFlag=*/false, 0., 0., 0., /*imax=*/1000);
+
+    for (const auto &[option, protons] : {std::pair<int, int> {0, 2}, {1, 1}}) {
+        CAPTURE(option);
+        param.nucleus.lightNucleusOption = option;
+        Random random;
+        random.init_genrand64(5);
+        NucleusSampler sampler;
+        sampler.readConfigurations(&param, &glauber, &random);
+        const Nuclei nuclei = sampler.sample(&param, &random, &glauber);
+        for (const auto *nucleus : {&nuclei.projectile, &nuclei.target}) {
+            REQUIRE(nucleus->size() == 3);
+            CHECK(countProtons(*nucleus) == protons);
+        }
+    }
+    std::remove((dir + "/He3.bin.in").c_str());
+    std::remove((dir + "/triton.bin.in").c_str());
+    std::remove(dir.c_str());
+}
+
+TEST_CASE(
     "configurationFileName and lightNucleusOptionError: the files by mass "
     "number and lightNucleusOption") {
     // species with several files

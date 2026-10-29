@@ -5,6 +5,7 @@
 #include "Init.h"
 
 #include <algorithm>
+#include <limits>
 #include <utility>
 #include <vector>
 
@@ -39,6 +40,7 @@ double Init::computeFluctuatingXG2mu2(
     double Ydeviation = 10000;
     const int maxIterations = 1000;
     int iterations = 0;
+    bool aboveOne = false;
     // iterative loops here to determine the fluctuating Y
     while (std::abs(Ydeviation) > 0.001 && iterations++ < maxIterations) {
         if (localrapidity >= 0) {
@@ -48,6 +50,7 @@ double Init::computeFluctuatingXG2mu2(
                    * exp(ySign * yIn);
             // no color charge at x = 0 (Q_s = 0) or x >= 1 (no gluons);
             // two square roots, as before, keep x < 1 bitwise the same
+            aboveOne = aboveOne || xVal >= 1.;
             if (xVal == 0)
                 Qs = 0.;
             else
@@ -73,10 +76,51 @@ double Init::computeFluctuatingXG2mu2(
         }
     }
     converged = std::abs(Ydeviation) <= 0.001;
+    if (!converged || aboveOne) {
+        // the iteration jumped to x >= 1 (from the Q_s of a smaller x), or
+        // oscillates (for roots above x of about 0.24, where the slope of
+        // the map is below -1): find the root by bisection instead; the
+        // cells where the iteration converges are unchanged
+        Qs = solveFluctuatingXQs(
+            Tp, param->colorCharge.xQsFactor / param->collision.sqrtS
+                    * exp(ySign * yIn));
+        g2mu2 = Qs * Qs / qsmuRatio / qsmuRatio * a * a / hbarc / hbarc
+                / param->coupling.g / param->coupling.g;
+        converged = true;
+    }
     if (g2mu2 != g2mu2) {
         g2mu2 = 0.;
     }
     return g2mu2;
+}
+
+double Init::fluctuatingXQs(double Tp, double x) const {
+    if (x <= 0.01) return sqrt(qsTable_.qs2(Tp, x));
+    return sqrt(qsTable_.qs2(Tp, 0.01)) * sqrt(largeXQs2Factor(x));
+}
+
+double Init::solveFluctuatingXQs(double Tp, double scale) const {
+    // h(u) = ln(scale Q_s(e^u)) - u, u = ln x, decreases; -infinity at
+    // x = 1 and wherever Q_s vanishes
+    auto h = [&](double u) {
+        const double qs = fluctuatingXQs(Tp, std::exp(u));
+        return (qs > 0.) ? std::log(scale * qs) - u
+                         : -std::numeric_limits<double>::infinity();
+    };
+    double lower = std::log(NuclearQsTable::smallestX());
+    if (!(h(lower) > 0.)) {
+        // no charge, or a root below the table, where Q_s is constant
+        return fluctuatingXQs(Tp, NuclearQsTable::smallestX());
+    }
+    double upper = 0.;
+    while (upper - lower > 1e-6) {
+        const double middle = 0.5 * (lower + upper);
+        if (h(middle) > 0.)
+            lower = middle;
+        else
+            upper = middle;
+    }
+    return fluctuatingXQs(Tp, std::exp(0.5 * (lower + upper)));
 }
 
 bool Init::computeCellColorCharge(

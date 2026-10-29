@@ -42,6 +42,12 @@ class NuclearQsTable {
      * a warning) if above it.
      */
     double qs2(double T, double x) const;
+    /**
+     * The smallest tabulated \f$x\f$, at the largest tabulated rapidity;
+     * qs2() clamps smaller \f$x\f$ to it.
+     * \return \f$0.01\, e^{-y_\text{max}}\f$.
+     */
+    static double smallestX();
 
   private:
     /// Number of tabulated rapidities.

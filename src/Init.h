@@ -279,7 +279,9 @@ class Init {
      * self-consistent local rapidity/\f$Q_s\f$ relation (following the
      * \f$x\f$-dependent \f$Q_s\f$ suppression of \cite Rezaeian:2012ji
      * Eq. (17)) until the rapidity estimate converges to within
-     * \f$10^{-3}\f$, for at most 1000 steps.
+     * \f$10^{-3}\f$, for at most 1000 steps; where it jumps to
+     * \f$x \geq 1\f$ or does not converge, it finds the root by bisection
+     * (solveFluctuatingXQs()).
      * \param[in] param Simulation parameters.
      * \param[in] a Lattice spacing [fm].
      * \param[in] rapidity Effective rapidity to start the iteration
@@ -289,14 +291,39 @@ class Init {
      * \param[in] ySign `+1` for nucleus A, `-1` for nucleus B -- the
      * only sign difference between the two originally-copy-pasted
      * solves.
-     * \param[out] converged `false` if the iteration did not converge in
-     * 1000 steps.
-     * \return The converged \f$g^2\mu^2\f$ [lattice units] (`0` if the
-     * iteration ever produces \f$Q_s=0\f$ or NaN).
+     * \param[out] converged `true`: a cell where the iteration does not
+     * converge is solved by bisection (kept for the check in
+     * setColorChargeDensity()).
+     * \return The \f$g^2\mu^2\f$ of the self-consistent \f$x\f$
+     * [lattice units] (`0` if the cell has no charge, or for NaN).
      */
     double computeFluctuatingXG2mu2(
         Parameters *param, double a, double rapidity, double Tp,
         double qsmuRatio, double ySign, bool &converged);
+    /**
+     * The saturation scale of the fluctuating-\f$x\f$ solve at a given
+     * \f$x\f$: from the table up to \f$x = 0.01\f$, extrapolated with
+     * largeXQs2Factor() beyond.
+     * \param[in] Tp Nuclear thickness \f$T_p\f$ at the cell.
+     * \param[in] x Bjorken \f$x\f$, positive.
+     * \return \f$Q_s\f$ [GeV]; 0 for \f$x \geq 1\f$.
+     */
+    double fluctuatingXQs(double Tp, double x) const;
+    /**
+     * Solves the fluctuating-\f$x\f$ condition \f$x = s\, Q_s(x)\f$ by
+     * bisection in \f$\ln x\f$, for the cells where the iteration of
+     * computeFluctuatingXG2mu2() fails. The root is unique: with
+     * \f$u = \ln x\f$, \f$\ln(s\, Q_s(e^u)) - u\f$ decreases and
+     * is \f$-\infty\f$ at \f$x = 1\f$, where \f$Q_s\f$ vanishes.
+     * \param[in] Tp Nuclear thickness \f$T_p\f$ at the cell.
+     * \param[in] scale \f$s = \beta\, e^{\pm y}/\sqrt{s_{NN}}\f$
+     * [GeV\f$^{-1}\f$], with \f$\beta\f$ = `xQsFactor`.
+     * \return \f$Q_s\f$ [GeV] at the root, to \f$|\Delta\ln x| <
+     * 10^{-6}\f$; at the smallest tabulated \f$x\f$ if the root lies
+     * below the table (where qs2() clamps \f$x\f$), and 0 if the cell has
+     * no charge.
+     */
+    double solveFluctuatingXQs(double Tp, double scale) const;
     /**
      * Sets the color-charge density (\f$g^2\mu_A^2\f$/\f$g^2\mu_B^2\f$)
      * over the whole lattice: either the constant-background case

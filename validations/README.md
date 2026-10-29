@@ -498,7 +498,7 @@ leading order, with 16 configurations at g²μ = 0.05 GeV:
   free parameter. This tests every factor from the color charges to the
   gluon number.
 - **Without the Bessel functions,** i.e. with the late-time formula, the
-  ratio oscillates between 0.87 and 1.32 below k ≈ 4 GeV, where kτ is only a
+  ratio oscillates between 0.77 and 1.32 below k ≈ 4 GeV, where kτ is only a
   few units at τ = 0.5 fm.
 - **Above the window,** the lattice spectrum lies a few percent higher. These
   are lattice artifacts; e.g. the estimator divides by the lattice ω = k̃ < k,
@@ -623,8 +623,8 @@ compares the two finest lattices: the relative change must be below
 observable that fails, it prints a prominent `WARNING: NOT CONVERGED IN THE
 LATTICE SPACING` with the change and an estimate of the remaining deviation
 from an extrapolation linear in a, marks the panel in the figure, and lists
-it under `not_converged` in the summary. With the defaults (25 minutes with
-2 workers of 8 threads), the results are
+it under `not_converged` in the summary. With the defaults (20 minutes with
+2 workers of 12 threads), the results are
 
 | size | 96 | 192 | 384 | 768 | 1024 | 1280 |
 |---|---|---|---|---|---|---|
@@ -652,8 +652,8 @@ cd numerical_parameters
 # sizes 32 and 64, 2 seeds (6 s with 8 workers)
 python3 numerical_parameters.py --ipglasma-path ../.. --quick --max-workers 8
 # the setup of the paper (the defaults): sizes 96-1280, Ny 1-100,
-# m 0.1-0.8 GeV, the constant g²μ at sizes 32-512, 4 seeds (25 minutes)
-python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \
+# m 0.1-0.8 GeV, the constant g²μ at sizes 32-512, 4 seeds (20 minutes)
+python3 numerical_parameters.py --ipglasma-path ../.. --threads 12 \
     --max-workers 2
 ```
 

@@ -147,21 +147,30 @@ class Init {
      * \f$g^2\mu a\f$ over the given cells, weighted with \f$(g^2\mu)^2\f$
      * like the gluon multiplicity. The multiplicity converges only for
      * values below about 1, the energy more slowly.
-     * \param[in] g2mu2 The stored \f$g^2\mu^2\f$ of the cells
-     * (Cell::getg2mu2A(), Cell::getg2mu2B()), in lattice units and divided
-     * by \f$g^2\f$, so that \f$g^2\mu a = g \sqrt{g^2\mu^2}\f$.
+     * \param[in] g2mu2 The stored \f$g^2\mu^2 = (g^2\mu)^2/g^2\f$ of the
+     * cells (Cell::getg2mu2A(), Cell::getg2mu2B()), in lattice units, so
+     * that \f$g^2\mu a = g \sqrt{g^2\mu^2}\f$.
      * \param[in] g The coupling of the stored values.
      * \return The weighted median of \f$g^2\mu a\f$, or 0 if no cell has a
      * color charge.
      */
     static double medianG2muA(std::vector<double> g2mu2, double g);
     /**
-     * Prints the median \f$g^2\mu a\f$ of both nuclei of the event
-     * (medianG2muA()) and, if it is above 1, a warning that the lattice
-     * does not resolve the color-charge density. Does nothing if no cell
-     * has a color charge.
+     * The median \f$g^2\mu a\f$ (medianG2muA()) over the cells of both
+     * nuclei of the lattice.
      * \param[in] lat Lattice whose cells hold \f$g^2\mu^2\f$ of both nuclei.
-     * \param[in] param Simulation parameters (size, L, g).
+     * \param[in] param Simulation parameters (size, g).
+     * \return The weighted median of \f$g^2\mu a\f$, or 0 if no cell has a
+     * color charge.
+     */
+    static double nucleiMedianG2muA(Lattice *lat, Parameters *param);
+    /**
+     * Prints the median \f$g^2\mu a\f$ of both nuclei of the event
+     * (nucleiMedianG2muA()) and, if it is above 1, a warning that the
+     * lattice does not resolve the color-charge density. Does nothing if no
+     * cell has a color charge.
+     * \param[in] lat Lattice whose cells hold \f$g^2\mu^2\f$ of both nuclei.
+     * \param[in] param Simulation parameters (size, L, g, useJIMWLK).
      */
     void reportColorChargeResolution(Lattice *lat, Parameters *param);
     /**

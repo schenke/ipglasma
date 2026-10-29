@@ -24,7 +24,15 @@ change" check: run this once against a known-good version of the code
 with --save-reference to record the epsilon_2 distribution's mean/std,
 then rerun it (e.g. in CI, or after refactoring) without that flag -- the
 script compares the new distribution against the saved reference and
-exits non-zero if it drifts beyond the configured tolerance.
+exits non-zero if it drifts beyond its statistical errors: the mean and
+the width of eps2 must agree within --n-sigma combined errors (from a
+bootstrap of this run and of the reference) and the two-sample KS test
+must give p > 0.01. --mean-tol and --std-tol add fixed relative tolerances.
+
+Seeds: a run uses the seeds --first-seed, --first-seed + 1, ...; the
+default, 10000, keeps a check independent of the reference, which is made
+with the seeds from 0 (the default with --save-reference) and records them.
+The check fails if the seeds of the run overlap those of the reference.
 
 Usage (from validations/eccentricity_regression/):
     # one-time: record a baseline from a known-good build
@@ -327,7 +335,7 @@ def reproduce_command():
     return "python3 {0}".format(" ".join([sys.argv[0]] + sys.argv[1:]))
 
 
-def save_reference(reference_file, eps2_values, run_meta):
+def save_reference(reference_file, eps2_values, run_meta, seeds=None):
     # JSON doesn't support comments, so the reproduce command is stored as
     # a leading "_command" field instead -- keep it first so it's the
     # first thing a human opening the file notices.
@@ -335,6 +343,8 @@ def save_reference(reference_file, eps2_values, run_meta):
     payload.update(summarize(eps2_values))
     payload["eps2_values"] = [float(v) for v in eps2_values]
     payload.update(run_meta)
+    if seeds is not None:
+        payload["first_seed"], payload["last_seed"] = seeds
     with open(reference_file, "w") as f:
         json.dump(payload, f, indent=2)
 
@@ -370,38 +380,52 @@ def check_reference_parameters(run_meta, reference):
     return warnings
 
 
-def compare_to_reference(eps2_values, reference, mean_tol, std_tol):
+def bootstrap_errors(values, n_bootstrap, rng):
+    """The errors of the mean and of the standard deviation of values from
+    n_bootstrap resamplings."""
+    values = np.asarray(values, dtype=float)
+    samples = values[rng.integers(0, len(values), (n_bootstrap, len(values)))]
+    return (float(np.std(samples.mean(axis=1))),
+            float(np.std(samples.std(axis=1))))
+
+
+def reference_seeds(reference):
+    """The seeds (first, last) of a reference; one saved before they were
+    recorded used the seeds from 0, one per event."""
+    first = reference.get("first_seed", 0)
+    return first, reference.get("last_seed", first + reference["n_events"] - 1)
+
+
+def compare_to_reference(eps2_values, reference, n_sigma, n_bootstrap,
+                         mean_tol=None, std_tol=None, seeds=None):
     current = summarize(eps2_values)
     messages = []
     passed = True
 
-    rel_mean = abs(current["mean"] - reference["mean"]) / max(
-        abs(reference["mean"]), 1e-12)
-    if rel_mean > mean_tol:
-        passed = False
-        messages.append(
-            "FAIL: mean eps2 changed by {0:.1%} (tolerance {1:.1%}): "
-            "{2:.5f} -> {3:.5f}".format(
-                rel_mean, mean_tol, reference["mean"], current["mean"]))
+    rng = np.random.default_rng(1)
+    errors = bootstrap_errors(eps2_values, n_bootstrap, rng)
+    if reference.get("eps2_values"):
+        ref_errors = bootstrap_errors(reference["eps2_values"],
+                                      n_bootstrap, rng)
     else:
-        messages.append(
-            "OK: mean eps2 within tolerance ({0:.1%} <= {1:.1%}): "
-            "{2:.5f} -> {3:.5f}".format(
-                rel_mean, mean_tol, reference["mean"], current["mean"]))
-
-    rel_std = abs(current["std"] - reference["std"]) / max(
-        abs(reference["std"]), 1e-12)
-    if rel_std > std_tol:
-        passed = False
-        messages.append(
-            "FAIL: std(eps2) changed by {0:.1%} (tolerance {1:.1%}): "
-            "{2:.5f} -> {3:.5f}".format(
-                rel_std, std_tol, reference["std"], current["std"]))
-    else:
-        messages.append(
-            "OK: std(eps2) within tolerance ({0:.1%} <= {1:.1%}): "
-            "{2:.5f} -> {3:.5f}".format(
-                rel_std, std_tol, reference["std"], current["std"]))
+        ref_errors = (0., 0.)
+    for name, key, error, ref_error, tol in (
+            ("mean eps2", "mean", errors[0], ref_errors[0], mean_tol),
+            ("std(eps2)", "std", errors[1], ref_errors[1], std_tol)):
+        diff = current[key] - reference[key]
+        combined = max(float(np.hypot(error, ref_error)), 1e-12)
+        ok = abs(diff) <= n_sigma * combined
+        message = ("{0}: {1} {2:.5f} -> {3:.5f}, {4:+.1f} sigma (error "
+                   "{5:.5f}, fail beyond {6:g} sigma)".format(
+                       "{0}", name, reference[key], current[key],
+                       diff / combined, combined, n_sigma))
+        if tol is not None:
+            relative = abs(diff) / max(abs(reference[key]), 1e-12)
+            ok = ok and relative <= tol
+            message += "; changed by {0:.1%} (tolerance {1:.1%})".format(
+                relative, tol)
+        passed = passed and ok
+        messages.append(message.format("OK" if ok else "FAIL"))
 
     try:
         from scipy import stats as scipy_stats
@@ -414,6 +438,15 @@ def compare_to_reference(eps2_values, reference, mean_tol, std_tol):
             "D={2:.4f})".format("OK" if ks_ok else "FAIL", p_value, ks_stat))
     except ImportError:
         messages.append("(scipy not available -- skipped KS distribution test)")
+
+    if seeds is not None:
+        ref_first, ref_last = reference_seeds(reference)
+        independent = seeds[1] < ref_first or seeds[0] > ref_last
+        passed = passed and independent
+        messages.append("{0}: seeds {1}-{2}, reference {3}-{4}{5}".format(
+            "OK" if independent else "FAIL", seeds[0], seeds[1], ref_first,
+            ref_last, "" if independent else " (overlap: not an independent "
+            "check)"))
 
     return passed, "\n".join(messages)
 
@@ -567,11 +600,27 @@ def main():
     parser.add_argument("--save-reference", action="store_true",
                          help="save this run's eps2 distribution as the "
                               "new reference instead of comparing to it")
-    parser.add_argument("--mean-tol", type=float, default=0.15,
-                         help="allowed relative change in mean(eps2)")
-    parser.add_argument("--std-tol", type=float, default=0.25,
-                         help="allowed relative change in std(eps2)")
+    parser.add_argument("--first-seed", type=int, default=None,
+                         help="first random seed (default 10000, beyond the "
+                              "seeds of the reference; 0 with "
+                              "--save-reference)")
+    parser.add_argument("--n-sigma", type=float, default=3.0,
+                         help="allowed change of mean(eps2) and std(eps2) "
+                              "in units of the combined error")
+    parser.add_argument("--bootstrap", type=int, default=1000,
+                         help="bootstrap resamplings for the errors")
+    parser.add_argument("--mean-tol", type=float, default=None,
+                         help="optional allowed relative change in "
+                              "mean(eps2), in addition")
+    parser.add_argument("--std-tol", type=float, default=None,
+                         help="optional allowed relative change in "
+                              "std(eps2), in addition")
     args = parser.parse_args()
+
+    first_seed = args.first_seed
+    if first_seed is None:
+        first_seed = 0 if args.save_reference else 10000
+    seed_list = range(first_seed, first_seed + args.maxevents)
 
     if args.clean:
         # Just tidy up an existing --datadir and exit -- no ipglasma
@@ -641,7 +690,7 @@ def main():
                     run_seed, seed, ipglasma_path, template_path, qs_table_path,
                     datadir, ipglasma_binary, args.size, args.L, args.maxtime,
                     args.jimwlk, args.slurm): seed
-                for seed in range(args.maxevents)
+                for seed in seed_list
             }
             for future in as_completed(futures):
                 seed = futures[future]
@@ -676,6 +725,8 @@ def main():
         sys.exit(1)
 
     eps2_values = [r["eps2"] for r in successes]
+    seed_numbers = [r["seed"] for r in results if isinstance(r["seed"], int)]
+    seeds = (min(seed_numbers), max(seed_numbers)) if seed_numbers else None
     stats = summarize(eps2_values)
     print("epsilon_2 over {0} successful events: "
           "mean={1:.5f} std={2:.5f} median={3:.5f} "
@@ -689,7 +740,7 @@ def main():
     exit_code = 1 if failures else 0
 
     if args.save_reference:
-        save_reference(args.reference_file, eps2_values, run_meta)
+        save_reference(args.reference_file, eps2_values, run_meta, seeds)
         print("Saved new reference distribution to {0}".format(
             args.reference_file))
     else:
@@ -698,17 +749,19 @@ def main():
         # reproduce it) to datadir, so it isn't lost once seed_*/ working
         # directories are cleaned up.
         results_file = os.path.join(datadir, "eccentricity_results.json")
-        save_reference(results_file, eps2_values, run_meta)
+        save_reference(results_file, eps2_values, run_meta, seeds)
         print("Saved this run's eps2 distribution to {0}".format(results_file))
 
         if reference is not None:
             passed, message = compare_to_reference(
-                eps2_values, reference, args.mean_tol, args.std_tol)
+                eps2_values, reference, args.n_sigma, args.bootstrap,
+                args.mean_tol, args.std_tol, seeds)
             print(message)
             if not passed:
                 exit_code = 1
                 print("REGRESSION CHECK FAILED: epsilon_2 distribution drifted "
-                      "beyond tolerance relative to {0}".format(args.reference_file))
+                      "beyond its errors relative to {0}, or the seeds "
+                      "overlap".format(args.reference_file))
             else:
                 print("Regression check passed.")
         else:
@@ -719,7 +772,7 @@ def main():
     if not args.keep_logs and not args.plot_only:
             print("Removing temporary files under {0} ...".format(
                 datadir))
-            for seed in range(args.maxevents):
+            for seed in seed_list:
                 worker_dir = os.path.join(datadir, f"seed_{seed}")
                 if os.path.exists(worker_dir):
                     cleanup_stray_output_files(worker_dir)

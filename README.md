@@ -25,7 +25,7 @@ The code can also be built with CMake directly, e.g. `cmake -B build` and `cmake
 The build type is `Release` (`-O3`) unless another one is given with `-DCMAKE_BUILD_TYPE`, e.g. `Debug` (`-g`, no optimization) or `RelWithDebInfo` (`-O2 -g`). Further compiler flags can be added with `-DCMAKE_CXX_FLAGS`, e.g. `-DCMAKE_CXX_FLAGS=-march=native`. The code is built without fast math (`-Ofast`, `-ffast-math`), which would switch off its checks for NaN.
 
 ### Docker
-`docker/Dockerfile` builds an Ubuntu image with IP-Glasma compiled (with MPI) and the nucleus configurations downloaded, in `/home/ipglasma`, from the branch `main` of the GitHub repository (`--build-arg IPGLASMA_BRANCH=devel` for another branch); it also contains the files to run it with Singularity/Apptainer:
+`docker/Dockerfile` builds an Ubuntu image with IP-Glasma compiled (with MPI and its unit tests, which run during the build) and the nucleus configurations downloaded, in `/home/ipglasma`, from the branch `main` of the GitHub repository (`--build-arg IPGLASMA_BRANCH=devel` for another branch). It also contains [subnucleondiffraction](https://github.com/hejajama/subnucleondiffraction) in `/home/subnucleondiffraction` (branch `master`, `--build-arg SUBNUCLEONDIFFRACTION_BRANCH=...`) and the Python packages of `validations/` and `utilities/`, so that the validation scripts run in it (see `validations/README.md`), and the files to run it with Singularity/Apptainer:
 ```
 docker build -t ipglasma docker/
 docker run --rm -v "$PWD:/work" -w /work ipglasma ipglasma input

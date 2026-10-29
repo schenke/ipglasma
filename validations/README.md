@@ -58,10 +58,23 @@ simultaneously.
 2. For `parallel_test_vector_meson_production.py` only: build
    [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
    separately and note its path (needed for `--subnucleondiffraction-path`).
+   It reads the Wilson lines of IP-Glasma 2.0 from its commit 4e3a05c on
+   (`master` since October 2026); its `python/cross_section.py` needs
+   `scipy`.
 3. Python 3 with `numpy` and `matplotlib` (and optionally `scipy`, used for
    the two-sample KS test in the eccentricity script if available; the
    JIMWLK step-size script, the dilute limit and the `--lappi` mode of the
    dipole correlator need it).
+4. Or the Docker image of `docker/Dockerfile` (see the main README), which
+   has all of these: the repository with the built `ipglasma` in
+   `/home/ipglasma` (the `--ipglasma-path`), subnucleondiffraction in
+   `/home/subnucleondiffraction` and the Python packages. A script runs in
+   it with its outputs in the mounted directory, e.g.
+   ```bash
+   docker run --rm -v "$PWD:/work" -w /work ipglasma python3 \
+       /home/ipglasma/validations/dipole_correlator/dipole_correlator.py \
+       --ipglasma-path /home/ipglasma --quick --datadir /work/dipole
+   ```
 
 ## Running interactively
 

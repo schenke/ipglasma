@@ -563,12 +563,12 @@ grows by 4.7% ± 1.4% from g²μ a = 0.3 to 0.15. The energy sits in modes up
 to several g²μ, where the gluon spectrum falls like 1/k⁴, and converges
 only like a: its deficit is about 0.2–0.3 g²μ a, so 5% needs g²μ a ≈
 0.15–0.25 (the energy density at τ = 0 even diverges like ln² a, T. Lappi,
-Phys. Lett. B 643 (2006) 11). This is not an artifact of IP-Glasma: an independent
-classical Yang-Mills code (a version of S. Schlichting's), run on the same
-Wilson lines, gives dE/dη within 0.1–0.6% of IP-Glasma's and the same
-dependence on a (see the discussion of #134). With JIMWLK, the gluon
-spectrum falls less steeply (the anomalous dimension of the evolved Wilson
-lines), so the energy converges even more slowly.
+Phys. Lett. B 643 (2006) 11). This is not an artifact of IP-Glasma: an
+independent classical Yang-Mills code (a version of S. Schlichting's), run
+on the same Wilson lines, gives dE/dη within 0.1–0.6% of IP-Glasma's and
+the same dependence on a (see the discussion of #134). With JIMWLK, the
+gluon spectrum falls less steeply (the anomalous dimension of the evolved
+Wilson lines), so the energy converges even more slowly.
 
 **Convergence check.** For each observable of the size scans, the script
 compares the two finest lattices: the relative change must be below
@@ -743,8 +743,9 @@ halved, while f_N changes by less than 4% for g²μa < 1 and by less than
 1% for g²μa ≤ 0.75. P_L/ε is between −0.994 and −0.985 at the first time
 step and +0.016 to +0.027 at g²μτ = 20 (Lappi's Fig. 5 gives about
 +0.025), and f_E decreases by 2.4–2.9% between g²μτ = 10 and 20. The
-errors are those of the mean over the 16 seeds, comparable to Lappi's. The defaults of the script (g²μL = 72
-and 120, four seeds) take 9 minutes with 2 workers of 4 threads.
+errors are those of the mean over the 16 seeds, comparable to Lappi's.
+The defaults of the script (g²μL = 72 and 120, four seeds) take 9 minutes
+with 2 workers of 4 threads.
 
 On a lattice with clamped boundaries, as `useNucleus 0` had before #139,
 the pure-gauge fields of the nuclei become physical fields along the

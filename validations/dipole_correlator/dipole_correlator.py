@@ -73,10 +73,11 @@ with the definitions he used (issue #148):
     spectrum files (lappi_coordinate_profile()); that mode is negative, so
     its magnitude adds about 1.9 to C(r) at every r.
 It checks that, for m = 0 and for m > 0 with the zero mode removed, the
-adjoint and the fundamental sqrt(C_A/C_F) Q~_s of his procedure agree with
-Fig. 4 within --lappi-n-sigma (3) combined errors at every Ny, and the
-coordinate-space Q_s with Fig. 7 within --lappi-coord-tolerance (3%). It
-also reports the adjoint correlator as written in his paper,
+factorized adjoint and the fundamental sqrt(C_A/C_F) Q~_s of his procedure
+agree with Fig. 4 within --lappi-n-sigma (3) combined errors at every Ny,
+and the coordinate-space Q_s with Fig. 7 within --lappi-coord-tolerance
+(3%); a check that cannot be made (e.g. at an Ny whose single fits are all
+dropped) counts as failed. It also reports the adjoint correlator as written in his paper,
 < |tr V^+(x) V(x + r)|^2 > - 1, from the adjoint Wilson lines
 U_ab = 2 tr(t^a V^+ t^b V) with Fourier transforms like D, the coordinate
 space of the lattice correlators, the maxima of the averaged spectra in
@@ -660,9 +661,12 @@ def lappi_procedure(outs, g2mu_lat, m_lat):
                                                          k ** 2 * err)
         peaks = np.array([lappi_peak_fit(k, k ** 2 * f) for f in single])
         peaks = scale * peaks[np.isfinite(peaks)]
-        row[f"Qs_kfitone{suffix}"] = float(peaks.mean())
-        row[f"Qs_kfitone{suffix}_error"] = float(peaks.std()
-                                                 / np.sqrt(len(peaks)))
+        # NaN if every fit is dropped, which fails the check
+        row[f"Qs_kfitone{suffix}"] = (float(peaks.mean()) if len(peaks)
+                                      else float("nan"))
+        row[f"Qs_kfitone{suffix}_error"] = (
+            float(peaks.std() / np.sqrt(len(peaks))) if len(peaks)
+            else float("nan"))
         row[f"kfitone{suffix}_rejected"] = int(len(single) - len(peaks))
     return row
 
@@ -842,6 +846,17 @@ def run_all(configs, settings, max_workers):
     return results, failures
 
 
+def bounded(deviations, bound):
+    """Whether all deviations lie below bound (a NaN, a deviation that
+    could not be computed, fails), the largest finite one and the number
+    of NaN."""
+    deviations = np.asarray(deviations, dtype=float)
+    finite = deviations[np.isfinite(deviations)]
+    return (bool(np.all(deviations < bound)),
+            float(finite.max()) if finite.size else float("nan"),
+            int(deviations.size - finite.size))
+
+
 def main_lappi(args, settings):
     """The setup of arXiv:0711.3039: g^2 mu L = 100, g^2 mu a = 0.5,
     m = 0 and 0.1 g^2 mu."""
@@ -892,12 +907,12 @@ def main_lappi(args, settings):
                   f"{lappi('lappi_fund')}    {entry('Qs_coord_adj')}  "
                   f"{coord:>12}")
     print("\nWith the procedure of arXiv:0711.3039 (#148): the mean of the "
-          "maxima of the single\nconfigurations in his bins, adjoint "
-          "(factorized) and sqrt(CA/CF) fundamental, with\ntheir deviation "
-          "from Fig. 4 in combined errors; the Gaussian fits of his "
-          "runn.pl;\nthe coordinate space from the 2D momentum integral of "
-          "the binned spectrum:")
-    checks, deviations = {}, {}
+          "maxima of the single\nconfigurations in his bins, factorized "
+          "adjoint (fact) and sqrt(CA/CF) fundamental\n(fund), with their "
+          "deviation from Fig. 4 in combined errors; the Gaussian fits\nof "
+          "his runn.pl; the coordinate space from the 2D momentum integral "
+          "of the binned\nspectrum:")
+    checks, deviations, units, unresolved = {}, {}, {}, {}
     for group in summary["groups"]:
         lappi_like = (group["m_over_g2mu"] == 0.
                       or group["remove_zero_mode"])
@@ -911,7 +926,9 @@ def main_lappi(args, settings):
             line = f"  {row['ny']:4d}"
             for name, ours in (("adj", "Qs_kfitone"),
                                ("fund", "Qs_kfitone_fund_scaled")):
-                line += f"  {name} {row[ours]:.4f}({row[ours + '_error']:.4f})"
+                short = "fact" if name == "adj" else name
+                line += (f"  {short} {row[ours]:.4f}"
+                         f"({row[ours + '_error']:.4f})")
                 if f"lappi_{name}" in row:
                     value, error = row[f"lappi_{name}"]
                     pull = (row[ours] - value) / np.hypot(
@@ -931,26 +948,41 @@ def main_lappi(args, settings):
         # the checks, where the definitions are those of arXiv:0711.3039
         coordinate = [abs(row["Qs_coord_lappi"] / row["lappi_coord"] - 1.)
                       for row in group["rows"] if "lappi_coord" in row]
-        for name, text in (("adj", "adjoint"), ("fund", "fundamental")):
-            if pulls[name]:
-                check = (f"{label}: the {text} Q_s is within "
-                         f"{args.lappi_n_sigma:g} errors of Fig. 4 at every "
-                         f"Ny")
-                checks[check] = bool(max(pulls[name]) < args.lappi_n_sigma)
-                deviations[check] = f"{max(pulls[name]):.2f} errors"
-        if coordinate:
-            check = (f"{label}: the coordinate-space Q_s is within "
-                     f"{args.lappi_coord_tolerance:g} of Fig. 7")
-            checks[check] = bool(max(coordinate)
-                                 < args.lappi_coord_tolerance)
-            deviations[check] = f"{max(coordinate):.4f}"
+        candidates = [
+            (f"{label}: the {text} Q_s is within {args.lappi_n_sigma:g} "
+             f"errors of Fig. 4 at every Ny", pulls[name],
+             args.lappi_n_sigma, "errors")
+            for name, text in (("adj", "factorized adjoint"),
+                               ("fund", "fundamental"))]
+        candidates.append(
+            (f"{label}: the coordinate-space Q_s is within "
+             f"{args.lappi_coord_tolerance:g} of Fig. 7", coordinate,
+             args.lappi_coord_tolerance, "relative"))
+        made = False
+        for check, values, bound, unit in candidates:
+            if not values:
+                continue
+            made = True
+            checks[check], deviations[check], unresolved[check] = bounded(
+                values, bound)
+            units[check] = unit
+        if not made:
+            # a check that cannot be made counts as failed
+            check = f"{label}: there are values of Figs. 4 and 7 to compare"
+            checks[check], deviations[check] = False, float("nan")
+            units[check], unresolved[check] = "", 0
     summary["checks"] = checks
     summary["largest_deviations"] = deviations
-    summary["passed"] = bool(all(checks.values()) and not failures)
+    summary["deviation_units"] = units
+    summary["unresolved_points"] = unresolved
+    summary["passed"] = bool(checks and all(checks.values())
+                             and not failures)
     print()
     for name, ok in checks.items():
+        note = (f", {unresolved[name]} points not computed"
+                if unresolved[name] else "")
         print(f"{'OK  ' if ok else 'FAIL'} {name} (largest deviation "
-              f"{deviations[name]})")
+              f"{deviations[name]:.4g} {units[name]}{note})")
     plot_lappi(summary["groups"],
                os.path.join(settings["datadir"], "dipole_lappi.pdf"))
     path = os.path.join(settings["datadir"], "dipole_lappi_summary.json")

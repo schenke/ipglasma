@@ -289,16 +289,17 @@ the procedure of his code and scripts (#148):
   than of a definition of Q_s.
 
 The script ports his scripts to Python (`lappi_procedure()`); on the same
-spectra, the ports agree with his `runn.pl`, `kfit.pl` and `kfitone.pl` to
-all digits they print. It checks that, for m = 0 and for m > 0 with the
-zero mode removed, the adjoint and the fundamental √(C_A/C_F) Q̃_s agree
-with his Fig. 4 within `--lappi-n-sigma` (3) combined errors at every
-`Ny`, and the coordinate-space Q_s with his Fig. 7 within
-`--lappi-coord-tolerance` (3%). His values were read off the vector
-graphics of Figs. 4 and 7 (marker centres and, in Fig. 4, error bars; Fig. 7
-has none) and are listed in the script. The errors of the other columns are
-from the jackknife over the configurations. The results, written to
-`<datadir>/dipole_lappi_summary.json` and `<datadir>/dipole_lappi.pdf`:
+spectra, the ports agree with his `runn.pl`, `kfit.pl` and `kfitone.pl` to all
+digits they print. It checks that, for m = 0 and for m > 0 with the zero mode
+removed, the factorized adjoint and the fundamental √(C_A/C_F) Q̃_s agree with
+his Fig. 4 within `--lappi-n-sigma` (3) combined errors at every `Ny`, and the
+coordinate-space Q_s with his Fig. 7 within `--lappi-coord-tolerance` (3%). A
+check that cannot be made, e.g. at an `Ny` whose single fits are all dropped,
+counts as failed. His values were read off the vector graphics of Figs. 4 and 7
+(marker centres and, in Fig. 4, error bars; Fig. 7 has none) and are listed in
+the script. The errors of the other columns are from the jackknife over the
+configurations. The results, written to `<datadir>/dipole_lappi_summary.json`
+and `<datadir>/dipole_lappi.pdf`:
 
 | m/g²μ | `Ny` | adjoint | Lappi, Fig. 4 | fundamental √(C_A/C_F) Q̃_s | Lappi, Fig. 4 | Gaussian fit | ⟨\|tr V†V\|²⟩ − 1 | coordinate | Lappi, Fig. 7 |
 |---|---|---|---|---|---|---|---|---|---|
@@ -323,11 +324,12 @@ from the jackknife over the configurations. The results, written to
 
 - **Momentum space:** the adjoint Q_s agrees with Fig. 4 within 0.5% at
   every `Ny`, within at most 1.2 (m = 0) and 1.6 (m = 0.1 g²μ) combined
-  errors, and the fundamental one within at most 1.9 and 2.0 errors. The
-  maximum of the averaged spectrum, from the parabola through the largest
-  bin and two bins on either side in bins of width 2π/L (`peak_momentum()`)
-  or from his `kfit.pl`, differs from the mean of the single maxima by less
-  than 1%.
+  errors, and the fundamental one within at most 1.9 and 2.0 errors. For
+  the adjoint spectrum, the maximum of the averaged spectrum, from the
+  parabola through the largest bin and two bins on either side in bins of
+  width 2π/L (`peak_momentum()`) or from his `kfit.pl`, differs from the
+  mean of the single maxima by less than 1%; for the noisier fundamental
+  spectrum, by up to 3.5% and 9%.
 - **The zero mode:** with it kept, as IP-Glasma does by default, the
   adjoint Q_s at m = 0.1 g²μ lies 1.4–3.4% lower for `Ny` ≤ 10 (0.504, 0.597,
   0.689 at `Ny` = 1, 2, 4), 5–12 errors from Fig. 4; for large `Ny` the two

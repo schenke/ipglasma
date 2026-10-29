@@ -703,3 +703,56 @@ TEST_CASE(
     CHECK(Init::largeXQs2Factor(1.5) == 0.);
     CHECK(Init::largeXQs2Factor(40.) == 0.);
 }
+
+TEST_CASE(
+    "Init::computeCellColorCharge with useFluctuatingX 1 finds the root "
+    "x = beta Q_s(x) e^{+-y}/sqrt(s) where the iteration jumps to x >= 1 "
+    "or oscillates") {
+    const int N = 4;
+    Parameters param;
+    makeInitTestParam(param, N);  // a = 1 fm
+    param.colorCharge.QsMuRatio = 1.;
+    param.coupling.g = 1.;
+    param.colorCharge.useFluctuatingX = true;
+    param.colorCharge.xQsFactor = 1.;
+    param.collision.sqrtS = 200.;
+    param.jimwlk.enabled = false;
+    Lattice lat(&param, N);
+    const int pos = 5;
+    // a dense cell: at y = 5 its root lies at large x, which the
+    // iteration misses (it jumps to x >= 1 from the Q_s of x = 0.01 e^-5)
+    const double T = 1.;
+    lat.cells[pos]->setTpA(T);
+    lat.cells[pos]->setTpB(T);
+
+    int nn[2] = {N, N};
+    Init init(nn);
+    init.readQsTable(
+        std::string(IPGLASMA_SOURCE_DIR) + "/qs2Adj_vs_Tp_vs_Y_240.in");
+    // g^2 mu^2 = Qs^2 a^2 / hbarc^2 with QsMuRatio = g = 1 and a = 1 fm
+    auto qsOf = [](double g2mu2) { return std::sqrt(g2mu2) * hbarc; };
+
+    REQUIRE(init.computeCellColorCharge(&lat, &param, pos, 1., 5.));
+    const double qsForward = qsOf(lat.cells[pos]->getg2mu2A());
+    REQUIRE(qsForward > 0.);
+    // self-consistent: Q_s is that of x = Q_s e^5 / 200, below 1
+    const double x = qsForward * std::exp(5.) / 200.;
+    CHECK(x < 1.);
+    CHECK(x > 0.01);
+    CHECK(
+        qsForward == doctest::Approx(init.fluctuatingXQs(T, x)).epsilon(1e-5));
+    // the target at y = -5 has the same x and Q_s: the solve is symmetric
+    // under y -> -y with projectile and target exchanged
+    REQUIRE(init.computeCellColorCharge(&lat, &param, pos, 1., -5.));
+    CHECK(
+        qsOf(lat.cells[pos]->getg2mu2B())
+        == doctest::Approx(qsForward).epsilon(1e-5));
+
+    // a root below the smallest tabulated x takes Q_s there, and a cell
+    // below the tabulated T_p has no charge
+    const double xMin = NuclearQsTable::smallestX();
+    CHECK(
+        init.solveFluctuatingXQs(T, 1e-9)
+        == doctest::Approx(init.fluctuatingXQs(T, xMin)));
+    CHECK(init.solveFluctuatingXQs(0., 1.) == 0.);
+}

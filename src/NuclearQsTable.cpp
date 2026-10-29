@@ -55,6 +55,10 @@ void NuclearQsTable::read(const std::string &fileName) {
     }
 }
 
+double NuclearQsTable::smallestX() {
+    return 0.01 * std::exp(-(nY_ - 1) * deltaY_);
+}
+
 double NuclearQsTable::qs2(double T, double x) const {
     double value, fracy, fracT, QsYdown, QsYup;
     int posy, check = 0;

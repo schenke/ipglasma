@@ -294,7 +294,10 @@ def compare(ref, got, case):
         "hydro": relative(exp["hydro_grid"], hydro_grid(got["hydro"])),
         "gluon_spectrum": relative(numbers(exp["gluons"]),
                                    numbers(got["gluons"])),
-        "dN_dE": relative(exp["summary"][[1, 4]], got["summary"][[1, 4]]),
+        # each relative to itself: dE/dy is larger than dN/dy, so a
+        # common scale would understate the change of dN/dy
+        "dN_dE": max(relative(exp["summary"][[i]], got["summary"][[i]])
+                     for i in (1, 4)),
     }
     eps = [abs(exp["ecc"][2 * n - 1] - got["ecc"][2 * n - 1])
            / max(abs(exp["ecc"][2 * n - 1]), 1e-300) for n in range(1, 7)]

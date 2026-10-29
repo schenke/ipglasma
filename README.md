@@ -28,9 +28,9 @@ The build type is `Release` (`-O3`) unless another one is given with `-DCMAKE_BU
 `docker/Dockerfile` builds an Ubuntu image with IP-Glasma compiled (with MPI and its unit tests, which run during the build) and the nucleus configurations downloaded, in `/home/ipglasma`, from the branch `main` of the GitHub repository (`--build-arg IPGLASMA_BRANCH=devel` for another branch). It also contains [subnucleondiffraction](https://github.com/hejajama/subnucleondiffraction) in `/home/subnucleondiffraction` (branch `master`, `--build-arg SUBNUCLEONDIFFRACTION_BRANCH=...`) and the Python packages of `validations/` and `utilities/`, so that the validation scripts run in it (see `validations/README.md`), and the files to run it with Singularity/Apptainer:
 ```
 docker build -t ipglasma docker/
-docker run --rm -v "$PWD:/work" -w /work ipglasma ipglasma input
+docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work ipglasma ipglasma input
 ```
-File names in the input file are relative to the working directory, so data files from the repository are given with their path in the image, e.g. `nuclearConfigurationsPath /home/ipglasma/nucleusConfigurations`.
+File names in the input file are relative to the working directory, so data files from the repository are given with their path in the image, e.g. `nuclearConfigurationsPath /home/ipglasma/nucleusConfigurations`. Without `-u`, the container runs as root, and its outputs in the mounted directory belong to root.
 
 ### Reproducible runs
 By default, FFTW picks its FFT algorithms by timing them when the program starts, so two runs with the same seed can differ by floating-point rounding (around 1e-14). For bit-identical output, build with

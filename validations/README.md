@@ -68,10 +68,15 @@ simultaneously.
 4. Or the Docker image of `docker/Dockerfile` (see the main README), which
    has all of these: the repository with the built `ipglasma` in
    `/home/ipglasma` (the `--ipglasma-path`), subnucleondiffraction in
-   `/home/subnucleondiffraction` and the Python packages. A script runs in
-   it with its outputs in the mounted directory, e.g.
+   `/home/subnucleondiffraction` and the Python packages. It has to be built
+   from a branch that contains this folder, e.g. `devel`. A script runs in
+   it with its outputs in the mounted directory (owned by the user given
+   with `-u`), e.g.
    ```bash
-   docker run --rm -v "$PWD:/work" -w /work ipglasma python3 \
+   # from the repository root
+   docker build -t ipglasma --build-arg IPGLASMA_BRANCH=devel docker/
+   docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+       ipglasma python3 \
        /home/ipglasma/validations/dipole_correlator/dipole_correlator.py \
        --ipglasma-path /home/ipglasma --quick --datadir /work/dipole
    ```

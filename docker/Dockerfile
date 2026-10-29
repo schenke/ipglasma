@@ -8,10 +8,13 @@
 #   docker build -t ipglasma --build-arg IPGLASMA_BRANCH=devel docker/
 # Run (the input's data files, e.g. nucleusQsTableFileName and
 # nuclearConfigurationsPath, are relative to the working directory; the
-# repository with the nucleus configurations is in /home/ipglasma):
-#   docker run --rm -it -v "$PWD:/work" -w /work ipglasma ipglasma input
+# repository with the nucleus configurations is in /home/ipglasma; -u keeps
+# the outputs in the mounted directory from belonging to root):
+#   docker run --rm -it -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+#       ipglasma ipglasma input
 # A validation script, with the repository in the image as --ipglasma-path:
-#   docker run --rm -v "$PWD:/work" -w /work ipglasma python3 \
+#   docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work \
+#       ipglasma python3 \
 #       /home/ipglasma/validations/dipole_correlator/dipole_correlator.py \
 #       --ipglasma-path /home/ipglasma --quick --datadir /work/dipole
 FROM ubuntu:24.04
@@ -106,6 +109,9 @@ RUN cd / && \
     ln -s .singularity.d/runscript singularity
 
 ENV PYTHONIOENCODING=utf-8
+# Matplotlib's configuration and cache, in a directory that a user given
+# with -u can write to (HOME=/home cannot)
+ENV MPLCONFIGDIR=/tmp/matplotlib
 WORKDIR ${HOME}
 
 CMD ["bash"]

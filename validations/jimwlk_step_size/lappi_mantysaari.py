@@ -55,9 +55,10 @@ than in jimwlk_step_size.py (no IR regulator, a coupling that freezes at
 Usage (from validations/jimwlk_step_size/):
     # quick test: 256^2, to y = 4, step sizes 0.002, 0.001, 0.0005, 2 seeds
     python3 lappi_mantysaari.py --ipglasma-path ../.. --quick
-    # the setup of the paper (several hours; 6 runs)
-    python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 4 \\
-        --max-workers 6
+    # the setup of the paper (6 runs, 3.6 hours with 4 workers of 6
+    # threads)
+    python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 \\
+        --max-workers 4
 """
 
 import argparse

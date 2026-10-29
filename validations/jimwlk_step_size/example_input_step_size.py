@@ -55,6 +55,10 @@ Usage (from validations/jimwlk_step_size/):
     # threads)
     python3 example_input_step_size.py --ipglasma-path ../.. --threads 5 \\
         --max-workers 3
+    # 256^2 at L = 30 fm, the lattice of the example input: 16 seeds (with
+    # four, the error of dN/dy is 6%, twice the tolerance)
+    python3 example_input_step_size.py --ipglasma-path ../.. --size 256 \\
+        --L 30 --seeds 16 --threads 6 --max-workers 4
 """
 
 import argparse

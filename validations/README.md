@@ -946,22 +946,31 @@ the same initial Wilson lines:
 ```bash
 # quick test: 128², L = 30 fm, three step sizes, 2 seeds (20 s)
 python3 example_input_step_size.py --ipglasma-path ../.. --quick --max-workers 3
-# 768², L = 22.5 fm, 3 seeds (about an hour with 2 workers of 4 threads)
-python3 example_input_step_size.py --ipglasma-path ../.. --max-workers 2
+# 768², L = 22.5 fm, 3 seeds (52 minutes with 2 workers of 8 threads)
+python3 example_input_step_size.py --ipglasma-path ../.. --threads 8 \
+    --max-workers 2
+# 256², L = 30 fm, the lattice of the example input, 16 seeds (12 minutes
+# with 4 workers of 6 threads)
+python3 example_input_step_size.py --ipglasma-path ../.. --size 256 --L 30 \
+    --seeds 16 --threads 6 --max-workers 4
 ```
 
-With the defaults, the deviation from zero step at `jimwlkDs 0.005` is:
+The deviation from zero step at `jimwlkDs 0.005` is (dN/dy with the
+projection, the default):
 
-| | 768², L = 22.5 fm | 256², L = 30 fm (the example input) |
+| | 768², L = 22.5 fm, 3 seeds | 256², L = 30 fm, 16 seeds |
 |---|---|---|
-| Q_s, all | +0.9% ± 0.6% | −0.4% ± 0.5% |
-| Q_s, dilute third | +1.2% ± 0.7% | −0.4% ± 0.8% |
-| Q_s, dense third | +0.5% ± 0.8% | −0.4% ± 0.4% |
-| dN/dy | +2.3% ± 1.3% | +2.3% ± 3.9% |
-| dE/dη | +5.4% ± 0.6% | +0.2% ± 1.6% |
+| Q_s, all | +0.9% ± 0.6% | −0.4% ± 0.2% |
+| Q_s, dilute third | +1.2% ± 0.7% | −0.4% ± 0.4% |
+| Q_s, dense third | +0.5% ± 0.8% | −0.3% ± 0.3% |
+| dN/dy | +2.6% ± 1.2% | +0.9% ± 1.8% |
+| dE/dη | +5.6% ± 0.6% | +0.2% ± 0.4% |
 
-- **Q_s and dN/dy:** within 1–2% of zero step at 0.005, as in the
-  constant-g²μ setup above.
+- **Q_s and dN/dy:** within about 1% (Q_s) and 3% (dN/dy) of zero step at
+  0.005, as in the constant-g²μ setup above.
+- **Seeds at 256²:** with four seeds, the error of dN/dy at 0.005 is 6%,
+  so its 3% check can fail by chance (+4.1% ± 6.4% in one such run); 16
+  seeds give 1.8%.
 - **dE/dη:** its step error grows on finer lattices. It sits in the hard
   tail of the evolved spectrum, which the coarse lattice cuts off (the same
   tail makes the energy converge slowly in the lattice spacing, see

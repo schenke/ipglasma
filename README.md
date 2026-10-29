@@ -145,7 +145,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
   - 1: Dynamically determined $b_\perp$ dependent $x$, see `xQsFactor`; the run stops with an error if $x$ does not converge in 1000 iterations in a cell
   - 0: Fixed $x$, `projectileX` and `targetX`
 - **rapidity**: rapidity $y$ at which the gluon and hadron spectra are computed (`computeGluonMultiplicity`, `writeHadronSpectrum`). It does not set the $x$ of the nuclei, except with `useFluctuatingX 1` (see `xQsFactor`)
-- **xQsFactor** (only used with `useFluctuatingX 1`): the factor $\beta$ in $x = \beta Q_s e^{\pm y}/\sqrt{s}$ ($+$ for the projectile, $-$ for the target), with $y$ = `rapidity`. $x$ and the local $Q_s$ are solved for self-consistently in every cell; for $x > 0.01$ the table's $Q_s^2$ at $y = 0$ is extrapolated with the factor $[(1-x)/0.99]^{5.6} (0.01/x)^{0.2}$
+- **xQsFactor** (only used with `useFluctuatingX 1`): the factor $\beta$ in $x = \beta Q_s e^{\pm y}/\sqrt{s}$ ($+$ for the projectile, $-$ for the target), with $y$ = `rapidity`. $x$ and the local $Q_s$ are solved for self-consistently in every cell; for $x > 0.01$ the table's $Q_s^2$ at $y = 0$ is extrapolated with the factor $[(1-x)/0.99]^{5.6} (0.01/x)^{0.2}$, and a cell with $x \geq 1$ gets no color charge
 - **usePseudoRapidity**: `1`: `rapidity` is a pseudorapidity $\eta$, and the gluon multiplicity and hadron spectrum are given per unit $\eta$ instead of $y$, with the Jacobian for a particle of mass `jacobianMass` and transverse momentum $P = 0.13 + 0.32 (\sqrt{s}/\mathrm{TeV})^{0.115}$ GeV. With `useFluctuatingX 1`, $\eta$ is converted to $y$ with the same mass and momentum for the fluctuating $x$
 - **jacobianMass** (only used with `usePseudoRapidity 1`): mass in GeV in the rapidity-pseudorapidity Jacobian
 
@@ -166,7 +166,7 @@ With `runEvolution 1` and `useNucleus 1`, the collision is drawn before the Wils
 - **nucleonPositionsFromFile**: `1` takes each nucleus' nucleon positions from a randomly chosen configuration in the files in `nuclearConfigurationsPath` (see `lightNucleusOption`) and assigns the protons randomly; species without a file are sampled as with `0`. `0` samples them: a proton is a single nucleon, a deuteron's neutron-proton separation $r$ is drawn in 3D from the Hulthén wave function $\psi(r) \propto (e^{-ar} - e^{-br})/r$ ($a$ = 0.228 fm⁻¹, $b$ = 1.18 fm⁻¹), in a random direction, with the nucleons at $\pm r/2$, and heavier nuclei from the density profile of their species (see [Nuclear density profiles](#nuclear-density-profiles))
 - **nuclearConfigurationsPath** (optional, default `./nucleusConfigurations`, only used with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): directory of the configuration files; running `download_nucleusTables.sh` inside `nucleusConfigurations/` downloads them there
 - **lightNucleusOption** (only used with `useNucleus 1`, `readInitialWilsonLines 0`, and `nucleonPositionsFromFile 1` or a nonzero polarization): which configuration file `nucleonPositionsFromFile 1` uses. The file is chosen by the mass number $A$:
-  - $A = 3$: `0` ³He, `1` triton
+  - $A = 3$: `0` ³He, `1` triton (with one proton)
   - $A = 12$ (C): `0` variational Monte Carlo (VMC), `1` alpha clusters
   - $A = 16$ (O): `0` VMC, `1` alpha clusters, `2`/`3` clustered/uniform PGCM, `4`/`5` NLEFT with positive/negative weights
   - $A = 20$ (Ne): `0` or `2` clustered PGCM, `3` uniform PGCM, `4`/`5` NLEFT with positive/negative weights

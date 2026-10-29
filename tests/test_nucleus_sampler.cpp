@@ -510,6 +510,11 @@ TEST_CASE(
         CAPTURE(option);
         CHECK(lightNucleusOptionError(nucleusA, option).empty());
     }
+    // the triton file has one proton, the other files that of the species
+    CHECK(configurationProtonNumber(3, 1, 2) == 1);
+    CHECK(configurationProtonNumber(3, 0, 2) == 2);
+    CHECK(configurationProtonNumber(16, 1, 8) == 8);
+    CHECK(configurationProtonNumber(208, 1, 82) == 82);
     // options without a file are rejected
     CHECK(configurationFileName(40, 5).empty());
     CHECK(configurationFileName(20, 1).empty());

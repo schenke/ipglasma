@@ -94,6 +94,18 @@ std::string configurationFileName(int nucleusA, int lightNucleusOption);
 std::string lightNucleusOptionError(int nucleusA, int lightNucleusOption);
 
 /**
+ * The number of protons of the nucleons read from a configuration file
+ * (`nucleonPositionsFromFile 1`): that of the species, except for the
+ * triton file, which the species He3 (\f$A\f$ = 3) reads with
+ * `lightNucleusOption 1` and which has one proton.
+ * \param[in] nucleusA Mass number.
+ * \param[in] lightNucleusOption The input `lightNucleusOption`.
+ * \param[in] Z Proton number of the species.
+ * \return The proton number of the configurations.
+ */
+int configurationProtonNumber(int nucleusA, int lightNucleusOption, int Z);
+
+/**
  * Samples the nucleon positions of the projectile and the target: from
  * the (possibly deformed) density profile of each species, or by drawing
  * one of the

@@ -5,6 +5,7 @@
 #ifndef SRC_INIT_H_
 #define SRC_INIT_H_
 
+#include <cmath>
 #include <memory>
 #include <string>
 #include <vector>
@@ -105,6 +106,22 @@ class Init {
         long long colorChargeSeed, int eventId) {
         return static_cast<unsigned long long>(colorChargeSeed)
                + (static_cast<unsigned long long>(eventId) << 32);
+    }
+
+    /**
+     * The extrapolation of \f$Q_s^2\f$ from \f$x = 0.01\f$, the largest
+     * \f$x\f$ of the table, to larger \f$x\f$ with `useFluctuatingX 1`:
+     * \f$Q_s^2(x) = Q_s^2(0.01)\, f(x)\f$ with
+     * \f$f(x) = [(1-x)/(1-0.01)]^{5.6}\, (0.01/x)^{0.2}\f$, the large-\f$x\f$
+     * behavior of the IP-Sat gluon distribution (\cite Rezaeian:2012ji
+     * Eq. (17)).
+     * \param[in] x Bjorken \f$x\f$, positive.
+     * \return \f$f(x)\f$; 0 for \f$x \geq 1\f$, where there are no
+     * gluons (and \f$(1-x)^{5.6}\f$ would be NaN).
+     */
+    static double largeXQs2Factor(double x) {
+        if (x >= 1.) return 0.;
+        return std::pow((1. - x) / (1. - 0.01), 5.6) * std::pow(0.01 / x, 0.2);
     }
 
     /**

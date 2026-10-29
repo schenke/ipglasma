@@ -30,7 +30,7 @@ void Init::sampleTA(Parameters *param, Random *random, Glauber *glauber) {
 
 double Init::computeFluctuatingXG2mu2(
     Parameters *param, double a, double rapidity, double Tp, double qsmuRatio,
-    double ySign, bool &converged) {
+    double ySign) {
     // Q_s as a function of \sum T_p and y
     double Qs = 1.;
     double xVal = 0.;
@@ -48,8 +48,9 @@ double Init::computeFluctuatingXG2mu2(
         } else {
             xVal = Qs * param->colorCharge.xQsFactor / param->collision.sqrtS
                    * exp(ySign * yIn);
-            // no color charge at x = 0 (Q_s = 0) or x >= 1 (no gluons);
-            // two square roots, as before, keep x < 1 bitwise the same
+            // Q_s = 0 at x = 0 and at x >= 1 (no gluons) ends the
+            // iteration (x >= 1 is solved by bisection below); two square
+            // roots, as before, keep x < 1 bitwise the same
             aboveOne = aboveOne || xVal >= 1.;
             if (xVal == 0)
                 Qs = 0.;
@@ -75,18 +76,21 @@ double Init::computeFluctuatingXG2mu2(
                        / param->collision.sqrtS * exp(ySign * yIn)));
         }
     }
-    converged = std::abs(Ydeviation) <= 0.001;
-    if (!converged || aboveOne) {
-        // the iteration jumped to x >= 1 (from the Q_s of a smaller x), or
+    // at a negative rapidity, the first step takes Q_s at the x of the
+    // start Q_s = 1 GeV, not at x = 0.01 e^{-localrapidity}, so a deviation
+    // below 0.001 after it does not mean that x is self-consistent
+    const bool stoppedAtFirstStep = rapidity < 0 && iterations == 1 && Qs > 0;
+    if (std::abs(Ydeviation) > 0.001 || aboveOne || stoppedAtFirstStep) {
+        // the iteration jumped to x >= 1 (from the Q_s of a smaller x),
         // oscillates (for roots above x of about 0.24, where the slope of
-        // the map is below -1): find the root by bisection instead; the
-        // cells where the iteration converges are unchanged
+        // the map is below -1), or stopped after its first step at a
+        // negative rapidity: find the root by bisection instead; the cells
+        // where the iteration converges are unchanged
         Qs = solveFluctuatingXQs(
             Tp, param->colorCharge.xQsFactor / param->collision.sqrtS
                     * exp(ySign * yIn));
         g2mu2 = Qs * Qs / qsmuRatio / qsmuRatio * a * a / hbarc / hbarc
                 / param->coupling.g / param->coupling.g;
-        converged = true;
     }
     if (g2mu2 != g2mu2) {
         g2mu2 = 0.;
@@ -123,19 +127,17 @@ double Init::solveFluctuatingXQs(double Tp, double scale) const {
     return fluctuatingXQs(Tp, std::exp(0.5 * (lower + upper)));
 }
 
-bool Init::computeCellColorCharge(
+void Init::computeCellColorCharge(
     // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
     // Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
     Lattice *lat, Parameters *param, int ipos, double a, double rapidity) {
     if (param->colorCharge.useFluctuatingX) {  // Local Qs dependent x
-        bool convergedA = false, convergedB = false;
         lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(
             param, a, rapidity, lat->cells[ipos]->getTpA(),
-            param->colorCharge.QsMuRatio, 1., convergedA));
+            param->colorCharge.QsMuRatio, 1.));
         lat->cells[ipos]->setg2mu2B(computeFluctuatingXG2mu2(
             param, a, rapidity, lat->cells[ipos]->getTpB(),
-            param->colorCharge.QsMuRatio, -1., convergedB));
-        return convergedA && convergedB;
+            param->colorCharge.QsMuRatio, -1.));
     } else {  // Fixed x: jimwlkInitialX with JIMWLK, else projectileX/targetX
         // nucleus A
         lat->cells[ipos]->setg2mu2A(
@@ -154,7 +156,6 @@ bool Init::computeCellColorCharge(
             / param->colorCharge.QsMuRatio / param->colorCharge.QsMuRatio * a
             * a / hbarc / hbarc / param->coupling.g / param->coupling.g);
     }
-    return true;
 }
 
 void Init::readQsTable(const std::string &fileName) { qsTable_.read(fileName); }
@@ -207,20 +208,9 @@ void Init::setColorChargeDensity(
     }
 
     // get Q_s^2 (and from that g^2mu^2) for a given \sum T_p and Y
-    int notConverged = 0;
-#pragma omp parallel for reduction(+ : notConverged)
+#pragma omp parallel for
     for (int ipos = 0; ipos < N * N; ipos++) {
-        if (!computeCellColorCharge(lat, param, ipos, a, rapidity)) {
-            notConverged++;
-        }
-    }
-    if (notConverged > 0) {
-        messager_ << "[Init::setColorChargeDensity]: the fluctuating-x "
-                     "iteration (useFluctuatingX 1) did not converge in "
-                     "1000 steps in "
-                  << notConverged << " cells. Exiting.";
-        messager_.flush("error");
-        exit(1);
+        computeCellColorCharge(lat, param, ipos, a, rapidity);
     }
     messager_.info(
         "[Init::setColorChargeDensity]: Color charge densities for nucleus A "

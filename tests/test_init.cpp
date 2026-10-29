@@ -743,8 +743,8 @@ TEST_CASE(
         == doctest::Approx(std::pow(0.9 / 0.99, 5.6) * std::pow(0.1, 0.2)));
     CHECK(Init::largeXQs2Factor(0.5) < Init::largeXQs2Factor(0.1));
     CHECK(Init::largeXQs2Factor(0.999) > 0.);
-    // no gluons at x >= 1: zero, not NaN, so that the cell gets no color
-    // charge and the fluctuating-x iteration ends there
+    // no gluons at x >= 1: zero, not NaN, so that the fluctuating-x
+    // iteration ends there (and the bisection finds the root below x = 1)
     CHECK(Init::largeXQs2Factor(1.) == 0.);
     CHECK(Init::largeXQs2Factor(1.5) == 0.);
     CHECK(Init::largeXQs2Factor(40.) == 0.);
@@ -752,8 +752,8 @@ TEST_CASE(
 
 TEST_CASE(
     "Init::computeCellColorCharge with useFluctuatingX 1 finds the root "
-    "x = beta Q_s(x) e^{+-y}/sqrt(s) where the iteration jumps to x >= 1 "
-    "or oscillates") {
+    "x = beta Q_s(x) e^{+-y}/sqrt(s) where the iteration jumps to x >= 1, "
+    "oscillates or stops after its first step at a negative y") {
     const int N = 4;
     Parameters param;
     makeInitTestParam(param, N);  // a = 1 fm
@@ -778,7 +778,7 @@ TEST_CASE(
     // g^2 mu^2 = Qs^2 a^2 / hbarc^2 with QsMuRatio = g = 1 and a = 1 fm
     auto qsOf = [](double g2mu2) { return std::sqrt(g2mu2) * hbarc; };
 
-    REQUIRE(init.computeCellColorCharge(&lat, &param, pos, 1., 5.));
+    init.computeCellColorCharge(&lat, &param, pos, 1., 5.);
     const double qsForward = qsOf(lat.cells[pos]->getg2mu2A());
     REQUIRE(qsForward > 0.);
     // self-consistent: Q_s is that of x = Q_s e^5 / 200, below 1
@@ -788,11 +788,41 @@ TEST_CASE(
     CHECK(
         qsForward == doctest::Approx(init.fluctuatingXQs(T, x)).epsilon(1e-5));
     // the target at y = -5 has the same x and Q_s: the solve is symmetric
-    // under y -> -y with projectile and target exchanged
-    REQUIRE(init.computeCellColorCharge(&lat, &param, pos, 1., -5.));
+    // under y -> -y with projectile and target exchanged (from the start
+    // Q_s = 1 GeV, the iteration jumps to x >= 1 at its third step)
+    init.computeCellColorCharge(&lat, &param, pos, 1., -5.);
     CHECK(
         qsOf(lat.cells[pos]->getg2mu2B())
         == doctest::Approx(qsForward).epsilon(1e-5));
+
+    // a root at x = 0.249, where the slope of the map is just below -1:
+    // the iteration oscillates for 1000 steps without reaching x >= 1
+    const double tOscillating = 0.1;
+    lat.cells[pos]->setTpB(tOscillating);
+    init.computeCellColorCharge(&lat, &param, pos, 1., -4.75);
+    const double qsOscillating = qsOf(lat.cells[pos]->getg2mu2B());
+    const double xOscillating = qsOscillating * std::exp(4.75) / 200.;
+    CHECK(xOscillating == doctest::Approx(0.249).epsilon(1e-2));
+    CHECK(
+        qsOscillating
+        == doctest::Approx(init.fluctuatingXQs(tOscillating, xOscillating))
+               .epsilon(1e-5));
+
+    // at a negative y, the first step takes Q_s at the x of the start
+    // Q_s = 1 GeV: here that x is 0.01, and sqrt(s) = Q_s(0.01)/0.01 makes
+    // the deviation after the first step vanish, although Q_s(0.01) is
+    // not that of x = 0.01 Q_s(0.01)
+    lat.cells[pos]->setTpB(T);
+    param.collision.sqrtS = 100. * init.fluctuatingXQs(T, 0.01);
+    const double yFirstStep = -std::log(0.01 * param.collision.sqrtS);
+    REQUIRE(yFirstStep < 0.);
+    init.computeCellColorCharge(&lat, &param, pos, 1., yFirstStep);
+    const double qsFirstStep = qsOf(lat.cells[pos]->getg2mu2B());
+    const double xFirstStep =
+        qsFirstStep * std::exp(-yFirstStep) / param.collision.sqrtS;
+    CHECK(
+        qsFirstStep
+        == doctest::Approx(init.fluctuatingXQs(T, xFirstStep)).epsilon(1e-5));
 
     // a root below the smallest tabulated x takes Q_s there, and a cell
     // below the tabulated T_p has no charge

@@ -60,6 +60,11 @@ with the definitions he used (issue #148):
     S(r) = sum_x tr V^+(x) V(x + r) / N^2 of each configuration (his code
     takes 2|S|^2 - 1, twice that plus a constant, with the same maximum of
     k~^2 C(k~)), and Q_s from that maximum, averaged over the polar angle;
+  * Q_s as his scripts obtain it (lappi_procedure()): the spectra in the
+    bins of his code, the maximum of k~^2 C of each configuration from a
+    parabola around its largest bin, and their mean and its error over the
+    configurations (his error bars), for the factorized adjoint and the
+    fundamental spectrum;
   * the k = 0 mode of the kernel removed also for m > 0
     (removeZeroMode 1); the runs with m > 0 are made with and without it;
   * in coordinate space, C(r_s) = C(0) exp(-1/2), Q_s^2 = 2/r_s^2, with
@@ -68,15 +73,15 @@ with the definitions he used (issue #148):
     spectrum files (lappi_coordinate_profile()); that mode is negative, so
     its magnitude adds about 1.9 to C(r) at every r.
 It checks that, for m = 0 and for m > 0 with the zero mode removed, the
-factorized Q_s agrees with Fig. 4 within --lappi-tolerance (2%) at every
-Ny and the coordinate-space Q_s with Fig. 7 within --lappi-coord-tolerance
-(3%). It also reports the adjoint correlator as written in his paper,
+adjoint and the fundamental sqrt(C_A/C_F) Q~_s of his procedure agree with
+Fig. 4 within --lappi-n-sigma (3) combined errors at every Ny, and the
+coordinate-space Q_s with Fig. 7 within --lappi-coord-tolerance (3%). It
+also reports the adjoint correlator as written in his paper,
 < |tr V^+(x) V(x + r)|^2 > - 1, from the adjoint Wilson lines
 U_ab = 2 tr(t^a V^+ t^b V) with Fourier transforms like D, the coordinate
-space of the lattice correlators, the fundamental sqrt(C_A/C_F) Q~_s, and
-Q_s from Gaussian fits of the maximum (a parabola in ln k~^2 C over 2 to 6
-bins on either side, his method), with half their range as a measure of
-the dependence on the fit window.
+space of the lattice correlators, the maxima of the averaged spectra in
+bins of width 2 pi/L (peak_momentum()) and in his bins (kfit.pl), and the
+Gaussian fits of his scripts (runn.pl), which are not those of Fig. 4.
 
 The results go to <datadir>/dipole_summary.json (with --lappi,
 <datadir>/dipole_lappi_summary.json), the figures to <datadir>/dipole_*.pdf.
@@ -272,24 +277,74 @@ def peak_momentum(k, f):
     return float(-c[1] / (2. * c[0]))
 
 
-def peak_gaussian(k, f, half_widths=(2, 3, 4, 5, 6)):
-    """The k~ of the maximum of the binned k~^2 C from Gaussian fits, as in
-    arXiv:0711.3039: a parabola in ln f through the largest bin and n bins
-    on either side, for each n of half_widths; the mean and half the range
-    of the fitted maxima, the latter a measure of the dependence on the
-    fit range."""
-    ok = np.isfinite(f) & (f > 0.)
-    k, f = k[ok][1:], f[ok][1:]
-    i = int(np.argmax(f))
-    peaks = []
-    for n in half_widths:
-        s = slice(max(i - n, 0), i + n + 1)
-        c = np.polyfit(k[s], np.log(f[s]), 2)
-        if c[0] < 0.:
-            peaks.append(-c[1] / (2. * c[0]))
-    if not peaks:
-        return float("nan"), float("nan")
-    return float(np.mean(peaks)), float(0.5 * (max(peaks) - min(peaks)))
+def lappi_bins(kt, bins):
+    """The bins of the spectrum files of the code of arXiv:0711.3039
+    (#148): bins of width 2 sqrt(2)/bins in k~ a (N bins for the adjoint,
+    2N for the fundamental spectrum); the bin of each mode and the mean
+    k~ a of each bin, NaN for an empty bin."""
+    index = np.floor(kt / (2. * np.sqrt(2.) + 1e-4) * bins).astype(int)
+    return index, binned_mean(kt, index, bins)
+
+
+def binned_mean(values, index, bins):
+    """The mean of values over the modes of each bin; NaN for an empty
+    bin."""
+    count = np.bincount(index.ravel(), minlength=bins)
+    with np.errstate(invalid="ignore"):
+        return np.bincount(index.ravel(), values.ravel(),
+                           minlength=bins) / count
+
+
+def lappi_gaussian_fit(k, c, err, q, kmin, kmax, iterations=5):
+    """Q_s from the fit of ln C = const - k~^2 / Q_s^2 to the spectrum C
+    averaged over the configurations, weighted with its relative errors,
+    as runn.pl of arXiv:0711.3039 does (#148): over kmin < k~ < kmax, then
+    over 0.1 Q_s < k~ < 1.3 Q_s, iterations times in all; q is the start
+    value, kept while the fit has no maximum. Returns Q_s, its error and
+    the last upper limit of the fit."""
+    ok = np.isfinite(c) & (c > 0.) & (err > 0.)
+    k, c, err = k[ok], c[ok], err[ok]
+    for _ in range(iterations):
+        s = (k > kmin) & (k < kmax)
+        x, y, w = k[s] ** 2, np.log(c[s]), (c[s] / err[s]) ** 2
+        S, Sx, Sxx = w.sum(), (w * x).sum(), (w * x * x).sum()
+        delta = S * Sxx - Sx * Sx
+        b = (S * (w * x * y).sum() - Sx * (w * y).sum()) / delta
+        if b < 0.:
+            q = np.sqrt(-1. / b)
+        kmin, kmax = 0.1 * q, 1.3 * q
+    return float(q), float(-0.5 * np.sqrt(S / delta) * q / b), float(kmax)
+
+
+def lappi_peak_fit(k, f, err=None):
+    """The k~ of the maximum of f = k~^2 C from a parabola around its
+    largest bin, as arXiv:0711.3039 does (#148). With err (kfit.pl, for the
+    averaged spectrum), the fit is weighted with 1/err^2 and its window,
+    from 0.95 to 1.05 times the k~ of the largest bin, is widened by 5% on
+    either side until it holds at least 3 bins and either 10 bins or an
+    upper limit of 1.5 times that k~. Without err (kfitone.pl, for one
+    configuration), the weight is k~ and the window grows by 10% from that
+    k~ until it holds at least 4 bins and the same; the result is NaN if
+    the parabola has no maximum or it lies more than 50% away from the
+    largest bin."""
+    ok = np.isfinite(f) & (k > 0.)
+    k, f = k[ok], f[ok]
+    kpeak = k[int(np.argmax(f))]
+    if err is not None:
+        w, step, lower, upper, least = 1. / err[ok] ** 2, 0.05, 0.95, 1.05, 3
+    else:
+        w, step, lower, upper, least = k, 0.1, 1., 1., 4
+    lower, upper = lower * kpeak, upper * kpeak
+    while True:
+        lower, upper = lower * (1. - step), upper * (1. + step)
+        s = (k > lower) & (k < upper)
+        if s.sum() >= least and (s.sum() >= 10 or upper >= 1.5 * kpeak):
+            break
+    c = np.polyfit(k[s], f[s], 2, w=np.sqrt(w[s]))
+    peak = -c[1] / (2. * c[0])
+    if err is None and not (c[0] < 0. and abs(peak / kpeak - 1.) < 0.5):
+        return float("nan")
+    return float(peak)
 
 
 def lappi_coordinate_profile(k, count, spectrum, c0, n, r):
@@ -344,7 +399,9 @@ def run_tag(cfg, settings):
 
 def lappi_observables(V, kt, index):
     """The adjoint correlator of one configuration (profiles in r) and the
-    binned k~^2 C(k~) of the adjoint, factorized and fundamental ones."""
+    binned k~^2 C(k~) of the adjoint, factorized and fundamental ones;
+    also the fundamental C(k~) and the magnitude of the factorized one in
+    the bins of arXiv:0711.3039 (lappi_bins)."""
     out = {}
     cka = adjoint_spectrum(V)
     adj = profiles(np.fft.ifft2(cka).real)
@@ -361,6 +418,12 @@ def lappi_observables(V, kt, index):
     out["spec_adj"] = radial_spectrum(cka, kt, index)
     out["spec_fund"] = radial_spectrum(ckf, kt, index)
     out["spec_fact"] = radial_spectrum(ck_fact, kt, index)
+    # the spectrum files of that code: the mean of tr U(k) U^+(k) and of
+    # the magnitude of the transform of 2|S|^2 - 1 (twice that of
+    # |S|^2 - 1 for k != 0) over each bin
+    n = V.shape[0]
+    out["lappi_fund"] = binned_mean(ckf, lappi_bins(kt, 2 * n)[0], 2 * n)
+    out["lappi_fact"] = binned_mean(np.abs(ck_fact), lappi_bins(kt, n)[0], n)
     return out
 
 
@@ -373,7 +436,7 @@ def run_one(cfg, settings):
     if os.path.exists(cache):
         with np.load(cache) as data:
             cached = {k: data[k] for k in data.files}
-        if not settings["lappi"] or "fact_axis0" in cached:
+        if not settings["lappi"] or "lappi_fact0" in cached:
             return cfg, cached, None
     if settings["analyze_only"]:
         return cfg, None, "no cached result (--analyze-only)"
@@ -403,6 +466,8 @@ def run_one(cfg, settings):
     if settings["lappi"]:
         kt, index, kmean = momentum_bins(settings["size"])
         out["k_bins"] = kmean
+        out["k_lappi_fund"] = lappi_bins(kt, 2 * settings["size"])[1]
+        out["k_lappi_fact"] = lappi_bins(kt, settings["size"])[1]
     for i, path in enumerate(files):
         V, meta = read_wilson_lines(path)
         prof = profiles(dipole_correlator(V))
@@ -556,11 +621,58 @@ def jackknife(samples, estimate):
     return float(value), float(np.sqrt((n - 1) * np.var(partial)))
 
 
+def lappi_procedure(outs, g2mu_lat, m_lat):
+    """Q_s / g^2 mu as the scripts of arXiv:0711.3039 obtain it (#148),
+    from the spectra in its bins (lappi_observables), averaged over the
+    configurations, with errors sqrt(var / n) in each bin:
+      * runn.pl: Gaussian fits (lappi_gaussian_fit), first of the
+        fundamental spectrum, from 0.1 m to 0.65 g^2 mu with the start value
+        0.5 g^2 mu, then of the factorized adjoint one, from 0.05 / a to
+        the last upper limit of the fundamental fit; the fundamental Q~_s
+        multiplied by sqrt(C_A / C_F);
+      * kfit.pl: the maximum of k~^2 C of the averaged spectra
+        (lappi_peak_fit with errors);
+      * kfitone.pl: the mean of the maxima of k~^2 C of the single
+        configurations (lappi_peak_fit without errors) that do not fail,
+        with the error sqrt(var / n)."""
+    row = {}
+    spectra = {}
+    for name in ("fund", "fact"):
+        k = outs[0][f"k_lappi_{name}"]
+        c = np.array([out[f"lappi_{name}{i}"] for out in outs
+                      for i in (0, 1)])
+        spectra[name] = (k, c.mean(axis=0), c.std(axis=0) / np.sqrt(len(c)),
+                         c)
+    k, c, err, _ = spectra["fund"]
+    q, dq, kmax = lappi_gaussian_fit(k, c, err, 0.5 * g2mu_lat,
+                                     0.1 * m_lat, 0.65 * g2mu_lat)
+    scale = np.sqrt(CA / CF) / g2mu_lat
+    row["Qs_runn_fund_scaled"] = q * scale
+    row["Qs_runn_fund_scaled_error"] = dq * scale
+    k, c, err, _ = spectra["fact"]
+    q, dq, _ = lappi_gaussian_fit(k, c, err, q, 0.05, kmax)
+    row["Qs_runn"], row["Qs_runn_error"] = q / g2mu_lat, dq / g2mu_lat
+    for name, suffix, factor in (("fact", "", 1.),
+                                 ("fund", "_fund_scaled", np.sqrt(CA / CF))):
+        k, c, err, single = spectra[name]
+        scale = factor / g2mu_lat
+        row[f"Qs_kfit{suffix}"] = scale * lappi_peak_fit(k, k ** 2 * c,
+                                                         k ** 2 * err)
+        peaks = np.array([lappi_peak_fit(k, k ** 2 * f) for f in single])
+        peaks = scale * peaks[np.isfinite(peaks)]
+        row[f"Qs_kfitone{suffix}"] = float(peaks.mean())
+        row[f"Qs_kfitone{suffix}_error"] = float(peaks.std()
+                                                 / np.sqrt(len(peaks)))
+        row[f"kfitone{suffix}_rejected"] = int(len(single) - len(peaks))
+    return row
+
+
 def analyze_lappi(key, runs, settings):
     """Q_s / g^2 mu of the Lappi setup for one m (and removeZeroMode), for
     each Ny."""
     g2mu, m, uv, removed = key
     g2mu_lat = g2mu * settings["L"] / settings["size"] / HBARC
+    m_lat = m * settings["L"] / settings["size"] / HBARC
     m_rel = round(m / g2mu, 6)
     r = np.arange(settings["size"] // 2 + 1)
     count = np.bincount(settings["bin_index"].ravel()).astype(float)
@@ -603,13 +715,7 @@ def analyze_lappi(key, runs, settings):
                    for out in outs for i in (0, 1)]
         row["Qs_coord_lappi"], row["Qs_coord_lappi_error"] = jackknife(
             samples, coordinate_lappi)
-        # the Gaussian fits of Lappi, with the dependence on the fit range
-        spectra = np.array(collect("spec_fact"))
-        q, spread = peak_gaussian(k, spectra.mean(axis=0))
-        row["Qs_fact_gauss"] = q / g2mu_lat
-        row["Qs_fact_gauss_range"] = spread / g2mu_lat
-        row["Qs_fact_gauss_error"] = jackknife(
-            spectra, lambda f: peak_gaussian(k, f)[0] / g2mu_lat)[1]
+        row.update(lappi_procedure(outs, g2mu_lat, m_lat))
         for name, table in (("adj", LAPPI_FIG4_ADJ),
                             ("fund", LAPPI_FIG4_FUND)):
             if ny in table.get(m_rel, {}):
@@ -672,8 +778,8 @@ def plot_lappi(groups, path):
         ny = np.array([row["ny"] for row in rows])
         for name, fmt, label in (
                 ("Qs_adj", "o-", r"adjoint, $\langle|\mathrm{tr}|^2\rangle-1$"),
-                ("Qs_fact", "s-", r"factorized, $|S|^2-1$"),
-                ("Qs_fund_scaled", "^-",
+                ("Qs_kfitone", "s-", r"factorized, $|S|^2-1$"),
+                ("Qs_kfitone_fund_scaled", "^-",
                  r"fundamental $\times\sqrt{C_A/C_F}$"),
                 ("Qs_coord_lappi", "v-",
                  "coordinate space, momentum integral of $|S|^2-1$")):
@@ -785,10 +891,12 @@ def main_lappi(args, settings):
                   f"{lappi('lappi_adj')}   {entry('Qs_fund_scaled')}   "
                   f"{lappi('lappi_fund')}    {entry('Qs_coord_adj')}  "
                   f"{coord:>12}")
-    print("\nWith the definitions of arXiv:0711.3039 (#148): the factorized "
-          "Q_s (Gaussian fits, their\nmean and half the range over the fit "
-          "windows), and the coordinate space from the\n2D momentum "
-          "integral of the binned spectrum:")
+    print("\nWith the procedure of arXiv:0711.3039 (#148): the mean of the "
+          "maxima of the single\nconfigurations in his bins, adjoint "
+          "(factorized) and sqrt(CA/CF) fundamental, with\ntheir deviation "
+          "from Fig. 4 in combined errors; the Gaussian fits of his "
+          "runn.pl;\nthe coordinate space from the 2D momentum integral of "
+          "the binned spectrum:")
     checks, deviations = {}, {}
     for group in summary["groups"]:
         lappi_like = (group["m_over_g2mu"] == 0.
@@ -798,38 +906,51 @@ def main_lappi(args, settings):
             ", zero mode removed" if group["remove_zero_mode"]
             else ", zero mode kept")
         print(f" {label}")
+        pulls = {"adj": [], "fund": []}
         for row in group["rows"]:
+            line = f"  {row['ny']:4d}"
+            for name, ours in (("adj", "Qs_kfitone"),
+                               ("fund", "Qs_kfitone_fund_scaled")):
+                line += f"  {name} {row[ours]:.4f}({row[ours + '_error']:.4f})"
+                if f"lappi_{name}" in row:
+                    value, error = row[f"lappi_{name}"]
+                    pull = (row[ours] - value) / np.hypot(
+                        row[ours + "_error"], error)
+                    row[f"pull_{name}"] = float(pull)
+                    pulls[name].append(abs(pull))
+                    line += f" {pull:+5.1f}"
+                else:
+                    line += "      "
             ref = (f"{row['lappi_coord']:.4f}" if "lappi_coord" in row
                    else "-")
-            print(f"  {row['ny']:4d}  factorized {row['Qs_fact']:.4f}, "
-                  f"Gaussian fits {row['Qs_fact_gauss']:.4f} +- "
-                  f"{row['Qs_fact_gauss_range']:.4f};  coordinate "
+            print(f"{line}  Gaussian fit {row['Qs_runn']:.4f};  coordinate "
                   f"{row['Qs_coord_lappi']:.4f}"
                   f"({row['Qs_coord_lappi_error']:.4f}), Fig. 7 {ref}")
         if not lappi_like:
             continue
         # the checks, where the definitions are those of arXiv:0711.3039
-        momentum = [abs(row["Qs_fact"] / row["lappi_adj"][0] - 1.)
-                    for row in group["rows"] if "lappi_adj" in row]
         coordinate = [abs(row["Qs_coord_lappi"] / row["lappi_coord"] - 1.)
                       for row in group["rows"] if "lappi_coord" in row]
-        if momentum:
-            name = (f"{label}: the factorized Q_s is within "
-                    f"{args.lappi_tolerance:g} of Fig. 4 at every Ny")
-            checks[name] = bool(max(momentum) < args.lappi_tolerance)
-            deviations[name] = float(max(momentum))
+        for name, text in (("adj", "adjoint"), ("fund", "fundamental")):
+            if pulls[name]:
+                check = (f"{label}: the {text} Q_s is within "
+                         f"{args.lappi_n_sigma:g} errors of Fig. 4 at every "
+                         f"Ny")
+                checks[check] = bool(max(pulls[name]) < args.lappi_n_sigma)
+                deviations[check] = f"{max(pulls[name]):.2f} errors"
         if coordinate:
-            name = (f"{label}: the coordinate-space Q_s is within "
-                    f"{args.lappi_coord_tolerance:g} of Fig. 7")
-            checks[name] = bool(max(coordinate) < args.lappi_coord_tolerance)
-            deviations[name] = float(max(coordinate))
+            check = (f"{label}: the coordinate-space Q_s is within "
+                     f"{args.lappi_coord_tolerance:g} of Fig. 7")
+            checks[check] = bool(max(coordinate)
+                                 < args.lappi_coord_tolerance)
+            deviations[check] = f"{max(coordinate):.4f}"
     summary["checks"] = checks
     summary["largest_deviations"] = deviations
     summary["passed"] = bool(all(checks.values()) and not failures)
     print()
     for name, ok in checks.items():
         print(f"{'OK  ' if ok else 'FAIL'} {name} (largest deviation "
-              f"{deviations[name]:.4f})")
+              f"{deviations[name]})")
     plot_lappi(summary["groups"],
                os.path.join(settings["datadir"], "dipole_lappi.pdf"))
     path = os.path.join(settings["datadir"], "dipole_lappi_summary.json")
@@ -882,10 +1003,10 @@ def main():
                         help="the setup of arXiv:0711.3039 instead of the "
                              "scan: size 200, g2mu 1, g2mu L = 100, m = 0 "
                              "and 0.1 g2mu, Ny 1..150, 32 seeds")
-    parser.add_argument("--lappi-tolerance", type=float, default=0.02,
-                        help="with --lappi: the largest relative deviation "
-                             "of the factorized Q_s from Fig. 4 of "
-                             "arXiv:0711.3039")
+    parser.add_argument("--lappi-n-sigma", type=float, default=3.,
+                        help="with --lappi: the largest deviation of Q_s "
+                             "from Fig. 4 of arXiv:0711.3039, in combined "
+                             "errors")
     parser.add_argument("--lappi-coord-tolerance", type=float, default=0.03,
                         help="with --lappi: the same for the "
                              "coordinate-space Q_s and its Fig. 7")

@@ -362,7 +362,10 @@ from the example `input` (`--template`). The results go to
 `<datadir>/symmetries_summary.json` (default `./symmetries_output`). At
 128², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 1.4% of the
 T^μν points differ and the observables by less than 0.1%; in (b) 6% and
-0.3%.
+0.3%. In the setup of the paper (256², L = 30 fm, 15 s), T^μν and the
+observables of (0) are bit-identical (the gluon spectrum to 7·10⁻¹¹); (a)
+holds everywhere, T^μν to 2·10⁻¹¹; in (b) 1.2% of the T^μν points differ
+and the observables by at most 0.13%.
 
 ### Dilute limit
 
@@ -552,7 +555,7 @@ and `m` of the input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512):
 | size | 32 | 64 | 128 | 256 | 512 |
 |---|---|---|---|---|---|
 | g²μ a | 2.38 | 1.19 | 0.59 | 0.30 | 0.15 |
-| dN/dy | 3616 | 4687 | 5061 | 5260 | 5133 |
+| dN/dy | 3687 | 4744 | 5154 | 5381 | 5312 |
 | dE/dη (0.4 fm) [GeV] | 12147 | 22022 | 28936 | 33240 | 34810 |
 
 dN/dy is within about 4% of its limit for g²μ a ≲ 0.6, while dE/dη still
@@ -579,18 +582,22 @@ it under `not_converged` in the summary. With the defaults (25 minutes with
 | size | 96 | 192 | 384 | 768 | 1024 | 1280 |
 |---|---|---|---|---|---|---|
 | a [fm] | 0.234 | 0.117 | 0.059 | 0.029 | 0.022 | 0.018 |
-| dN/dy | 8195 | 14375 | 18994 | 21418 | 21766 | 21931 |
+| dN/dy | 8151 | 14170 | 18836 | 21289 | 21713 | 22046 |
 | dE/dη (0.4 fm) [GeV] | 9062 | 28602 | 51825 | 68667 | 72709 | 75766 |
 
-dN/dy changes by +0.8% ± 2.0% in the last step, ε₂ and ε₃ by less than
+dN/dy changes by +1.5% ± 2.1% in the last step, ε₂ and ε₃ by less than
 their errors, so they converge. dE/dη still grows by 4.2% ± 1.2%, and the
 linear extrapolation puts its value at a = 0 about 16% above the finest
 lattice (5% for the constant g²μ): converging the energy to the percent
 level would need lattice spacings far below 0.018 fm, so its dependence on
 a has to be quoted as a systematic uncertainty. The `Ny` scan (at 768²)
-converges for dN/dy by `Ny` ≈ 25–50 (21418 for `Ny 50`, 21174 for
-`Ny 100`); the `m` scan changes dN/dy from 28825 (`m 0.1`) to 15675
-(`m 0.8`) at fixed `QsMuRatio`, which changes the physical Q_s.
+converges for dN/dy by `Ny` ≈ 25–50 (21289 for `Ny 50`, 20912 for
+`Ny 100`); the `m` scan changes dN/dy from 28196 (`m 0.1`) to 15782
+(`m 0.8`) at fixed `QsMuRatio`, which changes the physical Q_s. dN/dy is
+the projection onto the free Bjorken modes (`gluonSpectrumEstimator 1`,
+the default); 2|E|²/ω (`0`) gives, on the same events at 0.4 fm, between
+0.5% less and 1.4% more in the size scan and 1–3.4% less for the constant
+g²μ.
 
 ```bash
 cd numerical_parameters
@@ -636,11 +643,18 @@ estimates agree on the two finest lattices, which puts the deficit at about
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.
 
-In the discussion of #134 (τ = 0.5 fm, 2 seeds, N = 768 to 1536):
-- **With JIMWLK:** dN/dy converges (+1.4% in the last step). dE/dη grows by
-  about 12% per step, because the evolution hardens the tail to p ≈ 1.3.
+With the commands below (two seeds, N = 768 to 1536, 26 and 7 minutes with
+2 workers of 12 threads):
+- **With JIMWLK:** dN/dy converges (+2.1% ± 3.1% in the last step). dE/dη
+  grows by about 12% per step (+11.8% ± 3.1% in the last), because the
+  evolution hardens the tail to p ≈ 1.4.
 - **At x = 0.01 without JIMWLK:** p ≈ 0.3, and dE/dη is converged within
-  about 1% from N = 1024 on.
+  about 1% from N = 1024 on (+1.0% ± 2.7% in the last step). In this dilute
+  event, dN/dy differs by up to 18% between the two seeds of one lattice
+  (5222 to 6512 over all eight runs), so two seeds do not resolve its
+  dependence on a: the script flags its last step, +12% ± 2%, as not
+  converged.
+- **ε₂ and ε₃** need more than two seeds in both variants.
 
 ```bash
 # the size scan with JIMWLK, and the Wilson lines at x = 0.01 without it
@@ -698,31 +712,39 @@ checked.
 cd constant_glasma
 # quick test: g²μL = 36 on 128² and 256², four seeds (1 minute)
 python3 constant_glasma.py --ipglasma-path ../.. --quick --max-workers 4
-# the setup of the paper: g²μL = 72 and 120 on 128², 256² and 512²
-python3 constant_glasma.py --ipglasma-path ../.. --max-workers 4
+# the setup of the paper: g²μL = 72, 120 and 192 on 128², 256² and 512²,
+# 16 seeds (25 minutes with 6 workers of 4 threads)
+python3 constant_glasma.py --ipglasma-path ../.. --g2muL 72 120 192 \
+    --seeds 16 --threads 4 --max-workers 6
 ```
 
-With the defaults (four seeds, 9 minutes with 2 workers of 4 threads), all
-checks pass. f_E and f_N agree with Lappi's Table I on 512², and the plateau
-of f_E with the points of his Fig. 3 (read off the figure) on the coarser
-lattices:
+In the setup of the paper, all checks pass. f_E and f_N agree with Lappi's
+Table I on 512² (within 1.2 combined standard deviations at g²μL = 72 and
+120; at 192, f_E and f_N lie 1.9 and 1.8 standard deviations below), and
+the plateau of f_E with the points of his Fig. 3 (read off the figure) on
+the coarser lattices:
 
 | g²μL | N   | g²μa | f_E           | Lappi         | f_N           | Lappi         |
 |------|-----|------|---------------|---------------|---------------|---------------|
-| 72   | 128 | 0.56 | 0.246 ± 0.011 | ≈ 0.237       | 0.319 ± 0.013 |               |
-| 72   | 256 | 0.28 | 0.249 ± 0.008 | ≈ 0.265       | 0.298 ± 0.011 |               |
-| 72   | 512 | 0.14 | 0.264 ± 0.010 | 0.265 ± 0.005 | 0.305 ± 0.014 | 0.297 ± 0.006 |
-| 120  | 128 | 0.94 | 0.199 ± 0.008 | ≈ 0.193       | 0.297 ± 0.008 |               |
-| 120  | 256 | 0.47 | 0.217 ± 0.008 | ≈ 0.217       | 0.297 ± 0.009 |               |
-| 120  | 512 | 0.23 | 0.231 ± 0.006 | 0.227 ± 0.003 | 0.300 ± 0.008 | 0.289 ± 0.003 |
+| 72   | 128 | 0.56 | 0.235 ± 0.004 | ≈ 0.237       | 0.302 ± 0.005 |               |
+| 72   | 256 | 0.28 | 0.254 ± 0.004 | ≈ 0.265       | 0.303 ± 0.005 |               |
+| 72   | 512 | 0.14 | 0.264 ± 0.004 | 0.265 ± 0.005 | 0.303 ± 0.005 | 0.297 ± 0.006 |
+| 120  | 128 | 0.94 | 0.192 ± 0.003 | ≈ 0.193       | 0.288 ± 0.004 |               |
+| 120  | 256 | 0.47 | 0.220 ± 0.003 | ≈ 0.217       | 0.298 ± 0.004 |               |
+| 120  | 512 | 0.23 | 0.229 ± 0.003 | 0.227 ± 0.003 | 0.295 ± 0.004 | 0.289 ± 0.003 |
+| 192  | 128 | 1.50 | 0.173 ± 0.002 |               | 0.290 ± 0.003 |               |
+| 192  | 256 | 0.75 | 0.210 ± 0.003 |               | 0.316 ± 0.004 |               |
+| 192  | 512 | 0.38 | 0.227 ± 0.003 | 0.238 ± 0.005 | 0.316 ± 0.004 | 0.329 ± 0.006 |
 
-g²ε(0⁺)/(g²μ)⁴ grows from 0.62 to 0.81 and 1.06 (g²μL = 72) and from 0.41
-to 0.58 and 0.77 (g²μL = 120) as a is halved, while f_N hardly depends on
-the lattice spacing. P_L/ε is between −0.995 and −0.988 at the first time
-step and +0.015 to +0.025 at g²μτ = 20 (Lappi's Fig. 5 gives about +0.025),
-and f_E decreases by 2.5–2.7% between g²μτ = 10 and 20. The errors are
-those of the mean over four seeds; more seeds are needed to reach the
-precision of Lappi's errors.
+g²ε(0⁺)/(g²μ)⁴ grows from 0.59 to 0.82 and 1.07 (g²μL = 72), from 0.39
+to 0.59 and 0.77 (120) and from 0.27 to 0.49 and 0.67 (192) as a is
+halved, while f_N changes by less than 4% for g²μa < 1 and by less than
+1% for g²μa ≤ 0.75. P_L/ε is between
+−0.994 and −0.985 at the first time step and +0.016 to +0.027 at
+g²μτ = 20 (Lappi's Fig. 5 gives about +0.025), and f_E decreases by
+2.4–2.9% between g²μτ = 10 and 20. The errors are those of the mean over
+the 16 seeds, comparable to Lappi's. The defaults of the script (g²μL = 72
+and 120, four seeds) take 9 minutes with 2 workers of 4 threads.
 
 On a lattice with clamped boundaries, as `useNucleus 0` had before #139,
 the pure-gauge fields of the nuclei become physical fields along the
@@ -767,7 +789,7 @@ above 1.
 cd performance
 # quick test: N = 64 and 128, 1 and 2 threads, one repeat (20 s)
 python3 performance.py --ipglasma-path ../.. --quick
-# the setup of the paper (about 1.5 hours)
+# the setup of the paper (33 minutes)
 python3 performance.py --ipglasma-path ../..
 ```
 
@@ -878,8 +900,8 @@ README there for how they were extracted):
 cd jimwlk_step_size
 # quick test: 256², to y = 4, jimwlkDs 0.002, 0.001, 0.0005 (4 minutes)
 python3 lappi_mantysaari.py --ipglasma-path ../.. --quick --max-workers 3
-# the setup of the paper (several hours)
-python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 4 --max-workers 6
+# the setup of the paper (3.6 hours with 4 workers of 6 threads)
+python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 --max-workers 4
 ```
 
 With the defaults, the step is again of first order, but its error per unit
@@ -887,17 +909,17 @@ of step and of rapidity is about 30 times larger than above:
 
 | Q_s/Λ_QCD at y = 8 | |
 |---|---|
-| `jimwlkDs 0.001` | 33.2 |
-| `jimwlkDs 0.0005` | 30.1 |
+| `jimwlkDs 0.001` | 33.1 |
+| `jimwlkDs 0.0005` | 30.2 |
 | `jimwlkDs 0.00025` | 28.7 |
 | zero step | 27.3 |
 | BK | 30.2 |
 | Fig. 6 of the paper | 28.5 |
 
-- **The paper matches a step of about 0.00025:** Q_s within 0.5% of its
+- **The paper matches a step of about 0.00025:** Q_s within 0.6% of its
   Fig. 6 at y = 4 and 8, and λ along its Fig. 8.
-- **BK** reproduces λ of Fig. 11 within 0.5%.
-- **At zero step,** λ of JIMWLK is 4–9% below BK for Q_s/Λ_QCD = 10–25, so
+- **BK** reproduces λ of Fig. 11 within 0.6%.
+- **At zero step,** λ of JIMWLK is 3–8% below BK for Q_s/Λ_QCD = 10–25, so
   JIMWLK is slower than BK, as in the paper (where the difference is about
   5% in Q_s at y = 7.8, here 9%).
 

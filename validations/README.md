@@ -139,8 +139,10 @@ Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 `eccentricity_results.json` (or, with `--save-reference`, an updated
 `eccentricity_reference.json` next to the script) recording the ε₂ values and
 the seed of each, the seeds, the version of IP-Glasma that ran the events
-(from their `usedParameters*.dat`, else `ipglasma --version`) and the exact
-command used to reproduce the run.
+(from their `usedParameters*.dat`, else `ipglasma --version`), the settings
+(lattice size, L, maxTime, JIMWLK) and the exact command used to reproduce
+the run, and `eccentricity_check.json` with the settings of the script, the
+checks and `passed`, as the summaries of the other validations.
 
 The check: the mean and the width of the ε₂ distribution must agree with the
 reference within `--n-sigma` combined errors, from a bootstrap of the run and
@@ -152,7 +154,8 @@ a comparable number of events. The seeds of the run must not overlap those
 of the reference: with
 the same code, the same seeds give the same events, so the check would not be
 independent. A reference saved before the seeds were recorded used the seeds
-from 0, one per event. The script exits non-zero if a check fails.
+from 0, one per event. The script exits non-zero if a check fails, an event
+fails or no reference is found.
 
 ### Dipole correlator of the MV model
 

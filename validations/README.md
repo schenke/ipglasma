@@ -93,7 +93,7 @@ references are found next to the script):
 ```bash
 cd eccentricity_regression
 # One-time: record a baseline from a known-good build (the stored
-# reference has 4998 events of the seeds 0-4999)
+# reference has the 5000 events of the seeds 0-4999, devel 3ce5513)
 python3 parallel_test_eccentricity.py --input-template input_eccentricity \
     --ipglasma-path ../.. --maxevents 5000 --save-reference
 

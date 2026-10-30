@@ -1062,8 +1062,9 @@ Useful flags:
   at a time run with `OMP_PROC_BIND=false`, since binding would put them on
   the same cores. Each seed needs about 1 GB of memory while IP-Glasma runs.
 - `--plot-only` — skip the simulation and only regenerate the comparison
-  plot and the check from the spectra already in `--datadir`; the seeds are
-  taken from its `run_info.json`, or from `--first-seed`.
+  plot and the check from the spectra already in `--datadir`; the seeds and
+  the number of events are taken from its `run_info.json` (the seeds from
+  `--first-seed` if it is given).
 - `--keep-logs` — keep the per-seed working directories with their logs
   instead of deleting them (those of failed seeds are always kept).
 - `--first-seed S` — the events use the seeds S, S + 1, ..., two events
@@ -1092,9 +1093,11 @@ the incoherent one is its variance, so 200 events give errors of about 8%
 and 9%, and 1000 events about 4%. The seeds of the run must not overlap
 those of the reference (a reference without a `# seeds` line used the seeds
 from 0). A seed for which IP-Glasma or subnucleondiffraction fails gives no
-spectra (spectra of an earlier run in `--datadir` with its numbers are
-removed first) and is listed in `failed_seeds.txt`. The script exits
-non-zero if a check fails or a seed fails.
+spectra and is listed in `failed_seeds.txt`; its working directory stays,
+with the logs but without the Wilson-line files. The spectra `spectra_1` to
+`spectra_<maxevents>` and the results (cross sections, plots, check and
+`failed_seeds.txt`) of an earlier run in `--datadir` are removed when a run
+starts. The script exits non-zero if a check fails or a seed fails.
 
 ## Running on a computing cluster (SLURM)
 
@@ -1169,7 +1172,7 @@ Notes:
       --datadir /path/to/datadir --input-template input_eccentricity --slurm
   ```
 - Expect one `seed_<n>/` working directory per event under `--datadir` while
-  the job runs; both scripts clean these up at the end unless `--keep-logs`
-  is passed, so pass `--keep-logs` if you want to inspect individual events
-  afterwards (or need `--plot-only`/`--clean` to resume from an interrupted
-  job).
+  the job runs; both scripts remove those of the successful events at the
+  end unless `--keep-logs` is passed (those of failed events stay), so pass
+  `--keep-logs` if you want to inspect individual events afterwards (or
+  need `--plot-only`/`--clean` to resume from an interrupted job).

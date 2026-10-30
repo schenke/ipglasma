@@ -390,12 +390,6 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     id2 = 2 * seed + 2
     local1 = 2 * (seed - first_seed) + 1
     local2 = 2 * (seed - first_seed) + 2
-    # spectra of an earlier run in datadir must not stand in for these
-    # events if they fail
-    for local_id in (local1, local2):
-        stale = os.path.join(datadir, f"spectra_{local_id}")
-        if os.path.exists(stale):
-            os.remove(stale)
 
     temp_input_path = generate_temp_input(source_input_file=input_file_path, seed=seed, x_pom=xpom, working_dir=worker_dir, qs_table_path=qs_table_path)
 
@@ -404,73 +398,73 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     result = run_command([ipglasma_cmd, temp_input_path], cwd=worker_dir, stdout_path=log_path, stderr_path=log_path + ".err", slurm=slurm)
     print("Removing temp files", temp_input_path, flush=True)
     remove_temp_input(temp_input_path)
-    if result.returncode != 0:
-        raise RuntimeError(f"ipglasma exited with code {result.returncode} (see {log_path}.err)")
-    print("Done", seed, flush=True)
-
-    # Canonicalize Wilson line file names once and reuse paths throughout.
-    wilson_1 = ensure_wilson_line_file(worker_dir, xpom, id1)
-    wilson_2 = ensure_wilson_line_file(worker_dir, xpom, id2)
-
-    print(f"===== RUNNING SUBNUCLEONDIFFRACTION FOR EVENTS {id1} AND {id2} =====", flush=True)
-    spectra_1_path = os.path.join(worker_dir, f"spectra_{id1}")
-    spectra_2_path = os.path.join(worker_dir, f"spectra_{id2}")
-    for wilson, spectra_path in ((wilson_1, spectra_1_path), (wilson_2, spectra_2_path)):
-        result = run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson], cwd=worker_dir, stdout_path=spectra_path, stderr_path=spectra_path + ".err", slurm=slurm)
+    # the Wilson-line files of the events (about 38 MB each) are removed
+    # also if the seed fails: its directory is kept for the logs
+    wilson_1 = wilson_line_path(worker_dir, xpom, id1)
+    wilson_2 = wilson_line_path(worker_dir, xpom, id2)
+    try:
         if result.returncode != 0:
-            raise RuntimeError(f"subnucleondiffraction exited with code {result.returncode} (see {spectra_path}.err)")
+            raise RuntimeError(f"ipglasma exited with code {result.returncode} (see {log_path}.err)")
+        print("Done", seed, flush=True)
 
-    for file_id, local_id in ((id1, local1), (id2, local2)):
-        src = os.path.join(worker_dir, f"spectra_{file_id}")
-        dst = os.path.join(datadir, f"spectra_{local_id}")
-        if os.path.exists(src):
-            shutil.copy2(src, dst)
+        # Canonicalize Wilson line file names once and reuse paths throughout.
+        wilson_1 = ensure_wilson_line_file(worker_dir, xpom, id1)
+        wilson_2 = ensure_wilson_line_file(worker_dir, xpom, id2)
 
-    if local1 in plot_ids or local2 in plot_ids:
-        plot_id = local1 if local1 in plot_ids else local2
-        final_file = wilson_1 if plot_id == local1 else wilson_2
-        plot_path = os.path.join(datadir, f"output_{plot_id}.pdf")
-        tmp_output_path = os.path.join(worker_dir, f"tmp_output_{plot_id}")
-        run_command(
-            subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", final_file, "-print_nucleus", "-Q2", "0"],
-            cwd=worker_dir,
-            stdout_path=tmp_output_path,
-            stderr_path=tmp_output_path + ".err",
-            slurm=slurm,
-        )
-        try:
-            data = np.loadtxt(tmp_output_path)
-            x = data[:, 0]
-            y = data[:, 1]
-            z = data[:, 5]
+        print(f"===== RUNNING SUBNUCLEONDIFFRACTION FOR EVENTS {id1} AND {id2} =====", flush=True)
+        spectra_1_path = os.path.join(worker_dir, f"spectra_{id1}")
+        spectra_2_path = os.path.join(worker_dir, f"spectra_{id2}")
+        for wilson, spectra_path in ((wilson_1, spectra_1_path), (wilson_2, spectra_2_path)):
+            result = run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson], cwd=worker_dir, stdout_path=spectra_path, stderr_path=spectra_path + ".err", slurm=slurm)
+            if result.returncode != 0:
+                raise RuntimeError(f"subnucleondiffraction exited with code {result.returncode} (see {spectra_path}.err)")
 
-            plt.figure()
-            plt.scatter(x, y, c=z, cmap="viridis", s=6, marker="s")
-            plt.colorbar(label="col6")
-            plt.xlabel(r"$x$")
-            plt.ylabel(r"$y$")
-            plt.title(fr"{final_file} $\mathrm{{Tr}} V(x)/N_c$")
-            plt.tight_layout()
-            plt.savefig(plot_path)
-            plt.close()
-            print("Created plot of V(x) for event", plot_id, "filename:", plot_path, flush=True)
-        except Exception as exc:
-            print(f"Plotting failed for {final_file}: {exc}", flush=True)
-        if os.path.exists(tmp_output_path):
-            os.remove(tmp_output_path)
-        if os.path.exists(tmp_output_path + ".err"):
-            os.remove(tmp_output_path + ".err")
+        for file_id, local_id in ((id1, local1), (id2, local2)):
+            src = os.path.join(worker_dir, f"spectra_{file_id}")
+            dst = os.path.join(datadir, f"spectra_{local_id}")
+            if os.path.exists(src):
+                shutil.copy2(src, dst)
 
+        if local1 in plot_ids or local2 in plot_ids:
+            plot_id = local1 if local1 in plot_ids else local2
+            final_file = wilson_1 if plot_id == local1 else wilson_2
+            plot_path = os.path.join(datadir, f"output_{plot_id}.pdf")
+            tmp_output_path = os.path.join(worker_dir, f"tmp_output_{plot_id}")
+            run_command(
+                subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", final_file, "-print_nucleus", "-Q2", "0"],
+                cwd=worker_dir,
+                stdout_path=tmp_output_path,
+                stderr_path=tmp_output_path + ".err",
+                slurm=slurm,
+            )
+            try:
+                data = np.loadtxt(tmp_output_path)
+                x = data[:, 0]
+                y = data[:, 1]
+                z = data[:, 5]
 
-    print("Removing Wilson line files ", wilson_1, " and ", wilson_2, flush=True)
-    if os.path.exists(wilson_1):
-        os.remove(wilson_1)
-    else:
-        print(f"Warning: {wilson_1} does not exist.", flush=True)
-    if os.path.exists(wilson_2):
-        os.remove(wilson_2)
-    else:
-        print(f"Warning: {wilson_2} does not exist.", flush=True)
+                plt.figure()
+                plt.scatter(x, y, c=z, cmap="viridis", s=6, marker="s")
+                plt.colorbar(label="col6")
+                plt.xlabel(r"$x$")
+                plt.ylabel(r"$y$")
+                plt.title(fr"{final_file} $\mathrm{{Tr}} V(x)/N_c$")
+                plt.tight_layout()
+                plt.savefig(plot_path)
+                plt.close()
+                print("Created plot of V(x) for event", plot_id, "filename:", plot_path, flush=True)
+            except Exception as exc:
+                print(f"Plotting failed for {final_file}: {exc}", flush=True)
+            if os.path.exists(tmp_output_path):
+                os.remove(tmp_output_path)
+            if os.path.exists(tmp_output_path + ".err"):
+                os.remove(tmp_output_path + ".err")
+
+    finally:
+        print("Removing Wilson line files ", wilson_1, " and ", wilson_2, flush=True)
+        for wilson in (wilson_1, wilson_2):
+            if os.path.exists(wilson):
+                os.remove(wilson)
 
     return {"seed": seed, "id1": id1, "id2": id2}
 
@@ -487,7 +481,7 @@ def main():
     parser.add_argument("--ipglasma-path", type=str, default=ipglasma_path, help="Path to the IP-Glasma executable.")
     parser.add_argument("--input-template", type=str, default="input_vm_proton", help="IP-Glasma input file to use as a template.")
     parser.add_argument("--max-workers", type=int, default=None, help="Seeds run at a time (default: the logical CPUs available divided by OMP_NUM_THREADS), each with OMP_NUM_THREADS threads (default 1); without --slurm, several seeds at a time run with OMP_PROC_BIND=false.")
-    parser.add_argument("--keep-logs", action="store_true", help="Keep log files for each seed.")
+    parser.add_argument("--keep-logs", action="store_true", help="Keep the working directories of all seeds, with their logs (by default, those of the successful seeds are removed at the end of the run; those of failed seeds are always kept).")
     parser.add_argument("--slurm", action="store_true", help="Wrap each ipglasma/subnucleondiffraction invocation with 'srun --ntasks=1 --cpus-per-task=N', N = OMP_NUM_THREADS (default 1).")
     parser.add_argument("--xpom", type=float, default=default_xpom, help="Value of x_pom to use in the runs.")
     parser.add_argument("--first-seed", type=int, default=None, help=f"First random seed (default {default_first_seed}, beyond the seeds of the reference; use 0 for a new reference). With --plot-only, the seeds recorded in run_info.json.")
@@ -519,14 +513,22 @@ def main():
     run_info_path = os.path.join(datadir, "run_info.json")
 
     if args.plot_only:
+        # the seeds and the number of events of the run from its
+        # run_info.json, so that, as in the run, spectra of an earlier,
+        # larger run in datadir do not count
         seeds = None
-        if args.first_seed is not None:
-            seeds = (args.first_seed, args.first_seed + len(spectra_files(datadir)) // 2 - 1)
-        elif os.path.exists(run_info_path):
+        maxconf = None
+        if os.path.exists(run_info_path):
             with open(run_info_path) as f:
-                seeds = tuple(json.load(f)["seeds"])
-        PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=reference_file_path, x_pom=xpom, seeds=seeds)
-        passed, _ = check_against_reference(datadir, reference_file_path, args.check_tmax, args.n_sigma, args.bootstrap, seeds=seeds)
+                run_info = json.load(f)
+            seeds = tuple(run_info["seeds"])
+            maxconf = run_info["maxevents"]
+        if args.first_seed is not None:
+            # the largest number, not the count: failed seeds leave gaps
+            events = maxconf if maxconf is not None else max(spectra_files(datadir), default=0)
+            seeds = (args.first_seed, args.first_seed + (events + 1) // 2 - 1)
+        PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=reference_file_path, x_pom=xpom, maxconf=maxconf, seeds=seeds)
+        passed, _ = check_against_reference(datadir, reference_file_path, args.check_tmax, args.n_sigma, args.bootstrap, seeds=seeds, maxconf=maxconf)
         raise SystemExit(0 if passed else 1)
 
     print("PID =", os.getpid())
@@ -545,6 +547,15 @@ def main():
     seeds = (first_seed, first_seed + maxseed - 1)
     with open(run_info_path, "w") as f:
         json.dump({"seeds": seeds, "maxevents": 2 * maxseed}, f)
+    # the spectra and results of an earlier run in datadir must not stand in
+    # for those of this one if its events fail, or do not run because it is
+    # interrupted (--plot-only); spectra beyond maxevents do not count anyway
+    stale_files = [f"spectra_{n}" for n in range(1, 2 * maxseed + 1)] + [f"output_{n}.pdf" for n in plot_ids] + [
+        "cross_section.dat", "cross_section.pdf", "jpsi_check.json", "failed_seeds.txt"]
+    for name in stale_files:
+        stale = os.path.join(datadir, name)
+        if os.path.exists(stale):
+            os.remove(stale)
 
     ipglasma_binary = os.path.join(ipglasma_path, "ipglasma")
     subnucleondiffraction_binary = os.path.join(subnucleondiffraction_path, "build", "bin", "subnucleondiffraction")

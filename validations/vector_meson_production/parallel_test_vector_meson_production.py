@@ -24,7 +24,8 @@ The script also generates plots  color field (tr V(x)) for selected events.
 Example usage (from validations/vector_meson_production/):
     python3 parallel_test_vector_meson_production.py --maxevents 100 --datadir path_for_cross_sections --subnucleondiffraction-path path_to_subnucleondiffraction_directory
 
-Maximum number of parallel workers can be specified with --max-workers. By default, it uses the number of logical CPUs.
+Maximum number of parallel workers can be specified with --max-workers. By default, it uses the logical CPUs available, one OpenMP
+thread (OMP_NUM_THREADS, default 1) per event.
 
 The comparison plot will be saved in the specified directory as "cross_section.pdf". The color field plots will be saved as "output_<event_id>.pdf".
 
@@ -161,12 +162,24 @@ def threads_per_event():
         return 1
 
 
+def available_cpus():
+    """The logical CPUs this process may run on (e.g. those of a Slurm
+    allocation or of taskset), else all of them."""
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:  # not available on macOS
+        return cpu_count()
+
+
 def run_command(cmd, cwd, stdout_path=None, stderr_path=None, slurm=False):
     print(f"Running: {' '.join(str(part) for part in cmd)}", " stdout:", stdout_path, " stderr:", stderr_path)
     srun_cmd = ["srun", "--ntasks=1", f"--cpus-per-task={threads_per_event()}"] + cmd
     if not slurm:
         srun_cmd = cmd
-    result = subprocess.run(srun_cmd, cwd=cwd, capture_output=True, text=True)
+    # one thread per event unless OMP_NUM_THREADS says otherwise: the events
+    # already run in parallel
+    env = dict(os.environ, OMP_NUM_THREADS=str(threads_per_event()))
+    result = subprocess.run(srun_cmd, cwd=cwd, capture_output=True, text=True, env=env)
     if stdout_path:
         with open(stdout_path, "w") as stdout_handle:
             stdout_handle.write(result.stdout)
@@ -203,13 +216,16 @@ def reference_seeds(reference_path):
     return 0, (events + 1) // 2 - 1
 
 
-def check_against_reference(datadir, reference_path, tmax, n_sigma, n_bootstrap, seeds=None):
+def check_against_reference(datadir, reference_path, tmax, n_sigma, n_bootstrap, seeds=None, maxconf=None):
     """Compare the coherent and incoherent cross sections of the run,
     integrated over |t| <= tmax, with those of the reference, with the
-    error of a bootstrap over the events and that of the reference.
+    error of a bootstrap over the events and that of the reference; with
+    maxconf, only spectra_1 to spectra_<maxconf>, as cross_section.py.
     Returns (passed, summary)."""
     spectra = []
     for number in spectra_files(datadir):
+        if maxconf is not None and number > maxconf:
+            continue
         try:
             data = np.loadtxt(os.path.join(datadir, f"spectra_{number}"))
         except ValueError:
@@ -367,14 +383,6 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     os.makedirs(worker_dir, exist_ok=True)
 
     print(f"===== RUNNING SEED {seed} =====", flush=True)
-    temp_input_path = generate_temp_input(source_input_file=input_file_path, seed=seed, x_pom=xpom, working_dir=worker_dir, qs_table_path=qs_table_path)
-
-    log_path = os.path.join(worker_dir, f"ipglasma_log_{seed}")
-    ipglasma_cmd = os.path.join(ipglasma_path, ipglasma_binary)
-    run_command([ipglasma_cmd, temp_input_path], cwd=worker_dir, stdout_path=log_path, stderr_path=log_path + ".err", slurm=slurm)
-    print("Removing temp files", temp_input_path, flush=True)
-    remove_temp_input(temp_input_path)
-    print("Done", seed, flush=True)
     # IP-Glasma numbers the Wilson-line files of a seed 2 seed + 1 and
     # 2 seed + 2; the spectra in datadir are numbered within the run, 1 to
     # maxevents, so that cross_section.py reads them for any seeds
@@ -382,6 +390,23 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     id2 = 2 * seed + 2
     local1 = 2 * (seed - first_seed) + 1
     local2 = 2 * (seed - first_seed) + 2
+    # spectra of an earlier run in datadir must not stand in for these
+    # events if they fail
+    for local_id in (local1, local2):
+        stale = os.path.join(datadir, f"spectra_{local_id}")
+        if os.path.exists(stale):
+            os.remove(stale)
+
+    temp_input_path = generate_temp_input(source_input_file=input_file_path, seed=seed, x_pom=xpom, working_dir=worker_dir, qs_table_path=qs_table_path)
+
+    log_path = os.path.join(worker_dir, f"ipglasma_log_{seed}")
+    ipglasma_cmd = os.path.join(ipglasma_path, ipglasma_binary)
+    result = run_command([ipglasma_cmd, temp_input_path], cwd=worker_dir, stdout_path=log_path, stderr_path=log_path + ".err", slurm=slurm)
+    print("Removing temp files", temp_input_path, flush=True)
+    remove_temp_input(temp_input_path)
+    if result.returncode != 0:
+        raise RuntimeError(f"ipglasma exited with code {result.returncode} (see {log_path}.err)")
+    print("Done", seed, flush=True)
 
     # Canonicalize Wilson line file names once and reuse paths throughout.
     wilson_1 = ensure_wilson_line_file(worker_dir, xpom, id1)
@@ -390,8 +415,10 @@ def run_seed(seed, args, repo_root, datadir, subnucleondiffraction_cmd, ipglasma
     print(f"===== RUNNING SUBNUCLEONDIFFRACTION FOR EVENTS {id1} AND {id2} =====", flush=True)
     spectra_1_path = os.path.join(worker_dir, f"spectra_{id1}")
     spectra_2_path = os.path.join(worker_dir, f"spectra_{id2}")
-    run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson_1], cwd=worker_dir, stdout_path=spectra_1_path, stderr_path=spectra_1_path + ".err", slurm=slurm)
-    run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson_2], cwd=worker_dir, stdout_path=spectra_2_path, stderr_path=spectra_2_path + ".err", slurm=slurm)
+    for wilson, spectra_path in ((wilson_1, spectra_1_path), (wilson_2, spectra_2_path)):
+        result = run_command(subnucleondiffraction_cmd + ["-dipole", "1", "ipglasma_binary", wilson], cwd=worker_dir, stdout_path=spectra_path, stderr_path=spectra_path + ".err", slurm=slurm)
+        if result.returncode != 0:
+            raise RuntimeError(f"subnucleondiffraction exited with code {result.returncode} (see {spectra_path}.err)")
 
     for file_id, local_id in ((id1, local1), (id2, local2)):
         src = os.path.join(worker_dir, f"spectra_{file_id}")
@@ -459,7 +486,7 @@ def main():
     parser.add_argument("--subnucleondiffraction-path", type=str, default=subnucleondiffraction_path, help="Path to the subnucleondiffraction executable.")
     parser.add_argument("--ipglasma-path", type=str, default=ipglasma_path, help="Path to the IP-Glasma executable.")
     parser.add_argument("--input-template", type=str, default="input_vm_proton", help="IP-Glasma input file to use as a template.")
-    parser.add_argument("--max-workers", type=int, default=None, help="Maximum number of parallel workers. Defaults to the number of logical CPUs.")
+    parser.add_argument("--max-workers", type=int, default=None, help="Seeds run at a time (default: the logical CPUs available divided by OMP_NUM_THREADS), each with OMP_NUM_THREADS threads (default 1); without --slurm, several seeds at a time run with OMP_PROC_BIND=false.")
     parser.add_argument("--keep-logs", action="store_true", help="Keep log files for each seed.")
     parser.add_argument("--slurm", action="store_true", help="Wrap each ipglasma/subnucleondiffraction invocation with 'srun --ntasks=1 --cpus-per-task=N', N = OMP_NUM_THREADS (default 1).")
     parser.add_argument("--xpom", type=float, default=default_xpom, help="Value of x_pom to use in the runs.")
@@ -474,8 +501,8 @@ def main():
     datadir = os.path.abspath(args.datadir)
     subnucleondiffraction_path = os.path.abspath(args.subnucleondiffraction_path)
     ipglasma_path = os.path.abspath(args.ipglasma_path)
-    max_workers = args.max_workers or min(cpu_count(), max(1, int(args.maxevents / 2)))
     maxseed = int(args.maxevents / 2)
+    max_workers = args.max_workers or max(1, min(available_cpus() // threads_per_event(), maxseed))
     first_seed = default_first_seed if args.first_seed is None else args.first_seed
     keep_logs = args.keep_logs
     xpom = args.xpom
@@ -549,11 +576,16 @@ def main():
         "-mcintpoints", "5e5",
     ]
 
-    failures=[]
+    failures = {}
 
+    if max_workers > 1 and not args.slurm:
+        # binding (OMP_PROC_BIND or OMP_PLACES, as in the main README) would
+        # put the threads of all events on the same first cores; with
+        # --slurm, srun gives each event its own CPUs
+        os.environ["OMP_PROC_BIND"] = "false"
     print(f"Running {maxseed} seeds ({seeds[0]} to {seeds[1]}) in parallel with {max_workers} workers")
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
-        futures = [
+        futures = {
             executor.submit(
                 run_seed,
                 seed,
@@ -569,38 +601,43 @@ def main():
                 xpom,
                 args.slurm,
                 first_seed,
-            )
+            ): seed
             for seed in range(first_seed, first_seed + maxseed)
-        ]
+        }
         for future in as_completed(futures):
             try:
-                outcome = "not available"
-                outcome = future.result()
+                future.result()
             except Exception as exc:
-                print("Error occurred during seed execution:", exc)
-                print(outcome, flush=True)
-                failures.append(outcome)
-                continue
+                seed = futures[future]
+                print(f"seed {seed} failed: {exc}", flush=True)
+                failures[seed] = str(exc)
 
     PlotComparison(datadir=datadir, subnucleondiffraction_path=subnucleondiffraction_path, reference_cross_section_file=reference_file_path, x_pom=xpom, maxconf=2 * maxseed, seeds=seeds)
-    passed, _ = check_against_reference(datadir, reference_file_path, args.check_tmax, args.n_sigma, args.bootstrap, seeds=seeds)
+    # spectra of an earlier, larger run in datadir do not count
+    passed, _ = check_against_reference(datadir, reference_file_path, args.check_tmax, args.n_sigma, args.bootstrap, seeds=seeds, maxconf=2 * maxseed)
 
     if failures:
         failure_file = os.path.join(datadir, "failed_seeds.txt")
         with open(failure_file, "w") as f:
-            for failure in failures:
-                f.write(f"{failure}\n")
-        print(f"{len(failures)} seed(s) failed; details: {failure_file}", flush=True)
+            for seed in sorted(failures):
+                f.write(f"seed {seed}: {failures[seed]}\n")
+        print(f"{len(failures)} of {maxseed} seed(s) failed, without spectra; details: {failure_file}", flush=True)
 
     if not keep_logs:
+        # the working directories of failed seeds stay, with their logs
         for seed in range(first_seed, first_seed + maxseed):
             worker_dir = os.path.join(datadir, f"seed_{seed}")
-            if os.path.exists(worker_dir):
+            if seed not in failures and os.path.exists(worker_dir):
                 shutil.rmtree(worker_dir)
         print(f"Removed temporary directories in {datadir}", flush=True)
 
-    print("PASSED" if passed else "FAILED: the cross sections differ from the reference, or the seeds overlap", flush=True)
-    raise SystemExit(0 if passed else 1)
+    if failures:
+        print(f"FAILED: {len(failures)} seed(s) failed", flush=True)
+    if not passed:
+        print("FAILED: the cross sections differ from the reference, or the seeds overlap", flush=True)
+    elif not failures:
+        print("PASSED", flush=True)
+    raise SystemExit(0 if passed and not failures else 1)
 
 if __name__ == "__main__":
     main()

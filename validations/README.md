@@ -1056,12 +1056,16 @@ Useful flags:
   taken from this file rather than hardcoded.
 - `--xpom X` — Bjorken x the Wilson lines are evolved to, written to the
   input as `projectileX` and `targetX` (default 0.001705).
-- `--max-workers N` — number of events to run in parallel (default: the
-  number of logical CPUs).
+- `--max-workers N` — number of seeds to run in parallel (default: the
+  logical CPUs available divided by `OMP_NUM_THREADS`); each event runs with
+  `OMP_NUM_THREADS` threads (default 1), and without `--slurm` several seeds
+  at a time run with `OMP_PROC_BIND=false`, since binding would put them on
+  the same cores. Each seed needs about 1 GB of memory while IP-Glasma runs.
 - `--plot-only` — skip the simulation and only regenerate the comparison
   plot and the check from the spectra already in `--datadir`; the seeds are
   taken from its `run_info.json`, or from `--first-seed`.
-- `--keep-logs` — keep per-seed log files instead of deleting them.
+- `--keep-logs` — keep the per-seed working directories with their logs
+  instead of deleting them (those of failed seeds are always kept).
 - `--first-seed S` — the events use the seeds S, S + 1, ..., two events
   (projectile and target) per seed: by default 10000, so that a check is
   independent of the reference; a new reference is made with
@@ -1074,9 +1078,10 @@ Output: `cross_section.dat`/`.pdf` in `--datadir` (coherent/incoherent cross
 section vs. reference, with a ratio panel), plus `output_1.pdf`/`output_5.pdf`
 color-field (Tr V(x)) plots for a couple of representative events. The
 spectra of the events are copied to `--datadir` as `spectra_1` to
-`spectra_<maxevents>`, whatever the seeds, and `cross_section.dat` records
-the seeds in its header (`# seeds: first-last`), so that it can serve as a
-new `validation_spectra`.
+`spectra_<maxevents>`, whatever the seeds (the cross sections and the check
+use only these, also if `--datadir` holds more from an earlier run), and
+`cross_section.dat` records the seeds in its header (`# seeds: first-last`),
+so that it can serve as a new `validation_spectra`.
 
 The check (`jpsi_check.json`): the coherent and incoherent cross sections,
 integrated over |t| ≤ `--check-tmax`, must agree with those of the reference
@@ -1086,7 +1091,10 @@ mean amplitude, which fluctuates by about 40% between events at t = 0, and
 the incoherent one is its variance, so 200 events give errors of about 8%
 and 9%, and 1000 events about 4%. The seeds of the run must not overlap
 those of the reference (a reference without a `# seeds` line used the seeds
-from 0). The script exits non-zero if a check fails.
+from 0). A seed for which IP-Glasma or subnucleondiffraction fails gives no
+spectra (spectra of an earlier run in `--datadir` with its numbers are
+removed first) and is listed in `failed_seeds.txt`. The script exits
+non-zero if a check fails or a seed fails.
 
 ## Running on a computing cluster (SLURM)
 

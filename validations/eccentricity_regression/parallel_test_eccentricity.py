@@ -36,16 +36,21 @@ The check fails if the seeds of the run overlap those of the reference.
 
 Usage (from validations/eccentricity_regression/):
     # one-time: record a baseline from a known-good build
-    python3 parallel_test_eccentricity.py --maxevents 40 --save-reference
+    python3 parallel_test_eccentricity.py --maxevents 5000 --save-reference
 
-    # later: check that nothing changed
-    python3 parallel_test_eccentricity.py --maxevents 40
+    # later: check that nothing changed (1000 events, the default)
+    python3 parallel_test_eccentricity.py
+
+By default, the events run on all logical CPUs, one OpenMP thread each, and
+the working directories of the successful events are removed at the end of
+the run (their eps2 values are kept in eccentricity_results.json).
 """
 
 import argparse
 import glob
 import json
 import os
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -139,7 +144,11 @@ def run_command(cmd, cwd, log_path, slurm=False):
     if slurm:
         cmd = ["srun", "--ntasks=1",
                "--cpus-per-task={0}".format(threads_per_event())] + list(cmd)
-    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True)
+    # one thread per event unless OMP_NUM_THREADS says otherwise: the events
+    # already run in parallel
+    env = dict(os.environ, OMP_NUM_THREADS=str(threads_per_event()))
+    result = subprocess.run(cmd, cwd=cwd, capture_output=True, text=True,
+                            env=env)
     with open(log_path, "w") as f:
         f.write("$ {0}\n".format(" ".join(cmd)))
         f.write(result.stdout or "")
@@ -540,9 +549,10 @@ def clean_datadir(datadir):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--maxevents", type=int, default=24,
+    parser.add_argument("--maxevents", type=int, default=1000,
                          help="number of independent IP-Glasma events "
-                              "(random seeds) to run in parallel")
+                              "(random seeds) to run in parallel "
+                              "(default 1000)")
     parser.add_argument("--datadir", default="./eccentricity_test_output/",
                          help="directory for per-event working dirs and plots")
     parser.add_argument("--ipglasma-path", default="../..",
@@ -564,10 +574,15 @@ def main():
                          help="keep JIMWLK small-x evolution enabled "
                               "(slower, more complete physics test). "
                               "Default: disabled for speed.")
-    parser.add_argument("--max-workers", type=int, default=1)
+    parser.add_argument("--max-workers", type=int, default=None,
+                         help="events run at a time (default: the number "
+                              "of logical CPUs), each with OMP_NUM_THREADS "
+                              "threads (default 1)")
     parser.add_argument("--keep-logs", action="store_true",
-                         help="keep per-event working directories "
-                              "(including failed ones, which are always kept)")
+                         help="keep the working directories of all events; "
+                              "by default, those of the successful events "
+                              "are removed at the end of the run (those of "
+                              "failed events are always kept)")
     parser.add_argument("--slurm", action="store_true",
                          help="wrap each ipglasma invocation with "
                               "'srun --ntasks=1 --cpus-per-task=N', N = "
@@ -770,12 +785,10 @@ def main():
                   "physics is correct.".format(args.reference_file))
 
     if not args.keep_logs and not args.plot_only:
-            print("Removing temporary files under {0} ...".format(
-                datadir))
-            for seed in seed_list:
-                worker_dir = os.path.join(datadir, f"seed_{seed}")
-                if os.path.exists(worker_dir):
-                    cleanup_stray_output_files(worker_dir)
+        print("Removing the working directories of the {0} successful "
+              "events under {1} ...".format(len(successes), datadir))
+        for r in successes:
+            shutil.rmtree(r["worker_dir"], ignore_errors=True)
 
 
 

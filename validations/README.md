@@ -92,13 +92,15 @@ references are found next to the script):
 
 ```bash
 cd eccentricity_regression
-# One-time: record a baseline from a known-good build
+# One-time: record a baseline from a known-good build (the stored
+# reference has 4998 events of the seeds 0-4999)
 python3 parallel_test_eccentricity.py --input-template input_eccentricity \
-    --ipglasma-path ../.. --maxevents 40 --max-workers 8 --save-reference
+    --ipglasma-path ../.. --maxevents 5000 --save-reference
 
-# Later, e.g. after changing the code: check nothing drifted
+# Later, e.g. after changing the code: check nothing drifted (1000 events,
+# about 4 minutes on 16 cores)
 python3 parallel_test_eccentricity.py --input-template input_eccentricity \
-    --ipglasma-path ../.. --maxevents 40 --max-workers 8
+    --ipglasma-path ../..
 ```
 
 Useful flags:
@@ -109,16 +111,19 @@ Useful flags:
   lattice).
 - `--jimwlk` — keep JIMWLK evolution enabled (slower, more complete physics
   test); disabled by default for speed.
-- `--max-workers N` — number of events to run in parallel (default 1; set
-  this to the number of cores you have available).
+- `--maxevents N` — number of events (default 1000).
+- `--max-workers N` — number of events to run in parallel (default: the
+  number of logical CPUs); each event runs with `OMP_NUM_THREADS` threads
+  (default 1).
 - `--plot-only` — skip launching new runs and just rebuild the plot/summary
   from `seed_*/` directories already present in `--datadir` (useful after an
-  interrupted run, if `--keep-logs` was used).
+  interrupted run, which keeps them, or with `--keep-logs`).
 - `--clean` — remove stray temporary files left behind by an interrupted run
   from every `seed_*/` directory under `--datadir`, without touching the
   saved `Tmunu` snapshots, then exit.
 - `--keep-logs` — keep the per-event working directories after the run
-  instead of deleting them (failed events are always kept).
+  instead of deleting them (failed events are always kept); they hold the
+  `Tmunu` snapshots, about 0.6 MB per event.
 - `--first-seed S` — the events use the seeds S, S + 1, ...: by default 10000,
   so that a check is independent of the reference, and 0 with
   `--save-reference`.
@@ -135,7 +140,11 @@ seeds and the exact command used to reproduce the run.
 The check: the mean and the width of the ε₂ distribution must agree with the
 reference within `--n-sigma` combined errors, from a bootstrap of the run and
 of the reference, and the two-sample Kolmogorov–Smirnov test must give
-p > 0.01. The seeds of the run must not overlap those of the reference: with
+p > 0.01. The error of the mean is about 0.092/√N for N events, so the
+default 1000 events resolve a change of the mean ε₂ of about 3% (three
+combined errors); the error of the reference adds little unless the run has
+a comparable number of events. The seeds of the run must not overlap those
+of the reference: with
 the same code, the same seeds give the same events, so the check would not be
 independent. A reference saved before the seeds were recorded used the seeds
 from 0, one per event. The script exits non-zero if a check fails.

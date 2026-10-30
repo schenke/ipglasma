@@ -41,9 +41,10 @@ Usage (from validations/eccentricity_regression/):
     # later: check that nothing changed (1000 events, the default)
     python3 parallel_test_eccentricity.py
 
-By default, the events run on all logical CPUs, one OpenMP thread each, and
-the working directories of the successful events are removed at the end of
-the run (their eps2 values are kept in eccentricity_results.json).
+By default, the events run on all logical CPUs available, OMP_NUM_THREADS
+(default 1) threads each, and the working directories of the successful
+events are removed at the end of the run (their eps2 values are kept in
+eccentricity_results.json, or in the reference with --save-reference).
 """
 
 import argparse
@@ -138,6 +139,15 @@ def threads_per_event():
         return max(1, int(os.environ.get("OMP_NUM_THREADS", "1")))
     except ValueError:
         return 1
+
+
+def available_cpus():
+    """The logical CPUs this process may run on (e.g. those of a Slurm
+    allocation or of taskset), else all of them."""
+    try:
+        return len(os.sched_getaffinity(0))
+    except AttributeError:  # not available on macOS
+        return cpu_count()
 
 
 def run_command(cmd, cwd, log_path, slurm=False):
@@ -551,8 +561,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--maxevents", type=int, default=1000,
                          help="number of independent IP-Glasma events "
-                              "(random seeds) to run in parallel "
-                              "(default 1000)")
+                              "(random seeds) to run (default 1000)")
     parser.add_argument("--datadir", default="./eccentricity_test_output/",
                          help="directory for per-event working dirs and plots")
     parser.add_argument("--ipglasma-path", default="../..",
@@ -575,9 +584,11 @@ def main():
                               "(slower, more complete physics test). "
                               "Default: disabled for speed.")
     parser.add_argument("--max-workers", type=int, default=None,
-                         help="events run at a time (default: the number "
-                              "of logical CPUs), each with OMP_NUM_THREADS "
-                              "threads (default 1)")
+                         help="events run at a time (default: the logical "
+                              "CPUs available divided by OMP_NUM_THREADS), "
+                              "each with OMP_NUM_THREADS threads (default "
+                              "1); without --slurm, several events at a "
+                              "time run with OMP_PROC_BIND=false")
     parser.add_argument("--keep-logs", action="store_true",
                          help="keep the working directories of all events; "
                               "by default, those of the successful events "
@@ -592,8 +603,8 @@ def main():
                               "rebuild the eps2 distribution from the "
                               "seed_*/ working directories already present "
                               "in --datadir (e.g. left behind by an "
-                              "interrupted run with --keep-logs) and "
-                              "regenerate the plot / regression check")
+                              "interrupted run, or kept with --keep-logs) "
+                              "and regenerate the plot / regression check")
     parser.add_argument("--clean", action="store_true",
                          help="don't run or plot anything; just remove "
                               "stray temporary/output files (run.log, "
@@ -693,7 +704,13 @@ def main():
               "(no new ipglasma runs) ...".format(datadir))
         results = collect_from_existing_datadir(datadir, ipglasma_path)
     else:
-        max_workers = args.max_workers or min(cpu_count(), args.maxevents)
+        max_workers = args.max_workers or max(1, min(
+            available_cpus() // threads_per_event(), args.maxevents))
+        if max_workers > 1 and not args.slurm:
+            # binding (OMP_PROC_BIND or OMP_PLACES, as in the main README)
+            # would put the threads of all events on the same first cores;
+            # with --slurm, srun gives each event its own CPUs
+            os.environ["OMP_PROC_BIND"] = "false"
         print("Running {0} IP-Glasma events across up to {1} parallel workers "
               "(size={2}, jimwlk={3}), lattice N={4}, L={5} fm ...".format(
                   args.maxevents, max_workers, args.size, args.jimwlk, args.size, args.L))

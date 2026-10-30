@@ -269,14 +269,16 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
             os.remove(temp_input)
     elapsed = time.time() - t0
 
-    #if result.returncode != 0:
-    #    print("seed {0}: ipglasma failed with code {1} (see {2})".format(
-    #        seed, result.returncode, log_path), flush=True)
-    #    return {
-    #        "seed": seed, "success": False, "worker_dir": worker_dir,
-    #        "error": "ipglasma exited with code {0} (see {1})".format(
-    #            result.returncode, log_path),
-    #    }
+    # a crashed event must not count, even if its working directory holds
+    # the Tmunu snapshot of an earlier run
+    if result.returncode != 0:
+        print("seed {0}: ipglasma failed with code {1} (see {2})".format(
+            seed, result.returncode, log_path), flush=True)
+        return {
+            "seed": seed, "success": False, "worker_dir": worker_dir,
+            "error": "ipglasma exited with code {0} (see {1})".format(
+                result.returncode, log_path),
+        }
 
     # IP-Glasma is run here as a single MPI-disabled, single-event
     # process, so it always writes rank/event index 0.

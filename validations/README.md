@@ -9,7 +9,7 @@ parts of the code against exact or published results:
   IP-Glasma + JIMWLK events, feeds the resulting Wilson lines to the external
   [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
   code, and compares the resulting coherent/incoherent J/ψ cross section to a
-  stored reference (`validation_spectra`) and to Fig. 1 ("CGC+shape fluct") of
+  stored reference (`jpsi_reference.json`) and to Fig. 1 ("CGC+shape fluct") of
   [arXiv:2207.03712](https://arxiv.org/pdf/2207.03712).
 - **`eccentricity_regression/`** (`parallel_test_eccentricity.py`) — runs
   many independent IP-Glasma
@@ -59,8 +59,8 @@ simultaneously.
    [`subnucleondiffraction`](https://github.com/hejajama/subnucleondiffraction)
    separately and note its path (needed for `--subnucleondiffraction-path`).
    It reads the Wilson lines of IP-Glasma 2.0 from its commit 4e3a05c on
-   (`master` since October 2026); its `python/cross_section.py` needs
-   `scipy`.
+   (`master` since October 2026). The script computes the cross sections
+   from the amplitudes itself; it does not use `python/cross_section.py`.
 3. Python 3 with `numpy` and `matplotlib` (and optionally `scipy`, used for
    the two-sample KS test in the eccentricity script if available; the
    JIMWLK step-size script, the dilute limit and the `--lappi` mode of the
@@ -1063,40 +1063,80 @@ Useful flags:
   `OMP_NUM_THREADS` threads (default 1), and without `--slurm` several seeds
   at a time run with `OMP_PROC_BIND=false`, since binding would put them on
   the same cores. Each seed needs about 1 GB of memory while IP-Glasma runs.
-- `--plot-only` — skip the simulation and only regenerate the comparison
-  plot and the check from the spectra already in `--datadir`; the seeds and
-  the number of events are taken from its `run_info.json` (the seeds from
-  `--first-seed` if it is given).
+- `--plot-only` — skip the simulation and only compute the cross sections,
+  the comparison plot and the check (or, with `--save-reference`, the
+  reference) from the spectra already in `--datadir`; the seeds, the number
+  of events, the version of IP-Glasma and the settings are taken from its
+  `run_info.json` (the seeds from `--first-seed` if it is given; without
+  `run_info.json`, the version from `ipglasma --version` of
+  `--ipglasma-path`).
 - `--keep-logs` — keep the per-seed working directories with their logs
   instead of deleting them (those of failed seeds are always kept).
 - `--first-seed S` — the events use the seeds S, S + 1, ..., two events
   (projectile and target) per seed: by default 10000, so that a check is
-  independent of the reference; a new reference is made with
-  `--first-seed 0`.
+  independent of the reference, and 0 with `--save-reference`.
 - `--check-tmax`, `--n-sigma`, `--bootstrap` — the range of |t| of the
   check (default 2 GeV²), the allowed deviation in errors (default 3) and
   the bootstrap resamplings for the errors (default 1000).
+- `--outlier-zmax Z` — a spectrum whose largest |A|² is more than Z robust
+  standard deviations of log₁₀|A|² from the median is an outlier
+  (default 7).
+- `--save-reference` — save the results of the run as the new reference
+  (`--reference-file`, default `jpsi_reference.json` next to the script)
+  instead of comparing with it; it is not saved if a spectrum is invalid or
+  an outlier, or if its seeds are not known (`--plot-only` without
+  `run_info.json` or `--first-seed`). A new reference (5000 events, seeds
+  0–2499):
+  ```bash
+  python3 parallel_test_vector_meson_production.py --maxevents 5000 \
+      --save-reference --ipglasma-path ../.. \
+      --subnucleondiffraction-path /path/to/subnucleondiffraction
+  ```
 
-Output: `cross_section.dat`/`.pdf` in `--datadir` (coherent/incoherent cross
-section vs. reference, with a ratio panel), plus `output_1.pdf`/`output_5.pdf`
-color-field (Tr V(x)) plots for a couple of representative events. The
-spectra of the events are copied to `--datadir` as `spectra_1` to
-`spectra_<maxevents>`, whatever the seeds (the cross sections and the check
-use only these, also if `--datadir` holds more from an earlier run), and
-`cross_section.dat` records the seeds in its header (`# seeds: first-last`),
-so that it can serve as a new `validation_spectra`.
+Output: `jpsi_results.json` and `cross_section.pdf` in `--datadir`
+(coherent/incoherent cross section vs. reference, with a ratio panel), plus
+`output_1.pdf`/`output_5.pdf` color-field (Tr V(x)) plots for a couple of
+representative events. The spectra of the events are copied to `--datadir`
+as `spectra_1` to `spectra_<maxevents>`, whatever the seeds (the cross
+sections and the check use only these, also if `--datadir` holds more from
+an earlier run). The script computes the cross sections from the amplitudes
+of the spectra as `python/cross_section.py` of subnucleondiffraction does:
+the coherent one is the square of the mean of Re A, the incoherent one the
+variance of Re A and Im A. `jpsi_results.json` has dσ/dt (in mb/GeV²) and its
+integral over |t| ≤ `--check-tmax` (in mb), with the errors of a bootstrap
+over the events, the number of events and the seeds, the versions of
+IP-Glasma (`ipglasma --version`) and of subnucleondiffraction (from the
+`# Git version` line of the spectra), the settings (input template and its
+SHA-256, x_P, lattice, options of subnucleondiffraction) and the command;
+the reference `jpsi_reference.json` has the same format.
 
-The check (`jpsi_check.json`): the coherent and incoherent cross sections,
-integrated over |t| ≤ `--check-tmax`, must agree with those of the reference
-within `--n-sigma` combined errors. The error of the run is that of a
-bootstrap over its events. The coherent cross section is the square of the
-mean amplitude, which fluctuates by about 40% between events at t = 0, and
-the incoherent one is its variance, so 200 events give errors of about 8%
-and 9%, and 1000 events about 4%. The seeds of the run must not overlap
-those of the reference (a reference without a `# seeds` line used the seeds
-from 0). A seed for which IP-Glasma or subnucleondiffraction fails gives no
-spectra and is listed in `failed_seeds.txt`; its working directory stays,
-with the logs but without the Wilson-line files. The spectra `spectra_1` to
+The check (`jpsi_check.json`, with the settings of the script, the checks
+and `passed`): the coherent and incoherent cross sections, integrated over
+|t| ≤ `--check-tmax`, must agree with those of the reference within
+`--n-sigma` errors. The error is the one expected if the two agree: the
+relative bootstrap error of the reference, scaled to the events of the
+reference and of the run, √(1 + N_ref/N_run). The run's own bootstrap error
+(also printed) is not used: it shrinks with the cross section, so that runs
+that fluctuate low would fail more often than runs that fluctuate high.
+Against a reference of 2000 other events of the same code, the earlier
+check (the run's own error, and the binned errors of the reference added in
+quadrature) failed 1.4% (coherent) and 5% (incoherent) of the runs with 32
+events beyond 3 errors, and 1.4% and 1% of those with 200 events, all on
+the low side; with this error, 0.2–0.5% fail, against 0.27% expected. The
+coherent cross section is the square of the mean
+amplitude, which fluctuates by about 40% between events at t = 0, and the
+incoherent one is its variance, so 200 events give errors of about 8% and
+9%, and 1000 events about 4%. The spectra must be finite, on the same t
+values, and none an outlier: its scale, the largest |A|² over t, must lie
+within `--outlier-zmax` robust standard deviations (MAD/0.6745) of
+log₁₀(scale) from the median, as in the outlier filter of
+`utilities/compute_tdiffCrossSections.py` of IPGlasmaFramework. The check
+fails instead of dropping such an event, since a blown-up event is what it
+should find. The seeds of the run must not overlap those of the reference.
+Settings in which the run and the reference differ are printed as warnings.
+A seed for which IP-Glasma or subnucleondiffraction fails gives no spectra
+and is listed in `failed_seeds.txt`; its working directory stays, with the
+logs but without the Wilson-line files. The spectra `spectra_1` to
 `spectra_<maxevents>` and the results (cross sections, plots, check and
 `failed_seeds.txt`) of an earlier run in `--datadir` are removed when a run
 starts. The script exits non-zero if a check fails or a seed fails.

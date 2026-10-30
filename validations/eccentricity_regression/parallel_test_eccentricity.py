@@ -384,7 +384,7 @@ def save_reference(reference_file, eps2_values, run_meta, seeds=None,
     if eps2_seeds is not None:
         # the seed of each value, so that events can be compared one by one
         payload["eps2_seeds"] = [int(seed) for seed in eps2_seeds]
-    payload.update(run_meta)
+    payload["settings"] = dict(run_meta)
     if seeds is not None:
         payload["first_seed"], payload["last_seed"] = seeds
     with open(reference_file, "w") as f:
@@ -396,8 +396,9 @@ def check_reference_parameters(run_meta, reference):
     recorded in `reference` (and in this run's `run_meta`) whose value
     differs between the two -- comparing eps2 distributions obtained with
     different settings is not a meaningful regression check."""
-    # Older reference files stored maxTime under the key "maxtime".
-    reference = dict(reference)
+    # Older reference files stored the settings at the top level, and
+    # maxTime under the key "maxtime".
+    reference = dict(reference.get("settings") or reference)
     if "maxTime" not in reference and "maxtime" in reference:
         reference["maxTime"] = reference.pop("maxtime")
 
@@ -450,9 +451,12 @@ def reference_seeds(reference):
 
 def compare_to_reference(eps2_values, reference, n_sigma, n_bootstrap,
                          mean_tol=None, std_tol=None, seeds=None):
+    """The checks of a run against the reference. Returns (passed, the
+    lines to print, {check: passed}, the compared numbers)."""
     current = summarize(eps2_values)
     messages = []
     passed = True
+    checks, details = {}, {}
 
     rng = np.random.default_rng(1)
     errors = bootstrap_errors(eps2_values, n_bootstrap, rng)
@@ -477,6 +481,10 @@ def compare_to_reference(eps2_values, reference, n_sigma, n_bootstrap,
             message += "; changed by {0:.1%} (tolerance {1:.1%})".format(
                 relative, tol)
         passed = passed and ok
+        checks["{0} agrees with the reference within {1:g} sigma".format(
+            name, n_sigma)] = bool(ok)
+        details[key] = {"reference": reference[key], "this_run": current[key],
+                        "error": combined, "sigma": diff / combined}
         messages.append(message.format("OK" if ok else "FAIL"))
 
     try:
@@ -485,6 +493,8 @@ def compare_to_reference(eps2_values, reference, n_sigma, n_bootstrap,
             eps2_values, reference["eps2_values"])
         ks_ok = p_value > 0.01
         passed = passed and ks_ok
+        checks["two-sample KS test p > 0.01"] = bool(ks_ok)
+        details["ks_p_value"] = float(p_value)
         messages.append(
             "{0}: two-sample KS test p-value = {1:.4f} (fail if <= 0.01, "
             "D={2:.4f})".format("OK" if ks_ok else "FAIL", p_value, ks_stat))
@@ -495,12 +505,13 @@ def compare_to_reference(eps2_values, reference, n_sigma, n_bootstrap,
         ref_first, ref_last = reference_seeds(reference)
         independent = seeds[1] < ref_first or seeds[0] > ref_last
         passed = passed and independent
+        checks["seeds independent of the reference"] = bool(independent)
         messages.append("{0}: seeds {1}-{2}, reference {3}-{4}{5}".format(
             "OK" if independent else "FAIL", seeds[0], seeds[1], ref_first,
             ref_last, "" if independent else " (overlap: not an independent "
             "check)"))
 
-    return passed, "\n".join(messages)
+    return passed, "\n".join(messages), checks, details
 
 
 # --------------------------------------------------------------------------
@@ -817,6 +828,10 @@ def main():
     print("Wrote epsilon_2 distribution plot to {0}".format(plot_path))
 
     exit_code = 1 if failures else 0
+    # the summary of the check, as those of the other validations
+    summary = {"settings": vars(args), "versions": versions, "seeds": seeds,
+               "events": len(successes),
+               "checks": {"all events succeeded": not failures}}
 
     if args.save_reference:
         save_reference(args.reference_file, eps2_values, run_meta, seeds,
@@ -834,9 +849,11 @@ def main():
         print("Saved this run's eps2 distribution to {0}".format(results_file))
 
         if reference is not None:
-            passed, message = compare_to_reference(
+            passed, message, checks, details = compare_to_reference(
                 eps2_values, reference, args.n_sigma, args.bootstrap,
                 args.mean_tol, args.std_tol, seeds)
+            summary["checks"].update(checks)
+            summary.update(details)
             print(message)
             if not passed:
                 exit_code = 1
@@ -846,9 +863,15 @@ def main():
             else:
                 print("Regression check passed.")
         else:
+            exit_code = 1
+            summary["checks"]["reference found"] = False
             print("No reference file found at {0}. Rerun with --save-reference "
                   "to record a baseline once you've confirmed this run's "
                   "physics is correct.".format(args.reference_file))
+
+    summary["passed"] = exit_code == 0
+    with open(os.path.join(datadir, "eccentricity_check.json"), "w") as f:
+        json.dump(summary, f, indent=1)
 
     if not args.keep_logs and not args.plot_only:
         print("Removing the working directories of the {0} successful "

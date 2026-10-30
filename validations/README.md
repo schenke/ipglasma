@@ -113,8 +113,11 @@ Useful flags:
   test); disabled by default for speed.
 - `--maxevents N` — number of events (default 1000).
 - `--max-workers N` — number of events to run in parallel (default: the
-  number of logical CPUs); each event runs with `OMP_NUM_THREADS` threads
-  (default 1).
+  logical CPUs available, e.g. those of a Slurm allocation, divided by
+  `OMP_NUM_THREADS`); each event runs with `OMP_NUM_THREADS` threads
+  (default 1). Without `--slurm`, several events at a time run with
+  `OMP_PROC_BIND=false`: binding (`OMP_PROC_BIND`, `OMP_PLACES`) would put
+  the threads of all events on the same first cores.
 - `--plot-only` — skip launching new runs and just rebuild the plot/summary
   from `seed_*/` directories already present in `--datadir` (useful after an
   interrupted run, which keeps them, or with `--keep-logs`).

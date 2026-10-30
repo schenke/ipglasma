@@ -51,6 +51,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -180,6 +181,18 @@ def extract_eps2(worker_dir, ipglasma_path, event_id=0):
     return eps2, psi2, tau_fm, energy_density
 
 
+def event_version(worker_dir):
+    """The version of IP-Glasma that ran an event, from the header of its
+    usedParameters*.dat ("... used by IP-Glasma 2.0.0 (git ...) ..."), or
+    None."""
+    for path in sorted(glob.glob(os.path.join(worker_dir, "usedParameters*.dat"))):
+        with open(path) as f:
+            match = re.search(r"IP-Glasma \S+ \(git [^)]*\)", f.readline())
+        if match:
+            return match.group(0)
+    return None
+
+
 def collect_from_existing_datadir(datadir, ipglasma_path):
     """--plot-only support: rebuild the per-event result list by reading
     back already-completed seed_*/ working directories in `datadir`,
@@ -210,6 +223,7 @@ def collect_from_existing_datadir(datadir, ipglasma_path):
             "seed": seed, "success": True, "worker_dir": worker_dir,
             "eps2": eps2, "psi2": psi2, "tau_fm": tau_fm,
             "mean_energy_density": float(np.mean(energy_density)),
+            "version": event_version(worker_dir),
         })
     return results
 
@@ -297,6 +311,7 @@ def run_seed(seed, ipglasma_path, template_path, qs_table_path, datadir,
         "eps2": eps2, "psi2": psi2, "tau_fm": tau_fm,
         "mean_energy_density": float(np.mean(energy_density)),
         "elapsed_sec": elapsed,
+        "version": event_version(worker_dir),
     }
 
 
@@ -356,13 +371,19 @@ def reproduce_command():
     return "python3 {0}".format(" ".join([sys.argv[0]] + sys.argv[1:]))
 
 
-def save_reference(reference_file, eps2_values, run_meta, seeds=None):
+def save_reference(reference_file, eps2_values, run_meta, seeds=None,
+                   versions=None, eps2_seeds=None):
     # JSON doesn't support comments, so the reproduce command is stored as
     # a leading "_command" field instead -- keep it first so it's the
     # first thing a human opening the file notices.
     payload = {"_command": reproduce_command()}  # type: dict
+    if versions is not None:
+        payload["versions"] = versions
     payload.update(summarize(eps2_values))
     payload["eps2_values"] = [float(v) for v in eps2_values]
+    if eps2_seeds is not None:
+        # the seed of each value, so that events can be compared one by one
+        payload["eps2_seeds"] = [int(seed) for seed in eps2_seeds]
     payload.update(run_meta)
     if seeds is not None:
         payload["first_seed"], payload["last_seed"] = seeds
@@ -399,6 +420,16 @@ def check_reference_parameters(run_meta, reference):
                 "WARNING: parameter '{0}' differs from the reference: "
                 "reference {1}, this run {2}".format(key, ref_value, value))
     return warnings
+
+
+def binary_version(ipglasma_binary):
+    """The version that "ipglasma --version" prints, or None."""
+    try:
+        result = subprocess.run([ipglasma_binary, "--version"],
+                                capture_output=True, text=True, timeout=60)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    return result.stdout.strip() or None if result.returncode == 0 else None
 
 
 def bootstrap_errors(values, n_bootstrap, rng):
@@ -574,7 +605,7 @@ def main():
     parser.add_argument("--input-template", default="input_eccentricity",
                          help="IP-Glasma input file to use as a template ")
     parser.add_argument("--size", type=int, default=128,
-                         help="lattice size override, default 256")
+                         help="lattice size override, default 128")
     parser.add_argument("--L", type=float, default=30,
                          help="transverse box size override in fm "
                               "(default: 30 fm)")
@@ -759,6 +790,20 @@ def main():
         sys.exit(1)
 
     eps2_values = [r["eps2"] for r in successes]
+    eps2_seeds = [r["seed"] for r in successes]
+    # the version of IP-Glasma that ran the events, from their
+    # usedParameters*.dat, else (without them) of the binary
+    event_versions = sorted({r["version"] for r in successes if r.get("version")})
+    if not event_versions:
+        event_versions = [binary_version(ipglasma_binary)]
+    elif len(event_versions) > 1:
+        print("WARNING: the events are from several versions of IP-Glasma: "
+              "{0}".format(event_versions))
+    versions = {"ipglasma": event_versions[0] if len(event_versions) == 1
+                else event_versions}
+    if reference is not None and reference.get("versions") != versions:
+        print("note: reference made with {0}; this run with {1}".format(
+            reference.get("versions", {}).get("ipglasma"), versions["ipglasma"]))
     seed_numbers = [r["seed"] for r in results if isinstance(r["seed"], int)]
     seeds = (min(seed_numbers), max(seed_numbers)) if seed_numbers else None
     stats = summarize(eps2_values)
@@ -774,7 +819,8 @@ def main():
     exit_code = 1 if failures else 0
 
     if args.save_reference:
-        save_reference(args.reference_file, eps2_values, run_meta, seeds)
+        save_reference(args.reference_file, eps2_values, run_meta, seeds,
+                       versions, eps2_seeds)
         print("Saved new reference distribution to {0}".format(
             args.reference_file))
     else:
@@ -783,7 +829,8 @@ def main():
         # reproduce it) to datadir, so it isn't lost once seed_*/ working
         # directories are cleaned up.
         results_file = os.path.join(datadir, "eccentricity_results.json")
-        save_reference(results_file, eps2_values, run_meta, seeds)
+        save_reference(results_file, eps2_values, run_meta, seeds,
+                       versions, eps2_seeds)
         print("Saved this run's eps2 distribution to {0}".format(results_file))
 
         if reference is not None:

@@ -56,6 +56,23 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::validationErrors: rejects seed -1 when reading Wilson "
+    "lines, unless the seeds come from seedList") {
+    // the drawn seed would also name the files to read
+    Parameters param;
+    makeValidBaseline(param);
+    param.random.seed = -1;
+    CHECK(param.validationErrors().empty());
+    param.wilsonLines.readInitialWilsonLines = 2;
+    CHECK(param.validationErrors().size() == 1);
+    param.random.useSeedList = true;
+    CHECK(param.validationErrors().empty());
+    param.random.useSeedList = false;
+    param.random.seed = 7;
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
     "Parameters::validationErrors: rejects a missing Wilson-line directory "
     "only when Wilson lines are written") {
     Parameters param;

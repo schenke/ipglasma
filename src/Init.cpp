@@ -127,9 +127,9 @@ double Init::solveFluctuatingXQs(double Tp, double scale) const {
     return fluctuatingXQs(Tp, std::exp(0.5 * (lower + upper)));
 }
 
+// g^2 mu^2 of a cell from the summed nucleon thicknesses T_p of each
+// nucleus, through Q_s^2(T_p, x) of the table and g^2 mu = Q_s / QsMuRatio
 void Init::computeCellColorCharge(
-    // set g^2\mu^2 as the sum of the individual nucleons' g^2\mu^2, using
-    // Q_s(b,y) prop to g^mu(b,y) Also compute N_part using Glauber
     Lattice *lat, Parameters *param, int ipos, double a, double rapidity) {
     if (param->colorCharge.useFluctuatingX) {  // Local Qs dependent x
         lat->cells[ipos]->setg2mu2A(computeFluctuatingXG2mu2(

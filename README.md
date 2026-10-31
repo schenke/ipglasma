@@ -85,7 +85,7 @@ The input file has one `key value` pair per line:
 - Unknown keys, keys given twice, missing required keys and malformed values (e.g. `256.0` for an integer) are errors. All problems are reported at once before the run stops.
 - A parameter marked "only used with …" below is only read, and only required, when that setting is on. Otherwise it can be left out, and if it is given, it is ignored.
 
-Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, `seed -1` draws a new seed, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
+Each event writes the values of all input parameters it used to `usedParameters<event>.dat`, followed by its random seed and collision geometry as comments. The file is itself a valid input file. Running it does not reproduce the same event, though: the random numbers also depend on the MPI rank and on the event's position in the run, and with `subNucleonParamSet -1` a new posterior parameter set is drawn.
 
 ### Run control
 - **runEvolution**: `1` samples the collision, runs the classical Yang-Mills evolution and writes the outputs. `0` stops after the Wilson lines of the two nuclei are built (and evolved with JIMWLK, see `useJIMWLK`); with `writeWilsonLines` they are written to disk
@@ -94,7 +94,7 @@ Each event writes the values of all input parameters it used to `usedParameters<
 - **inverseQsForMaxTime**: `1` stops the evolution at $\tau = 1/\langle Q_s \rangle$ instead of `maxTime`, with $\langle Q_s \rangle$ the larger of the two nuclei's $Q_s$ averaged over the overlap region (see `runWithQs`); with `useJIMWLK 1` that of the initial condition, before the JIMWLK evolution. Not possible with `useNucleus 0`, which does not compute $\langle Q_s \rangle$
 
 ### Random seed
-- **seed**: random seed; MPI rank $r$ uses `seed` $+ 1000 r$. `-1` draws the seed from `std::random_device` (rank $r$ again adds $1000 r$). It also enters the names of the Wilson-line files (see `writeWilsonLines`), as `0` for `seed -1`, and also with `useSeedList 1`
+- **seed**: random seed; MPI rank 0 uses it, and rank $r > 0$ a seed derived from it and $r$ (SplitMix64). `-1` draws one seed for the run from `std::random_device`, prints it and uses it in its place, also in `usedParameters<id>.dat`, so that `seed` set to it repeats the run. It also enters the names of the Wilson-line files (see `writeWilsonLines`); with `useSeedList 1`, `seed -1` enters them as `0`
 - **useSeedList**: `1` reads one seed per MPI rank from the file `seedList` in the working directory (rank $r$ uses the $(r+1)$-th number); it overrides `seed`
 - **colorChargeSeed** (optional, default `-1`; only used when the color charges are sampled, `readInitialWilsonLines 0`): `-1` draws the color charges from the random numbers of the run, after the geometry. A value $\ge 0$ draws them from a separate generator, seeded with this value and the event id, so that the color charges can be varied while the geometry (nucleon positions, hot spots, impact parameter), which `seed` determines, stays the same, e.g. to measure their statistical spread at a fixed geometry. The random numbers drawn after the color charges (e.g. the JIMWLK noise, the next event) then differ from a run with `-1`
 

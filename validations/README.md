@@ -123,7 +123,8 @@ Useful flags:
   interrupted run, which keeps them, or with `--keep-logs`).
 - `--clean` — remove stray temporary files left behind by an interrupted run
   from every `seed_*/` directory under `--datadir`, without touching the
-  saved `Tmunu` snapshots, then exit.
+  saved `Tmunu` snapshots or the `usedParameters*.dat` (the version of
+  IP-Glasma that ran the event), then exit.
 - `--keep-logs` — keep the per-event working directories after the run
   instead of deleting them (failed events are always kept); they hold the
   `Tmunu` snapshots, about 0.6 MB per event.
@@ -137,12 +138,14 @@ Useful flags:
 
 Output: `epsilon2_distribution.pdf` in `--datadir`, plus
 `eccentricity_results.json` (or, with `--save-reference`, an updated
-`eccentricity_reference.json` next to the script) recording the ε₂ values and
+`eccentricity_reference.json` next to the script, not saved if an event
+fails) recording the ε₂ values and
 the seed of each, the seeds, the version of IP-Glasma that ran the events
 (from their `usedParameters*.dat`, else `ipglasma --version`), the settings
 (lattice size, L, maxTime, JIMWLK) and the exact command used to reproduce
 the run, and `eccentricity_check.json` with the settings of the script, the
-checks and `passed`, as the summaries of the other validations.
+checks and `passed`, as the summaries of the other validations. These files
+of an earlier run in `--datadir` are removed when a run starts.
 
 The check: the mean and the width of the ε₂ distribution must agree with the
 reference within `--n-sigma` combined errors, from a bootstrap of the run and

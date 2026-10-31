@@ -153,8 +153,8 @@ information:
 
 Running the file again gives the same parameters, but not the same event:
 the random numbers also depend on the MPI rank and on the event's position
-in the run, `seed -1` draws a new seed, and `subNucleonParamSet -1`
-draws a new posterior set.
+in the run, and `subNucleonParamSet -1` draws a new posterior set. With
+`seed -1`, the file has the seed that was drawn.
 
 ## Wilson lines
 
@@ -166,7 +166,7 @@ draws a new posterior set.
     no fixed x and leave it out; JIMWLK snapshots and final lines always
     have it.
   - `<n> = 2 (seed · N + <id>) + iA`, where seed is the input parameter
-    `seed` (`0` for `seed -1`, and also with `useSeedList 1`), N is the number
+    `seed` (with `seed -1` the drawn seed, or `0` with `useSeedList 1`), N is the number
     of events of the run (events per rank times MPI ranks) and `iA` is 1 for
     the projectile and 2 for the target. So no two files of a run, nor of runs with different
     seeds and the same N, have the same number; one event on one rank gives
@@ -555,7 +555,7 @@ on.
 - **`<prefix>Phi-<n>.txt`, `<prefix>Pi-<n>.txt`**
   (`Lattice::writeSU3Matrices()`): φ and π in the Wilson-line text format,
   with `<n>` = `<id>` + 2·seed·nRanks for φ and `<id>` + (2·seed + 1)·nRanks
-  for π, with seed 0 for `seed -1` (not the Wilson-line numbering).
+  for π, with the drawn seed for `seed -1` (not the Wilson-line numbering).
 - **`NpartdNdy-mod.dat`** (`GluonMultiplicity::readNkt()`): reads
   `multiplicity<id>.dat` and `NpartdNdy<id>.dat` (names no version of the
   program writes), converts dN/dy to dN/dη with the `jacobianMass`/`sqrtS`

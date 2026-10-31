@@ -125,24 +125,37 @@ int main(int argc, char *argv[]) {
     // std::random_device or from the file seedList
     Random randomStorage;
     Random *random = &randomStorage;
-    unsigned long long int rnum;
     if (!param->random.useSeedList) {
         if (param->random.seed < 0) {
-            std::random_device ran_dev;
-            rnum = ran_dev();
-        } else {
-            rnum = static_cast<unsigned long long>(param->random.seed);
-            messager << "[main::main]: Random seed = " << rnum + (rank * 1000)
-                     << " - entered directly +rank*1000.";
-            messager.flush("info");
+            // one seed for the whole run, drawn on rank 0, which replaces
+            // -1: the file names and usedParameters<id>.dat carry it, and a
+            // rerun with it gives the same events
+            unsigned long long drawn = 0;
+            if (rank == 0) {
+                std::random_device ran_dev;
+                drawn = ran_dev();
+            }
+#ifndef DISABLEMPI
+            MPI_Bcast(&drawn, 1, MPI_UNSIGNED_LONG_LONG, 0, MPI_COMM_WORLD);
+#endif
+            param->random.seed = static_cast<long long>(drawn);
+            if (rank == 0) {
+                messager << "[main::main]: Drew the random seed " << drawn
+                         << "; seed " << drawn << " repeats this run.";
+                messager.flush("info");
+            }
         }
-        param->run.randomSeed = rnum + rank * 1000;
-        if (param->random.seed < 0) {
-            messager << "[main::main]: Random seed = " << param->run.randomSeed;
-            messager.flush("info");
+        const unsigned long long rnum =
+            static_cast<unsigned long long>(param->random.seed);
+        param->run.randomSeed = rankSeed(rnum, rank);
+        messager << "[main::main]: Random seed = " << param->run.randomSeed;
+        if (rank > 0) {
+            messager << " (seed " << rnum << " on MPI rank " << rank << ")";
         }
-        random->init_genrand64(rnum + rank * 1000);
-        random->gslRandomInit(rnum + rank * 1000);
+        messager << ".";
+        messager.flush("info");
+        random->init_genrand64(param->run.randomSeed);
+        random->gslRandomInit(param->run.randomSeed);
     } else {
         ifstream fin;
         fin.open("seedList");
@@ -480,8 +493,7 @@ void writeparams(Parameters *param) {
              "reproduce this event:\n"
              "# the random numbers also depend on the MPI rank and the "
              "event's position in\n"
-             "# the run (and are drawn anew with seed -1), and "
-             "subNucleonParamSet -1\n"
+             "# the run, and subNucleonParamSet -1\n"
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);
     if (param->subnucleon.subNucleonParamType > 0) {

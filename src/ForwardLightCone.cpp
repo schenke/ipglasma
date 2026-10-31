@@ -11,6 +11,7 @@
 
 #include "Instrumentation.h"
 #include "PhysConst.h"
+#include "Random.h"
 #include "gsl/gsl_linalg.h"
 
 using PhysConst::Nc2m1;
@@ -30,20 +31,6 @@ bool isFinite(const Matrix &M) {
         }
     }
     return true;
-}
-
-/**
- * SplitMix64 finalizer/counter step, used only to construct a
- * deterministic, stateless retry stream for the forward-lightcone
- * solver (see forwardLightconeRetrySeed()/deterministicRetryGaussian()).
- * \param[in] x Input state.
- * \return The mixed 64-bit output.
- */
-inline std::uint64_t splitmix64(std::uint64_t x) {
-    x += 0x9E3779B97F4A7C15ULL;
-    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
-    return x ^ (x >> 31);
 }
 
 /**

@@ -287,5 +287,9 @@ TEST_CASE("rankSeed: rank 0 keeps the seed, all ranks of nearby seeds differ") {
         }
     }
     CHECK(static_cast<int>(seeds.size()) == count);
+    // 53 bits: a valid seed (long long) and exact as a double
+    for (unsigned long long seed : seeds) {
+        CHECK(seed < (1ULL << 53));
+    }
     CHECK(rankSeed(5ULL, 1) != rankSeed(1005ULL, 0));
 }

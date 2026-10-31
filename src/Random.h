@@ -30,14 +30,17 @@ inline std::uint64_t splitmix64(std::uint64_t x) {
  * itself on rank 0, so that a single process uses it directly, and a
  * SplitMix64 mix of both on the other ranks, so that every rank of every
  * run gets its own stream (with `seed + 1000 rank`, as before, rank 1 of
- * the seed s repeated rank 0 of the seed s + 1000).
+ * the seed s repeated rank 0 of the seed s + 1000). The mix keeps 53 bits,
+ * so that it is a valid `seed` (to replay the stream of a rank in one
+ * process) and exact as a double (e.g. in RESULTS.h5).
  * \param[in] seed The seed of the run.
  * \param[in] rank The MPI rank.
  * \return The seed of the rank.
  */
 inline unsigned long long rankSeed(unsigned long long seed, int rank) {
     if (rank == 0) return seed;
-    return splitmix64(splitmix64(seed) ^ static_cast<std::uint64_t>(rank));
+    return splitmix64(splitmix64(seed) ^ static_cast<std::uint64_t>(rank))
+           >> 11;
 }
 
 /**

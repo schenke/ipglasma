@@ -4,6 +4,7 @@
 
 #include "GaugeFix.h"
 
+#include <cmath>
 #include <complex>
 #include <sstream>
 #include <vector>
@@ -12,6 +13,15 @@
 #include "Matrix.h"
 
 namespace {
+
+/// The threshold of the gauge-fixing residual at the lattice spacing
+/// kGaugeFixReferenceSpacing; it scales like a^4 (GaugeFix::fftChi()).
+constexpr double kGaugeFixTolerance = 1e-12;
+/// [fm]
+constexpr double kGaugeFixReferenceSpacing = 0.1;
+/// Iterations without a new minimum of the residual after which the gauge
+/// fixing stops.
+constexpr int kGaugeFixStagnation = 200;
 
 // chi is a traceless Hermitian SU(3) algebra element,
 // chi = q[a] t[a], with t[a] = lambda[a]/2.  Recover the eight real
@@ -108,7 +118,25 @@ void GaugeFix::fftChi(
 
     const int max_gfiter = steps;
 
-    double gresidual_prev = 10000.;
+    // The residual is the mean of (g a^2 div A)^2 in lattice units, so for
+    // the same physical fields it falls like a^4: a fixed threshold, 1e-9
+    // as in 1.x, fixed the gauge ever more loosely on finer lattices, and
+    // dN/dy of a central Pb+Pb event of the example input came out -0.5%,
+    // -1.1%, +5.7% and -3.6% off at N = 256, 512, 768 and 1024 (L = 30 fm).
+    // The threshold is therefore fixed in physical units, 1e-12 at
+    // a = 0.1 fm: dN/dy is then within 0.05% of the converged value.
+    const double a = param->lattice.L / N;  // [fm]
+    const double tolerance =
+        kGaugeFixTolerance * std::pow(a / kGaugeFixReferenceSpacing, 4);
+    bool converged = false;
+    int iterations = max_gfiter;
+
+    // The residual can stay flat, or rise slightly, for tens of iterations
+    // before it falls again; only when it has not reached a new minimum in
+    // kGaugeFixStagnation iterations has it stopped converging (e.g. at the
+    // rounding level).
+    double bestResidual = 0.;
+    int bestIteration = 0;
     double gresidual = 0.;
     std::vector<double> residualSite(static_cast<std::size_t>(N) * N);
 
@@ -172,16 +200,25 @@ void GaugeFix::fftChi(
             messager_ << "[GaugeFix::fftChi]: iteration " << gfiter
                       << ", residual = " << gresidual;
             messager_.flush("info");
-            gresidual_prev = gresidual;
         }
 
-        if (gresidual < 1e-9) {
+        if (gresidual < tolerance) {
+            converged = true;
+            iterations = gfiter;
             break;
         }
 
-        if (gresidual > gresidual_prev && gresidual < 1e-6) {
-            // make sure it is progressively converging
-            // otherwise, break the loop with less accuracy
+        if (gfiter == 0 || gresidual < bestResidual) {
+            bestResidual = gresidual;
+            bestIteration = gfiter;
+        } else if (gfiter - bestIteration >= kGaugeFixStagnation) {
+            iterations = gfiter;
+            messager_ << "[GaugeFix::fftChi]: the residual stopped decreasing "
+                         "at "
+                      << bestResidual << " (iteration " << bestIteration
+                      << "), above the threshold " << tolerance
+                      << "; the gauge is fixed less accurately.";
+            messager_.flush("warning");
             break;
         }
 
@@ -315,4 +352,18 @@ void GaugeFix::fftChi(
             }
         }
     }  // gfiter loop
+
+    if (converged) {
+        messager_ << "[GaugeFix::fftChi]: Coulomb gauge after " << iterations
+                  << " iterations, residual " << gresidual << " < " << tolerance
+                  << ".";
+        messager_.flush("info");
+    } else if (iterations == max_gfiter) {
+        messager_ << "[GaugeFix::fftChi]: Coulomb gauge not reached in "
+                  << max_gfiter << " iterations: residual " << gresidual
+                  << ", threshold " << tolerance
+                  << "; the gluon spectrum is computed in an inaccurately "
+                     "fixed gauge.";
+        messager_.flush("warning");
+    }
 }

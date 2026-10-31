@@ -48,9 +48,11 @@ class GaugeFix {
      * \f$g(x) = \exp(i\chi(x))\f$; and applies \f$g(x)\f$ to every
      * link and adjoint field on the lattice (\c Ux, \c Uy, \c U, \c
      * U2, \c Uy2, \c Ux2). Stops early once the mean residual
-     * \f$\langle\mathrm{Tr}(\chi^2)\rangle/3\f$ drops below
-     * \f$10^{-9}\f$, or once it stops improving while already below
-     * \f$10^{-6}\f$.
+     * \f$\langle\mathrm{Tr}(\chi^2)\rangle/3\f$, which for given
+     * physical fields scales like \f$a^4\f$, drops below
+     * \f$10^{-12} (a/0.1\,\mathrm{fm})^4\f$, or, with a warning, once it
+     * has not reached a new minimum in 200 iterations; warns if it is not
+     * reached in \p steps iterations.
      * \param[in] fft FFT instance used to transform \f$\chi\f$ to and
      * from momentum space; must be constructed for the same lattice
      * size as \p lat.
@@ -58,8 +60,8 @@ class GaugeFix {
      * place.
      * \param[in] group Unused; kept for interface consistency with
      * other lattice-observable methods that do need a Group instance.
-     * \param[in] param Simulation parameters; only `param->lattice.size` is
-     * used.
+     * \param[in] param Simulation parameters; only `param->lattice.size` and
+     * `param->lattice.L` are used.
      * \param[in] steps Maximum number of relaxation iterations to run
      * before giving up regardless of the residual.
      */

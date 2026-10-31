@@ -4,6 +4,7 @@
 
 #include "MyEigen.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdlib>
 #include <fstream>
@@ -255,9 +256,10 @@ bool onOutputLattice(const Lattice *lat, double x, double y, double L) {
 
 /**
  * The cells of one Landau matching in which \f$T^\mu{}_\nu\f$ has no
- * timelike eigenvector: their number and the one with the largest
- * \f$T^{\tau\tau}\f$ (the lowest position among equal values, so that
- * the result does not depend on the number of threads).
+ * timelike eigenvector: their number, their sum of \f$T^{\tau\tau}\f$,
+ * and the one with the largest \f$T^{\tau\tau}\f$ (the lowest position
+ * among equal values, so that the chosen cell does not depend on the
+ * number of threads; the sum does, in its last bits).
  */
 struct CellsWithoutFlow {
     int count = 0;
@@ -486,7 +488,7 @@ void solveFlowVelocityAtCell(
                     }
                     if (abs(GSL_IMAG(z)) > 0.001 && eps > 0.001
                         && (lat->isPeriodic()
-                            || (si > 10 && sj > 10 && si < N - 10
+                            || (si >= 10 && sj >= 10 && si < N - 10
                                 && sj < N - 10))) {
                         utau = 1.;
                         ux = 0.;
@@ -1106,6 +1108,7 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
     double averageeps = 0.;
     int count = 0;
     double ttautauSum = 0.;
+    double ttautauMax = 0.;
     CellsWithoutFlow withoutFlow;
 
     // The per-cell flow-velocity solve is now independent across cells (the
@@ -1114,12 +1117,14 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
     // Each thread allocates its own GSL workspace/eigenvalue/eigenvector
     // objects once. All per-cell writes touch only cells[pos], so every
     // DATA-FILE output is bit-for-bit identical to the serial version
-    // regardless of thread count. The four diagnostic averages (printed to
-    // stdout only) use an OpenMP reduction whose summation order differs
+    // regardless of thread count. The four diagnostic averages, and the
+    // share of T^tautau in the cells without a flow velocity (printed to
+    // stdout only), use OpenMP reductions whose summation order differs
     // from serial, so those logged numbers may differ in their last bits --
     // no data file is affected.
-#pragma omp parallel reduction( \
-        + : averageux, averageuy, averageueta, averageeps, count, ttautauSum)
+#pragma omp parallel reduction(                                               \
+        + : averageux, averageuy, averageueta, averageeps, count, ttautauSum) \
+    reduction(max : ttautauMax)
     {
         gsl_vector_complex *eval_ws = gsl_vector_complex_alloc(4);
         gsl_matrix_complex *evec_ws = gsl_matrix_complex_alloc(4, 4);
@@ -1132,6 +1137,7 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
             const int sj = lat->yFromPosition(posLoop);
             const int pos = posLoop;
             ttautauSum += lat->cells[pos]->getTtautau();
+            ttautauMax = std::max(ttautauMax, lat->cells[pos]->getTtautau());
             solveFlowVelocityAtCell(
                 lat, pos, si, sj, N, it, dtau, a, eval_ws, evec_ws, w_ws,
                 averageux, averageuy, averageueta, averageeps, count,
@@ -1153,9 +1159,10 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
 
     // Cells without a timelike eigenvector are common in the dilute
     // periphery (in a central Pb+Pb event of the example input, 3% of the
-    // cells with about 0.01% of the energy), so they are reported in one
-    // line, and as a warning, with T^munu of the densest of them, only if
-    // they carry more than 1% of the energy.
+    // cells with about 0.01% of the energy, the densest with 2% of the
+    // largest T^tautau), so they are reported in one line, and as a warning,
+    // with T^munu of the densest of them, only if they carry more than 1% of
+    // the energy or one of them has more than 10% of the largest T^tautau.
     if (withoutFlow.count > 0) {
         const double share =
             ttautauSum > 0. ? withoutFlow.ttautauSum / ttautauSum : 0.;
@@ -1165,7 +1172,7 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
                   << 100. * share
                   << "% of the sum of T^tautau; they are left at rest with "
                      "epsilon = T^tautau.";
-        if (share > 0.01) {
+        if (share > 0.01 || withoutFlow.largestTtautau > 0.1 * ttautauMax) {
             const int pos = withoutFlow.largestPos;
             const Cell &cell = *lat->cells[pos];
             messager_ << " The one with the largest T^tautau, at site ("

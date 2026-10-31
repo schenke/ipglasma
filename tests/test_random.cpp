@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <set>
 #include <vector>
 
 #include "Random.h"
@@ -267,4 +268,28 @@ TEST_CASE(
                 100)
             < 1.95);
     }
+}
+
+TEST_CASE("rankSeed: rank 0 keeps the seed, all ranks of nearby seeds differ") {
+    // a single process (rank 0) uses the seed of the input itself
+    for (unsigned long long seed : {0ULL, 3ULL, 1000ULL, 123456789ULL}) {
+        CHECK(rankSeed(seed, 0) == seed);
+    }
+    // seed + 1000 rank, as before, gave rank 1 of seed s the seed of rank 0
+    // of seed s + 1000; now the seeds of 8 ranks of 2001 nearby runs are
+    // all different
+    std::set<unsigned long long> seeds;
+    int count = 0;
+    for (unsigned long long seed = 0; seed <= 2000; ++seed) {
+        for (int rank = 0; rank < 8; ++rank) {
+            seeds.insert(rankSeed(seed, rank));
+            ++count;
+        }
+    }
+    CHECK(static_cast<int>(seeds.size()) == count);
+    // 53 bits: a valid seed (long long) and exact as a double
+    for (unsigned long long seed : seeds) {
+        CHECK(seed < (1ULL << 53));
+    }
+    CHECK(rankSeed(5ULL, 1) != rankSeed(1005ULL, 0));
 }

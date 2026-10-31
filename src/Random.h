@@ -6,10 +6,42 @@
 #define SRC_RANDOM_H_
 
 #include <cstddef>
+#include <cstdint>
 #include <random>
 #include <vector>
 
 #include "gsl/gsl_rng.h"
+
+/**
+ * SplitMix64 finalizer/counter step: mixes a 64-bit state into a
+ * well-distributed 64-bit output (used for derived, independent seeds).
+ * \param[in] x Input state.
+ * \return The mixed 64-bit output.
+ */
+inline std::uint64_t splitmix64(std::uint64_t x) {
+    x += 0x9E3779B97F4A7C15ULL;
+    x = (x ^ (x >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    x = (x ^ (x >> 27)) * 0x94D049BB133111EBULL;
+    return x ^ (x >> 31);
+}
+
+/**
+ * The seed of MPI rank \p rank in a run with the seed \p seed: \p seed
+ * itself on rank 0, so that a single process uses it directly, and a
+ * SplitMix64 mix of both on the other ranks, so that every rank of every
+ * run gets its own stream (with `seed + 1000 rank`, as before, rank 1 of
+ * the seed s repeated rank 0 of the seed s + 1000). The mix keeps 53 bits,
+ * so that it is a valid `seed` (to replay the stream of a rank in one
+ * process) and exact as a double (e.g. in RESULTS.h5).
+ * \param[in] seed The seed of the run.
+ * \param[in] rank The MPI rank.
+ * \return The seed of the rank.
+ */
+inline unsigned long long rankSeed(unsigned long long seed, int rank) {
+    if (rank == 0) return seed;
+    return splitmix64(splitmix64(seed) ^ static_cast<std::uint64_t>(rank))
+           >> 11;
+}
 
 /**
  * Random-number source for the whole simulation: a 64-bit Mersenne

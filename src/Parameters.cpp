@@ -134,6 +134,17 @@ std::vector<std::string> Parameters::validationErrors() const {
         errors.push_back(message.str());
     };
 
+    if (random.seed < 0 && !random.useSeedList
+        && wilsonLines.readInitialWilsonLines != 0) {
+        // the drawn seed would also name the files to read (fileSeed())
+        std::ostringstream message;
+        message << "seed -1 cannot read Wilson lines (readInitialWilsonLines "
+                   "1 or 2): their file names contain the seed, so give the "
+                   "seed of the run that wrote them; for other random numbers "
+                   "with the same files, use useSeedList 1 with that seed";
+        fail(message);
+    }
+
     if (jimwlk.saveSnapshots && wilsonLines.writeWilsonLines == 0) {
         std::ostringstream message;
         message << "jimwlkSaveSnapshots = 1 requires writing Wilson lines "

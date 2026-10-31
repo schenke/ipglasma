@@ -41,10 +41,11 @@ struct EvolutionParameters {
 
 /// Random-number seeding.
 struct RandomParameters {
-    /// Random seed; MPI rank \f$r\f$ uses `seed + 1000 r`, unless \c
-    /// useSeedList is set. `-1` draws the seed from `std::random_device`
-    /// (and rank \f$r\f$ adds \f$1000 r\f$). Also part of the
-    /// Wilson-line file names (see fileSeed()).
+    /// Random seed; MPI rank 0 uses it, the other ranks a seed derived
+    /// from it and the rank (rankSeed()), unless \c useSeedList is set.
+    /// `-1` draws one seed for the run from `std::random_device` on rank 0,
+    /// which then replaces it (main()). Also part of the Wilson-line file
+    /// names (see fileSeed()).
     long long seed = 0;
     /// Whether to read one random seed per MPI rank from the file
     /// `seedList` (`1`); overrides \c seed.
@@ -56,8 +57,9 @@ struct RandomParameters {
     long long colorChargeSeed = -1;
 
     /**
-     * The seed in the Wilson-line file names: \c seed, or `0` for a
-     * random seed (`seed -1`).
+     * The seed in the Wilson-line file names: \c seed (main() replaces
+     * `seed -1` by the drawn seed before any file is written), or `0` if
+     * it is still negative.
      * \return The seed for the file names.
      */
     unsigned long long fileSeed() const {

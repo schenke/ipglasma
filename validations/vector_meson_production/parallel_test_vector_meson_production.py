@@ -46,9 +46,9 @@ sections must agree with those of the reference within --n-sigma errors,
 where the error is the one expected if they agree: the relative error of the
 reference, for the events of the reference and of the run; the spectra must
 be finite and none an outlier (its largest |A|^2 more than --outlier-zmax
-robust standard deviations of log10 |A|^2 from the median); and the seeds of
-the run must not overlap those of the reference. Otherwise the script exits
-with 1.
+robust standard deviations of log10 |A|^2 from the median, both of the
+reference); and the seeds of the run must be known and not overlap those of
+the reference. Otherwise the script exits with 1.
 
 Use --plot-only to skip the simulation and only compute the cross sections, the plots and the check from the spectra in the specified directory.
 
@@ -61,6 +61,7 @@ Before running this, make sure you have downloaded and built the subnucleondiffr
 
 import argparse
 import hashlib
+from collections import Counter
 import json
 import os
 import shutil
@@ -235,9 +236,9 @@ def read_spectra(datadir, maxconf=None):
     returns their numbers, t, the amplitudes (event, t, column; the columns
     after t: Re A and Im A of the transverse, then of the longitudinal
     polarization), the spectra that are not readable, not finite or not on
-    the t values of the first (number, reason), and the versions of
+    the t values of most spectra (number, reason), and the versions of
     subnucleondiffraction that wrote them."""
-    numbers, data, invalid, versions = [], [], [], set()
+    candidates, invalid = [], []
     for number in spectra_files(datadir):
         if maxconf is not None and number > maxconf:
             continue
@@ -251,36 +252,66 @@ def read_spectra(datadir, maxconf=None):
             invalid.append((number, "no t values and amplitudes"))
         elif not np.isfinite(values).all():
             invalid.append((number, "not finite"))
-        elif data and (values.shape != data[0].shape or not np.allclose(values[:, 0], data[0][:, 0], atol=1e-5)):
-            invalid.append((number, "other t values than the first spectra"))
         else:
+            candidates.append((number, path, values))
+    # the t values of most spectra, so that one cut short does not make the
+    # others look wrong
+    grids = Counter((values.shape, tuple(np.round(values[:, 0], 5))) for _, _, values in candidates)
+    numbers, data, versions = [], [], set()
+    if grids:
+        shape, t = grids.most_common(1)[0][0]
+        for number, path, values in candidates:
+            if values.shape != shape or not np.allclose(values[:, 0], t, atol=1e-5):
+                invalid.append((number, "other t values than most spectra"))
+                continue
             numbers.append(number)
             data.append(values)
             version = subnucleondiffraction_version(path)
             if version:
                 versions.add(version)
+    invalid.sort()
     if not data:
         return numbers, None, None, invalid, sorted(versions)
     data = np.array(data)
     return numbers, data[0][:, 0], data[:, :, 1:], invalid, sorted(versions)
 
 
-def find_outliers(numbers, amplitudes, zmax):
-    """The spectra whose scale, the largest |A|^2 (summed over the columns)
-    over t, is not positive, or more than zmax robust standard deviations
-    (MAD / 0.6745) of log10(scale) from its median, as the outlier filter of
-    utilities/compute_tdiffCrossSections.py of IPGlasmaFramework: returns
-    [(number, z)], z None for a scale that is not positive."""
-    scale = np.max(np.sum(amplitudes ** 2, axis=2), axis=1)
+def spectrum_scales(amplitudes):
+    """The scale of each spectrum: its largest |A|^2 (summed over the
+    columns) over t."""
+    return np.max(np.sum(amplitudes ** 2, axis=2), axis=1)
+
+
+def scale_distribution(amplitudes):
+    """The median and the median absolute deviation (MAD) of log10 of the
+    positive scales of the spectra, recorded in the results and the
+    reference ("outlier_filter") for the outlier filter of later runs, or
+    None for fewer than 3 positive scales."""
+    scale = spectrum_scales(amplitudes)
+    x = np.log10(scale[scale > 0])
+    if len(x) < 3:
+        return None
+    median = np.median(x)
+    return {"log10_scale_median": float(median), "log10_scale_mad": float(np.median(np.abs(x - median)))}
+
+
+def find_outliers(numbers, amplitudes, zmax, distribution=None):
+    """The spectra whose scale (spectrum_scales) is not positive, or more
+    than zmax robust standard deviations (MAD / 0.6745) of log10(scale) from
+    the median, as the outlier filter of utilities/compute_tdiffCrossSections.py
+    of IPGlasmaFramework: returns [(number, z)], z None for a scale that is
+    not positive. The median and the MAD are those of the reference
+    (distribution, from scale_distribution), if given: those of a few events
+    are uncertain (of runs with 4 events of the same code, 5% would have an
+    outlier beyond 7 with their own), else those of these spectra."""
+    scale = spectrum_scales(amplitudes)
     positive = scale > 0
     outliers = [(numbers[i], None) for i in np.where(~positive)[0]]
-    x = np.log10(scale[positive])
-    if len(x) >= 3:
-        median = np.median(x)
-        mad = np.median(np.abs(x - median))
-        if mad > 0:
-            z = 0.6745 * (x - median) / mad
-            outliers += [(numbers[i], float(zi)) for i, zi in zip(np.where(positive)[0], z) if abs(zi) > zmax]
+    if distribution is None:
+        distribution = scale_distribution(amplitudes)
+    if distribution is not None and distribution["log10_scale_mad"] > 0:
+        z = 0.6745 * (np.log10(scale[positive]) - distribution["log10_scale_median"]) / distribution["log10_scale_mad"]
+        outliers += [(numbers[i], float(zi)) for i, zi in zip(np.where(positive)[0], z) if abs(zi) > zmax]
     return sorted(outliers)
 
 
@@ -347,7 +378,8 @@ def load_reference(reference_path):
 def check_against_reference(result, reference, n_sigma, seeds=None):
     """The checks of a run against the reference: its cross sections
     integrated over |t| <= tmax agree with those of the reference within
-    n_sigma errors, and its seeds do not overlap those of the reference.
+    n_sigma errors, and its seeds are known and do not overlap those of the
+    reference.
     The error is that of the ratio expected if the two agree: the relative
     bootstrap error of the reference, scaled to the events of the reference
     and of the run, sqrt(1 + N_ref / N_run). The run's own error is not
@@ -377,8 +409,16 @@ def check_against_reference(result, reference, n_sigma, seeds=None):
                          "relative_error_of_the_run": own}
         print(f"  {'OK  ' if ok else 'FAIL'} {name}: ratio {ratio:.3f} +- {error:.3f} ({(ratio - 1.0) / error:+.1f} sigma; "
               f"relative error of the run alone {own:.3f})", flush=True)
-    if seeds is not None:
-        ref_first, ref_last = reference["first_seed"], reference["last_seed"]
+    ref_first, ref_last = reference.get("first_seed"), reference.get("last_seed")
+    if seeds is None:
+        # e.g. the events of the reference itself, which would agree with it
+        checks["seeds independent of the reference"] = False
+        print("  FAIL the seeds of the run are not known (no run_info.json in --datadir): give them with --first-seed",
+              flush=True)
+    elif ref_first is None or ref_last is None:
+        checks["seeds independent of the reference"] = False
+        print("  FAIL the reference records no seeds", flush=True)
+    else:
         independent = bool(seeds[1] < ref_first or seeds[0] > ref_last)
         checks["seeds independent of the reference"] = independent
         print(f"  {'OK  ' if independent else 'FAIL'} seeds {seeds[0]}-{seeds[1]}, reference {ref_first}-{ref_last}", flush=True)
@@ -452,7 +492,7 @@ def evaluate(datadir, args, reference_path, seeds, maxconf, versions, settings):
     reference, written to jpsi_check.json, or, with --save-reference, the
     new reference. Returns whether all checks passed."""
     # results of an earlier evaluation must not stand in for these
-    for name in ("jpsi_results.json", "cross_section.pdf"):
+    for name in ("jpsi_results.json", "cross_section.pdf", "jpsi_check.json"):
         if os.path.exists(os.path.join(datadir, name)):
             os.remove(os.path.join(datadir, name))
     numbers, t, amplitudes, invalid, snd_versions = read_spectra(datadir, maxconf)
@@ -464,18 +504,26 @@ def evaluate(datadir, args, reference_path, seeds, maxconf, versions, settings):
     checks = summary["checks"]
     for number, reason in invalid:
         print(f"  spectra_{number}: {reason}", flush=True)
+    summary["invalid_spectra"] = [{"spectra": n, "reason": r} for n, r in invalid]
+    reference = None
+    if not args.save_reference:
+        reference = load_reference(reference_path)
+        if reference is None:
+            print(f"No reference found at {reference_path}; make one with --save-reference", flush=True)
+            checks["reference found"] = False
     if len(numbers) < 2:
         print("Fewer than two valid spectra: no cross sections", flush=True)
         checks["at least two valid spectra"] = False
     else:
         result = analyze(t, amplitudes, args.check_tmax, args.bootstrap)
-        outliers = find_outliers(numbers, amplitudes, args.outlier_zmax)
+        result["outlier_filter"] = scale_distribution(amplitudes)
+        outliers = find_outliers(numbers, amplitudes, args.outlier_zmax,
+                                 reference.get("outlier_filter") if reference is not None else None)
         for number, z in outliers:
             print(f"  spectra_{number}: outlier, " + ("largest |A|^2 not positive" if z is None else f"z = {z:+.1f}"), flush=True)
         checks["all spectra valid and none an outlier"] = not invalid and not outliers
         print(f"  {'OK  ' if not invalid and not outliers else 'FAIL'} {len(invalid)} invalid spectra, "
               f"{len(outliers)} outliers beyond {args.outlier_zmax:g} robust standard deviations", flush=True)
-        summary["invalid_spectra"] = [{"spectra": n, "reason": r} for n, r in invalid]
         summary["outliers"] = [{"spectra": n, "z": z} for n, z in outliers]
 
         payload = results_payload(result, seeds, versions, settings)
@@ -484,31 +532,32 @@ def evaluate(datadir, args, reference_path, seeds, maxconf, versions, settings):
             json.dump(payload, f, indent=1)
         print("Results saved to", results_path, flush=True)
 
-        reference = None
         if args.save_reference:
+            # the spectra of failed seeds are missing
+            present = set(numbers) | {n for n, _ in invalid}
+            missing = [n for n in range(1, 2 * (seeds[1] - seeds[0] + 1) + 1) if n not in present] if seeds else []
             if seeds is None:
                 # a check needs the seeds of the reference, to tell whether
                 # a run is independent of it
                 print("No reference saved: the seeds are not known (no run_info.json in --datadir); "
                       "give them with --first-seed", flush=True)
                 checks["seeds of the reference known"] = False
+            elif missing:
+                print(f"No reference saved: {len(missing)} spectra of the seeds {seeds[0]}-{seeds[1]} are missing "
+                      f"(failed seeds), e.g. spectra_{missing[0]}", flush=True)
+                checks["no spectra missing"] = False
             elif all(checks.values()):
                 with open(reference_path, "w") as f:
                     json.dump(payload, f, indent=1)
                 print("Saved the new reference to", reference_path, flush=True)
             else:
                 print("No reference saved: there are invalid spectra or outliers", flush=True)
-        else:
-            reference = load_reference(reference_path)
-            if reference is None:
-                print(f"No reference found at {reference_path}; make one with --save-reference", flush=True)
-                checks["reference found"] = False
-            else:
-                for warning in settings_warnings(settings, versions, reference):
-                    print(warning, flush=True)
-                reference_checks, comparison = check_against_reference(result, reference, args.n_sigma, seeds)
-                checks.update(reference_checks)
-                summary.update(comparison)
+        elif reference is not None:
+            for warning in settings_warnings(settings, versions, reference):
+                print(warning, flush=True)
+            reference_checks, comparison = check_against_reference(result, reference, args.n_sigma, seeds)
+            checks.update(reference_checks)
+            summary.update(comparison)
         plot_comparison(result, reference, os.path.join(datadir, "cross_section.pdf"), settings["xpom"])
     passed = all(checks.values())
     summary["passed"] = passed
@@ -637,9 +686,9 @@ def main():
     parser.add_argument("--check-tmax", type=float, default=2.0, help="Largest |t| [GeV^2] of the integrated cross sections compared with the reference.")
     parser.add_argument("--n-sigma", type=float, default=3.0, help="Allowed deviation from the reference in units of the error expected if the run and the reference agree.")
     parser.add_argument("--bootstrap", type=int, default=1000, help="Bootstrap resamplings of the events for the errors.")
-    parser.add_argument("--outlier-zmax", type=float, default=7.0, help="A spectrum whose largest |A|^2 is more than this many robust standard deviations of log10 |A|^2 from the median is an outlier, and the check fails.")
+    parser.add_argument("--outlier-zmax", type=float, default=7.0, help="A spectrum whose largest |A|^2 is more than this many robust standard deviations of log10 |A|^2 from the median (both of the reference, else of the run) is an outlier, and the check fails.")
     parser.add_argument("--reference-file", type=str, default=os.path.join(_script_dir(), reference_file_name), help=f"The reference (default {reference_file_name} next to the script).")
-    parser.add_argument("--save-reference", action="store_true", help="Save the results of this run as the new reference (--reference-file) instead of comparing with it; not if a spectrum is invalid or an outlier, or if the seeds are not known (--plot-only without run_info.json or --first-seed).")
+    parser.add_argument("--save-reference", action="store_true", help="Save the results of this run as the new reference (--reference-file) instead of comparing with it; not if a spectrum is invalid, an outlier or missing (a failed seed), or if the seeds are not known (--plot-only without run_info.json or --first-seed).")
     args = parser.parse_args()
 
     repo_root = _repo_root()

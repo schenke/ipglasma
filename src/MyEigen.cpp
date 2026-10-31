@@ -254,6 +254,43 @@ bool onOutputLattice(const Lattice *lat, double x, double y, double L) {
 }
 
 /**
+ * The cells of one Landau matching in which \f$T^\mu{}_\nu\f$ has no
+ * timelike eigenvector: their number and the one with the largest
+ * \f$T^{\tau\tau}\f$ (the lowest position among equal values, so that
+ * the result does not depend on the number of threads).
+ */
+struct CellsWithoutFlow {
+    int count = 0;
+    double ttautauSum = 0.;
+    int largestPos = -1;
+    double largestTtautau = 0.;
+
+    /// Records a candidate for the cell with the largest \f$T^{\tau\tau}\f$.
+    void consider(int pos, double ttautau) {
+        if (pos < 0) return;
+        if (largestPos < 0 || ttautau > largestTtautau
+            || (ttautau == largestTtautau && pos < largestPos)) {
+            largestPos = pos;
+            largestTtautau = ttautau;
+        }
+    }
+
+    /// Adds a cell.
+    void add(int pos, double ttautau) {
+        ++count;
+        ttautauSum += ttautau;
+        consider(pos, ttautau);
+    }
+
+    /// Adds the cells of another thread.
+    void merge(const CellsWithoutFlow &other) {
+        count += other.count;
+        ttautauSum += other.ttautauSum;
+        consider(other.largestPos, other.largestTtautau);
+    }
+};
+
+/**
  * Solves for the local flow velocity \f$u^\mu\f$ and energy density at
  * one lattice cell by diagonalizing the mixed tensor \f$T^\mu_\nu\f$
  * (Landau matching: find its timelike eigenvector, normalized under
@@ -291,12 +328,15 @@ bool onOutputLattice(const Lattice *lat, double x, double y, double L) {
  * of \f$\epsilon\f$.
  * \param[in,out] count OpenMP reduction accumulator: number of cells a
  * timelike eigenvector was found for.
+ * \param[in,out] withoutFlow This thread's cells without a timelike
+ * eigenvector.
  */
 void solveFlowVelocityAtCell(
     Lattice *lat, int pos, int si, int sj, int N, int it, double dtau, double a,
     gsl_vector_complex *eval_ws, gsl_matrix_complex *evec_ws,
     gsl_eigen_nonsymmv_workspace *w_ws, double &averageux, double &averageuy,
-    double &averageueta, double &averageeps, int &count) {
+    double &averageueta, double &averageeps, int &count,
+    CellsWithoutFlow &withoutFlow) {
     // Flow velocity defaults to the local rest frame (0,0,0,1):
     // zero spatial flow, u^tau = 1. (See note in the serial
     // version: this also removes the old cross-cell carryover bug.)
@@ -377,9 +417,11 @@ void solveFlowVelocityAtCell(
                 sqrt(abs(GSL_REAL(euklidiansquare) / GSL_REAL(square))), 0);
             if (GSL_REAL(square) > 0) {
                 eps = GSL_REAL(eval_i);
+                // at least five sites from every edge (the lower edges
+                // used to be left out only at site 0)
                 if (abs(GSL_IMAG(eval_i)) > 0.001
                     && (lat->isPeriodic()
-                        || (si > 0 && sj > 0 && si < N - 5 && sj < N - 5))) {
+                        || (si >= 5 && sj >= 5 && si < N - 5 && sj < N - 5))) {
                     eps = lat->cells[pos]->getTtautau();
                 }
             }
@@ -471,40 +513,9 @@ void solveFlowVelocityAtCell(
         }
     }
 
-    // write Tmunu in case no u was found
+    // reported once per Landau matching, by solveFlowVelocity()
     if (foundU == 0) {
-        if (si == N / 2 && sj == N / 2) {
-            // A fresh, stack-local instance: this runs inside
-            // an omp parallel region, and PrettyOstream is not
-            // thread-safe to share.
-            PrettyOstream localMessager;
-            localMessager << "[MyEigen::flowVelocity4DImpl]: No "
-                             "physical flow velocity found at "
-                             "site ("
-                          << si << ", " << sj
-                          << "). T^munu and the best-guess "
-                             "velocity there:\n\n"
-                          << lat->cells[pos]->getTtautau() << " "
-                          << lat->cells[pos]->getTtaux() << " "
-                          << lat->cells[pos]->getTtauy() << " "
-                          << lat->cells[pos]->getTtaueta() << "\n"
-                          << lat->cells[pos]->getTtaux() << " "
-                          << lat->cells[pos]->getTxx() << " "
-                          << lat->cells[pos]->getTxy() << " "
-                          << lat->cells[pos]->getTxeta() << "\n"
-                          << lat->cells[pos]->getTtauy() << " "
-                          << lat->cells[pos]->getTxy() << " "
-                          << lat->cells[pos]->getTyy() << " "
-                          << lat->cells[pos]->getTyeta() << "\n"
-                          << lat->cells[pos]->getTtaueta() << " "
-                          << lat->cells[pos]->getTxeta() << " "
-                          << lat->cells[pos]->getTyeta() << " "
-                          << lat->cells[pos]->getTetaeta() << "\n"
-                          << "ux=" << ux << "\n"
-                          << "uy=" << uy << "\n"
-                          << "ueta=" << ueta;
-            localMessager.flush("warning");
-        }
+        withoutFlow.add(pos, lat->cells[pos]->getTtautau());
     }
 
     // compute pi^{\mu\nu}
@@ -1094,6 +1105,8 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
     double averageueta = 0.;
     double averageeps = 0.;
     int count = 0;
+    double ttautauSum = 0.;
+    CellsWithoutFlow withoutFlow;
 
     // The per-cell flow-velocity solve is now independent across cells (the
     // velocity carryover that previously serialized it has been removed via
@@ -1106,21 +1119,26 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
     // from serial, so those logged numbers may differ in their last bits --
     // no data file is affected.
 #pragma omp parallel reduction( \
-        + : averageux, averageuy, averageueta, averageeps, count)
+        + : averageux, averageuy, averageueta, averageeps, count, ttautauSum)
     {
         gsl_vector_complex *eval_ws = gsl_vector_complex_alloc(4);
         gsl_matrix_complex *evec_ws = gsl_matrix_complex_alloc(4, 4);
         gsl_eigen_nonsymmv_workspace *w_ws = gsl_eigen_nonsymmv_alloc(4);
+        CellsWithoutFlow threadWithoutFlow;
 
 #pragma omp for
         for (int posLoop = 0; posLoop < N * N; posLoop++) {
             const int si = lat->xFromPosition(posLoop);
             const int sj = lat->yFromPosition(posLoop);
             const int pos = posLoop;
+            ttautauSum += lat->cells[pos]->getTtautau();
             solveFlowVelocityAtCell(
                 lat, pos, si, sj, N, it, dtau, a, eval_ws, evec_ws, w_ws,
-                averageux, averageuy, averageueta, averageeps, count);
+                averageux, averageuy, averageueta, averageeps, count,
+                threadWithoutFlow);
         }  // omp for over posLoop
+#pragma omp critical(MyEigen_cellsWithoutFlow)
+        withoutFlow.merge(threadWithoutFlow);
 
         gsl_eigen_nonsymmv_free(w_ws);
         gsl_vector_complex_free(eval_ws);
@@ -1132,6 +1150,42 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
               << ", average u^y=" << sqrt(averageuy / averageeps)
               << ", average tau*u^eta=" << sqrt(averageueta / averageeps);
     messager_.flush("info");
+
+    // Cells without a timelike eigenvector are common in the dilute
+    // periphery (in a central Pb+Pb event of the example input, 3% of the
+    // cells with about 0.01% of the energy), so they are reported in one
+    // line, and as a warning, with T^munu of the densest of them, only if
+    // they carry more than 1% of the energy.
+    if (withoutFlow.count > 0) {
+        const double share =
+            ttautauSum > 0. ? withoutFlow.ttautauSum / ttautauSum : 0.;
+        messager_ << "[MyEigen::solveFlowVelocity]: tau=" << it * dtau * a
+                  << " fm/c: no timelike eigenvector of T^mu_nu in "
+                  << withoutFlow.count << " of " << N * N << " cells, with "
+                  << 100. * share
+                  << "% of the sum of T^tautau; they are left at rest with "
+                     "epsilon = T^tautau.";
+        if (share > 0.01) {
+            const int pos = withoutFlow.largestPos;
+            const Cell &cell = *lat->cells[pos];
+            messager_ << " The one with the largest T^tautau, at site ("
+                      << lat->xFromPosition(pos) << ", "
+                      << lat->yFromPosition(pos)
+                      << "), has T^munu (in fm^-4; with eta indices in fm^-5 "
+                         "and fm^-6):\n\n"
+                      << cell.getTtautau() << " " << cell.getTtaux() << " "
+                      << cell.getTtauy() << " " << cell.getTtaueta() << "\n"
+                      << cell.getTtaux() << " " << cell.getTxx() << " "
+                      << cell.getTxy() << " " << cell.getTxeta() << "\n"
+                      << cell.getTtauy() << " " << cell.getTxy() << " "
+                      << cell.getTyy() << " " << cell.getTyeta() << "\n"
+                      << cell.getTtaueta() << " " << cell.getTxeta() << " "
+                      << cell.getTyeta() << " " << cell.getTetaeta();
+            messager_.flush("warning");
+        } else {
+            messager_.flush("info");
+        }
+    }
 }
 
 void MyEigen::flowVelocity4DImpl(

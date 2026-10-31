@@ -437,5 +437,9 @@
   "coherent_error_mb": 9.089791121481363e-07,
   "incoherent_mb": 4.2138316294759334e-05,
   "incoherent_error_mb": 7.035257544822897e-07
+ },
+ "outlier_filter": {
+  "log10_scale_median": -1.4869773123618,
+  "log10_scale_mad": 0.25082451198986
  }
 }

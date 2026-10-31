@@ -1085,15 +1085,15 @@ Useful flags:
   check (default 2 GeV²), the allowed deviation in errors (default 3) and
   the bootstrap resamplings for the errors (default 1000).
 - `--outlier-zmax Z` — a spectrum whose largest |A|² is more than Z robust
-  standard deviations of log₁₀|A|² from the median is an outlier
-  (default 7).
+  standard deviations of log₁₀|A|² from the median, both of the reference,
+  is an outlier (default 7).
 - `--save-reference` — save the results of the run as the new reference
   (`--reference-file`, default `jpsi_reference.json` next to the script)
-  instead of comparing with it; it is not saved if a spectrum is invalid or
-  an outlier, or if its seeds are not known (`--plot-only` without
-  `run_info.json` or `--first-seed`). The stored reference has the 5000
-  events of the seeds 0–2499 (devel 3ce5513, subnucleondiffraction
-  1cc1fed); a new one:
+  instead of comparing with it; it is not saved if a spectrum is invalid,
+  an outlier or missing (a failed seed), or if its seeds are not known
+  (`--plot-only` without `run_info.json` or `--first-seed`). The stored
+  reference has the 5000 events of the seeds 0–2499 (devel 3ce5513,
+  subnucleondiffraction 1cc1fed); a new one:
   ```bash
   python3 parallel_test_vector_meson_production.py --maxevents 5000 \
       --save-reference --ipglasma-path ../.. \
@@ -1137,16 +1137,23 @@ incoherent one is its variance, so 200 events give errors of about 8% and
 values, and none an outlier: its scale, the largest |A|² over t, must lie
 within `--outlier-zmax` robust standard deviations (MAD/0.6745) of
 log₁₀(scale) from the median, as in the outlier filter of
-`utilities/compute_tdiffCrossSections.py` of IPGlasmaFramework. The check
-fails instead of dropping such an event, since a blown-up event is what it
-should find. The seeds of the run must not overlap those of the reference.
+`utilities/compute_tdiffCrossSections.py` of IPGlasmaFramework. The median
+and the MAD are those of the reference (`outlier_filter` in the results and
+the reference; without a reference, those of the run): with their own, 5% of
+the runs with 4 events and 1.6% of those with 8 would have an outlier. For
+the reference (MAD 0.25), 7 robust standard deviations are a factor of
+about 400 in |A|², 20 in the amplitude; none of 5000 events of seeds
+10000–12499 is beyond 3.7. The check fails instead of dropping such an
+event, since a blown-up event is what it should find. The seeds of the run
+must be known (`run_info.json`, or `--first-seed` with `--plot-only`) and
+must not overlap those of the reference.
 Settings in which the run and the reference differ are printed as warnings.
 A seed for which IP-Glasma or subnucleondiffraction fails gives no spectra
 and is listed in `failed_seeds.txt`; its working directory stays, with the
 logs but without the Wilson-line files. The spectra `spectra_1` to
 `spectra_<maxevents>` and the results (cross sections, plots, check and
 `failed_seeds.txt`) of an earlier run in `--datadir` are removed when a run
-starts. The script exits non-zero if a check fails or a seed fails.
+starts, and the results and the check also with `--plot-only`. The script exits non-zero if a check fails or a seed fails.
 
 ## Running on a computing cluster (SLURM)
 

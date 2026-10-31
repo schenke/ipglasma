@@ -1,0 +1,40 @@
+name: Validation smoke test
+
+# Runs two validation setups end to end in their quick modes, which the
+# unit tests (tests.yml) do not: lattice_symmetries (64^2, the index
+# bookkeeping from the light cone to the observables, about 5 s) and
+# dilute_limit (64^2, the light-cone matching, the evolution and T^munu at
+# second order in g^2 mu, about 30 s with 2 workers). Neither needs the
+# nuclear configurations of download_nucleusTables.sh. Each script exits
+# with 1 if one of its checks fails.
+
+on:
+  push:
+    branches: [devel, main]
+  pull_request:
+    branches: [devel, main]
+
+jobs:
+  validations:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfftw3-dev libgsl-dev python3-numpy python3-matplotlib
+
+      - name: Build and install ipglasma
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DdisableMPI=ON
+          cmake --build build -j"$(nproc)"
+          cmake --install build
+
+      - name: Lattice symmetries (quick)
+        working-directory: validations/lattice_symmetries
+        run: python3 lattice_symmetries.py --ipglasma-path ../.. --quick
+
+      - name: Dilute limit (quick)
+        working-directory: validations/dilute_limit
+        run: python3 dilute_limit.py --ipglasma-path ../.. --quick --max-workers 2

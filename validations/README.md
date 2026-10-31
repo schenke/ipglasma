@@ -1088,8 +1088,9 @@ Useful flags:
   (`--reference-file`, default `jpsi_reference.json` next to the script)
   instead of comparing with it; it is not saved if a spectrum is invalid or
   an outlier, or if its seeds are not known (`--plot-only` without
-  `run_info.json` or `--first-seed`). A new reference (5000 events, seeds
-  0–2499):
+  `run_info.json` or `--first-seed`). The stored reference has the 5000
+  events of the seeds 0–2499 (devel 3ce5513, subnucleondiffraction
+  1cc1fed); a new one:
   ```bash
   python3 parallel_test_vector_meson_production.py --maxevents 5000 \
       --save-reference --ipglasma-path ../.. \

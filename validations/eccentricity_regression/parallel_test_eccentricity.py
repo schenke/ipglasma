@@ -183,11 +183,11 @@ def extract_eps2(worker_dir, ipglasma_path, event_id=0):
 
 def event_version(worker_dir):
     """The version of IP-Glasma that ran an event, from the header of its
-    usedParameters*.dat ("... used by IP-Glasma 2.0.0 (git ...) ..."), or
-    None."""
+    usedParameters*.dat ("... used by IP-Glasma 2.0.0 (git ...) for event
+    ...", without "(git ...)" for a build outside git), or None."""
     for path in sorted(glob.glob(os.path.join(worker_dir, "usedParameters*.dat"))):
         with open(path) as f:
-            match = re.search(r"IP-Glasma \S+ \(git [^)]*\)", f.readline())
+            match = re.search(r"IP-Glasma \S+(?: \(git [^)]*\))?", f.readline())
         if match:
             return match.group(0)
     return None
@@ -569,9 +569,12 @@ _STRAY_OUTPUT_GLOBS = [
 ]
 
 
-def cleanup_stray_output_files(directory):
-    """Remove any of _STRAY_OUTPUT_GLOBS found directly in `directory`."""
+def cleanup_stray_output_files(directory, keep=()):
+    """Remove any of _STRAY_OUTPUT_GLOBS, except those in `keep`, found
+    directly in `directory`."""
     for pattern in _STRAY_OUTPUT_GLOBS:
+        if pattern in keep:
+            continue
         for path in glob.glob(os.path.join(directory, pattern)):
             if os.path.isfile(path):
                 os.remove(path)
@@ -580,7 +583,8 @@ def cleanup_stray_output_files(directory):
 def clean_datadir(datadir):
     """--clean support: remove stray temporary/output files from every
     seed_*/ working directory under `datadir` (and from `datadir` itself),
-    keeping the Tmunu snapshots and any results/plots. Meant to tidy up
+    keeping the Tmunu snapshots, the usedParameters*.dat of the events (the
+    version of IP-Glasma that ran them) and any results/plots. Meant to tidy up
     after a run was interrupted (e.g. Ctrl-C) before it reached its own
     end-of-run cleanup. Does not touch failed-event or missing seed_*
     directories beyond removing the same stray files from them."""
@@ -590,7 +594,7 @@ def clean_datadir(datadir):
     worker_dirs = sorted(
         d for d in glob.glob(os.path.join(datadir, "seed_*")) if os.path.isdir(d))
     for worker_dir in worker_dirs:
-        cleanup_stray_output_files(worker_dir)
+        cleanup_stray_output_files(worker_dir, keep=("usedParameters*.dat",))
         print("Cleaned {0}".format(worker_dir))
     cleanup_stray_output_files(datadir)
     print("Cleaned {0} working director{1} under {2}".format(
@@ -669,7 +673,8 @@ def main():
                      "eccentricity_reference.json")))
     parser.add_argument("--save-reference", action="store_true",
                          help="save this run's eps2 distribution as the "
-                              "new reference instead of comparing to it")
+                              "new reference instead of comparing to it; "
+                              "not if an event fails")
     parser.add_argument("--first-seed", type=int, default=None,
                          help="first random seed (default 10000, beyond the "
                               "seeds of the reference; 0 with "
@@ -742,6 +747,12 @@ def main():
 
     datadir = os.path.abspath(args.datadir)
     os.makedirs(datadir, exist_ok=True)
+    # the results of an earlier run must not stand in for those of this one
+    # if it stops early (e.g. when no event succeeds)
+    for name in ("eccentricity_results.json", "eccentricity_check.json",
+                 "epsilon2_distribution.pdf"):
+        if os.path.exists(os.path.join(datadir, name)):
+            os.remove(os.path.join(datadir, name))
 
     if args.plot_only:
         print("--plot-only: reading already-completed events from {0} "
@@ -834,10 +845,14 @@ def main():
                "checks": {"all events succeeded": not failures}}
 
     if args.save_reference:
-        save_reference(args.reference_file, eps2_values, run_meta, seeds,
-                       versions, eps2_seeds)
-        print("Saved new reference distribution to {0}".format(
-            args.reference_file))
+        if failures:
+            # a baseline only from a run in which every event succeeded
+            print("No reference saved: {0} event(s) failed".format(len(failures)))
+        else:
+            save_reference(args.reference_file, eps2_values, run_meta, seeds,
+                           versions, eps2_seeds)
+            print("Saved new reference distribution to {0}".format(
+                args.reference_file))
     else:
         # Not (re-)saving the reference -- still write this run's
         # distribution (same format, including the "_command" needed to

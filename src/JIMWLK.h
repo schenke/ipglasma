@@ -155,8 +155,8 @@ class JIMWLK {
      * splitmix64() of the seed of the color charges' generator
      * (Init::colorChargeRandomSeed()), so that the noise and the color
      * charges come from different streams, and, since splitmix64() is a
-     * bijection, every event and `colorChargeSeed` below \f$2^{32}\f$ gets
-     * its own noise.
+     * bijection, the noise of two events or two values of
+     * `colorChargeSeed` differs whenever their color charges do.
      * \param[in] colorChargeSeed The input parameter (not `-1`).
      * \param[in] eventId The event id.
      * \return The seed for Random::init_genrand64().

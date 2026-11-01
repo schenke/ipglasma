@@ -6,6 +6,7 @@
 #define SRC_INIT_H_
 
 #include <cmath>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -95,17 +96,24 @@ class Init {
 
     /**
      * The seed of the separate generator of the color charges with
-     * `colorChargeSeed` (issue #127): \p colorChargeSeed in the lower and
-     * \p eventId in the upper 32 bits, so that every event of a run, and
-     * every `colorChargeSeed` below \f$2^{32}\f$, gets its own stream.
+     * `colorChargeSeed` (issue #127): a SplitMix64 mix of \p
+     * colorChargeSeed, a constant of this stream and \p eventId, as for the
+     * seeds of the MPI ranks (rankSeed()), so that every event and every
+     * `colorChargeSeed` gets its own stream. The seed is not \p
+     * colorChargeSeed itself: the stream of the run on rank 0 starts from
+     * `seed` itself, so with `colorChargeSeed` = `seed` the color charges
+     * of event 0 would repeat the random numbers of the geometry.
      * \param[in] colorChargeSeed The input parameter (not `-1`).
      * \param[in] eventId The event id.
      * \return The seed for Random::init_genrand64().
      */
     static unsigned long long colorChargeRandomSeed(
         long long colorChargeSeed, int eventId) {
-        return static_cast<unsigned long long>(colorChargeSeed)
-               + (static_cast<unsigned long long>(eventId) << 32);
+        // "colorchg"
+        constexpr std::uint64_t stream = 0x636F6C6F72636867ULL;
+        return splitmix64(
+            splitmix64(static_cast<std::uint64_t>(colorChargeSeed) ^ stream)
+            ^ static_cast<std::uint64_t>(eventId));
     }
 
     /**

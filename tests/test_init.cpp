@@ -731,7 +731,14 @@ TEST_CASE(
     // -1: the color charges come from the stream of the run
     CHECK_FALSE(same(wilsonLines(1, -1, 0), wilsonLines(2, -1, 0)));
     CHECK_FALSE(same(wilsonLines(1, -1, 0), wilsonLines(1, 5, 0)));
-    CHECK(Init::colorChargeRandomSeed(5, 3) == 5ULL + (3ULL << 32));
+    // colorChargeSeed = seed does not repeat the stream of the run, which
+    // here draws nothing before the color charges (no nucleus)
+    CHECK_FALSE(same(wilsonLines(5, 5, 0), wilsonLines(5, -1, 0)));
+    CHECK(Init::colorChargeRandomSeed(5, 0) != 5ULL);
+    CHECK(
+        Init::colorChargeRandomSeed(5, 3) != Init::colorChargeRandomSeed(5, 4));
+    CHECK(
+        Init::colorChargeRandomSeed(5, 3) != Init::colorChargeRandomSeed(6, 3));
 }
 
 TEST_CASE(

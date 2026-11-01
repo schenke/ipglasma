@@ -77,7 +77,7 @@ and 12 GeV (--tail-fit); the mean spectra go to the summary and to
 numerical_parameters_spectra.pdf.
 
 With --jimwlk, all runs evolve the Wilson lines with the JIMWLK parameters
-of the template (the example input: from x = 0.01 to 1e-4), and the g^2 mu
+of the template (the example input: from x = 0.01 to 1.29e-4), and the g^2 mu
 scale is that of the initial Wilson lines; --x sets projectileX and targetX
 (the x of the Wilson lines, or with --jimwlk the x the evolution ends at).
 The runs, the summary and the figures of these variants are tagged
@@ -91,7 +91,7 @@ Usage (from validations/numerical_parameters/):
     # the setup of the paper (about 25 min with 2 workers of 8 threads)
     python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \\
         --max-workers 2
-    # the size scan with JIMWLK (the example input from x = 0.01 to 1e-4)
+    # the size scan with JIMWLK (the example input from x = 0.01 to 1.29e-4)
     python3 numerical_parameters.py --ipglasma-path ../.. --jimwlk \\
         --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 2
 

@@ -1175,21 +1175,27 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
     messager_.flush("info");
 
     // Cells without a timelike eigenvector are common in the dilute
-    // periphery (in a central Pb+Pb event of the example input, 3% of the
-    // cells with about 0.01% of the energy, the densest with 2% of the
-    // largest T^tautau), so they are reported in one line, and as a warning,
-    // with T^munu of the densest of them, only if they carry more than 1% of
-    // the energy or one of them has more than 10% of the largest T^tautau.
+    // periphery and, on fine lattices, also occur among dense cells (in a
+    // Pb+Pb event of the example input at b = 7.5 fm, 1.3% of the cells
+    // with about 0.01% of the energy, the densest with 12% of the largest
+    // T^tautau), so they are reported in one line, with the
+    // T^tautau of the densest relative to the largest one, and as a
+    // warning, with T^munu of the densest of them, only if they carry more
+    // than 1% of the energy.
     if (withoutFlow.count > 0) {
         const double share =
             ttautauSum > 0. ? withoutFlow.ttautauSum / ttautauSum : 0.;
+        const double densest =
+            ttautauMax > 0. ? withoutFlow.largestTtautau / ttautauMax : 0.;
         messager_ << "[MyEigen::solveFlowVelocity]: tau=" << it * dtau * a
                   << " fm/c: no timelike eigenvector of T^mu_nu in "
                   << withoutFlow.count << " of " << N * N << " cells, with "
                   << 100. * share
-                  << "% of the sum of T^tautau; they are left at rest with "
+                  << "% of the sum of T^tautau (the densest of them has "
+                  << 100. * densest
+                  << "% of the largest T^tautau); they are left at rest with "
                      "epsilon = T^tautau.";
-        if (share > 0.01 || withoutFlow.largestTtautau > 0.1 * ttautauMax) {
+        if (share > 0.01) {
             const int pos = withoutFlow.largestPos;
             const Cell &cell = *lat->cells[pos];
             messager_ << " The one with the largest T^tautau, at site ("
@@ -1237,10 +1243,13 @@ void MyEigen::flowVelocity4DImpl(
     // eccentricity weights (issue #55)
     const CouplingFactor coupling = latticeCouplingFactor(lat, param);
 
+    // a larger output grid leaves room for the hydrodynamic expansion (the
+    // example input writes 34 fm of a 30 fm lattice)
     if (hL > L) {
-        messager_.warning(
-            "[MyEigen::flowVelocity4DImpl]: hydro grid length larger than "
-            "the computed one.");
+        messager_ << "[MyEigen::flowVelocity4DImpl]: the output grid (" << hL
+                  << " fm) extends beyond the lattice (" << L
+                  << " fm); it is vacuum outside the lattice.";
+        messager_.flush("info");
     }
 
     double tau0 = it * dtau * a;

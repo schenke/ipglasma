@@ -544,7 +544,8 @@ of the T^μν output (10⁻¹⁶ GeV/fm³).
 `gluon_spectrum_estimator/gluon_spectrum_estimator.py` (issue #140) compares
 the two values of `gluonSpectrumEstimator` in the example input: Pb+Pb with
 JIMWLK from x = 0.01 to 10⁻⁴, b = 0, `seed 3`, 768² at L = 22.5 fm, and two
-color-charge configurations (`colorChargeSeed 1` and `2`).
+color-charge configurations (`colorChargeSeed 1` and `2`, which also give
+the JIMWLK evolution its own noise).
 - **Runs:** the gluon multiplicity is measured at the final time, so each
   time (default τ = 0.2, 0.4 and 1 fm) and configuration is a run of its
   own. The runs use `gluonSpectrumEstimator 1`, whose

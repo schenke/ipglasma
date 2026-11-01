@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <complex>
+#include <cstddef>
 #include <filesystem>
 #include <string>
 #include <vector>
@@ -14,6 +15,7 @@
 #include "Lattice.h"
 #include "Matrix.h"
 #include "Parameters.h"
+#include "PhysConst.h"
 #include "Random.h"
 #include "WilsonLineIO.h"
 #include "doctest.h"
@@ -219,8 +221,13 @@ TEST_CASE(
     "JIMWLK: with colorChargeSeed the noise comes from a stream of its own, "
     "seeded by colorChargeSeed and the event, not from that of the run") {
     const int N = 8;
-    // the Wilson line of the projectile at one site after one step from the
-    // same nontrivial Wilson lines (the step leaves unit ones unchanged)
+    // one step from the same nontrivial Wilson lines (the step leaves unit
+    // ones unchanged): the Wilson line of the projectile at one site, and
+    // the next number of the run's stream after the step
+    struct Step {
+        std::complex<double> wilsonLine;
+        unsigned long long nextOfRun;
+    };
     auto evolved = [&](unsigned long long runSeed, long long colorChargeSeed,
                        int eventId) {
         Parameters param;
@@ -238,20 +245,39 @@ TEST_CASE(
         }
         JIMWLK jimwlk(param, &group, &lat, &random);
         jimwlk.evolutionStep(NucleusRole::Projectile);
-        return lat.U[3].get(1);
+        return Step {lat.U[3].get(1), random.genrand64_int64()};
+    };
+    // the next number of the stream of runSeed after count Gaussian ones
+    auto nextAfter = [](unsigned long long runSeed, std::size_t count) {
+        Random random;
+        random.init_genrand64(runSeed);
+        std::vector<double> gaussians(count);
+        std::vector<double> scratch;
+        random.gaussBulk(gaussians.data(), count, scratch);
+        return random.genrand64_int64();
     };
     // the FFT plans can differ in the last bits between two runs
-    auto same = [](std::complex<double> a, std::complex<double> b) {
-        return std::abs(a - b) < 1e-12;
+    auto same = [](const Step &a, const Step &b) {
+        return std::abs(a.wilsonLine - b.wilsonLine) < 1e-12;
     };
-    // -1: the noise comes from the stream of the run
+    // -1: the noise comes from the stream of the run, which the step
+    // advances by its 2 (Nc^2 - 1) N^2 Gaussian numbers
     CHECK_FALSE(same(evolved(1, -1, 0), evolved(2, -1, 0)));
+    CHECK(
+        evolved(1, -1, 0).nextOfRun
+        == nextAfter(
+            1, static_cast<std::size_t>(2 * PhysConst::Nc2m1 * N * N)));
     // colorChargeSeed: the seed of the run no longer matters, the
-    // colorChargeSeed and the event do
+    // colorChargeSeed and the event do, and the step leaves the run's stream
+    // alone
     CHECK(same(evolved(1, 5, 0), evolved(2, 5, 0)));
     CHECK_FALSE(same(evolved(1, 5, 0), evolved(1, 6, 0)));
     CHECK_FALSE(same(evolved(1, 5, 0), evolved(1, 5, 1)));
-    // a stream other than that of the color charges
+    CHECK(evolved(1, 5, 0).nextOfRun == nextAfter(1, 0));
+    // exactly the noise of a run whose stream is seeded with
+    // noiseRandomSeed(), a stream other than that of the color charges
+    CHECK(
+        same(evolved(1, 5, 3), evolved(JIMWLK::noiseRandomSeed(5, 3), -1, 3)));
     CHECK(
         JIMWLK::noiseRandomSeed(5, 3)
         == splitmix64(Init::colorChargeRandomSeed(5, 3)));

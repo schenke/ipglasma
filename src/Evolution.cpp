@@ -500,8 +500,9 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     Matrix Gauss;
     // On a clamped lattice, the outermost sites take their missing
     // neighbors from themselves, so Gauss's law does not hold there; their
-    // largest violation is reported apart from that of the interior, which
-    // shows the accuracy of the evolution.
+    // largest violation is reported apart from that of the interior, where
+    // the discrete evolution conserves it exactly, so that the interior
+    // value is zero up to rounding (it would show, e.g., a wrong stencil).
     const bool clamped = !lat->isPeriodic();
     double largestInterior = 0.;
     double largestEdge = 0.;

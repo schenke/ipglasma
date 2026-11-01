@@ -141,10 +141,11 @@ class Evolution {
      * constraint violation
      * \f$U_x(x-\hat x)^\dagger E_1(x-\hat x) U_x(x-\hat x) - E_1(x) +
      * U_y(x-\hat y)^\dagger E_2(x-\hat y) U_y(x-\hat y) - E_2(x) -
-     * i[\phi,\pi]\f$ (evaluated using the momenta at their current
-     * \f$\tau-d\tau/2\f$), and logs the largest value found in the
-     * interior and, on a clamped lattice, separately the largest on the
-     * outermost sites, where the clamped neighbors violate the law.
+     * i[\phi,\pi]\f$ (after the final half step, with all fields at
+     * \f$\tau_n\f$), and logs the largest
+     * \f$\frac{1}{2}\sum_{ij}|\mathcal{G}_{ij}|^2\f$ in the interior and,
+     * on a clamped lattice, separately the largest on the outermost sites,
+     * where the clamped neighbors violate the law.
      * \param[in] lat Lattice to read `U`/`U2`/`Ux`/`Uy`/`Uy2`/\c
      * Ux2 from.
      * \param[in] param Simulation parameters.

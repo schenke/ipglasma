@@ -643,7 +643,7 @@ compares the two finest lattices: the relative change must be below
 deviations come from the spread between the color-charge seeds, relative
 to the mean and pooled over the lattices of the scan: with two seeds, the
 spread of one lattice has a single degree of freedom and can be far too
-small or too large. For an
+small or too large (with one seed, the tolerance alone applies). For an
 observable that fails, it prints a prominent `WARNING: NOT CONVERGED IN THE
 LATTICE SPACING` with the change and an estimate of the remaining deviation
 from an extrapolation linear in a, marks the panel in the figure, and lists

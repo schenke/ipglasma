@@ -60,10 +60,11 @@ observable: the relative change between the two finest lattices must be
 below --convergence-tolerance (1%) plus two standard deviations. The
 standard deviations come from the spread between the color-charge seeds,
 relative to the mean and pooled over the lattices of the scan, since a few
-seeds per lattice estimate the spread of that lattice poorly. For an
-observable that does not converge, it prints a prominent warning, with an
-estimate of the remaining deviation from an extrapolation linear in a,
-marks it in the figure and in the summary. With the defaults, dN/dy and
+seeds per lattice estimate the spread of that lattice poorly; with one
+seed, the tolerance alone applies. For an observable that does not
+converge, it prints a prominent warning, with an estimate of the
+remaining deviation from an extrapolation linear in a, marks it in the
+figure and in the summary. With the defaults, dN/dy and
 the eccentricities converge, while dE/deta still changes by about 4% between
 the two finest lattices; the linear extrapolation puts its continuum value
 about 16% above the finest one, which would need lattice spacings far below
@@ -315,8 +316,9 @@ def pooled_relative_std(rows, name):
     seeds, relative to the mean, pooled over the settings of a scan (NaN
     without two seeds of one setting). With two seeds per setting, the
     standard deviation of one setting has a single degree of freedom and
-    is often far too small or too large; the relative spread of the color
-    charges at a fixed geometry changes little with the lattice spacing."""
+    is often far too small or too large; the relative spread from the
+    color charges at a fixed geometry changes little with the lattice
+    spacing."""
     squares, dof = 0., 0
     for row in rows:
         values = np.array(row["observables"][name]["values"])
@@ -336,9 +338,9 @@ def convergence(rows, L, tolerance):
     """Per observable of a size scan: the relative change between the two
     finest lattices with its error, from the spread between the seeds
     pooled over all lattices of the scan (pooled_relative_std), whether it
-    is below tolerance plus two standard deviations, and, from an
-    extrapolation linear in a, the relative deviation of the finest lattice
-    from a = 0."""
+    is below tolerance plus two standard deviations (with one seed, which
+    gives no spread, the tolerance alone), and, from an extrapolation
+    linear in a, the relative deviation of the finest lattice from a = 0."""
     if len(rows) < 2:
         return {}
     second, finest = sorted(rows, key=lambda r: r["value"])[-2:]
@@ -354,10 +356,12 @@ def convergence(rows, L, tolerance):
         spread = pooled_relative_std(rows, name)
         change = x1 / x2 - 1.
         error = abs(x1 / x2) * spread * np.sqrt(1. / n1 + 1. / n2)
+        # without a spread (NaN), the tolerance alone, not always failed
+        bound = tolerance + (2. * error if np.isfinite(error) else 0.)
         result[name] = {
             "a_fm": [a2, a1], "change": change, "error": float(error),
             "pooled_relative_std": spread,
-            "converged": bool(abs(change) <= tolerance + 2. * error),
+            "converged": bool(abs(change) <= bound),
             # x(a) = x(0) + c a through both points
             "extrapolated_deviation": (x1 - x2) / (a2 - a1) * a1 / x1}
     return result
@@ -762,8 +766,8 @@ def main():
     print(f"\nconvergence in the lattice spacing (change between the two "
           f"finest lattices; converged if below "
           f"{100 * args.convergence_tolerance:g}% plus two standard "
-          f"deviations of the spread between the seeds, pooled over the "
-          f"lattices of the scan):")
+          f"deviations of the change, from the spread between the seeds "
+          f"pooled over the lattices of the scan):")
     not_converged = []
     for scan, checks in summary["convergence"].items():
         for name, check in checks.items():

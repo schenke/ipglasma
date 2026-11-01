@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "Init.h"
 #include "Instrumentation.h"
 #include "WilsonLineIO.h"
 
@@ -34,7 +35,17 @@ JIMWLK::JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random)
     fft_ptr_ = std::make_shared<FFT>(nn_);
 
     group_ptr_ = group;
-    random_ptr_ = random;
+    // with colorChargeSeed, the configurations of a fixed geometry differ
+    // also in the noise of the evolution, which then comes from a stream of
+    // its own, like the color charges (issue #127); without it, from the
+    // stream of the run
+    if (param_.random.colorChargeSeed >= 0) {
+        noiseRandom_.init_genrand64(noiseRandomSeed(
+            param_.random.colorChargeSeed, param_.event.eventId));
+        random_ptr_ = &noiseRandom_;
+    } else {
+        random_ptr_ = random;
+    }
     lat_ptr_ = lat;
 
     initializeK();
@@ -99,6 +110,11 @@ void JIMWLK::initializeK() {
     }
     fft_ptr_->fftnVector(K_.data(), K_.data(), nn_, 1);
     initializedK_ = true;
+}
+
+unsigned long long JIMWLK::noiseRandomSeed(
+    long long colorChargeSeed, int eventId) {
+    return splitmix64(Init::colorChargeRandomSeed(colorChargeSeed, eventId));
 }
 
 double JIMWLK::getMassRegulator(const double x, const double y) const {

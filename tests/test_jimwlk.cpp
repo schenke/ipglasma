@@ -3,13 +3,16 @@
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
 #include <cmath>
+#include <complex>
 #include <filesystem>
 #include <string>
 #include <vector>
 
 #include "Group.h"
+#include "Init.h"
 #include "JIMWLK.h"
 #include "Lattice.h"
+#include "Matrix.h"
 #include "Parameters.h"
 #include "Random.h"
 #include "WilsonLineIO.h"
@@ -210,4 +213,47 @@ TEST_CASE(
             WilsonLineIO::fileName(&param, 0.008, nucleus)));
     }
     std::filesystem::remove_all(dir);
+}
+
+TEST_CASE(
+    "JIMWLK: with colorChargeSeed the noise comes from a stream of its own, "
+    "seeded by colorChargeSeed and the event, not from that of the run") {
+    const int N = 8;
+    // the Wilson line of the projectile at one site after one step from the
+    // same nontrivial Wilson lines (the step leaves unit ones unchanged)
+    auto evolved = [&](unsigned long long runSeed, long long colorChargeSeed,
+                       int eventId) {
+        Parameters param;
+        makeJimwlkTestParam(param, N);
+        param.random.colorChargeSeed = colorChargeSeed;
+        param.event.eventId = eventId;
+        Group group;
+        Random random;
+        random.init_genrand64(runSeed);
+        Lattice lat(&param, N);
+        for (int pos = 0; pos < N * N; ++pos) {
+            std::vector<double> q(8);
+            for (int a = 0; a < 8; ++a) q[a] = std::sin(1.3 * pos + 0.7 * a);
+            lat.U[pos] = Matrix::fromAlgebraExponent(q);
+        }
+        JIMWLK jimwlk(param, &group, &lat, &random);
+        jimwlk.evolutionStep(NucleusRole::Projectile);
+        return lat.U[3].get(1);
+    };
+    // the FFT plans can differ in the last bits between two runs
+    auto same = [](std::complex<double> a, std::complex<double> b) {
+        return std::abs(a - b) < 1e-12;
+    };
+    // -1: the noise comes from the stream of the run
+    CHECK_FALSE(same(evolved(1, -1, 0), evolved(2, -1, 0)));
+    // colorChargeSeed: the seed of the run no longer matters, the
+    // colorChargeSeed and the event do
+    CHECK(same(evolved(1, 5, 0), evolved(2, 5, 0)));
+    CHECK_FALSE(same(evolved(1, 5, 0), evolved(1, 6, 0)));
+    CHECK_FALSE(same(evolved(1, 5, 0), evolved(1, 5, 1)));
+    // a stream other than that of the color charges
+    CHECK(
+        JIMWLK::noiseRandomSeed(5, 3)
+        == splitmix64(Init::colorChargeRandomSeed(5, 3)));
+    CHECK(JIMWLK::noiseRandomSeed(5, 3) != Init::colorChargeRandomSeed(5, 3));
 }

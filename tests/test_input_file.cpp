@@ -379,7 +379,8 @@ TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
     REQUIRE(param.readInput(inputFromText(exampleInputWith("nFlavors", "")))
                 .empty());
     CHECK(param.coupling.nFlavors == 3);
-    // wilsonLinePath is only read when Wilson lines are written
+    // wilsonLinePath is only read when Wilson lines are written or read,
+    // and writeWilsonLineGeometry when they are written
     Parameters param2;
     REQUIRE(param2
                 .readInput(inputFromText(inputWith(
@@ -389,10 +390,16 @@ TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
     CHECK(param2.wilsonLines.wilsonLinePath == "./");
     Parameters param3;
     REQUIRE(param3
-                .readInput(inputFromText(
-                    exampleInputWith("writeWilsonLineGeometry", "")))
+                .readInput(inputFromText(inputWith(
+                    exampleInputWith("writeWilsonLineGeometry", ""),
+                    "writeWilsonLines", "2")))
                 .empty());
     CHECK(param3.wilsonLines.writeGeometry);
+    // read with its default, not left at the initial value
+    std::ostringstream used;
+    param3.writeInputParameters(used);
+    CHECK(
+        used.str().find("\nwriteWilsonLineGeometry 1\n") != std::string::npos);
 }
 
 TEST_CASE("Parameters::readInput: values must have the parameter's type") {

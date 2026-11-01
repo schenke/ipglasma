@@ -628,7 +628,7 @@ and `m` of the input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512):
 | dE/dη (0.4 fm) [GeV] | 12147 | 22022 | 28936 | 33240 | 34810 |
 
 dN/dy is within about 4% of its limit for g²μ a ≲ 0.6, while dE/dη still
-grows by 4.7% ± 1.4% from g²μ a = 0.3 to 0.15. The energy sits in modes up
+grows by 4.7% ± 1.2% from g²μ a = 0.3 to 0.15. The energy sits in modes up
 to several g²μ, where the gluon spectrum falls like 1/k⁴, and converges
 only like a: its deficit is about 0.2–0.3 g²μ a, so 5% needs g²μ a ≈
 0.15–0.25 (the energy density at τ = 0 even diverges like ln² a, T. Lappi,
@@ -658,8 +658,8 @@ it under `not_converged` in the summary. With the defaults (20 minutes with
 | dN/dy | 8151 | 14170 | 18836 | 21289 | 21713 | 22046 |
 | dE/dη (0.4 fm) [GeV] | 9062 | 28602 | 51825 | 68667 | 72709 | 75766 |
 
-dN/dy changes by +1.5% ± 2.1% in the last step, ε₂ and ε₃ by less than
-their errors, so they converge. dE/dη still grows by 4.2% ± 1.2%, and the
+dN/dy changes by +1.5% ± 2.0% in the last step, ε₂ and ε₃ by less than
+their errors, so they converge. dE/dη still grows by 4.2% ± 1.0%, and the
 linear extrapolation puts its value at a = 0 about 16% above the finest
 lattice (5% for the constant g²μ): converging the energy to the percent
 level would need lattice spacings far below 0.018 fm, so its dependence on
@@ -728,10 +728,11 @@ With the commands below (two seeds, N = 768 to 1536; 26 and 7 minutes with
   about 1% from N = 1024 on (+1.0% ± 2.4% in the last step). In this dilute
   event, dN/dy differs by up to 24% between the two seeds of one lattice
   (5116 to 6586 over all eight runs), so two seeds do not resolve its
-  dependence on a: its last step, +12% ± 9%, is within the errors. With the
-  spread of each lattice alone, the two seeds of the two finest lattices
-  happened to lie within 3% of each other, and the check flagged the step
-  (± 2%).
+  dependence on a: its last step, +12% ± 9%, is within two standard
+  deviations (most of the pooled spread comes from the two seeds at 768²).
+  With the spread of each lattice alone, the two seeds of the two finest
+  lattices happened to lie within about 3% of each other, and the check
+  flagged the step (± 2%).
 - **ε₂ and ε₃** need more than two seeds in both variants.
 
 ```bash

@@ -7,7 +7,8 @@
 The two definitions of the gluon number (gluonSpectrumEstimator, issue
 #140) in the example input: Pb+Pb with hot spots and JIMWLK from x = 0.01
 to 1e-4, at b = 0 (--b), 768^2 at L = 22.5 fm, the geometry of --seed and
---configs color-charge configurations (colorChargeSeed 1, 2, ...).
+--configs color-charge configurations (colorChargeSeed 1, 2, ..., which
+also give the JIMWLK evolution its own noise).
 
 The gluon multiplicity is measured at the final time, so each time of
 --times and configuration is a run of its own. The runs use

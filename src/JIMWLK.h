@@ -154,8 +154,9 @@ class JIMWLK {
      * The seed of the noise's own generator with `colorChargeSeed`:
      * splitmix64() of the seed of the color charges' generator
      * (Init::colorChargeRandomSeed()), so that the noise and the color
-     * charges come from different streams, and every `colorChargeSeed`
-     * and event gets its own noise.
+     * charges come from different streams, and, since splitmix64() is a
+     * bijection, every event and `colorChargeSeed` below \f$2^{32}\f$ gets
+     * its own noise.
      * \param[in] colorChargeSeed The input parameter (not `-1`).
      * \param[in] eventId The event id.
      * \return The seed for Random::init_genrand64().
@@ -165,10 +166,13 @@ class JIMWLK {
 
     // K_/xi_/xi2_/CKxi_/VxsiVx_/VxsiVy_ are pointer-per-cell views aliasing
     // this object's own *_storage_/*_data_ vectors (see their declarations
-    // below). A compiler-generated copy would deep-copy the storage but
-    // shallow-copy the views, leaving the copy's views pointing into the
-    // original's memory instead of its own -- so disable copying (nothing
-    // needs it; JIMWLK is only ever stack-constructed once in main.cpp).
+    // above), and with colorChargeSeed random_ptr_ points to its own
+    // noiseRandom_. A compiler-generated copy would deep-copy the storage
+    // but shallow-copy the views and random_ptr_, leaving the copy's
+    // pointing into the original's memory instead of its own -- so disable
+    // copying (nothing needs it; main.cpp constructs one JIMWLK per event,
+    // on the stack). The deleted copy constructor also keeps the compiler
+    // from declaring a move constructor or assignment.
     JIMWLK(const JIMWLK &) = delete;
     JIMWLK &operator=(const JIMWLK &) = delete;
 

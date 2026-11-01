@@ -54,8 +54,14 @@ class JIMWLK {
     /// Non-owning pointer to the shared Group instance (the SU(3)
     /// generators).
     Group *group_ptr_;
-    /// Non-owning pointer to the shared Random instance.
+    /// Non-owning pointer to the Random instance the noise is drawn from:
+    /// the shared one of the run, or \c noiseRandom_ with
+    /// `colorChargeSeed`.
     Random *random_ptr_;
+    /// The noise's own generator with `colorChargeSeed` (at least 0),
+    /// seeded by noiseRandomSeed(), so that the configurations of a fixed
+    /// geometry also differ in the noise of the evolution.
+    Random noiseRandom_;
     /// Non-owning pointer to the Lattice whose Wilson lines
     /// (`lat_ptr_->U`/`U2`) this instance evolves.
     Lattice *lat_ptr_;
@@ -137,10 +143,25 @@ class JIMWLK {
      * \param[in] lat Non-owning pointer to the Lattice to evolve; must
      * outlive this JIMWLK.
      * \param[in] random Non-owning pointer to the shared Random
-     * instance; must outlive this JIMWLK.
+     * instance; must outlive this JIMWLK. With `colorChargeSeed` (at
+     * least 0), the noise comes from a generator of its own instead (see
+     * noiseRandomSeed()).
      */
     JIMWLK(Parameters &param, Group *group, Lattice *lat, Random *random);
     ~JIMWLK() = default;
+
+    /**
+     * The seed of the noise's own generator with `colorChargeSeed`:
+     * splitmix64() of the seed of the color charges' generator
+     * (Init::colorChargeRandomSeed()), so that the noise and the color
+     * charges come from different streams, and every `colorChargeSeed`
+     * and event gets its own noise.
+     * \param[in] colorChargeSeed The input parameter (not `-1`).
+     * \param[in] eventId The event id.
+     * \return The seed for Random::init_genrand64().
+     */
+    static unsigned long long noiseRandomSeed(
+        long long colorChargeSeed, int eventId);
 
     // K_/xi_/xi2_/CKxi_/VxsiVx_/VxsiVy_ are pointer-per-cell views aliasing
     // this object's own *_storage_/*_data_ vectors (see their declarations

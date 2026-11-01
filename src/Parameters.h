@@ -50,10 +50,11 @@ struct RandomParameters {
     /// Whether to read one random seed per MPI rank from the file
     /// `seedList` (`1`); overrides \c seed.
     bool useSeedList = false;
-    /// Seed of a separate generator for the color charges, combined with
-    /// the event id (Init::colorChargeRandomSeed()), so that they can be
-    /// varied at a fixed geometry; `-1` (the default) draws them from the
-    /// one stream of the run, after the geometry.
+    /// Seed of separate generators for the color charges and the JIMWLK
+    /// noise, combined with the event id (Init::colorChargeRandomSeed(),
+    /// JIMWLK::noiseRandomSeed()), so that they can be varied at a fixed
+    /// geometry; `-1` (the default) draws them from the one stream of the
+    /// run, after the geometry.
     long long colorChargeSeed = -1;
 
     /**

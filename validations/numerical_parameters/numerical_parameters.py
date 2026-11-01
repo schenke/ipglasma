@@ -12,9 +12,9 @@ With a fixed `seed` and b = 0 (or an impact parameter that is a lattice
 vector for all sizes, e.g. a multiple of L/128), the geometry of an event
 (nucleon positions, hot spots, T_p) does not depend on `size`, `Ny` or
 `m`; only the color charges change. The color charges of each setting are
-varied with `colorChargeSeed`, which draws them from their own stream, so
-that the spread at a fixed geometry gives the statistical error of each
-setting.
+varied with `colorChargeSeed`, which draws them, and with --jimwlk the noise
+of the evolution, from streams of their own, so that the spread at a fixed
+geometry gives the statistical error of each setting.
 
 The script runs the example input without JIMWLK, with b fixed (0 by
 default) and L = 22.5 fm (which suffices at b = 0; use 30 fm for other

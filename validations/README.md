@@ -596,8 +596,9 @@ sizes 96 to 1280) at the `Ny` and `m` of the input, and `Ny` and `m` at the
 size 768 (a = 0.029 fm). For another impact parameter, use L = 30 fm. With a fixed `seed` and b = 0 (or a multiple of L/128), the geometry
 (nucleon positions, hot spots, T_p) does not depend on `size`, `Ny` or `m`;
 only the color charges change. These are varied with the input parameter
-`colorChargeSeed`, which draws them from their own stream, so that a few
-seeds per setting give its statistical error. The script computes dE/dη =
+`colorChargeSeed`, which draws them, and with JIMWLK the noise of the
+evolution, from streams of their own, so that a few seeds per setting give
+its statistical error. The script computes dE/dη =
 τ∫T^ττ d²x at τ = 0.2 fm and at the final time (0.4 fm), dN/dy, ε₂, ε₃ and
 their angles, and reports their mean and error against a, `Ny` and `m`
 (`numerical_parameters_summary.json` and `numerical_parameters.pdf` in

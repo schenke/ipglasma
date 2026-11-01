@@ -407,6 +407,10 @@ def main():
         args.ds = [template_ds / 2. ** k for k in range(3)]
     elif args.ds is None:
         args.ds = [template_ds / 2. ** k for k in range(4)]
+    # checks 2 and 3, which --quick skips, use the recommended step
+    if not args.quick and args.recommended not in args.ds:
+        parser.error(f"--recommended {args.recommended:g} is not one of the "
+                     "step sizes")
     ratios = [max(args.ds) / ds for ds in args.ds]
     if any(abs(q - round(q)) > 1e-9 for q in ratios):
         parser.error("the largest step must be a multiple of each step")

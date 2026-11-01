@@ -3,10 +3,10 @@
 # and W. Zhao, arXiv:2502.05138: the file
 # config/arXiv_2502.05138/parameters_dict_user_IPGJIMWLK_PbPb_5020.py of
 # iEBE-MUSIC (tag arXiv2502.05138), with the defaults of its
-# config/parameters_dict_master.py. Each event writes T^munu for
-# hydrodynamics at tau = 0.4 fm (writeHydro). seed -1 draws a new seed for
-# each run; usedParameters<event>.dat records it. README.md explains every
-# parameter.
+# config/parameters_dict_master.py. Each event writes the initial condition
+# for hydrodynamics at tau = 0.4 fm (writeHydro: epsilon, u^mu and
+# pi^munu). seed -1 draws a new seed for each run;
+# usedParameters<event>.dat records it. README.md explains every parameter.
 runEvolution 1
 minimumQs2ST 0
 size 800
@@ -16,7 +16,7 @@ UVDamp 0.
 jacobianMass 0.35
 g 1.
 subNucleonParamType 0
-subNucleonParamSet -1
+subNucleonParamSet 0
 BG 3.3
 BGq 0.3
 BGqVar 0.0

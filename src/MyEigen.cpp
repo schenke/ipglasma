@@ -1175,13 +1175,12 @@ void MyEigen::solveFlowVelocity(Lattice *lat, Parameters *param, int it) {
     messager_.flush("info");
 
     // Cells without a timelike eigenvector are common in the dilute
-    // periphery and, on fine lattices, also occur among dense cells (in a
-    // Pb+Pb event of the example input at b = 7.5 fm, 1.3% of the cells
-    // with about 0.01% of the energy, the densest with 12% of the largest
-    // T^tautau), so they are reported in one line, with the
-    // T^tautau of the densest relative to the largest one, and as a
-    // warning, with T^munu of the densest of them, only if they carry more
-    // than 1% of the energy.
+    // periphery, and some of them can be dense (in a Pb+Pb event of the
+    // example input at b = 7.5 fm, 1.3% of the cells with about 0.01% of
+    // the energy, the densest with 12% of the largest T^tautau), so they
+    // are reported in one line, with the T^tautau of the densest relative
+    // to the largest one, and as a warning, with T^munu of the densest of
+    // them, only if they carry more than 1% of the energy.
     if (withoutFlow.count > 0) {
         const double share =
             ttautauSum > 0. ? withoutFlow.ttautauSum / ttautauSum : 0.;
@@ -1244,7 +1243,7 @@ void MyEigen::flowVelocity4DImpl(
     const CouplingFactor coupling = latticeCouplingFactor(lat, param);
 
     // a larger output grid leaves room for the hydrodynamic expansion (the
-    // example input writes 34 fm of a 30 fm lattice)
+    // example input writes a 34 fm grid for its 30 fm lattice)
     if (hL > L) {
         messager_ << "[MyEigen::flowVelocity4DImpl]: the output grid (" << hL
                   << " fm) extends beyond the lattice (" << L

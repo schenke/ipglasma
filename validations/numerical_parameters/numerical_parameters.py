@@ -560,7 +560,8 @@ def main():
                         help="k_T range [GeV] of the fit k^4 dN/d^2k ~ k^p")
     parser.add_argument("--color-seeds", type=int, default=4)
     parser.add_argument("--maxtime", type=float, default=DEFAULT_MAXTIME,
-                        help="[fm/c]; another value tags the runs (t1_ ...)")
+                        help="[fm/c]; a value other than 0.4 tags the runs "
+                             "(t1_ ...)")
     parser.add_argument("--convergence-tolerance", type=float,
                         default=0.01,
                         help="largest relative change between the two "

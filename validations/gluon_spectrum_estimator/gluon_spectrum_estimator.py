@@ -6,7 +6,7 @@
 """
 The two definitions of the gluon number (gluonSpectrumEstimator, issue
 #140) in the example input: Pb+Pb with hot spots and JIMWLK from x = 0.01
-to 1e-4, at b = 0 (--b), 768^2 at L = 22.5 fm, the geometry of --seed and
+to 1.29e-4, at b = 0 (--b), 768^2 at L = 22.5 fm, the geometry of --seed and
 --configs color-charge configurations (colorChargeSeed 1, 2, ..., which
 also give the JIMWLK evolution its own noise).
 
@@ -255,6 +255,7 @@ def main():
             "sizeOutput": args.size, "bMin": args.b, "bMax": args.b,
             "seed": args.seed, "rotateReactionPlane": 0,
             "jimwlkSaveSnapshots": 0, "writeWilsonLines": 0,
+            "writeHydro": 0, "writeWilsonLineGeometry": 0,
             "computeGluonMultiplicity": 1, "gluonSpectrumEstimator": 1,
             "nucleusQsTableFileName": os.path.join(
                 path, "qs2Adj_vs_Tp_vs_Y_240.in"),

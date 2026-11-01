@@ -8,7 +8,7 @@ Performance of IP-Glasma: the time per stage of an event and the peak
 memory, against the lattice size and the number of OpenMP threads.
 
 The script runs the example input (Pb+Pb with hot spots, JIMWLK from
-x = 0.01 to 1e-4, the classical Yang-Mills evolution to tau = 0.5 fm, the
+x = 0.01 to 1.29e-4, the classical Yang-Mills evolution to tau = 0.4 fm, the
 gluon multiplicity and the eccentricities) at a fixed geometry (--seed,
 b = 0), without writing Wilson lines, JIMWLK snapshots or fields, with
 IPGLASMA_PROFILE=1. Two scans:

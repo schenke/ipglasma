@@ -220,9 +220,13 @@ TEST_CASE("Parameters::readInput: the shipped input files are valid") {
 }
 
 TEST_CASE("Parameters::readInput: reads values and sets derived ones") {
+    // with the JIMWLK snapshots, which the example input does not write
     Parameters param;
-    REQUIRE(param.readInput(inputFromText(readSourceFile("input"))).empty());
-    CHECK(param.lattice.size == 256);
+    REQUIRE(param
+                .readInput(
+                    inputFromText(exampleInputWith("jimwlkSaveSnapshots", "1")))
+                .empty());
+    CHECK(param.lattice.size == 800);
     CHECK(param.lattice.L == 30.);
     CHECK(param.collision.projectile == "Pb");
     CHECK(param.jimwlk.xSnapshotList.size() == 4);
@@ -278,13 +282,14 @@ TEST_CASE(
                 std::to_string(n)))
             == 1. / n);
     }
-    // the step limit counts the steps with the chosen time step
+    // the step limit counts the steps with the chosen time step: 1e8 a is
+    // 3.75e6 fm/c on the lattice of the example input
     const std::vector<std::string> errors = readErrors(inputWith(
-        exampleInputWith("maxTime", "1e7"), "timeStepsPerLatticeSpacing", "1"));
+        exampleInputWith("maxTime", "3e6"), "timeStepsPerLatticeSpacing", "1"));
     CHECK(errors.empty());
     CHECK(anyContains(
         readErrors(inputWith(
-            exampleInputWith("maxTime", "1e7"), "timeStepsPerLatticeSpacing",
+            exampleInputWith("maxTime", "3e6"), "timeStepsPerLatticeSpacing",
             "1000")),
         "more than 1e8 time steps"));
     // an integer
@@ -340,11 +345,15 @@ TEST_CASE(
     }
     CHECK(readErrors(text).empty());
 
-    // sqrtS is only needed with fluctuating x or pseudorapidity, and
-    // smearingWidth only with smearQs 1 (both off in the example input)
+    // sqrtS is only needed with fluctuating x or pseudorapidity (both off
+    // in the example input), and smearingWidth only with smearQs 1
+    CHECK(readErrors(exampleInputWith("sqrtS", "")).empty());
     CHECK(readErrors(
-              inputWith(exampleInputWith("sqrtS", ""), "smearingWidth", ""))
+              inputWith(exampleInputWith("smearingWidth", ""), "smearQs", "0"))
               .empty());
+    CHECK(anyContains(
+        readErrors(exampleInputWith("smearingWidth", "")),
+        "smearingWidth is required but not given"));
 
     // the configuration files are only read when the nucleons are sampled,
     // not when the Wilson lines are read from file
@@ -370,10 +379,13 @@ TEST_CASE("Parameters::readInput: optional keys fall back to their default") {
     REQUIRE(param.readInput(inputFromText(exampleInputWith("nFlavors", "")))
                 .empty());
     CHECK(param.coupling.nFlavors == 3);
+    // wilsonLinePath is only read when Wilson lines are written
     Parameters param2;
-    REQUIRE(
-        param2.readInput(inputFromText(exampleInputWith("wilsonLinePath", "")))
-            .empty());
+    REQUIRE(param2
+                .readInput(inputFromText(inputWith(
+                    exampleInputWith("wilsonLinePath", ""), "writeWilsonLines",
+                    "2")))
+                .empty());
     CHECK(param2.wilsonLines.wilsonLinePath == "./");
     Parameters param3;
     REQUIRE(param3
@@ -398,7 +410,9 @@ TEST_CASE("Parameters::readInput: values must have the parameter's type") {
         readErrors(exampleInputWith("m", "0.4GeV")),
         "m '0.4GeV' is not a number"));
     CHECK(anyContains(
-        readErrors(exampleInputWith("jimwlkXSnapshotList", "1e-3;1e-4")),
+        readErrors(inputWith(
+            exampleInputWith("jimwlkXSnapshotList", "1e-3;1e-4"),
+            "jimwlkSaveSnapshots", "1")),
         "jimwlkXSnapshotList '1e-3;1e-4' is not a comma-separated list"));
 }
 
@@ -548,7 +562,8 @@ TEST_CASE(
 TEST_CASE(
     "Parameters::readInput: outputTimes is only read with a field output, "
     "defaults to none and must be positive") {
-    // the example input writes no field output and has outputTimes none
+    // the example input writes the hydro fields (writeHydro 1) and has
+    // outputTimes none
     auto withLine = [](const std::string &text, const std::string &key,
                        const std::string &value) {
         std::istringstream in(text);
@@ -575,10 +590,11 @@ TEST_CASE(
     {
         // not read without a field output
         Parameters param;
-        REQUIRE(param
-                    .readInput(
-                        inputFromText(exampleInputWith("outputTimes", "0.1")))
-                    .empty());
+        REQUIRE(
+            param
+                .readInput(inputFromText(withLine(
+                    exampleInputWith("outputTimes", "0.1"), "writeHydro", "0")))
+                .empty());
         CHECK(param.output.outputTimes.empty());
     }
     {
@@ -679,8 +695,9 @@ TEST_CASE(
     }
     CHECK(readErrors(text).empty());
 
-    const std::vector<std::string> errors = readErrors(
-        exampleInputWith("jimwlkXSnapshotList", ""));  // jimwlkSaveSnapshots 1
+    const std::vector<std::string> errors = readErrors(inputWith(
+        exampleInputWith("jimwlkXSnapshotList", ""), "jimwlkSaveSnapshots",
+        "1"));
     REQUIRE(errors.size() == 1);
     CHECK(errors[0] == "test: jimwlkXSnapshotList is required but not given");
 }

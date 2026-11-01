@@ -1,6 +1,15 @@
+# Pb+Pb collisions at sqrt(s_NN) = 5.02 TeV with JIMWLK-evolved Wilson
+# lines, with the IP-Glasma parameters of H. Mantysaari, B. Schenke, C. Shen
+# and W. Zhao, arXiv:2502.05138: the file
+# config/arXiv_2502.05138/parameters_dict_user_IPGJIMWLK_PbPb_5020.py of
+# iEBE-MUSIC (tag arXiv2502.05138), with the defaults of its
+# config/parameters_dict_master.py. Each event writes T^munu for
+# hydrodynamics at tau = 0.4 fm (writeHydro). seed -1 draws a new seed for
+# each run; usedParameters<event>.dat records it. README.md explains every
+# parameter.
 runEvolution 1
 minimumQs2ST 0
-size 256
+size 800
 L 30
 m 0.4
 UVDamp 0.
@@ -11,7 +20,7 @@ subNucleonParamSet -1
 BG 3.3
 BGq 0.3
 BGqVar 0.0
-dqMin 0.
+dqMin 0.2582
 omega 1.
 useSmoothNucleus 0
 shiftConstituentQuarkProtonOrigin 1
@@ -24,25 +33,25 @@ c 0.2
 nFlavors 3
 LambdaQCD 0.2
 g2muGeV 0.17
-smearQs 0
-smearingWidth 0.6
+smearQs 1
+smearingWidth 0.7
 protonAnisotropy 0
 sqrtS 5020
 usePseudoRapidity 0
 rapidity 0.
-projectileX 0.0001
-targetX 0.0001
+projectileX 0.0001294820717
+targetX 0.0001294820717
 useFluctuatingX 0
 xQsFactor 1
 useNucleus 1
 useInputWSParams 0
-radiusWS 6.6
-diffusenessWS 0.52
-beta2 0.28
+radiusWS 6.62
+diffusenessWS 0.546
+beta2 0.0
 beta3 0.0
-beta4 0.08
+beta4 0.0
 gamma 0.0
-forceDMin 0
+forceDMin 1
 dMin 0.9
 deltaRnp 0.0
 deltaAnp 0.0
@@ -56,7 +65,7 @@ runWithKt 0
 Ny 50
 useSeedList 0
 colorChargeSeed -1
-seed 13
+seed -1
 projectile Pb
 target Pb
 bMin 0
@@ -64,7 +73,7 @@ bMax 20
 computeGluonMultiplicity 0
 gluonSpectrumEstimator 1
 computeEccentricities 0
-rotateReactionPlane 1
+rotateReactionPlane 0
 nucleonPositionsFromFile 0
 lightNucleusOption 0
 nuclearConfigurationsPath ./nucleusConfigurations
@@ -74,14 +83,14 @@ polarizationProjectileJz 0
 polarizationTargetJz 0
 useFixedNpart 0
 nucleiToAverage 1
-sigmaNN 73.
+sigmaNN 67.
 gaussianWounding 1
 inverseQsForMaxTime 0
-maxTime 0.5
+maxTime 0.4
 timeStepsPerLatticeSpacing 10
-LOutput 30
+LOutput 34
 sizeOutput 340
-writeHydro 0
+writeHydro 1
 writeJazma 0
 writeTmunu 0
 outputTimes none
@@ -91,20 +100,19 @@ writeNcollList 1
 writeNgluonEstimators 1
 readInitialWilsonLines 0
 readWilsonLinesX 0
-writeWilsonLines 2
+writeWilsonLines 0
 wilsonLinePath ./
-writeWilsonLineGeometry 1
+writeWilsonLineGeometry 0
 writeTmunuBinary 1
 writeOutputsToHDF5 0
 useJIMWLK 1
 jimwlkMu0 0.28
 jimwlkAlphaS 0
 jimwlkInitialX 0.01
-jimwlkDs 0.005
+jimwlkDs 0.003
 jimwlkLambdaQCD 0.040
 jimwlkC 0.2
 jimwlkMass 0.4
-jimwlkSaveSnapshots 1
+jimwlkSaveSnapshots 0
 jimwlkXSnapshotList 5e-3,2e-3,1e-3,5e-4
 EndOfFile
-BOB

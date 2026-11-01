@@ -6,12 +6,14 @@
 """
 The JIMWLK step size in the example input (issue #128): Pb+Pb with hot
 spots, the running coupling and IR regulator of the input, evolved from
-x0 ~ 0.01 to projectileX = targetX = 1e-4, at b = 0 (--b), for several step
-sizes jimwlkDs from the same initial Wilson lines.
+x0 ~ 0.01 to projectileX = targetX of the input (--x, 1.29e-4), at b = 0
+(--b), for several step sizes jimwlkDs from the same initial Wilson lines:
+by default the jimwlkDs of the input (0.003) and a half, a quarter and an
+eighth of it.
 
 The evolution is a multiple of the largest step, with --snapshots
-equally spaced snapshots in between (by default 93 steps of 0.005 from
-x0 = 0.0098, snapshots after 31 and 62), so all step sizes end and take
+equally spaced snapshots in between (by default 144 steps of 0.003 from
+x0 = 0.0092, snapshots after 48 and 96), so all step sizes end and take
 their snapshots at exactly the same x. The seed fixes the geometry and the
 initial Wilson lines (both nuclei, two configurations per run).
 
@@ -39,10 +41,12 @@ checks that
 
   1. the initial Wilson lines are the same for all step sizes,
   2. Q_s of every region and dN/dy deviate by less than --max-deviation at
-     the recommended step (0.005),
-  3. dE/deta deviates by less than --max-deviation at --energy-ds (0.0025):
-     its step error grows on finer lattices, since it sits in the hard tail
-     of the evolved spectrum (0.2% at 256^2, 5.6% at 768^2 with 0.005),
+     the recommended step (--recommended, by default the jimwlkDs of the
+     input),
+  3. dE/deta deviates by less than --max-deviation at --energy-ds (by
+     default half the recommended step): its step error grows on finer
+     lattices, since it sits in the hard tail of the evolved spectrum (see
+     validations/README.md),
   4. ln Q_s of the whole nucleus is consistent with first order (the
      quadratic term within three standard deviations of zero).
 
@@ -55,8 +59,8 @@ Usage (from validations/jimwlk_step_size/):
     # threads)
     python3 example_input_step_size.py --ipglasma-path ../.. --threads 8 \\
         --max-workers 2
-    # 256^2 at L = 30 fm, the lattice of the example input: 16 seeds (with
-    # four, the error of dN/dy is 6%, twice the tolerance)
+    # a coarse lattice, 256^2 at L = 30 fm: 16 seeds (with four, the error
+    # of dN/dy is 6%, twice the tolerance)
     python3 example_input_step_size.py --ipglasma-path ../.. --size 256 \\
         --L 30 --seeds 16 --threads 6 --max-workers 4
 """
@@ -92,8 +96,9 @@ def evolution(settings):
     lines, the snapshots and the final ones."""
     dy = np.pi ** 2 * max(settings["ds"])
     parts = settings["snapshots"] + 1
-    n = parts * max(1, round(np.log(settings["x0"] / settings["x"])
-                             / dy / parts))
+    # rounded down, since the nuclear Q_s table starts at x = 0.01
+    n = parts * max(1, int(np.floor(np.log(settings["x0"] / settings["x"])
+                                    / dy / parts)))
     # a little more than n steps, so that rounding cannot drop one
     x0 = settings["x"] * np.exp((n + 1e-6) * dy)
     xs = [x0 * np.exp(-k * (n // parts) * dy) for k in range(parts)]
@@ -358,32 +363,50 @@ def main():
                         help="[fm]; 22.5 fm suffices at b = 0")
     parser.add_argument("--b", type=float, default=0., help="[fm]")
     parser.add_argument("--ds", type=float, nargs="+",
-                        default=[0.005, 0.0025, 0.00125, 0.000625],
                         help="step sizes; the largest must be a multiple of "
-                             "each")
+                             "each (default: the jimwlkDs of the template "
+                             "and 1/2, 1/4 and 1/8 of it)")
     parser.add_argument("--x0", type=float, default=0.01,
                         help="the nominal jimwlkInitialX; the evolution is "
-                             "rounded to multiples of the largest step")
-    parser.add_argument("--x", type=float, default=1e-4,
-                        help="projectileX and targetX")
+                             "rounded down to multiples of the largest step")
+    parser.add_argument("--x", type=float,
+                        help="projectileX and targetX (default: those of the "
+                             "template)")
     parser.add_argument("--snapshots", type=int, default=2)
     parser.add_argument("--seeds", type=int, default=3)
-    parser.add_argument("--recommended", type=float, default=0.005)
-    parser.add_argument("--energy-ds", type=float, default=0.0025,
+    parser.add_argument("--recommended", type=float,
+                        help="the step at which Q_s and dN/dy must be "
+                             "within --max-deviation (default: the jimwlkDs "
+                             "of the template)")
+    parser.add_argument("--energy-ds", type=float,
                         help="the step at which dE/deta must be within "
-                             "--max-deviation")
+                             "--max-deviation (default: half the "
+                             "recommended step)")
     parser.add_argument("--max-deviation", type=float, default=0.03)
     parser.add_argument("--threads", type=int, default=4)
     parser.add_argument("--max-workers", type=int, default=1)
     parser.add_argument("--quick", action="store_true",
-                        help="128^2 at L = 30 fm, step sizes 0.005, 0.0025 "
-                             "and 0.00125, 2 seeds")
+                        help="128^2 at L = 30 fm, the step of the template, "
+                             "1/2 and 1/4 of it, 2 seeds")
     parser.add_argument("--analyze-only", action="store_true")
     parser.add_argument("--keep-files", action="store_true")
     args = parser.parse_args()
+    with open(args.template) as f:
+        template_values = dict(line.split()[:2] for line in f
+                               if len(line.split()) >= 2
+                               and not line.startswith("#"))
+    template_ds = float(template_values["jimwlkDs"])
+    if args.x is None:
+        args.x = float(template_values["projectileX"])
+    if args.recommended is None:
+        args.recommended = template_ds
+    if args.energy_ds is None:
+        args.energy_ds = args.recommended / 2.
     if args.quick:
         args.size, args.L, args.seeds = 128, 30., 2
-        args.ds = [0.005, 0.0025, 0.00125]
+        args.ds = [template_ds / 2. ** k for k in range(3)]
+    elif args.ds is None:
+        args.ds = [template_ds / 2. ** k for k in range(4)]
     ratios = [max(args.ds) / ds for ds in args.ds]
     if any(abs(q - round(q)) > 1e-9 for q in ratios):
         parser.error("the largest step must be a multiple of each step")

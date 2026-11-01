@@ -142,7 +142,9 @@ class Evolution {
      * \f$U_x(x-\hat x)^\dagger E_1(x-\hat x) U_x(x-\hat x) - E_1(x) +
      * U_y(x-\hat y)^\dagger E_2(x-\hat y) U_y(x-\hat y) - E_2(x) -
      * i[\phi,\pi]\f$ (evaluated using the momenta at their current
-     * \f$\tau-d\tau/2\f$), and logs the largest value found.
+     * \f$\tau-d\tau/2\f$), and logs the largest value found in the
+     * interior and, on a clamped lattice, separately the largest on the
+     * outermost sites, where the clamped neighbors violate the law.
      * \param[in] lat Lattice to read `U`/`U2`/`Ux`/`Uy`/`Uy2`/\c
      * Ux2 from.
      * \param[in] param Simulation parameters.

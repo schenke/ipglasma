@@ -86,9 +86,9 @@ scale is that of the initial Wilson lines; --x sets projectileX and targetX
 (the x of the Wilson lines, or with --jimwlk the x the evolution ends at).
 The runs, the summary and the figures of these variants are tagged
 (jimwlk_, x0.01_, ...), so they never mix with the default ones; so are
-those of a --maxtime other than 0.4 fm (t1_ ...). Another --template is not
-part of the tag and needs its own --datadir. --ny, --m
-and --uniform-sizes without values skip those scans.
+those of a --maxtime other than 0.4 fm (t1_ ...). Another --template, --L,
+--b or --seed is not part of the tag and needs its own --datadir. --ny,
+--m and --uniform-sizes without values skip those scans.
 
 Usage (from validations/numerical_parameters/):
     # quick test: sizes 64 and 128, Ny and m scans at 64, the constant

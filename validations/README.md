@@ -711,8 +711,8 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.3.
 - **Separate results:** runs and summaries of these variants are tagged
   (`jimwlk_`, `x0.01_`, `numerical_parameters_jimwlk_summary.json`), so they
   never mix with the default ones. So are those of a `--maxtime` other than
-  0.4 fm (`t1_`); another `--template` is not part of the tag and needs its
-  own `--datadir`.
+  0.4 fm (`t1_`); another `--template`, `--L`, `--b` or `--seed` is not
+  part of the tag and needs its own `--datadir`.
 - **Skipping scans:** `--ny` and `--m` with no values skip those scans, and
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.

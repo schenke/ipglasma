@@ -498,7 +498,13 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
     Matrix pi;
 
     Matrix Gauss;
-    double largest = 0;
+    // On a clamped lattice, the outermost sites take their missing
+    // neighbors from themselves, so Gauss's law does not hold there; their
+    // largest violation is reported apart from that of the interior, which
+    // shows the accuracy of the evolution.
+    const bool clamped = !lat->isPeriodic();
+    double largestInterior = 0.;
+    double largestEdge = 0.;
 
     for (int pos = 0; pos < N * N; pos++) {
         // retrieve current Ux and Uy
@@ -536,9 +542,19 @@ void Evolution::checkGaussLaw(Lattice *lat, Parameters *param) {
         Gauss = UxXm1Dag * E1mX * UxXm1 - E1 + UyYm1Dag * E2mY * UyYm1 - E2
                 - complex<double>(0., 1.) * (phi * pi - pi * phi);
 
+        const int x = lat->xFromPosition(pos);
+        const int y = lat->yFromPosition(pos);
+        const bool edge =
+            clamped && (x == 0 || y == 0 || x == N - 1 || y == N - 1);
+        double &largest = edge ? largestEdge : largestInterior;
         if (Gauss.square() > largest) largest = Gauss.square();
     }
-    messager_ << "[Evolution::checkGaussLaw]: Gauss violation=" << largest;
+    messager_ << "[Evolution::checkGaussLaw]: Gauss violation="
+              << largestInterior;
+    if (clamped) {
+        messager_ << " in the interior, " << largestEdge
+                  << " on the outermost sites (clamped edges)";
+    }
     messager_.flush("info");
 }
 

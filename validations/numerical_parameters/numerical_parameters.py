@@ -57,7 +57,10 @@ even more slowly.
 
 The script checks the convergence in the lattice spacing for each
 observable: the relative change between the two finest lattices must be
-below --convergence-tolerance (1%) plus two standard deviations. For an
+below --convergence-tolerance (1%) plus two standard deviations. The
+standard deviations come from the spread between the color-charge seeds,
+relative to the mean and pooled over the lattices of the scan, since a few
+seeds per lattice estimate the spread of that lattice poorly. For an
 observable that does not converge, it prints a prominent warning, with an
 estimate of the remaining deviation from an extrapolation linear in a,
 marks it in the figure and in the summary. With the defaults, dN/dy and
@@ -81,7 +84,9 @@ of the template (the example input: from x = 0.01 to 1e-4), and the g^2 mu
 scale is that of the initial Wilson lines; --x sets projectileX and targetX
 (the x of the Wilson lines, or with --jimwlk the x the evolution ends at).
 The runs, the summary and the figures of these variants are tagged
-(jimwlk_, x0.01_, ...), so they never mix with the default ones. --ny, --m
+(jimwlk_, x0.01_, ...), so they never mix with the default ones; so are
+those of a --maxtime other than 0.4 fm (t1_ ...). Another --template is not
+part of the tag and needs its own --datadir. --ny, --m
 and --uniform-sizes without values skip those scans.
 
 Usage (from validations/numerical_parameters/):
@@ -127,6 +132,7 @@ HBARC = 0.1973269804  # GeV fm
 # k_T of the spectrum
 ENERGY_CUTS = (2., 4.)
 TAIL_FRACTIONS = (0.3, 0.4)
+DEFAULT_MAXTIME = 0.4  # fm/c
 
 
 def write_input(template, overrides, path):
@@ -304,6 +310,22 @@ def statistics(values):
             "values": values.tolist()}
 
 
+def pooled_relative_std(rows, name):
+    """The standard deviation of one observable between the color-charge
+    seeds, relative to the mean, pooled over the settings of a scan (NaN
+    without two seeds of one setting). With two seeds per setting, the
+    standard deviation of one setting has a single degree of freedom and
+    is often far too small or too large; the relative spread of the color
+    charges at a fixed geometry changes little with the lattice spacing."""
+    squares, dof = 0., 0
+    for row in rows:
+        values = np.array(row["observables"][name]["values"])
+        if len(values) > 1 and values.mean() != 0.:
+            squares += ((values / values.mean() - 1.) ** 2).sum()
+            dof += len(values) - 1
+    return float(np.sqrt(squares / dof)) if dof else float("nan")
+
+
 # observables whose convergence in the lattice spacing is checked (not the
 # angles)
 CONVERGENCE_OBSERVABLES = ["dE/deta(0.2)", "dE/deta(final)", "dN/dy",
@@ -312,9 +334,11 @@ CONVERGENCE_OBSERVABLES = ["dE/deta(0.2)", "dE/deta(final)", "dN/dy",
 
 def convergence(rows, L, tolerance):
     """Per observable of a size scan: the relative change between the two
-    finest lattices with its error, whether it is below tolerance plus two
-    standard deviations, and, from an extrapolation linear in a, the
-    relative deviation of the finest lattice from a = 0."""
+    finest lattices with its error, from the spread between the seeds
+    pooled over all lattices of the scan (pooled_relative_std), whether it
+    is below tolerance plus two standard deviations, and, from an
+    extrapolation linear in a, the relative deviation of the finest lattice
+    from a = 0."""
     if len(rows) < 2:
         return {}
     second, finest = sorted(rows, key=lambda r: r["value"])[-2:]
@@ -325,12 +349,14 @@ def convergence(rows, L, tolerance):
             continue
         x1 = finest["observables"][name]["mean"]
         x2 = second["observables"][name]["mean"]
-        e1 = finest["observables"][name]["error"]
-        e2 = second["observables"][name]["error"]
+        n1 = len(finest["observables"][name]["values"])
+        n2 = len(second["observables"][name]["values"])
+        spread = pooled_relative_std(rows, name)
         change = x1 / x2 - 1.
-        error = abs(x1 / x2) * float(np.hypot(e1 / x1, e2 / x2))
+        error = abs(x1 / x2) * spread * np.sqrt(1. / n1 + 1. / n2)
         result[name] = {
-            "a_fm": [a2, a1], "change": change, "error": error,
+            "a_fm": [a2, a1], "change": change, "error": float(error),
+            "pooled_relative_std": spread,
             "converged": bool(abs(change) <= tolerance + 2. * error),
             # x(a) = x(0) + c a through both points
             "extrapolated_deviation": (x1 - x2) / (a2 - a1) * a1 / x1}
@@ -529,7 +555,8 @@ def main():
                         metavar=("KMIN", "KMAX"),
                         help="k_T range [GeV] of the fit k^4 dN/d^2k ~ k^p")
     parser.add_argument("--color-seeds", type=int, default=4)
-    parser.add_argument("--maxtime", type=float, default=0.4, help="[fm/c]")
+    parser.add_argument("--maxtime", type=float, default=DEFAULT_MAXTIME,
+                        help="[fm/c]; another value tags the runs (t1_ ...)")
     parser.add_argument("--convergence-tolerance", type=float,
                         default=0.01,
                         help="largest relative change between the two "
@@ -553,9 +580,12 @@ def main():
                                if len(line.split()) >= 2
                                and not line.startswith("#"))
     ny0, m0 = int(template_values["Ny"]), float(template_values["m"])
-    # the tag of the runs with --jimwlk or --x, e.g. jimwlk or x0.01
+    # the tag of the runs with --jimwlk, --x or another --maxtime, e.g.
+    # jimwlk, x0.01 or x0.01_t1
     variant = "_".join((["jimwlk"] if args.jimwlk else [])
-                       + ([f"x{args.x:g}"] if args.x is not None else []))
+                       + ([f"x{args.x:g}"] if args.x is not None else [])
+                       + ([f"t{args.maxtime:g}"]
+                          if args.maxtime != DEFAULT_MAXTIME else []))
     # numerical_parameters[_<variant>]_summary.json and the figures
     stem = os.path.join(os.path.abspath(args.datadir), "numerical_parameters"
                         + (f"_{variant}" if variant else ""))
@@ -732,7 +762,8 @@ def main():
     print(f"\nconvergence in the lattice spacing (change between the two "
           f"finest lattices; converged if below "
           f"{100 * args.convergence_tolerance:g}% plus two standard "
-          f"deviations):")
+          f"deviations of the spread between the seeds, pooled over the "
+          f"lattices of the scan):")
     not_converged = []
     for scan, checks in summary["convergence"].items():
         for name, check in checks.items():

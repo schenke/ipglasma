@@ -262,12 +262,22 @@ bool onOutputLattice(const Lattice *lat, double x, double y, double L) {
  * number of threads; the sum does, in its last bits).
  */
 struct CellsWithoutFlow {
+    /// The number of cells.
     int count = 0;
+    /// Their sum of \f$T^{\tau\tau}\f$ [fm\f$^{-4}\f$].
     double ttautauSum = 0.;
+    /// The position of the cell with the largest \f$T^{\tau\tau}\f$
+    /// (`-1` if there is none).
     int largestPos = -1;
+    /// Its \f$T^{\tau\tau}\f$ [fm\f$^{-4}\f$].
     double largestTtautau = 0.;
 
-    /// Records a candidate for the cell with the largest \f$T^{\tau\tau}\f$.
+    /**
+     * Records a candidate for the cell with the largest
+     * \f$T^{\tau\tau}\f$.
+     * \param[in] pos Flat cell index (`-1`: none, ignored).
+     * \param[in] ttautau Its \f$T^{\tau\tau}\f$.
+     */
     void consider(int pos, double ttautau) {
         if (pos < 0) return;
         if (largestPos < 0 || ttautau > largestTtautau
@@ -277,14 +287,21 @@ struct CellsWithoutFlow {
         }
     }
 
-    /// Adds a cell.
+    /**
+     * Adds a cell.
+     * \param[in] pos Flat cell index.
+     * \param[in] ttautau Its \f$T^{\tau\tau}\f$.
+     */
     void add(int pos, double ttautau) {
         ++count;
         ttautauSum += ttautau;
         consider(pos, ttautau);
     }
 
-    /// Adds the cells of another thread.
+    /**
+     * Adds the cells of another thread.
+     * \param[in] other The other thread's cells.
+     */
     void merge(const CellsWithoutFlow &other) {
         count += other.count;
         ttautauSum += other.ttautauSum;

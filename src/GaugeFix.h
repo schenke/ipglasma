@@ -51,7 +51,7 @@ class GaugeFix {
      * \f$\langle\mathrm{Tr}(\chi^2)\rangle/3\f$, which for given
      * physical fields scales like \f$a^4\f$, drops below
      * \f$10^{-12} (a/0.1\,\mathrm{fm})^4\f$, or, with a warning, once it
-     * has not reached a new minimum in 200 iterations; warns if it is not
+     * has not reached a new minimum in 500 iterations; warns if it is not
      * reached in \p steps iterations.
      * \param[in] fft FFT instance used to transform \f$\chi\f$ to and
      * from momentum space; must be constructed for the same lattice

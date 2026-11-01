@@ -21,7 +21,7 @@ constexpr double kGaugeFixTolerance = 1e-12;
 constexpr double kGaugeFixReferenceSpacing = 0.1;
 /// Iterations without a new minimum of the residual after which the gauge
 /// fixing stops.
-constexpr int kGaugeFixStagnation = 200;
+constexpr int kGaugeFixStagnation = 500;
 
 // chi is a traceless Hermitian SU(3) algebra element,
 // chi = q[a] t[a], with t[a] = lambda[a]/2.  Recover the eight real
@@ -118,8 +118,9 @@ void GaugeFix::fftChi(
 
     const int max_gfiter = steps;
 
-    // The residual is the mean of (g a^2 div A)^2 in lattice units, so for
-    // the same physical fields it falls like a^4: a fixed threshold, 1e-9
+    // The residual is <Tr chi^2>/3 with chi = (g a^2 div A)/2, i.e.
+    // <sum_b (g a^2 div A^b)^2>/24, so for the same physical fields it
+    // falls like a^4: a fixed threshold, 1e-9
     // as in 1.x, fixed the gauge ever more loosely on finer lattices, and
     // dN/dy of a central Pb+Pb event of the example input came out -0.5%,
     // -1.1%, +5.7% and -3.6% off at N = 256, 512, 768 and 1024 (L = 30 fm).
@@ -131,10 +132,10 @@ void GaugeFix::fftChi(
     bool converged = false;
     int iterations = max_gfiter;
 
-    // The residual can stay flat, or rise slightly, for tens of iterations
-    // before it falls again; only when it has not reached a new minimum in
-    // kGaugeFixStagnation iterations has it stopped converging (e.g. at the
-    // rounding level).
+    // The residual can stay flat, or rise by a factor of 30, for up to about
+    // 100 iterations before it falls again (512^2, a = 0.0075 fm); only when
+    // it has not reached a new minimum in kGaugeFixStagnation iterations has
+    // it stopped converging (e.g. at the rounding level, about 1e-35).
     double bestResidual = 0.;
     int bestIteration = 0;
     double gresidual = 0.;
@@ -213,11 +214,12 @@ void GaugeFix::fftChi(
             bestIteration = gfiter;
         } else if (gfiter - bestIteration >= kGaugeFixStagnation) {
             iterations = gfiter;
-            messager_ << "[GaugeFix::fftChi]: the residual stopped decreasing "
-                         "at "
-                      << bestResidual << " (iteration " << bestIteration
-                      << "), above the threshold " << tolerance
-                      << "; the gauge is fixed less accurately.";
+            messager_ << "[GaugeFix::fftChi]: the residual stopped decreasing: "
+                      << gresidual << " after " << gfiter
+                      << " iterations, above the threshold " << tolerance
+                      << " (lowest " << bestResidual << " at iteration "
+                      << bestIteration
+                      << "); the gauge is fixed less accurately.";
             messager_.flush("warning");
             break;
         }

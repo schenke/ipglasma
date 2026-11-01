@@ -582,7 +582,7 @@ With the defaults, 2|E|²/ω over the projection, for the two configurations:
 - **At τ = 0.2 fm,** they differ by 7–14% in dN/dy and by 0.2–0.4 GeV in
   ⟨k_T⟩. The fields are still strongly nonlinear, and no estimator gives a
   well-defined particle number yet.
-- **The longitudinal part** of the gauge-fixed potential is 2–6%.
+- **The longitudinal part** of the gauge-fixed potential is about 10⁻⁴ (1.5 × 10⁻⁴ at 256² and 1.9 × 10⁻⁴ at 512² for the example input at L = 30 fm); with the earlier gauge-fixing threshold (before #162) it was 2–6%.
 - **The lines k = −π/a,** which only the projection counts, carry about
   10⁻⁴ of dN/dy (0.9–1.4 × 10⁻⁴, `pi_line_fraction` in the summary,
   estimated from the mean spectrum of their k̃ bins).

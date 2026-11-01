@@ -639,7 +639,11 @@ Wilson lines), so the energy converges even more slowly.
 
 **Convergence check.** For each observable of the size scans, the script
 compares the two finest lattices: the relative change must be below
-`--convergence-tolerance` (1%) plus two standard deviations. For an
+`--convergence-tolerance` (1%) plus two standard deviations. The standard
+deviations come from the spread between the color-charge seeds, relative
+to the mean and pooled over the lattices of the scan: with two seeds, the
+spread of one lattice has a single degree of freedom and can be far too
+small or too large. For an
 observable that fails, it prints a prominent `WARNING: NOT CONVERGED IN THE
 LATTICE SPACING` with the change and an estimate of the remaining deviation
 from an extrapolation linear in a, marks the panel in the figure, and lists
@@ -706,22 +710,26 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.3.
   the x of the Wilson lines; with it, the x the evolution ends at.
 - **Separate results:** runs and summaries of these variants are tagged
   (`jimwlk_`, `x0.01_`, `numerical_parameters_jimwlk_summary.json`), so they
-  never mix with the default ones.
+  never mix with the default ones. So are those of a `--maxtime` other than
+  0.4 fm (`t1_`); another `--template` is not part of the tag and needs its
+  own `--datadir`.
 - **Skipping scans:** `--ny` and `--m` with no values skip those scans, and
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.
 
 With the commands below (two seeds, N = 768 to 1536; 26 and 7 minutes with
 `--threads 12 --max-workers 2`):
-- **With JIMWLK:** dN/dy converges (+2.1% ± 3.1% in the last step). dE/dη
-  grows by 22%, 13% and 12% in the three steps (+11.8% ± 3.1% in the
+- **With JIMWLK:** dN/dy converges (+1.2% ± 2.3% in the last step). dE/dη
+  grows by 22%, 13% and 12% in the three steps (+11.8% ± 2.3% in the
   last), because the evolution hardens the tail to p ≈ 1.4.
 - **At x = 0.01 without JIMWLK:** p ≈ 0.3, and dE/dη is converged within
-  about 1% from N = 1024 on (+1.0% ± 2.7% in the last step). In this dilute
-  event, dN/dy differs by up to 18% between the two seeds of one lattice
-  (5222 to 6512 over all eight runs), so two seeds do not resolve its
-  dependence on a: the script flags its last step, +12% ± 2%, as not
-  converged.
+  about 1% from N = 1024 on (+1.0% ± 2.4% in the last step). In this dilute
+  event, dN/dy differs by up to 24% between the two seeds of one lattice
+  (5116 to 6586 over all eight runs), so two seeds do not resolve its
+  dependence on a: its last step, +12% ± 9%, is within the errors. With the
+  spread of each lattice alone, the two seeds of the two finest lattices
+  happened to lie within 3% of each other, and the check flagged the step
+  (± 2%).
 - **ε₂ and ε₃** need more than two seeds in both variants.
 
 ```bash

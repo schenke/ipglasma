@@ -522,7 +522,7 @@ struct EventState {
     /// Number of participants.
     int Npart = 0;
     /// Convolution of two nuclear thickness functions,
-    /// \f$T_{pp}(b_T) = \sum \delta^2x_T\, T_p(x_T) T_p(x_T-b_T)\f$,
+    /// \f$T_{pp}(b_T) = \sum \Delta^2x_T\, T_p(x_T) T_p(x_T-b_T)\f$,
     /// used to weight different impact parameters.
     double Tpp = 0.;
     /// Area [fm\f$^2\f$] of the initial interaction region.

@@ -257,8 +257,7 @@ void Init::setConstantColorChargeDensity(Lattice *lat, Parameters *param) {
 void Init::sampleNucleonAnisotropyAngles(Parameters *param, Random *random) {
     const int A1 = nucleusA_.size();
     const int A2 = nucleusB_.size();
-    double xi = param->subnucleon.protonAnisotropy;
-    if (xi != 0.) {
+    if (param->subnucleon.protonAnisotropy != 0.) {
         for (int i = 0; i < A1; i++) {
             nucleusA_.at(i).phi = 2 * M_PI * random->genrand64_real2();
         }

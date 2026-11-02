@@ -266,9 +266,9 @@ class ForwardLightCone {
     /**
      * Computes the Jacobian of computeResidual()'s \f$F_a\f$ for a
      * rotation of \f$U_{\text{sol}}\f$ from the left,
-     * \f$U_{\text{sol}} \to e^{i\delta_b t_b} U_{\text{sol}}\f$, in the
+     * \f$U_{\text{sol}} \to e^{i\Delta\alpha_b t_b} U_{\text{sol}}\f$, in the
      * sign findU() uses (solveAxb() solves \f$J\,\Delta\alpha = F\f$):
-     * \f$J_{ab} = -\partial F_a/\partial\delta_b =
+     * \f$J_{ab} = -\partial F_a/\partial\Delta\alpha_b =
      * -2\,\mathrm{Re}\,\mathrm{tr}[t_a (U_1+U_2)
      * U_{\text{sol}}^\dagger t_b]\f$. It is exact and needs no
      * exponential.

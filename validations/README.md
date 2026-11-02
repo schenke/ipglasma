@@ -736,7 +736,7 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.4.
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.
 
-With the commands below (N = 768 to 1536, 2 workers of 12 threads):
+With the commands below (2 workers of 12 threads):
 - **With JIMWLK** (four seeds, 1.6 hours): dE/dη is 48048, 58045, 65102
   and 72770 GeV, i.e. it grows by 21%, 12% and 12% in the three steps
   (+11.8% ± 1.3% in the last), as the evolution hardens the tail to
@@ -1126,12 +1126,13 @@ projection, the default):
 - **dE/dη:** its step error grows on finer lattices. It sits in the hard
   tail of the evolved spectrum, which the coarse lattice cuts off (the same
   tail makes the energy converge slowly in the lattice spacing, see
-  `numerical_parameters/`). At 0.0015 it is 1.6% ± 0.3% at 768²; on the
-  lattice of the example input (a = 0.0375 fm) it is about 2–3% at 0.003,
-  and at 1536², L = 22.5 fm (a = 0.015 fm), 10% (see the JIMWLK scan of
-  `numerical_parameters`).
-- **ε₂ and ε₃** (at b = 0, from fluctuations alone): consistent with no
-  dependence on the step, within their errors (about 7% and 5% at 768²).
+  `numerical_parameters/`). At 0.0015 it is 1.6% ± 0.3% at 768²; at
+  1536², L = 22.5 fm (a = 0.015 fm), it is 10% at 0.003 (see the JIMWLK
+  scan of `numerical_parameters`). For the lattice of the example input
+  (a = 0.0375 fm), which was not run, an interpolation gives about 2–3%.
+- **ε₂ and ε₃** (at b = 0, from fluctuations alone): −6.9% ± 6.5% and
+  −8.0% ± 5.0% at 0.003 on 768², consistent with no dependence on the
+  step within two standard deviations.
 
 ### Vector meson production validation
 

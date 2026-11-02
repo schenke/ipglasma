@@ -64,12 +64,13 @@ std::vector<double> sampleQsNormalization(
 double GaussianProfile::thickness(double x, double y) const {
     const double xm = xm_;
     const double ym = ym_;
-    const double xi = xi_;
+    const double anisotropy = anisotropy_;
     const double phi = phi_;
-    double bp2 = (xm - x) * (xm - x) + (ym - y) * (ym - y)
-                 + xi * pow((xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
+    double bp2 =
+        (xm - x) * (xm - x) + (ym - y) * (ym - y)
+        + anisotropy * pow((xm - x) * cos(phi) + (ym - y) * sin(phi), 2.);
     bp2 /= hbarc * hbarc;
-    return sqrt(1 + xi) * exp(-bp2 / (2. * BG_)) / (2. * M_PI * BG_)
+    return sqrt(1 + anisotropy) * exp(-bp2 / (2. * BG_)) / (2. * M_PI * BG_)
            * normalization_;
 }
 

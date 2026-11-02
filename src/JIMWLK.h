@@ -236,12 +236,12 @@ class JIMWLK {
     /**
      * Finds the evolution step at which to save each JIMWLK snapshot:
      * after \f$k\f$ steps the Wilson lines are at
-     * \f$x_k = x_0 e^{-k\,\delta}\f$, and each requested \f$x\f$ is saved
+     * \f$x_k = x_0 e^{-k\,\Delta y}\f$, and each requested \f$x\f$ is saved
      * at the \f$k\f$ whose \f$x_k\f$ is closest to it in \f$\ln x\f$, so at
      * most half a step away.
      * \param[in] xSnapshotList The requested \f$x\f$ values, in any order.
      * \param[in] x0 Bjorken \f$x\f$ before the first step.
-     * \param[in] dlogx The step \f$\delta\f$ in \f$\ln(1/x)\f$.
+     * \param[in] dlogx The step \f$\Delta y\f$ in \f$\ln(1/x)\f$.
      * \param[in] steps Number of evolution steps.
      * \return For each requested \f$x\f$, the number of steps after which
      * to save it (`0`: before the first step), or `-1` if it is more than

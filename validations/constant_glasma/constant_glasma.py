@@ -74,6 +74,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
+from input_template import cached_input_mismatch, write_input  # noqa: E402
 from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
 
 HBARC = 0.1973269804
@@ -90,22 +91,6 @@ LAPPI_FN = {72.: (0.297, 0.006), 120.: (0.289, 0.003), 192.: (0.329, 0.006)}
 KNV_FE = {np.sqrt(np.pi) * 25.: 0.537 / 2, np.sqrt(np.pi) * 83.7: 0.497 / 2}
 
 
-def write_input(template, overrides, path):
-    remaining = dict(overrides)
-    lines = []
-    with open(template) as f:
-        for line in f:
-            tokens = line.split()
-            if len(tokens) >= 2 and tokens[0] in remaining:
-                lines.append(f"{tokens[0]} {remaining.pop(tokens[0])}\n")
-            else:
-                lines.append(line)
-    if remaining:
-        raise KeyError(f"keys not in the template: {sorted(remaining)}")
-    with open(path, "w") as f:
-        f.writelines(lines)
-
-
 def lattice_mean(tmunu):
     """Means of T^tautau, T^xx + T^yy and tau^2 T^etaeta over the whole
     (periodic) lattice."""
@@ -117,20 +102,14 @@ def lattice_mean(tmunu):
             float(t[..., c["tau2_Tetaeta"]].mean()))
 
 
-def run_one(cfg, settings):
+def run_setup(cfg, settings):
+    """The directory of one run and the overrides of its input."""
     tag = f"g2muL{cfg['g2muL']:g}_N{cfg['size']}_seed{cfg['seed']}"
     workdir = os.path.join(settings["datadir"], tag)
-    cache = os.path.join(workdir, "result.json")
-    if os.path.exists(cache):
-        with open(cache) as f:
-            return cfg, json.load(f), None
-    os.makedirs(workdir, exist_ok=True)
-    g2mu = settings["g2mu"]
-    L = cfg["g2muL"] * HBARC / g2mu
+    L = cfg["g2muL"] * HBARC / settings["g2mu"]
     size = cfg["size"]
-    a = L / size
-    dt = a / STEPS_PER_SPACING
-    taus = [x * HBARC / g2mu for x in settings["g2mu_tau"]]
+    dt = L / size / STEPS_PER_SPACING
+    taus = [x * HBARC / settings["g2mu"] for x in settings["g2mu_tau"]]
     taus = [t for t in taus if 2 * dt <= t]
     max_time = taus[-1]
     # the first time step (an output time is rounded down to it) for
@@ -140,6 +119,33 @@ def run_one(cfg, settings):
                      sizeOutput=size, LOutput=f"{L:.10g}", seed=cfg["seed"],
                      maxTime=f"{max_time:.10g}",
                      outputTimes=",".join(f"{t:.10g}" for t in outputs))
+    return workdir, overrides
+
+
+def cached_result(workdir, overrides, settings):
+    """The cached result of a run (None if it has not been run) and, if it
+    was run with another input, why it cannot be reused."""
+    cache = os.path.join(workdir, "result.json")
+    if not os.path.exists(cache):
+        return None, None
+    mismatch = cached_input_mismatch(workdir, settings["template"],
+                                     overrides)
+    if mismatch:
+        return None, mismatch
+    with open(cache) as f:
+        return json.load(f), None
+
+
+def run_one(cfg, settings):
+    workdir, overrides = run_setup(cfg, settings)
+    cached, mismatch = cached_result(workdir, overrides, settings)
+    if cached is not None or mismatch:
+        return cfg, cached, mismatch
+    os.makedirs(workdir, exist_ok=True)
+    g2mu = settings["g2mu"]
+    L = cfg["g2muL"] * HBARC / g2mu
+    a = L / cfg["size"]
+    cache = os.path.join(workdir, "result.json")
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))
@@ -257,15 +263,12 @@ def main():
     results, failures = [], []
     if args.analyze_only:
         for cfg in configs:
-            cache = os.path.join(
-                settings["datadir"],
-                f"g2muL{cfg['g2muL']:g}_N{cfg['size']}_seed{cfg['seed']}",
-                "result.json")
-            if os.path.exists(cache):
-                with open(cache) as f:
-                    results.append((cfg, json.load(f)))
+            cached, mismatch = cached_result(*run_setup(cfg, settings),
+                                             settings)
+            if cached is not None:
+                results.append((cfg, cached))
             else:
-                failures.append(f"{cfg}: no cached result")
+                failures.append(f"{cfg}: {mismatch or 'no cached result'}")
     else:
         print(f"{len(configs)} runs, g^2 mu = {args.g2mu} GeV ...",
               flush=True)

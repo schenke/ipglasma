@@ -82,27 +82,12 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
+from input_template import cached_input_mismatch, write_input  # noqa: E402
 from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
 sys.path.insert(0, HERE)
 import leading_order  # noqa: E402
 
 HBARC = 0.1973269804
-
-
-def write_input(template, overrides, path):
-    remaining = dict(overrides)
-    lines = []
-    with open(template) as f:
-        for line in f:
-            tokens = line.split()
-            if len(tokens) >= 2 and tokens[0] in remaining:
-                lines.append(f"{tokens[0]} {remaining.pop(tokens[0])}\n")
-            else:
-                lines.append(line)
-    if remaining:
-        raise KeyError(f"keys not in the template: {sorted(remaining)}")
-    with open(path, "w") as f:
-        f.writelines(lines)
 
 
 def lattice_mean(tmunu):
@@ -119,16 +104,20 @@ def run_one(cfg, settings):
     tag = f"g2mu{cfg['g2mu']:g}_g{cfg['g']:g}{seed}{estimator}"
     workdir = os.path.join(settings["datadir"], tag)
     cache = os.path.join(workdir, "result.json")
+    overrides = dict(settings["overrides"], g2muGeV=cfg["g2mu"], g=cfg["g"])
+    if "seed" in cfg:
+        overrides["seed"] = cfg["seed"]
     if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return cfg, None, mismatch
         with open(cache) as f:
             return cfg, json.load(f), None
     os.makedirs(workdir, exist_ok=True)
     tables = os.path.join(workdir, "tables")
     if os.path.isdir(settings["tables"]) and not os.path.exists(tables):
         os.symlink(settings["tables"], tables)
-    overrides = dict(settings["overrides"], g2muGeV=cfg["g2mu"], g=cfg["g"])
-    if "seed" in cfg:
-        overrides["seed"] = cfg["seed"]
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))

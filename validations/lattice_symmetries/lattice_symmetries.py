@@ -65,6 +65,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
+from input_template import write_input  # noqa: E402
 from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
 
 WILSON_HEADER = 32  # int32 N, int32 Nc, double L, a, x
@@ -162,22 +163,6 @@ def make_files(original, target_dir, case):
 # --------------------------------------------------------------------------
 # running IP-Glasma
 # --------------------------------------------------------------------------
-
-def write_input(template, overrides, path):
-    remaining = dict(overrides)
-    lines = []
-    with open(template) as f:
-        for line in f:
-            tokens = line.split()
-            if len(tokens) >= 2 and tokens[0] in remaining:
-                lines.append(f"{tokens[0]} {remaining.pop(tokens[0])}\n")
-            else:
-                lines.append(line)
-    if remaining:
-        raise KeyError(f"keys not in the template: {sorted(remaining)}")
-    with open(path, "w") as f:
-        f.writelines(lines)
-
 
 def run(settings, workdir, overrides, wisdom=None):
     os.makedirs(workdir, exist_ok=True)

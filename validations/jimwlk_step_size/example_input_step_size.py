@@ -81,8 +81,8 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "numerical_parameters"))
-from numerical_parameters import (HBARC, read_g2mu, read_run,  # noqa: E402
-                                  write_input)
+from numerical_parameters import (HBARC, cached_input_mismatch,  # noqa
+                                  read_g2mu, read_run, write_input)
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
 from read_wilson_lines import read_wilson_lines  # noqa: E402
 
@@ -138,7 +138,17 @@ def run_one(cfg, settings):
     at every snapshot and the observables (cached in <workdir>/result.json)."""
     workdir = os.path.join(settings["datadir"], run_tag(cfg))
     cache = os.path.join(workdir, "result.json")
+    x0, _, xs = evolution(settings)
+    overrides = dict(settings["overrides"], seed=cfg["seed"],
+                     jimwlkInitialX=f"{x0:.15g}",
+                     jimwlkDs=f"{cfg['ds']:.12g}",
+                     jimwlkXSnapshotList=",".join(f"{x:.15g}"
+                                                  for x in xs[1:-1]))
     if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return cfg, None, mismatch
         with open(cache) as f:
             return cfg, json.load(f), None
     if settings["analyze_only"]:
@@ -149,12 +159,6 @@ def run_one(cfg, settings):
     tables = os.path.join(workdir, "tables")
     if os.path.isdir(settings["tables"]) and not os.path.exists(tables):
         os.symlink(settings["tables"], tables)
-    x0, _, xs = evolution(settings)
-    overrides = dict(settings["overrides"], seed=cfg["seed"],
-                     jimwlkInitialX=f"{x0:.15g}",
-                     jimwlkDs=f"{cfg['ds']:.12g}",
-                     jimwlkXSnapshotList=",".join(f"{x:.15g}"
-                                                  for x in xs[1:-1]))
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))

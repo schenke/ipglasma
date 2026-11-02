@@ -421,18 +421,25 @@ cd lattice_symmetries
 python3 lattice_symmetries.py --ipglasma-path ../.. --quick
 # the setup of the paper: 256², L = 30 fm
 python3 lattice_symmetries.py --ipglasma-path ../..
+# the lattice of the example input: 800², L = 30 fm
+python3 lattice_symmetries.py --ipglasma-path ../.. --size 800 --threads 16
 ```
 
 `--ipglasma-path` is a directory with the `ipglasma` executable,
 `qs2Adj_vs_Tp_vs_Y_240.in` and `nucleusConfigurations/`; the input starts
 from the example `input` (`--template`). The results go to
 `<datadir>/symmetries_summary.json` (default `./symmetries_output`). At
-128², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 1.4% of the
-T^μν points differ and the observables by less than 0.1%; in (b) 6% and
-0.3%. In the setup of the paper (256², L = 30 fm, 15 s), T^μν and the
-observables of (0) are bit-identical (the gluon spectrum to 7·10⁻¹¹); (a)
-holds everywhere, T^μν to 2·10⁻¹¹; in (b) 1.2% of the T^μν points differ
-and the observables by at most 0.13%.
+128², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 3.7% of the
+T^μν points differ and the observables by at most 0.8% (dN/dy); in (b) 11%
+and 0.9%. In the setup of the paper (256², L = 30 fm, 30 s), T^μν and the
+observables of (0) are bit-identical (the gluon spectrum to 1·10⁻¹¹); in
+(a) 0.4% of the T^μν points differ, dN/dy by 1.4% and the other
+observables by at most 0.2%; in (b) 1.5% of the points, dN/dy by 0.8% and
+the others by at most 0.3%. These lattices are coarse for the example
+input (g²μ a ≈ 3 at 256²), and its strong-field cells have several
+solutions. On its own lattice (`--size 800`, 4.5 minutes with 16 threads),
+no T^μν point of (a) or (b) differs beyond rounding: T^μν agrees to
+1·10⁻⁸, the hydro fields to 6·10⁻⁵, and the observables exactly.
 
 ### Dilute limit
 
@@ -543,9 +550,9 @@ of the T^μν output (10⁻¹⁶ GeV/fm³).
 
 `gluon_spectrum_estimator/gluon_spectrum_estimator.py` (issue #140) compares
 the two values of `gluonSpectrumEstimator` in the example input: Pb+Pb with
-JIMWLK from x = 0.01 to 10⁻⁴, b = 0, `seed 3`, 768² at L = 22.5 fm, and two
-color-charge configurations (`colorChargeSeed 1` and `2`, which also give
-the JIMWLK evolution its own noise).
+JIMWLK from x = 0.01 to 10⁻⁴, b = 0, `seed 3`, 768² at L = 22.5 fm, and
+`--configs` color-charge configurations (default 2; `colorChargeSeed 1`,
+`2`, ..., which also give the JIMWLK evolution its own noise).
 - **Runs:** the gluon multiplicity is measured at the final time, so each
   time (default τ = 0.2, 0.4 and 1 fm) and configuration is a run of its
   own. The runs use `gluonSpectrumEstimator 1`, whose
@@ -563,27 +570,34 @@ the JIMWLK evolution its own noise).
 cd gluon_spectrum_estimator
 # quick test: 128², one configuration at 0.2 and 0.4 fm
 python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --quick
-# the setup of the paper: 6 runs of about 5 minutes with 10 threads
-python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --threads 10
+# two configurations: 6 runs (18 minutes with 2 workers of 12 threads)
+python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --threads 12 \
+    --max-workers 2
+# the setup of the paper: eight configurations, 24 runs (about an hour)
+python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --configs 8 \
+    --threads 12 --max-workers 2
 ```
 
-With the defaults, 2|E|²/ω over the projection, for the two configurations:
+2|E|²/ω over the projection, for the eight configurations (mean and its
+error, and the range over the configurations):
 
 | τ [fm] | dN/dy | ⟨k_T⟩ |
 |---|---|---|
-| 0.2 | 0.860, 0.928 | 1.164, 1.078 |
-| 0.4 | 1.007, 1.004 | 0.999, 1.001 |
-| 1.0 | 1.013, 1.003 | 0.988, 0.997 |
+| 0.2 | 0.908 ± 0.010 (0.873–0.942) | 1.105 ± 0.011 (1.067–1.144) |
+| 0.4 | 1.000 ± 0.007 (0.970–1.024) | 1.006 ± 0.007 (0.983–1.039) |
+| 1.0 | 1.012 ± 0.002 (1.006–1.020) | 0.989 ± 0.002 (0.982–0.995) |
 
-- **From τ = 0.4 fm on,** the two agree within about 1%. The spectrum peaks
-  near Q_s ≈ 2 GeV, where kτ ≈ 4 at 0.4 fm, and integrated over k the
+- **From τ = 0.4 fm on,** the two agree within about 3% in every
+  configuration and within about 1% on average. The spectrum peaks near
+  Q_s ≈ 2 GeV, where kτ ≈ 4 at 0.4 fm, and integrated over k the
   oscillation averages out. In the dilute limit, in contrast, the lowest
   modes dominate, and 2|E|²/ω is off by tens of percent at all times (see
-  the dilute limit above).
-- **At τ = 0.2 fm,** they differ by 7–14% in dN/dy and by 0.2–0.4 GeV in
+  the dilute limit above); in the more dilute events at x = 0.01 (see
+  `numerical_parameters` below), it is 8% above the projection at 1 fm.
+- **At τ = 0.2 fm,** they differ by 6–13% in dN/dy and by 0.2–0.3 GeV in
   ⟨k_T⟩. The fields are still strongly nonlinear, and no estimator gives a
   well-defined particle number yet.
-- **The longitudinal part** of the gauge-fixed potential is about 10⁻⁴ (1.5 × 10⁻⁴ at 256² and 1.9 × 10⁻⁴ at 512² for the example input at L = 30 fm); with the earlier gauge-fixing threshold (before #162) it was 2–6%.
+- **The longitudinal part** of the gauge-fixed potential is about 10⁻⁴ (2 × 10⁻⁴ at 1 fm; 1.4 × 10⁻⁴ at 256², 1.5 × 10⁻⁴ at 512² and 1.8 × 10⁻⁴ at 800² for the example input at L = 30 fm); with the earlier gauge-fixing threshold (before #162) it was 2–6%.
 - **The lines k = −π/a,** which only the projection counts, carry about
   10⁻⁴ of dN/dy (0.9–1.4 × 10⁻⁴, `pi_line_fraction` in the summary,
   estimated from the mean spectrum of their k̃ bins).
@@ -614,8 +628,8 @@ lines (at the size of the `Ny` and `m` scans) gives g²μ of each site of the
 geometry; the script reports its median (weighted with (g²μ)², like the
 multiplicity) and maximum, and the median g²μ a of each size. The hot spots
 of the example input are small (`BGq 0.3` GeV⁻², a width of 0.11 fm) and
-overlap in Pb to g²μ of up to 13 GeV; for `seed 3` the median is 5.2 GeV
-(1/g²μ = 0.038 fm), i.e. g²μ a = 6.2, 3.1, 1.5, 0.77, 0.58 and 0.46 for the
+overlap in Pb to g²μ of up to 17 GeV; for `seed 3` the median is 5.4 GeV
+(1/g²μ = 0.036 fm), i.e. g²μ a = 6.5, 3.2, 1.6, 0.81, 0.61 and 0.49 for the
 default sizes, so that only the finest lattices resolve most of the event. As a
 reference, a fourth scan runs a constant g²μ (`useNucleus 0`, on its
 periodic lattice, `--uniform-g2mu`, default 5 GeV, L = 3 fm) at the `Ny`
@@ -624,14 +638,14 @@ and `m` of the input, for g²μ a = 2.4 to 0.15 (sizes 32 to 512):
 | size | 32 | 64 | 128 | 256 | 512 |
 |---|---|---|---|---|---|
 | g²μ a | 2.38 | 1.19 | 0.59 | 0.30 | 0.15 |
-| dN/dy | 3687 | 4744 | 5154 | 5381 | 5312 |
-| dE/dη (0.4 fm) [GeV] | 12147 | 22022 | 28936 | 33240 | 34810 |
+| dN/dy | 3690 | 4847 | 5099 | 5281 | 5298 |
+| dE/dη (0.4 fm) [GeV] | 12042 | 22434 | 28605 | 32970 | 35247 |
 
 dN/dy is within about 4% of its limit for g²μ a ≲ 0.6, while dE/dη still
-grows by 4.7% ± 1.2% from g²μ a = 0.3 to 0.15. The energy sits in modes up
-to several g²μ, where the gluon spectrum falls like 1/k⁴, and converges
-only like a: its deficit is about 0.2–0.3 g²μ a, so 5% needs g²μ a ≈
-0.15–0.25 (the energy density at τ = 0 even diverges like ln² a, T. Lappi,
+grows by 6.9% ± 0.9% from g²μ a = 0.3 to 0.15 (eight seeds). The energy
+sits in modes up to several g²μ, where the gluon spectrum falls like 1/k⁴,
+and converges only like a: its deficit is about 0.2–0.4 g²μ a, so 5% needs
+g²μ a ≈ 0.12–0.25 (the energy density at τ = 0 even diverges like ln² a, T. Lappi,
 Phys. Lett. B 643 (2006) 11). This is not an artifact of IP-Glasma: an
 independent classical Yang-Mills code (a version of S. Schlichting's), run
 on the same Wilson lines, gives dE/dη within 0.1–0.6% of IP-Glasma's and
@@ -649,38 +663,40 @@ small or too large (with one seed, the tolerance alone applies). For an
 observable that fails, it prints a prominent `WARNING: NOT CONVERGED IN THE
 LATTICE SPACING` with the change and an estimate of the remaining deviation
 from an extrapolation linear in a, marks the panel in the figure, and lists
-it under `not_converged` in the summary. With the defaults (20 minutes with
-2 workers of 12 threads), the results are
+it under `not_converged` in the summary. With eight seeds
+(`--color-seeds 8`, about two hours with 2 workers of 12 threads; the
+default four take one), the results are
 
 | size | 96 | 192 | 384 | 768 | 1024 | 1280 |
 |---|---|---|---|---|---|---|
 | a [fm] | 0.234 | 0.117 | 0.059 | 0.029 | 0.022 | 0.018 |
-| dN/dy | 8151 | 14170 | 18836 | 21289 | 21713 | 22046 |
-| dE/dη (0.4 fm) [GeV] | 9062 | 28602 | 51825 | 68667 | 72709 | 75766 |
+| dN/dy | 7135 | 12389 | 16594 | 18696 | 18896 | 19227 |
+| dE/dη (0.4 fm) [GeV] | 7848 | 23843 | 44850 | 59312 | 64311 | 66972 |
 
-dN/dy changes by +1.5% ± 2.0% in the last step, ε₂ and ε₃ by less than
-their errors, so they converge. dE/dη still grows by 4.2% ± 1.0%, and the
-linear extrapolation puts its value at a = 0 about 16% above the finest
-lattice (5% for the constant g²μ): converging the energy to the percent
-level would need lattice spacings far below 0.018 fm, so its dependence on
-a has to be quoted as a systematic uncertainty. The `Ny` scan (at 768²)
-converges for dN/dy by `Ny` ≈ 25–50 (21289 for `Ny 50`, 20912 for
-`Ny 100`); the `m` scan changes dN/dy from 28196 (`m 0.1`) to 15782
+dN/dy changes by +1.8% ± 1.7% in the last step, so it converges. dE/dη
+still grows by 4.1% ± 0.5%, and the linear extrapolation puts its value at
+a = 0 about 16% above the finest lattice (6% for the constant g²μ):
+converging the energy to the percent level would need lattice spacings far
+below 0.018 fm, so its dependence on a has to be quoted as a systematic
+uncertainty. At b = 0, ε₂ and ε₃ come from fluctuations alone; their
+dependence on a is tested at b = 7.5 fm (below). The `Ny` scan (at 768²)
+converges for dN/dy by `Ny` ≈ 25–50 (18164, 18696 and 18432 for `Ny` 25,
+50 and 100); the `m` scan changes dN/dy from 26450 (`m 0.1`) to 13048
 (`m 0.8`) at fixed `QsMuRatio`, which changes the physical Q_s. dN/dy is
 the projection onto the free Bjorken modes (`gluonSpectrumEstimator 1`,
 the default); 2|E|²/ω (`0`) gives, on the same events at 0.4 fm, between
-0.5% less and 1.4% more in the size scan and 1–3.4% less for the constant
-g²μ.
+0.6% less and 1.5% more on average in the size scan (single events within
+4%) and 1.1–3.6% less for the constant g²μ.
 
 ```bash
 cd numerical_parameters
 # quick test: sizes 64 and 128, Ny and m scans at 64, the constant g²μ at
 # sizes 32 and 64, 2 seeds (6 s with 8 workers)
 python3 numerical_parameters.py --ipglasma-path ../.. --quick --max-workers 8
-# the setup of the paper (the defaults): sizes 96-1280, Ny 1-100,
-# m 0.1-0.8 GeV, the constant g²μ at sizes 32-512, 4 seeds (20 minutes)
+# the defaults: sizes 96-1280, Ny 1-100, m 0.1-0.8 GeV, the constant g²μ
+# at sizes 32-512, 4 seeds (an hour); the paper uses 8 seeds (two hours)
 python3 numerical_parameters.py --ipglasma-path ../.. --threads 12 \
-    --max-workers 2
+    --max-workers 2 --color-seeds 8
 ```
 
 **Where the energy sits in k_T.** For each lattice of the size scans, the
@@ -702,7 +718,7 @@ shows k⁴ dN/d²k of each lattice. For the constant g²μ, the energy below
 2g²μ does not grow on finer lattices; all of the growth is above. The two
 estimates agree within about 1% on the two finest lattices, which puts the
 deficit at about 0.2 g²μ a with the projection (0.3 with 2|E|²/ω in the
-discussion of #134); the extrapolation of dE/dη linear in a gives 0.3.
+discussion of #134); the extrapolation of dE/dη linear in a gives 0.4.
 
 **With JIMWLK, and at another x.**
 - **`--jimwlk`:** evolves the Wilson lines of all runs with the JIMWLK
@@ -719,28 +735,61 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.3.
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.
 
-With the commands below (two seeds, N = 768 to 1536; 26 and 7 minutes with
-`--threads 12 --max-workers 2`):
-- **With JIMWLK:** dN/dy converges (+1.2% ± 2.3% in the last step). dE/dη
-  grows by 22%, 13% and 12% in the three steps (+11.8% ± 2.3% in the
-  last), because the evolution hardens the tail to p ≈ 1.4.
-- **At x = 0.01 without JIMWLK:** p ≈ 0.3, and dE/dη is converged within
-  about 1% from N = 1024 on (+1.0% ± 2.4% in the last step). In this dilute
-  event, dN/dy differs by up to 24% between the two seeds of one lattice
-  (5116 to 6586 over all eight runs), so two seeds do not resolve its
-  dependence on a: its last step, +12% ± 9%, is within two standard
-  deviations (most of the pooled spread comes from the two seeds at 768²).
-  With the spread of each lattice alone, the two seeds of the two finest
-  lattices happened to lie within about 3% of each other, and the check
-  flagged the step (± 2%).
-- **ε₂ and ε₃** need more than two seeds in both variants.
+With the commands below (N = 768 to 1536, 2 workers of 12 threads):
+- **With JIMWLK** (four seeds, 1.6 hours): dE/dη is 48048, 58045, 65102
+  and 72770 GeV, i.e. it grows by 21%, 12% and 12% in the three steps
+  (+11.8% ± 1.3% in the last), as the evolution hardens the tail to
+  p ≈ 1.35. Part of this is the error of the JIMWLK step, which grows on
+  finer lattices (see `jimwlk_step_size`): with `jimwlkDs` 0.0015 as well
+  (two seeds), the extrapolation to zero step, 2E(0.0015) − E(0.003), gives
+  45972, 53490, 59700 and 66256 GeV, still +16%, +12% and +11% (± 2–3%)
+  per step, while the step error at 0.003 is 4% of dE/dη at 768² and 10%
+  at 1536². The energy of JIMWLK-evolved Wilson lines therefore depends on
+  a much more strongly than without JIMWLK. dN/dy changes by +6.5% ± 2.9%
+  in the last step: within the check, but not clearly converged.
+- **At x = 0.01 without JIMWLK** (eight seeds, 40 and 60 minutes with
+  3 workers of 8 threads): p ≈ 0.4, and dE/dη (7923, 8277, 8413 and
+  8634 GeV) grows by 4.5%, 1.6% and 2.6% ± 0.7%, about linearly in a. dN/dy
+  is 5220, 5341, 5154 and 5312 at 0.4 fm (+3.1% ± 3.4% in the last step;
+  its zig-zag is within the errors) and 4521, 4559, 4544 and 4563 at 1 fm
+  (+0.4% ± 2.4%), where the spread between the seeds is about 30% smaller.
+  In these dilute events, 2|E|²/ω is 8% above the projection at 1 fm.
+- **ε₂ at b = 7.5 fm** (L = 30 fm, eight seeds without JIMWLK, four with;
+  about 1 and 1.3 hours) converges at the percent level, while dE/dη
+  changes by +3.2% ± 1.1% without and +10.6% ± 1.3% with JIMWLK in the
+  last step:
+
+| size | 128 | 256 | 512 | 768 | 1024 | 1280 | 1536 |
+|---|---|---|---|---|---|---|---|
+| a [fm] | 0.234 | 0.117 | 0.059 | 0.039 | 0.029 | 0.023 | 0.020 |
+| ε₂ | 0.493 | 0.472 | 0.464 | 0.462 | 0.464 | 0.472 | 0.464 |
+| ε₂ with JIMWLK | | | | 0.458 | 0.475 | 0.466 | 0.467 |
+
+The errors of ε₂ are 0.003–0.005 without and 0.004–0.008 with JIMWLK; the
+last step is −1.7% ± 1.2% and +0.2% ± 1.8%.
 
 ```bash
-# the size scan with JIMWLK, and the Wilson lines at x = 0.01 without it
+# the size scan with JIMWLK
 python3 numerical_parameters.py --ipglasma-path ../.. --jimwlk \
-    --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 2
+    --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 4
+# the same at half the step, for the extrapolation to zero step
+sed 's/^jimwlkDs .*/jimwlkDs 0.0015/' ../../input > input_ds0.0015
+python3 numerical_parameters.py --ipglasma-path ../.. --jimwlk \
+    --template input_ds0.0015 --sizes 768 1024 1280 1536 --ny --m \
+    --uniform-sizes --color-seeds 2 --datadir ./output_ds0.0015
+# the Wilson lines at x = 0.01 without JIMWLK, at 0.4 and 1 fm
 python3 numerical_parameters.py --ipglasma-path ../.. --x 0.01 \
-    --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 2
+    --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 8
+python3 numerical_parameters.py --ipglasma-path ../.. --x 0.01 \
+    --maxtime 1 --sizes 768 1024 1280 1536 --ny --m --uniform-sizes \
+    --color-seeds 8
+# b = 7.5 fm, without and with JIMWLK
+python3 numerical_parameters.py --ipglasma-path ../.. --b 7.5 --L 30 \
+    --sizes 128 256 512 768 1024 1280 1536 --ny --m --uniform-sizes \
+    --color-seeds 8 --datadir ./output_b7.5
+python3 numerical_parameters.py --ipglasma-path ../.. --jimwlk --b 7.5 \
+    --L 30 --sizes 768 1024 1280 1536 --ny --m --uniform-sizes \
+    --color-seeds 4 --datadir ./output_b7.5
 ```
 
 `--ipglasma-path` is a directory with the `ipglasma` executable,
@@ -836,13 +885,13 @@ too large.
 the peak memory, against the lattice size and the number of OpenMP
 threads:
 - **Event:** the example input (Pb+Pb with hot spots, JIMWLK from
-  x = 0.01 to 10⁻⁴, the Yang–Mills evolution to τ = 0.5 fm, the gluon
+  x = 0.01 to 1.29·10⁻⁴, the Yang–Mills evolution to τ = 0.4 fm, the gluon
   multiplicity and the eccentricities) at a fixed geometry (`seed 3`,
   b = 0), without writing Wilson lines or fields.
 - **Scans:** N = 256 to 1536 at L = 30 fm with 8 threads, and 1 to 16
-  threads at N = 512. With fixed L, the lattice spacing shrinks with N, so
-  the Yang–Mills evolution, whose time step is a/10, needs N times more
-  steps.
+  threads at N = 800, the lattice of the example input. With fixed L, the
+  lattice spacing shrinks with N, so the Yang–Mills evolution, whose time
+  step is a/10, needs N times more steps.
 - **Times:** from the profile IP-Glasma writes with `IPGLASMA_PROFILE=1`
   (`ipglasma_profile_rank0.tsv`, see `OUTPUT.md`): the Wilson lines
   (`initialization.wilson_lines`), the JIMWLK evolution
@@ -853,7 +902,7 @@ threads:
 - **Time per step:** of the JIMWLK evolution (`jimwlk.step`) and of the
   Yang–Mills evolution (`evolution.parallel_step`), the time of the phase
   divided by its calls. The number of JIMWLK steps does not depend on N
-  (93 per nucleus), that of the Yang–Mills steps grows like N.
+  (147 per nucleus), that of the Yang–Mills steps grows like N.
 - **Memory:** the peak resident memory of each run, from the operating
   system.
 - **Repeats:** the runs are sequential and repeated (`--repeats`, default
@@ -868,12 +917,34 @@ above 1.
 cd performance
 # quick test: N = 64 and 128, 1 and 2 threads, one repeat (20 s)
 python3 performance.py --ipglasma-path ../.. --quick
-# the setup of the paper (33 minutes)
+# the setup of the paper (80 minutes)
 python3 performance.py --ipglasma-path ../..
 ```
 
 The results go to `performance_summary.json` and `performance.pdf` in
-`--datadir` (default `./performance_output`).
+`--datadir` (default `./performance_output`). On an Intel Core i7-13700HX
+(24 CPUs; the fastest of two repeats, in seconds):
+
+| N | threads | Wilson lines | JIMWLK | Yang–Mills | event | memory [GiB] |
+|---|---|---|---|---|---|---|
+| 256 | 8 | 0.5 | 7.9 | 1.3 | 10.3 | 0.26 |
+| 512 | 8 | 2.7 | 38.5 | 10.7 | 53.5 | 0.98 |
+| 800 | 1 | 21.1 | 423 | 93.6 | 548 | 2.36 |
+| 800 | 8 | 6.8 | 99.9 | 20.5 | 130.5 | 2.36 |
+| 800 | 16 | 7.0 | 86.8 | 18.0 | 114.7 | 2.36 |
+| 1024 | 8 | 11.3 | 166 | 55.8 | 238 | 3.87 |
+| 1536 | 8 | 25.6 | 380 | 298 | 715 | 8.66 |
+
+- **JIMWLK** takes most of an event of the example input (three quarters
+  at 800²). A step takes 0.34 s at 800² with 8 threads and scales like N²
+  (1.29 s at 1536²).
+- **The Yang–Mills column** includes the observables at the final time,
+  among them the Coulomb gauge fixing for the gluon multiplicity. Its
+  number of iterations depends on the event (80 at 800², 168 at 1024², 495
+  at 1536²), so this column does not scale smoothly with N: at 1536², the
+  gauge fixing takes 226 of its 298 s, the 204 Yang–Mills steps 64 s.
+- **Threads:** 8 threads are 4.2 times as fast as one, 16 threads 4.8
+  times.
 
 ### JIMWLK step size
 
@@ -1003,9 +1074,9 @@ of step and of rapidity is about 30 times larger than above:
   5% in Q_s at y = 7.8, here 9%).
 
 **The example input.** `example_input_step_size.py` evolves the example
-input itself (Pb+Pb with hot spots, b = 0) from x₀ = 0.0098 to 10⁻⁴, exactly
-93 steps of 0.005, at `jimwlkDs` 0.005, 0.0025, 0.00125 and 0.000625, from
-the same initial Wilson lines:
+input itself (Pb+Pb with hot spots, b = 0) from x₀ = 0.0092 to 1.29·10⁻⁴,
+exactly 144 steps of 0.003, at `jimwlkDs` 0.003, 0.0015, 0.00075 and
+0.000375, from the same initial Wilson lines:
 - **Q_s:** a nucleus is not translation invariant, so Q_s comes from the
   dipole correlator averaged over a region: the thirds of each nucleus by
   the initial g²μ (dilute, medium, dense) and all of them. The dilute
@@ -1019,43 +1090,44 @@ the same initial Wilson lines:
   while those of the Langevin noise, which differs between step sizes,
   remain in the error. A quadratic fit tests the first order.
 - **Checks:** the initial Wilson lines agree, the step is of first order,
-  Q_s of every region and dN/dy are within 3% of zero step at 0.005, and
-  dE/dη at 0.0025.
+  Q_s of every region and dN/dy are within 3% of zero step at 0.003, and
+  dE/dη at 0.0015.
 
 ```bash
 # quick test: 128², L = 30 fm, three step sizes, 2 seeds (20 s)
 python3 example_input_step_size.py --ipglasma-path ../.. --quick --max-workers 3
-# 768², L = 22.5 fm, 3 seeds (52 minutes with 2 workers of 8 threads)
-python3 example_input_step_size.py --ipglasma-path ../.. --threads 8 \
-    --max-workers 2
-# 256², L = 30 fm, the lattice of the example input, 16 seeds (12 minutes
-# with 4 workers of 6 threads)
+# 768², L = 22.5 fm, 8 seeds (3.4 hours with 3 workers of 8 threads)
+python3 example_input_step_size.py --ipglasma-path ../.. --seeds 8 \
+    --threads 8 --max-workers 3
+# 256², L = 30 fm, 16 seeds (30 minutes with 4 workers of 6 threads)
 python3 example_input_step_size.py --ipglasma-path ../.. --size 256 --L 30 \
     --seeds 16 --threads 6 --max-workers 4
 ```
 
-The deviation from zero step at `jimwlkDs 0.005` is (dN/dy with the
+The deviation from zero step at `jimwlkDs 0.003` is (dN/dy with the
 projection, the default):
 
-| | 768², L = 22.5 fm, 3 seeds | 256², L = 30 fm, 16 seeds |
+| | 768², L = 22.5 fm, 8 seeds | 256², L = 30 fm, 16 seeds |
 |---|---|---|
-| Q_s, all | +0.9% ± 0.6% | −0.4% ± 0.2% |
-| Q_s, dilute third | +1.2% ± 0.7% | −0.4% ± 0.4% |
-| Q_s, dense third | +0.5% ± 0.8% | −0.3% ± 0.3% |
-| dN/dy | +2.6% ± 1.2% | +0.9% ± 1.8% |
-| dE/dη | +5.6% ± 0.6% | +0.2% ± 0.4% |
+| Q_s, all | +0.5% ± 0.4% | +0.6% ± 0.3% |
+| Q_s, dilute third | +1.1% ± 0.6% | +0.5% ± 0.4% |
+| Q_s, dense third | +0.4% ± 0.4% | +0.7% ± 0.3% |
+| dN/dy | +0.6% ± 2.1% | +1.8% ± 1.9% |
+| dE/dη | +3.3% ± 0.7% | +1.2% ± 0.6% |
 
-- **Q_s and dN/dy:** within about 1% (Q_s) and 3% (dN/dy) of zero step at
-  0.005, as in the constant-g²μ setup above.
-- **Seeds at 256²:** with four seeds, the error of dN/dy at 0.005 is 6%,
-  so its 3% check can fail by chance (+4.1% ± 6.4% in one such run); 16
-  seeds give 1.8%.
+- **Q_s and dN/dy:** within about 1% (Q_s) and 2% (dN/dy) of zero step at
+  0.003, as in the constant-g²μ setup above.
+- **Seeds:** even with 8 and 16 events, the error of dN/dy is about 2%,
+  close to its 3% tolerance, so fewer seeds can fail the check by chance.
 - **dE/dη:** its step error grows on finer lattices. It sits in the hard
   tail of the evolved spectrum, which the coarse lattice cuts off (the same
   tail makes the energy converge slowly in the lattice spacing, see
-  `numerical_parameters/`). At 0.0025 it is 2.7% ± 0.3% at 768².
-- **ε₂ and ε₃:** consistent with no dependence on the step, within their
-  errors (about 6% and 11% at 768²).
+  `numerical_parameters/`). At 0.0015 it is 1.6% ± 0.3% at 768²; on the
+  lattice of the example input (a = 0.0375 fm) it is about 2–3% at 0.003,
+  and at 1536², L = 22.5 fm (a = 0.015 fm), 10% (see the JIMWLK scan of
+  `numerical_parameters`).
+- **ε₂ and ε₃** (at b = 0, from fluctuations alone): consistent with no
+  dependence on the step, within their errors (about 7% and 5% at 768²).
 
 ### Vector meson production validation
 

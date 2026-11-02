@@ -33,9 +33,13 @@ validations/dilute_limit (--gluon-spectrum-estimator 1).
 Usage (from validations/gluon_spectrum_estimator/):
     # quick test: 128^2, one configuration at 0.2 and 0.4 fm
     python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --quick
-    # 768^2, 2 configurations at 0.2, 0.4 and 1 fm (6 runs, about 5 min
-    # each with 10 threads)
-    python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --threads 10
+    # 768^2, 2 configurations at 0.2, 0.4 and 1 fm (6 runs, 18 min with 2
+    # workers of 12 threads)
+    python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --threads 12 \\
+        --max-workers 2
+    # the setup of the paper: 8 configurations (24 runs, about an hour)
+    python3 gluon_spectrum_estimator.py --ipglasma-path ../.. --configs 8 \\
+        --threads 12 --max-workers 2
 """
 
 import argparse

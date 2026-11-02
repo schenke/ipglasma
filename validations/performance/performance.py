@@ -17,7 +17,7 @@ IPGLASMA_PROFILE=1. Two scans:
     8 threads; the lattice spacing shrinks with N, so the Yang-Mills
     evolution, whose time step is a/10, needs N times more steps),
   * the number of OpenMP threads at --scan-size (by default 1 to 16 at
-    N = 512).
+    N = 800, the lattice of the example input).
 
 The runs are sequential, and each is repeated --repeats times; the fastest
 repeat is kept, since a shared machine can only make a run slower. From
@@ -39,7 +39,7 @@ if the load is above 1.
 Usage (from validations/performance/):
     # quick test: N = 64 and 128, 1 and 2 threads, one repeat
     python3 performance.py --ipglasma-path ../.. --quick
-    # the setup of the paper (33 minutes on 16 cores)
+    # the setup of the paper (80 minutes on 24 CPUs)
     python3 performance.py --ipglasma-path ../..
 
 --ipglasma-path is a directory with the ipglasma executable,
@@ -229,12 +229,12 @@ def main():
     parser.add_argument("--L", type=float, default=30., help="[fm]")
     parser.add_argument("--seed", type=int, default=3)
     parser.add_argument("--sizes", type=int, nargs="+",
-                        default=[256, 512, 768, 1024, 1536])
+                        default=[256, 512, 800, 1024, 1536])
     parser.add_argument("--threads", type=int, default=8,
                         help="the threads of the size scan")
     parser.add_argument("--thread-counts", type=int, nargs="+",
                         default=[1, 2, 4, 8, 16])
-    parser.add_argument("--scan-size", type=int, default=512,
+    parser.add_argument("--scan-size", type=int, default=800,
                         help="the size of the thread scan")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--quick", action="store_true",

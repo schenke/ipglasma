@@ -136,7 +136,11 @@ Useful flags:
   the threads of all events on the same first cores.
 - `--plot-only` — skip launching new runs and just rebuild the plot/summary
   from `seed_*/` directories already present in `--datadir` (useful after an
-  interrupted run, which keeps them, or with `--keep-logs`).
+  interrupted run, which keeps them, or with `--keep-logs`). The events are
+  labeled, and compared with the settings of the reference, with the
+  `size`, `L`, `maxTime` and `useJIMWLK` of their `usedParameters*.dat`,
+  not with the options of the call; events with different settings stop
+  the script.
 - `--clean` — remove stray temporary files left behind by an interrupted run
   from every `seed_*/` directory under `--datadir`, without touching the
   saved `Tmunu` snapshots or the `usedParameters*.dat` (the version of

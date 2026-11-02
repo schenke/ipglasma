@@ -240,7 +240,7 @@ struct SubnucleonParameters {
     bool shiftConstituentQuarkProtonOrigin = false;
     /// Anisotropy \f$\delta\f$ of the `nucleonModel gaussian` thickness,
     /// \f$T \propto \sqrt{1+\delta}\,\exp[-(b^2+\delta(\vec b\cdot\hat
-    /// n)^2)/2B]/(2\pi B)\f$ with \f$\hat n=(\cos\phi,\sin\phi)\f$ at a
+    /// n)^2)/(2B_G)]/(2\pi B_G)\f$ with \f$\hat n=(\cos\phi,\sin\phi)\f$ at a
     /// random angle \f$\phi\f$ per nucleon, i.e. narrower along \f$\hat
     /// n\f$ for \f$\delta>0\f$ (an initial test parameter).
     double protonAnisotropy = 0.;

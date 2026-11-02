@@ -55,12 +55,13 @@ Checks 2 and 3 are skipped with --quick.
 Usage (from validations/jimwlk_step_size/):
     # quick test: 128^2, L = 30 fm, three step sizes, 2 seeds
     python3 example_input_step_size.py --ipglasma-path ../.. --quick
-    # 768^2 at L = 22.5 fm, 3 seeds (52 minutes with 2 workers of 8
-    # threads)
+    # 768^2 at L = 22.5 fm, 3 seeds (76 minutes with 3 workers of 8
+    # threads; the paper uses --seeds 8, 3.4 hours)
     python3 example_input_step_size.py --ipglasma-path ../.. --threads 8 \\
-        --max-workers 2
-    # a coarse lattice, 256^2 at L = 30 fm: 16 seeds (with four, the error
-    # of dN/dy is 6%, twice the tolerance)
+        --max-workers 3
+    # a coarse lattice, 256^2 at L = 30 fm: 16 seeds (the error of dN/dy is
+    # then about 2%, close to the tolerance; 30 minutes with 4 workers of 6
+    # threads)
     python3 example_input_step_size.py --ipglasma-path ../.. --size 256 \\
         --L 30 --seeds 16 --threads 6 --max-workers 4
 """

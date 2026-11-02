@@ -40,15 +40,15 @@ Q_s/QsMuRatio of each site of the geometry, and the script reports its
 median and maximum (the median weighted with (g^2 mu)^2, i.e. with the
 multiplicity) and g^2 mu a for each size. For seed 3 the hot spots of the
 example input (BGq = 0.3 GeV^-2, a width of 0.11 fm) overlap to g^2 mu of
-up to 13 GeV, with a median of 5.2 GeV (1/g^2 mu = 0.038 fm), so that only
+up to 17 GeV, with a median of 5.4 GeV (1/g^2 mu = 0.036 fm), so that only
 the smallest lattice spacings resolve most of the event. As a reference,
 a fourth scan runs a constant g^2 mu (useNucleus 0, L = 3 fm, on its
 periodic lattice) of about this median at the Ny and m of the input,
 against g^2 mu a: dN/dy is within about 4% of its limit for g^2 mu a below
-about 0.6, while dE/deta still grows by 5% from g^2 mu a = 0.3 to 0.15.
+about 0.6, while dE/deta still grows by 7% from g^2 mu a = 0.3 to 0.15.
 The energy sits in modes up to several g^2 mu, where the gluon spectrum
 falls like 1/k^4, and converges only like a, with a deficit of about
-0.2-0.3 g^2 mu a (the energy density at tau = 0 even diverges, as ln^2 a;
+0.2-0.4 g^2 mu a (the energy density at tau = 0 even diverges, as ln^2 a;
 T. Lappi, Phys. Lett. B 643 (2006) 11). An independent classical
 Yang-Mills implementation gives the same dependence on a for the same
 Wilson lines. With JIMWLK the tail of the spectrum is less steep (the
@@ -64,11 +64,14 @@ seeds per lattice estimate the spread of that lattice poorly; with one
 seed, the tolerance alone applies. For an observable that does not
 converge, it prints a prominent warning, with an estimate of the
 remaining deviation from an extrapolation linear in a, marks it in the
-figure and in the summary. With the defaults, dN/dy and
-the eccentricities converge, while dE/deta still changes by about 4% between
-the two finest lattices; the linear extrapolation puts its continuum value
-about 16% above the finest one, which would need lattice spacings far below
-0.018 fm to reach.
+figure and in the summary. With the defaults, dN/dy converges, while
+dE/deta still changes by about 4% between the two finest lattices; the
+linear extrapolation puts its continuum value about 16% above the finest
+one, which would need lattice spacings far below 0.018 fm to reach. With
+JIMWLK, dE/deta changes by 12-21% per step on lattices of 768^2 to
+1536^2 (L = 22.5 fm), and still by 11-16% at zero JIMWLK step. At
+b = 0, the eccentricities come from fluctuations alone; at b = 7.5 fm
+(--b 7.5 --L 30), eps_2 converges at the percent level.
 
 Where the energy sits in k_T: for each lattice of the size scans, the
 script reads the gluon spectrum (gluonMultiplicity0.json) and reports the
@@ -94,12 +97,13 @@ Usage (from validations/numerical_parameters/):
     # quick test: sizes 64 and 128, Ny and m scans at 64, the constant
     # g^2 mu at sizes 32 and 64, 2 seeds
     python3 numerical_parameters.py --ipglasma-path ../.. --quick
-    # the setup of the paper (about 25 min with 2 workers of 8 threads)
-    python3 numerical_parameters.py --ipglasma-path ../.. --threads 8 \\
+    # the defaults, 4 seeds (about an hour with 2 workers of 12 threads;
+    # the paper uses --color-seeds 8)
+    python3 numerical_parameters.py --ipglasma-path ../.. --threads 12 \\
         --max-workers 2
     # the size scan with JIMWLK (the example input from x = 0.01 to 1.29e-4)
     python3 numerical_parameters.py --ipglasma-path ../.. --jimwlk \\
-        --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 2
+        --sizes 768 1024 1280 1536 --ny --m --uniform-sizes --color-seeds 4
 
 --ipglasma-path is a directory with the ipglasma executable,
 qs2Adj_vs_Tp_vs_Y_240.in, nucleusConfigurations/ and tables/. The results

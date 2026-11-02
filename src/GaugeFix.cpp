@@ -122,7 +122,7 @@ void GaugeFix::fftChi(
     // <sum_b (g a^2 div A^b)^2>/24, so for the same physical fields it
     // falls like a^4: a fixed threshold, 1e-9
     // as in 1.x, fixed the gauge ever more loosely on finer lattices, and
-    // dN/dy of a central Pb+Pb event of the example input came out -0.5%,
+    // dN/dy of a central Pb+Pb event with hot spots and JIMWLK came out -0.5%,
     // -1.1%, +5.7% and -3.6% off at N = 256, 512, 768 and 1024 (L = 30 fm).
     // The threshold is therefore fixed in physical units, 1e-12 at
     // a = 0.1 fm: dN/dy is then within 0.05% of the converged value.

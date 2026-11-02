@@ -47,9 +47,9 @@ class NucleonProfile {
 
 /**
  * A single Gaussian nucleon of width \f$B_G\f$, optionally made
- * anisotropic by `protonAnisotropy` \f$\xi\f$: the width along the
- * direction at the angle \c phi becomes \f$B_G/(1+\xi)\f$ (narrower for
- * \f$\xi>0\f$), at the same normalization.
+ * anisotropic by `protonAnisotropy` \f$\delta\f$: the width along the
+ * direction at the angle \c phi becomes \f$B_G/(1+\delta)\f$ (narrower for
+ * \f$\delta>0\f$), at the same normalization.
  */
 class GaussianProfile : public NucleonProfile {
   public:
@@ -57,7 +57,7 @@ class GaussianProfile : public NucleonProfile {
      * \param[in] xm Nucleon center \f$x\f$ [fm].
      * \param[in] ym Nucleon center \f$y\f$ [fm].
      * \param[in] BG Gaussian width \f$B_G\f$ [GeV\f$^{-2}\f$].
-     * \param[in] anisotropy Elongation \f$\xi\f$ (`protonAnisotropy`).
+     * \param[in] anisotropy Elongation \f$\delta\f$ (`protonAnisotropy`).
      * \param[in] phi Orientation of the elongation [rad].
      * \param[in] normalization Qs normalization factor.
      */
@@ -74,7 +74,7 @@ class GaussianProfile : public NucleonProfile {
   private:
     /// Gaussian width \f$B_G\f$ [GeV\f$^{-2}\f$].
     double BG_;
-    /// Elongation \f$\xi\f$.
+    /// Elongation \f$\delta\f$.
     double xi_;
     /// Orientation of the elongation [rad].
     double phi_;
@@ -174,7 +174,7 @@ class GaussianNucleon : public NucleonModel {
   private:
     /// Gaussian width \f$B_G\f$ [GeV\f$^{-2}\f$].
     double BG_;
-    /// Elongation \f$\xi\f$ (`protonAnisotropy`).
+    /// Elongation \f$\delta\f$ (`protonAnisotropy`).
     double anisotropy_;
     /// Whether the Qs normalization fluctuates (`smearQs`).
     bool smearQs_;

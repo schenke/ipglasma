@@ -238,11 +238,11 @@ struct SubnucleonParameters {
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).
     bool shiftConstituentQuarkProtonOrigin = false;
-    /// Anisotropy \f$\xi\f$ of the `nucleonModel gaussian` thickness,
-    /// \f$T \propto \sqrt{1+\xi}\,\exp[-(b^2+\xi(\vec b\cdot\hat
+    /// Anisotropy \f$\delta\f$ of the `nucleonModel gaussian` thickness,
+    /// \f$T \propto \sqrt{1+\delta}\,\exp[-(b^2+\delta(\vec b\cdot\hat
     /// n)^2)/2B]/(2\pi B)\f$ with \f$\hat n=(\cos\phi,\sin\phi)\f$ at a
     /// random angle \f$\phi\f$ per nucleon, i.e. narrower along \f$\hat
-    /// n\f$ for \f$\xi>0\f$ (an initial test parameter).
+    /// n\f$ for \f$\delta>0\f$ (an initial test parameter).
     double protonAnisotropy = 0.;
     /// Selects which Bayesian-posterior-fit table
     /// setParamsWithPosteriorParameterSet() draws from: `1` (variable

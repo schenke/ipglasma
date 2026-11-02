@@ -266,6 +266,10 @@ def main():
         summary["runs"][f"{g:g}"] = results[(g, 1.)]
     names = ["eps0", "tau_eps", "dN_dy_per_area"]
     use = g2mu <= args.dilute_max
+    if not use.any():
+        # the fits of the scaling need runs of the dilute range
+        print("\nFAILED: no run of the dilute range succeeded")
+        return 1
     print(f"\nScaling with g^2 mu (dilute range: g^2 mu <= "
           f"{args.dilute_max} GeV, {use.sum()} points):")
     fits = {}

@@ -630,7 +630,7 @@ geometry; the script reports its median (weighted with (g²μ)², like the
 multiplicity) and maximum, and the median g²μ a of each size. The hot spots
 of the example input are small (`BGq 0.3` GeV⁻², a width of 0.11 fm) and
 overlap in Pb to g²μ of up to 17 GeV; for `seed 3` the median is 5.4 GeV
-(1/g²μ = 0.036 fm), i.e. g²μ a = 6.5, 3.2, 1.6, 0.81, 0.61 and 0.49 for the
+(1/g²μ = 0.036 fm), i.e. g²μ a = 6.5, 3.2, 1.6, 0.81, 0.61 and 0.48 for the
 default sizes, so that only the finest lattices resolve most of the event. As a
 reference, a fourth scan runs a constant g²μ (`useNucleus 0`, on its
 periodic lattice, `--uniform-g2mu`, default 5 GeV, L = 3 fm) at the `Ny`
@@ -1019,7 +1019,7 @@ the rapidity: at `jimwlkDs 0.005` it is +0.3%, +0.7%, +1.1% and +1.9% at
 y = 1.2, 2.4, 3.6 and 4.7, about 0.4% per unit of y, or 3% of the evolution
 speed d ln Q_s/dy (1.6% with fixed coupling at 0.0005). The checked step
 sizes stay below the 3% of the acceptance over the evolution of the example
-input (from x = 0.01 to 1.29·10⁻⁴, y = 4.4), and its step, 0.003, gives
+input (from x = 0.01 to 1.29·10⁻⁴, y = 4.35), and its step, 0.003, gives
 about 1.1%.
 
 The error depends strongly on the setup. Two more scripts measure it in

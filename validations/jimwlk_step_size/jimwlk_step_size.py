@@ -36,10 +36,11 @@ final x, that
      sign of c or is zero within two standard deviations,
   3. Q_s and D are consistent with first order: the chi^2 of the linear
      fit has a p-value above --min-p-value,
-  4. the deviation c ds / Q_s(0) of Q_s (and of D) at the recommended step
-     sizes of the README (0.005 with running and 0.0005 with fixed
-     coupling) is below --max-deviation; otherwise the recommendation
-     should be revised.
+  4. the deviation c ds / Q_s(0) of Q_s (and of D) at 0.005 with running
+     and 0.0005 with fixed coupling (the README recommends 0.003 and
+     0.0005; the larger running-coupling step is the stricter test) is
+     below --max-deviation; otherwise the recommendation should be
+     revised.
 
 Usage (from validations/jimwlk_step_size/):
     python3 jimwlk_step_size.py --ipglasma-path ../.. --quick

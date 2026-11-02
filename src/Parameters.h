@@ -471,8 +471,8 @@ struct JimwlkParameters {
     /// JIMWLK coupling: `0` (within PhysConst::inputTolerance) running
     /// coupling, a positive value fixed coupling.
     double alphaS = 0.;
-    /// JIMWLK evolution step size (recommended `0.005` with running
-    /// coupling, `0.0005` with fixed coupling).
+    /// JIMWLK evolution step size (recommended `0.003` with running
+    /// coupling, `0.0005` with fixed coupling; see the README).
     double Ds = 0.;
     /// Bjorken \f$x\f$ at the initial condition of the JIMWLK
     /// evolution, at which \f$Q_s^2\f$ of both nuclei is evaluated. The

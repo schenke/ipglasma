@@ -550,9 +550,10 @@ of the T^μν output (10⁻¹⁶ GeV/fm³).
 
 `gluon_spectrum_estimator/gluon_spectrum_estimator.py` (issue #140) compares
 the two values of `gluonSpectrumEstimator` in the example input: Pb+Pb with
-JIMWLK from x = 0.01 to 10⁻⁴, b = 0, `seed 3`, 768² at L = 22.5 fm, and
-`--configs` color-charge configurations (default 2; `colorChargeSeed 1`,
-`2`, ..., which also give the JIMWLK evolution its own noise).
+JIMWLK from x = 0.01 to 1.29·10⁻⁴, b = 0, `seed 3`, 768² at L = 22.5 fm,
+and `--configs` color-charge configurations (default 2;
+`colorChargeSeed 1`, `2`, ..., which also give the JIMWLK evolution its
+own noise).
 - **Runs:** the gluon multiplicity is measured at the final time, so each
   time (default τ = 0.2, 0.4 and 1 fm) and configuration is a run of its
   own. The runs use `gluonSpectrumEstimator 1`, whose
@@ -722,8 +723,8 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.4.
 
 **With JIMWLK, and at another x.**
 - **`--jimwlk`:** evolves the Wilson lines of all runs with the JIMWLK
-  parameters of the template, i.e. the example input from x = 0.01 to 10⁻⁴.
-  The g²μ scale is then that of the initial Wilson lines.
+  parameters of the template, i.e. the example input from x = 0.01 to
+  1.29·10⁻⁴. The g²μ scale is then that of the initial Wilson lines.
 - **`--x X`:** sets `projectileX` and `targetX`. Without `--jimwlk`, this is
   the x of the Wilson lines; with it, the x the evolution ends at.
 - **Separate results:** runs and summaries of these variants are tagged

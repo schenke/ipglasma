@@ -83,6 +83,16 @@ simultaneously.
 
 ## Running interactively
 
+**Cached runs.** Most scripts keep each run in a directory of `--datadir`
+named after the settings they vary, so a rerun only runs what is missing.
+Options that change the input of a run without changing that name, such as
+`--template`, `--b` or `--L`, would otherwise make a rerun silently reuse
+results of other settings. A cached result is therefore only reused if the
+input file of its directory has the parameters that the current options
+give (`utilities/input_template.py`); otherwise that run fails with the
+parameters that differ, e.g. `bMax 0.0 -> 7.5`. Rerun with the options of
+the cached runs, use another `--datadir`, or remove the directory.
+
 From the folder of each script (paths below assume the scripts are run
 from there; both scripts also accept absolute paths for `--ipglasma-path`
 etc. if you invoke them from elsewhere; their input templates and
@@ -730,8 +740,9 @@ discussion of #134); the extrapolation of dE/dη linear in a gives 0.4.
 - **Separate results:** runs and summaries of these variants are tagged
   (`jimwlk_`, `x0.01_`, `numerical_parameters_jimwlk_summary.json`), so they
   never mix with the default ones. So are those of a `--maxtime` other than
-  0.4 fm (`t1_`); another `--template`, `--L`, `--b` or `--seed` is not
-  part of the tag and needs its own `--datadir`.
+  0.4 fm (`t1_`). Another `--template`, `--L`, `--b` or `--seed` is not
+  part of the tag and needs its own `--datadir`; a cached run made with
+  other values fails instead of being reused (see "Cached runs" above).
 - **Skipping scans:** `--ny` and `--m` with no values skip those scans, and
   `--uniform-sizes` with no values the constant g²μ, which does not depend
   on x.

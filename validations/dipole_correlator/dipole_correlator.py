@@ -114,6 +114,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
+from input_template import cached_input_mismatch, write_input  # noqa: E402
 from read_wilson_lines import read_wilson_lines  # noqa: E402
 
 CF = 4. / 3.
@@ -368,23 +369,6 @@ def lappi_coordinate_profile(k, count, spectrum, c0, n, r):
 # running IP-Glasma
 # --------------------------------------------------------------------------
 
-def write_input(template, overrides, path):
-    """Copy the template, replacing the values of the keys in overrides."""
-    remaining = dict(overrides)
-    lines = []
-    with open(template) as f:
-        for line in f:
-            tokens = line.split()
-            if len(tokens) >= 2 and tokens[0] in remaining:
-                lines.append(f"{tokens[0]} {remaining.pop(tokens[0])}\n")
-            else:
-                lines.append(line)
-    if remaining:
-        raise KeyError(f"keys not in the template: {sorted(remaining)}")
-    with open(path, "w") as f:
-        f.writelines(lines)
-
-
 def seed_of(ny, i, first_seed):
     """The seed of the i-th run with Ny layers: each Ny has its own seeds,
     so the configurations of different Ny are independent."""
@@ -434,16 +418,6 @@ def run_one(cfg, settings):
     the correlators of lappi_observables."""
     workdir = os.path.join(settings["datadir"], run_tag(cfg, settings))
     cache = os.path.join(workdir, "profiles.npz")
-    if os.path.exists(cache):
-        with np.load(cache) as data:
-            cached = {k: data[k] for k in data.files}
-        if not settings["lappi"] or "lappi_fact0" in cached:
-            return cfg, cached, None
-    if settings["analyze_only"]:
-        return cfg, None, "no cached result (--analyze-only)"
-    os.makedirs(workdir, exist_ok=True)
-    for old in glob.glob(os.path.join(workdir, "WilsonLine_*")):
-        os.remove(old)
     overrides = {
         "size": settings["size"], "L": settings["L"], "Ny": cfg["ny"],
         "m": cfg["m"], "UVDamp": cfg["uvdamp"], "g2muGeV": cfg["g2mu"],
@@ -453,6 +427,20 @@ def run_one(cfg, settings):
     }
     if cfg.get("remove_zero_mode"):
         overrides["removeZeroMode"] = 1
+    if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return cfg, None, mismatch
+        with np.load(cache) as data:
+            cached = {k: data[k] for k in data.files}
+        if not settings["lappi"] or "lappi_fact0" in cached:
+            return cfg, cached, None
+    if settings["analyze_only"]:
+        return cfg, None, "no cached result (--analyze-only)"
+    os.makedirs(workdir, exist_ok=True)
+    for old in glob.glob(os.path.join(workdir, "WilsonLine_*")):
+        os.remove(old)
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))

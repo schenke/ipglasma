@@ -56,7 +56,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "numerical_parameters"))
-from numerical_parameters import write_input  # noqa: E402
+from numerical_parameters import cached_input_mismatch, write_input  # noqa
 sys.path.insert(0, os.path.join(HERE, "..", "dilute_limit"))
 from leading_order import pi_line_fraction  # noqa: E402
 
@@ -74,15 +74,19 @@ def run_one(cfg, settings):
     configuration; both gluon numbers (cached in <workdir>/result.json)."""
     workdir = os.path.join(settings["datadir"], run_tag(cfg))
     cache = os.path.join(workdir, "result.json")
+    overrides = dict(settings["overrides"], maxTime=f"{cfg['tau']:g}",
+                     colorChargeSeed=cfg["config"])
     if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return cfg, None, mismatch
         with open(cache) as f:
             return cfg, json.load(f), None
     os.makedirs(workdir, exist_ok=True)
     tables = os.path.join(workdir, "tables")
     if os.path.isdir(settings["tables"]) and not os.path.exists(tables):
         os.symlink(settings["tables"], tables)
-    overrides = dict(settings["overrides"], maxTime=f"{cfg['tau']:g}",
-                     colorChargeSeed=cfg["config"])
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))

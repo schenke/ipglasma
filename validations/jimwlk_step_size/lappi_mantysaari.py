@@ -78,8 +78,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 # (jimwlk_step_size puts validations/dipole_correlator on the path)
 from jimwlk_step_size import FILE_RE, fit_step_size  # noqa: E402
-from dipole_correlator import (HBARC, crossing, dipole_correlator,  # noqa
-                               profiles, write_input)
+from dipole_correlator import (HBARC, cached_input_mismatch,  # noqa
+                               crossing, dipole_correlator, profiles,
+                               write_input)
 from read_wilson_lines import read_wilson_lines  # noqa: E402
 import bk_sqrt  # noqa: E402
 
@@ -103,14 +104,6 @@ def run_one(cfg, settings):
     <workdir>/profiles.npz)."""
     workdir = os.path.join(settings["datadir"], run_tag(cfg))
     cache = os.path.join(workdir, "profiles.npz")
-    if os.path.exists(cache):
-        with np.load(cache) as data:
-            return cfg, {k: data[k] for k in data.files}, None
-    if settings["analyze_only"]:
-        return cfg, None, "no cached result (--analyze-only)"
-    os.makedirs(workdir, exist_ok=True)
-    for old in glob.glob(os.path.join(workdir, "WilsonLine_*")):
-        os.remove(old)
     xs = settings["x0"] * np.exp(-snapshot_y(settings))
     L = settings["L"]
     overrides = {
@@ -129,6 +122,18 @@ def run_one(cfg, settings):
         "jimwlkSaveSnapshots": 1,
         "jimwlkXSnapshotList": ",".join(f"{x:.12g}" for x in xs[1:-1]),
     }
+    if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return cfg, None, mismatch
+        with np.load(cache) as data:
+            return cfg, {k: data[k] for k in data.files}, None
+    if settings["analyze_only"]:
+        return cfg, None, "no cached result (--analyze-only)"
+    os.makedirs(workdir, exist_ok=True)
+    for old in glob.glob(os.path.join(workdir, "WilsonLine_*")):
+        os.remove(old)
     write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(settings["threads"]))

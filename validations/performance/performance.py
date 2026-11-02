@@ -57,7 +57,7 @@ import time
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "numerical_parameters"))
-from numerical_parameters import write_input  # noqa: E402
+from numerical_parameters import cached_input_mismatch, write_input  # noqa
 
 # the stages shown in the figure: phases of the profile that do not contain
 # each other, and the whole event
@@ -102,7 +102,13 @@ def run_one(cfg, settings):
     phases of its profile (cached in <workdir>/result.json)."""
     workdir = os.path.join(settings["datadir"], run_tag(cfg))
     cache = os.path.join(workdir, "result.json")
+    overrides = dict(settings["overrides"], size=cfg["size"],
+                     sizeOutput=cfg["size"])
     if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return None, mismatch
         with open(cache) as f:
             return json.load(f), None
     os.makedirs(workdir, exist_ok=True)
@@ -112,9 +118,7 @@ def run_one(cfg, settings):
     tables = os.path.join(workdir, "tables")
     if os.path.isdir(settings["tables"]) and not os.path.exists(tables):
         os.symlink(settings["tables"], tables)
-    write_input(settings["template"],
-                dict(settings["overrides"], size=cfg["size"],
-                     sizeOutput=cfg["size"]),
+    write_input(settings["template"], overrides,
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(cfg["threads"]),
                IPGLASMA_PROFILE="1", IPGLASMA_PROFILE_DIR=workdir)

@@ -90,7 +90,9 @@ scale is that of the initial Wilson lines; --x sets projectileX and targetX
 The runs, the summary and the figures of these variants are tagged
 (jimwlk_, x0.01_, ...), so they never mix with the default ones; so are
 those of a --maxtime other than 0.4 fm (t1_ ...). Another --template, --L,
---b or --seed is not part of the tag and needs its own --datadir. --ny,
+--b or --seed is not part of the tag and needs its own --datadir: a cached
+run is only reused if its input file has the parameters of the current
+options, otherwise it fails with those that differ. --ny,
 --m and --uniform-sizes without values skip those scans.
 
 Usage (from validations/numerical_parameters/):
@@ -125,6 +127,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, "..", "..", "utilities"))
+from input_template import cached_input_mismatch, write_input  # noqa: E402
 from read_tmunu import COMPONENTS, read_tmunu  # noqa: E402
 
 OBSERVABLES = ["dE/deta(0.2)", "dE/deta(final)", "dN/dy", "eps_2", "eps_3",
@@ -138,22 +141,6 @@ HBARC = 0.1973269804  # GeV fm
 ENERGY_CUTS = (2., 4.)
 TAIL_FRACTIONS = (0.3, 0.4)
 DEFAULT_MAXTIME = 0.4  # fm/c
-
-
-def write_input(template, overrides, path):
-    remaining = dict(overrides)
-    lines = []
-    with open(template) as f:
-        for line in f:
-            tokens = line.split()
-            if len(tokens) >= 2 and tokens[0] in remaining:
-                lines.append(f"{tokens[0]} {remaining.pop(tokens[0])}\n")
-            else:
-                lines.append(line)
-    if remaining:
-        raise KeyError(f"keys not in the template: {sorted(remaining)}")
-    with open(path, "w") as f:
-        f.writelines(lines)
 
 
 def run_tag(cfg):
@@ -252,15 +239,20 @@ def g2mu_scale(settings, size):
     variant = f"{settings['variant']}_" if settings["variant"] else ""
     workdir = os.path.join(settings["datadir"], f"{variant}g2mu_size{size}")
     cache = os.path.join(workdir, "g2mu.json")
-    if os.path.exists(cache):
-        with open(cache) as f:
-            return json.load(f)
     # the initial Wilson lines, without JIMWLK (with --jimwlk at its
     # starting x)
     overrides = dict(settings["overrides"], size=size, sizeOutput=size,
                      Ny=1, runEvolution=0, writeWilsonLines=2,
                      writeWilsonLineGeometry=1, colorChargeSeed=1,
                      useJIMWLK=0, **settings["initial_x"])
+    if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            print(f"FAILED: {mismatch}")
+            return None
+        with open(cache) as f:
+            return json.load(f)
     error = run_ipglasma(settings, overrides, workdir)
     if error:
         print(f"FAILED: the g^2 mu run in {workdir}: {error}")
@@ -282,11 +274,6 @@ def g2mu_scale(settings, size):
 def run_one(cfg, settings):
     workdir = os.path.join(settings["datadir"], run_tag(cfg))
     cache = os.path.join(workdir, "result.json")
-    if os.path.exists(cache):
-        with open(cache) as f:
-            data = json.load(f)
-        return (cfg, data["observables"], data["geometry"],
-                data.get("spectrum"), None)
     overrides = dict(settings["overrides"], size=cfg["size"],
                      sizeOutput=cfg["size"], Ny=cfg["ny"], m=cfg["m"],
                      colorChargeSeed=cfg["color_seed"])
@@ -294,6 +281,15 @@ def run_one(cfg, settings):
     if uniform:
         overrides.update(useNucleus=0, g2muGeV=cfg["g2mu"], L=cfg["L"],
                          LOutput=cfg["L"], computeEccentricities=0)
+    if os.path.exists(cache):
+        mismatch = cached_input_mismatch(workdir, settings["template"],
+                                         overrides)
+        if mismatch:
+            return cfg, None, None, None, mismatch
+        with open(cache) as f:
+            data = json.load(f)
+        return (cfg, data["observables"], data["geometry"],
+                data.get("spectrum"), None)
     error = run_ipglasma(settings, overrides, workdir)
     if error:
         return cfg, None, None, None, error
@@ -663,6 +659,9 @@ def main():
                       f"({time.time() - start:.0f} s)", flush=True)
     for failure in failures:
         print("FAILED:", failure)
+    if not results:
+        print("\nFAILED: no run succeeded")
+        return 1
 
     # the geometry must be the same in all runs: the N_part and N_coll lists
     # and b (<Q_s> is averaged on the lattice, so it depends a little on a);

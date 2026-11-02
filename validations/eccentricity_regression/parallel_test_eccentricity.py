@@ -193,6 +193,38 @@ def event_version(worker_dir):
     return None
 
 
+def event_settings(worker_dir):
+    """The settings of run_meta in main() (size, L, maxTime, jimwlk) that
+    an event ran with, from its usedParameters*.dat, or None without
+    one."""
+    for path in sorted(glob.glob(os.path.join(worker_dir, "usedParameters*.dat"))):
+        values = {}
+        with open(path) as f:
+            for line in f:
+                tokens = line.split("#", 1)[0].split()
+                if len(tokens) >= 2:
+                    values[tokens[0]] = tokens[1]
+        if all(key in values for key in ("size", "L", "maxTime", "useJIMWLK")):
+            return {"size": int(values["size"]), "L": float(values["L"]),
+                    "maxTime": float(values["maxTime"]),
+                    "jimwlk": values["useJIMWLK"] == "1"}
+    return None
+
+
+def same_settings(a, b):
+    """Whether two run_meta dicts have the same values (floats to
+    rounding)."""
+    if set(a) != set(b):
+        return False
+    for key, value in a.items():
+        if isinstance(value, float) or isinstance(b[key], float):
+            if value is None or b[key] is None or not np.isclose(value, b[key]):
+                return False
+        elif value != b[key]:
+            return False
+    return True
+
+
 def collect_from_existing_datadir(datadir, ipglasma_path):
     """--plot-only support: rebuild the per-event result list by reading
     back already-completed seed_*/ working directories in `datadir`,
@@ -224,6 +256,7 @@ def collect_from_existing_datadir(datadir, ipglasma_path):
             "eps2": eps2, "psi2": psi2, "tau_fm": tau_fm,
             "mean_energy_density": float(np.mean(energy_density)),
             "version": event_version(worker_dir),
+            "settings": event_settings(worker_dir),
         })
     return results
 
@@ -740,8 +773,9 @@ def main():
 
     reference = None if args.save_reference else load_reference(args.reference_file)
     # Warn up front, before spending time on the run, if this run's
-    # parameters don't match those the reference was recorded with.
-    if reference is not None:
+    # parameters don't match those the reference was recorded with (with
+    # --plot-only, once the settings of the events are known).
+    if reference is not None and not args.plot_only:
         for warning in check_reference_parameters(run_meta, reference):
             print(warning)
 
@@ -758,6 +792,29 @@ def main():
         print("--plot-only: reading already-completed events from {0} "
               "(no new ipglasma runs) ...".format(datadir))
         results = collect_from_existing_datadir(datadir, ipglasma_path)
+        # the events are labeled with the settings they ran with, from their
+        # usedParameters*.dat, not with the options of this call
+        recorded = [r["settings"] for r in results
+                    if r["success"] and r.get("settings")]
+        for settings in recorded[1:]:
+            if not same_settings(settings, recorded[0]):
+                print("The events under {0} ran with different settings "
+                      "({1} and {2}) -- aborting.".format(
+                          datadir, recorded[0], settings))
+                sys.exit(1)
+        if recorded:
+            if not same_settings(recorded[0], run_meta):
+                print("note: the events ran with {0}, not with the options of "
+                      "this call ({1}); they are labeled with their own "
+                      "settings".format(recorded[0], run_meta))
+            run_meta = recorded[0]
+        else:
+            print("note: the events do not record their settings "
+                  "(usedParameters*.dat); they are labeled with the options of "
+                  "this call ({0})".format(run_meta))
+        if reference is not None:
+            for warning in check_reference_parameters(run_meta, reference):
+                print(warning)
     else:
         max_workers = args.max_workers or max(1, min(
             available_cpus() // threads_per_event(), args.maxevents))

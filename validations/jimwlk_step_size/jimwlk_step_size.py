@@ -350,8 +350,8 @@ def main():
     parser.add_argument("--seeds", type=int, default=8,
                         help="runs per step size (two configurations each)")
     parser.add_argument("--max-deviation", type=float, default=0.03,
-                        help="largest relative deviation at the recommended "
-                             "step sizes")
+                        help="largest relative deviation at the checked "
+                             "step sizes (0.005 and 0.0005)")
     parser.add_argument("--min-p-value", type=float, default=0.01,
                         help="smallest p-value of the first-order fit")
     parser.add_argument("--threads", type=int, default=4)

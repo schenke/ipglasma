@@ -16,8 +16,9 @@ are then read back three times (readInitialWilsonLines 2):
   (b) projectile and target exchanged.
 
 (a) maps the lattice action onto itself, so all outputs map onto the
-reference point by point (to rounding; the hydro fields and the
-eccentricities, which come from the Landau matching, to about 1e-7): eps, T^tautau, T^xy, tau^2 T^etaeta, T^taueta
+reference point by point (to rounding; the hydro fields, which come from
+the Landau matching, to about 1e-4 of their largest values, since the
+matching amplifies the rounding in a few cells): eps, T^tautau, T^xy, tau^2 T^etaeta, T^taueta
 at (y, x) equal those at (x, y), T^xx <-> T^yy, T^taux <-> T^tauy,
 T^xeta <-> T^yeta, u^x <-> u^y (and likewise pi^munu), |eps_n| is
 unchanged and Psi_n -> pi/2 - Psi_n (mod 2 pi/n), and the gluon spectrum

@@ -66,7 +66,7 @@ converge, it prints a prominent warning, with an estimate of the
 remaining deviation from an extrapolation linear in a, marks it in the
 figure and in the summary. With the defaults, dN/dy converges, while
 dE/deta still changes by about 4% between the two finest lattices; the
-linear extrapolation puts its continuum value about 16% above the finest
+linear extrapolation puts its continuum value about 15% above the finest
 one, which would need lattice spacings far below 0.018 fm to reach. With
 JIMWLK, dE/deta changes by 12-21% per step on lattices of 768^2 to
 1536^2 (L = 22.5 fm), and still by 11-16% at zero JIMWLK step. At

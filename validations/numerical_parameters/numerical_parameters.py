@@ -92,8 +92,8 @@ The runs, the summary and the figures of these variants are tagged
 those of a --maxtime other than 0.4 fm (t1_ ...). Another --template, --L,
 --b or --seed is not part of the tag and needs its own --datadir: a cached
 run is only reused if its input file has the parameters of the current
-options, otherwise it fails with those that differ. --ny,
---m and --uniform-sizes without values skip those scans.
+options, otherwise it fails with those that differ. --ny, --m and
+--uniform-sizes without values skip those scans.
 
 Usage (from validations/numerical_parameters/):
     # quick test: sizes 64 and 128, Ny and m scans at 64, the constant
@@ -661,6 +661,10 @@ def main():
         print("FAILED:", failure)
     if not results:
         print("\nFAILED: no run succeeded")
+        # replaces the summary of an earlier run in the same --datadir
+        with open(f"{stem}_summary.json", "w") as f:
+            json.dump({"settings": vars(args), "failures": failures,
+                       "passed": False}, f, indent=1)
         return 1
 
     # the geometry must be the same in all runs: the N_part and N_coll lists

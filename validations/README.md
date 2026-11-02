@@ -81,17 +81,23 @@ simultaneously.
        --ipglasma-path /home/ipglasma --quick --datadir /work/dipole
    ```
 
-## Running interactively
+## Cached runs
 
-**Cached runs.** Most scripts keep each run in a directory of `--datadir`
-named after the settings they vary, so a rerun only runs what is missing.
-Options that change the input of a run without changing that name, such as
-`--template`, `--b` or `--L`, would otherwise make a rerun silently reuse
-results of other settings. A cached result is therefore only reused if the
-input file of its directory has the parameters that the current options
-give (`utilities/input_template.py`); otherwise that run fails with the
-parameters that differ, e.g. `bMax 0.0 -> 7.5`. Rerun with the options of
-the cached runs, use another `--datadir`, or remove the directory.
+Most scripts keep each run in a directory of `--datadir` named after the
+settings they vary, so a rerun only runs what is missing. Options that
+change the input of a run without changing that name, such as `--b`, `--L`
+or another `--template` (also an edited one), would otherwise make a rerun
+silently reuse results of other settings. A cached result is therefore only
+reused if the input file of its directory has the parameters that the
+current options give (`utilities/input_template.py`); of the paths of the
+Q_s table, the nucleus configurations and the Wilson lines, only the file
+or directory name is compared, so another `--ipglasma-path` with the same
+files does not matter. Otherwise that run fails with the parameters that
+differ, e.g. `bMax 0.0 -> 7.5`: rerun with the options of the cached runs,
+use another `--datadir`, or remove the directory. The version of IP-Glasma
+is not compared; after a change of the code, use a new `--datadir`.
+
+## Running interactively
 
 From the folder of each script (paths below assume the scripts are run
 from there; both scripts also accept absolute paths for `--ipglasma-path`

@@ -269,6 +269,11 @@ def main():
     if not use.any():
         # the fits of the scaling need runs of the dilute range
         print("\nFAILED: no run of the dilute range succeeded")
+        # replaces the summary of an earlier run in the same --datadir
+        summary.update(failures=failures, passed=False)
+        with open(os.path.join(settings["datadir"], "dilute_summary.json"),
+                  "w") as f:
+            json.dump(summary, f, indent=1)
         return 1
     print(f"\nScaling with g^2 mu (dilute range: g^2 mu <= "
           f"{args.dilute_max} GeV, {use.sum()} points):")

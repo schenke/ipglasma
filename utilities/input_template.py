@@ -15,6 +15,13 @@ run would be written with now (cached_input_mismatch).
 
 import os
 
+# Keys whose values are file or directory paths. The validation scripts write
+# them as absolute paths into --ipglasma-path, which can differ between runs
+# with the same input (another build directory, --analyze-only from
+# elsewhere), so only the name of the file or directory is compared.
+PATH_KEYS = ("nucleusQsTableFileName", "nuclearConfigurationsPath",
+             "wilsonLinePath")
+
 
 def input_lines(template, overrides):
     """The lines of the template with the values of the keys in overrides
@@ -54,12 +61,21 @@ def parameters(lines):
     return out
 
 
+def comparable(params):
+    """The parameters with the paths of PATH_KEYS reduced to the name of the
+    file or directory."""
+    return {key: os.path.basename(os.path.normpath(value))
+            if key in PATH_KEYS and value else value
+            for key, value in params.items()}
+
+
 def cached_input_mismatch(workdir, template, overrides, name="input",
                           shown=6):
     """None if the input file <workdir>/<name> of a cached run has the
-    parameters that the template and the overrides give (comments and the
-    order of the lines do not matter), else the reason why the run cannot
-    be reused, with up to `shown` of the parameters that differ."""
+    parameters that the template and the overrides give (comments, the
+    order of the lines and the directories of the paths in PATH_KEYS do not
+    matter), else the reason why the run cannot be reused, with up to
+    `shown` of the parameters that differ."""
     path = os.path.join(workdir, name)
     if not os.path.exists(path):
         return (f"the cached run in {workdir} has no input file to compare "
@@ -67,10 +83,11 @@ def cached_input_mismatch(workdir, template, overrides, name="input",
     with open(path) as f:
         cached = parameters(f)
     expected = parameters(input_lines(template, overrides))
+    same_cached, same_expected = comparable(cached), comparable(expected)
     differ = [f"{key} {cached.get(key, '(missing)')} -> "
               f"{expected.get(key, '(missing)')}"
               for key in sorted(set(cached) | set(expected))
-              if cached.get(key) != expected.get(key)]
+              if same_cached.get(key) != same_expected.get(key)]
     if not differ:
         return None
     more = f", and {len(differ) - shown} more" if len(differ) > shown else ""

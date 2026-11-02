@@ -719,8 +719,11 @@ def main():
             rows.append(row)
         summary["scans"][scan] = rows
 
-    print(f"\nGeometry (seed {args.seed}, b = {args.b} fm): <Q_s>(avg) = "
-          f"{summary['geometry']['Qs_avg']} GeV")
+    # none if only runs of the constant g^2 mu succeeded (e.g. all others
+    # were cached with another --L)
+    if summary["geometry"]:
+        print(f"\nGeometry (seed {args.seed}, b = {args.b} fm): <Q_s>(avg) = "
+              f"{summary['geometry']['Qs_avg']} GeV")
     if scale:
         print(f"g^2 mu of the geometry: median {scale['median']:.3g} GeV "
               f"(1/g^2 mu = {HBARC / scale['median']:.3g} fm, weighted with "

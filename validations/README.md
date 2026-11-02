@@ -950,8 +950,9 @@ The results go to `performance_summary.json` and `performance.pdf` in
 
 `jimwlk_step_size/jimwlk_step_size.py` (issue #128) tests the convergence of
 the Langevin step of the JIMWLK evolution in `jimwlkDs`, and the error at
-the step sizes recommended in the main README (0.005 with running and 0.0005
-with fixed coupling). The MV model with a constant color-charge density
+0.005 with running and 0.0005 with fixed coupling (the main README
+recommends 0.003 and 0.0005; with running coupling, the check at the larger
+step is the stricter one). The MV model with a constant color-charge density
 (`useNucleus 0`, g²μ = 2 GeV, `Ny 50`, m = 0.4 GeV, 512², L = 10 fm) is
 evolved from x₀ = 0.01 with `jimwlkMass 0.4`:
 
@@ -980,7 +981,8 @@ the smallest step. At the final x it checks that the initial Wilson lines
 agree for all step sizes, that Q_s and D converge monotonically (every
 successive difference has the sign of c or is zero within 2σ), that they are
 consistent with first order (p-value above 0.01) and that the deviation
-c ds/Q_s(0) at the recommended step size is below 3% (`--max-deviation`).
+c ds/Q_s(0) at the checked step size (0.005 and 0.0005) is below 3%
+(`--max-deviation`).
 
 Each step size draws its own Langevin noise, so the differences between step
 sizes fluctuate by 1–2% per configuration even at 512², and many
@@ -1011,12 +1013,13 @@ deviation from zero step size, c ds/Q_s(0), is
 | fixed    | 0.00025  | +0.23%         | −0.13%          |
 
 (the measured deviations, e.g. +2.0% ± 0.3% and +0.6% ± 0.4% at the
-recommended steps, agree with the fit). The error grows about linearly with
+checked steps, agree with the fit). The error grows about linearly with
 the rapidity: at `jimwlkDs 0.005` it is +0.3%, +0.7%, +1.1% and +1.9% at
 y = 1.2, 2.4, 3.6 and 4.7, about 0.4% per unit of y, or 3% of the evolution
-speed d ln Q_s/dy (1.6% with fixed coupling at 0.0005). The recommended step
+speed d ln Q_s/dy (1.6% with fixed coupling at 0.0005). The checked step
 sizes stay below the 3% of the acceptance over the evolution of the example
-input (from x = 0.01 to 10⁻⁴, y = 4.6).
+input (from x = 0.01 to 1.29·10⁻⁴, y = 4.4), and its step, 0.003, gives
+about 1.1%.
 
 The error depends strongly on the setup. Two more scripts measure it in
 other setups.

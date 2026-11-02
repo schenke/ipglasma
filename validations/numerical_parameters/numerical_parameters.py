@@ -792,7 +792,7 @@ def main():
                   f"an extrapolation linear in a puts a = 0 "
                   f"{100 * check['extrapolated_deviation']:+.0f}% away.")
         print("The gluon number converges like a^2 once g^2 mu a < 1, the "
-              "energy only like a\n(a deficit of about 0.2-0.3 g^2 mu a from "
+              "energy only like a\n(a deficit of about 0.2-0.4 g^2 mu a from "
               "the 1/k^4 tail of the spectrum;\nwith JIMWLK, whose tail is "
               "less steep, even more slowly), so these values\nstill depend "
               "on the lattice spacing; see validations/README.md.\n" + line)

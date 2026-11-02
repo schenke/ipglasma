@@ -587,7 +587,7 @@ error, and the range over the configurations):
 | 0.4 | 1.000 ± 0.007 (0.970–1.024) | 1.006 ± 0.007 (0.983–1.039) |
 | 1.0 | 1.012 ± 0.002 (1.006–1.020) | 0.989 ± 0.002 (0.982–0.995) |
 
-- **From τ = 0.4 fm on,** the two agree within about 3% in every
+- **From τ = 0.4 fm on,** the two agree within 4% in every
   configuration and within about 1% on average. The spectrum peaks near
   Q_s ≈ 2 GeV, where kτ ≈ 4 at 0.4 fm, and integrated over k the
   oscillation averages out. In the dilute limit, in contrast, the lowest

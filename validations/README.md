@@ -429,7 +429,7 @@ python3 lattice_symmetries.py --ipglasma-path ../.. --size 800 --threads 16
 `qs2Adj_vs_Tp_vs_Y_240.in` and `nucleusConfigurations/`; the input starts
 from the example `input` (`--template`). The results go to
 `<datadir>/symmetries_summary.json` (default `./symmetries_output`). At
-128², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 3.7% of the
+64², L = 24 fm, `maxTime 0.3`: (0) is bit-identical; in (a) 3.7% of the
 T^μν points differ and the observables by at most 0.8% (dN/dy); in (b) 11%
 and 0.9%. In the setup of the paper (256², L = 30 fm, 30 s), T^μν and the
 observables of (0) are bit-identical (the gluon spectrum to 1·10⁻¹¹); in

@@ -179,7 +179,8 @@ std::vector<std::string> Parameters::validationErrors() const {
         message << "jimwlkLambdaQCD (" << jimwlk.LambdaQCD
                 << ") must be smaller than jimwlkMu0 (" << jimwlk.mu0
                 << ") with the JIMWLK running coupling; otherwise alpha_s "
-                   "is singular or negative at large dipole sizes";
+                   "is singular or negative at large dipole sizes (at small "
+                   "momenta with jimwlkRunningCoupling 2)";
         fail(message);
     }
 

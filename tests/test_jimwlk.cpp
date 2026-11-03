@@ -376,3 +376,84 @@ TEST_CASE(
     CHECK(maxChange > 1e-3);  // the Wilson lines did evolve
     CHECK(maxDiff < 1e-10);
 }
+
+TEST_CASE(
+    "JIMWLK: the noise of the noise running coupling has the correlator of "
+    "Eq. (24) of Lappi:2012vw on the lattice") {
+    // eta is linear in xi, eta_x = sum_z M_xz xi_z, so for white noise
+    // <eta_x eta_y> = sum_z M_xz M_yz. On the lattice (noise in units of
+    // the lattice spacing) Eq. (24) is (1/N^2) sum_k alpha_s(k) e^{ik(x-y)}
+    // over the N^2 momenta, with alpha_s(k) of Eq. (39) there.
+    for (const int N : {8, 16}) {
+        CAPTURE(N);
+        Parameters param;
+        makeJimwlkTestParam(param, N);
+        // the setup of Fig. 6 there, in units of the lattice size L
+        const double L = param.lattice.L * PhysConst::invHbarc;  // 1/GeV
+        param.jimwlk.mu0 = 15. / L;
+        param.jimwlk.LambdaQCD = 6. / L;
+        param.jimwlk.alphaS = 0.0;
+        param.jimwlk.runningCoupling = 2;
+
+        Group group;
+        Random random;
+        random.init_genrand64(42ULL);
+        Lattice lat(&param, N);
+        JIMWLK jimwlk(param, &group, &lat, &random);
+
+        // the infrared value quoted in the paper
+        CHECK(
+            jimwlk.getAlphasMomentum(0., 0.)
+            == doctest::Approx(0.7619).epsilon(1e-4));
+
+        std::vector<std::vector<double>> columns;  // columns[z][x] = M_xz
+        for (int z = 0; z < N * N; ++z) {
+            std::vector<double> xi(N * N, 0.);
+            xi[z] = 1.;
+            columns.push_back(jimwlk.correlatedNoise(xi));
+        }
+
+        // alpha_s(k) written as in Eq. (39), of the lattice momentum
+        const double a = L / N;
+        const double beta = 11. - 2. * param.coupling.nFlavors / 3.;
+        const double c = param.jimwlk.c;
+        auto alphas = [&](int nx, int ny) {
+            const double k2 = 4. / (a * a)
+                              * (std::pow(std::sin(M_PI * nx / N), 2)
+                                 + std::pow(std::sin(M_PI * ny / N), 2));
+            const double Lambda2 =
+                param.jimwlk.LambdaQCD * param.jimwlk.LambdaQCD;
+            return 4. * M_PI
+                   / (beta
+                      * std::log(
+                          std::pow(
+                              std::pow(
+                                  param.jimwlk.mu0 * param.jimwlk.mu0 / Lambda2,
+                                  1. / c)
+                                  + std::pow(k2 / Lambda2, 1. / c),
+                              c)));
+        };
+        double maxDiff = 0.;
+        for (int x = 0; x < N * N; ++x) {
+            for (int y = 0; y < N * N; ++y) {
+                double correlator = 0.;
+                for (int z = 0; z < N * N; ++z) {
+                    correlator += columns[z][x] * columns[z][y];
+                }
+                const int dx = x / N - y / N;
+                const int dy = x % N - y % N;
+                double expected = 0.;
+                for (int nx = -N / 2; nx < N / 2; ++nx) {
+                    for (int ny = -N / 2; ny < N / 2; ++ny) {
+                        expected +=
+                            alphas(nx, ny)
+                            * std::cos(2. * M_PI * (nx * dx + ny * dy) / N);
+                    }
+                }
+                expected /= N * N;
+                maxDiff = std::max(maxDiff, std::abs(correlator - expected));
+            }
+        }
+        CHECK(maxDiff < 1e-12);
+    }
+}

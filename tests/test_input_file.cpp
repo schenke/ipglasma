@@ -696,6 +696,35 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::validationErrors: jimwlkLambdaQCD must be smaller than "
+    "jimwlkMu0 with the running coupling, with either prescription") {
+    for (const std::string prescription : {"1", "2"}) {
+        CAPTURE(prescription);
+        const std::string text =
+            exampleInputWith("jimwlkRunningCoupling", prescription);
+        for (const std::string mu0 : {"0.040", "0.03"}) {  // = and < Lambda
+            CAPTURE(mu0);
+            Parameters param;
+            REQUIRE(
+                param
+                    .readInput(inputFromText(inputWith(text, "jimwlkMu0", mu0)))
+                    .empty());
+            CHECK(anyContains(
+                param.validationErrors(), "must be smaller than jimwlkMu0"));
+        }
+        // with a fixed coupling neither is used
+        Parameters fixed;
+        REQUIRE(fixed
+                    .readInput(inputFromText(inputWith(
+                        inputWith(text, "jimwlkMu0", "0.03"), "jimwlkAlphaS",
+                        "0.2")))
+                    .empty());
+        CHECK_FALSE(anyContains(
+            fixed.validationErrors(), "must be smaller than jimwlkMu0"));
+    }
+}
+
+TEST_CASE(
     "Parameters::readInput: jimwlkXSnapshotList is only read with "
     "jimwlkSaveSnapshots 1") {
     std::string text;

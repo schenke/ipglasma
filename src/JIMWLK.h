@@ -263,6 +263,16 @@ class JIMWLK {
      */
     void evolutionStep(NucleusRole nucleus);
     /**
+     * The noise of one color and spatial component after the noise
+     * running coupling, \f$\eta = F^{-1}[\sqrt{\alpha_s(k)} F(\xi)]\f$,
+     * computed as in evolutionStep() (the noise unchanged without it), to
+     * test its correlator.
+     * \param[in] xi The Gaussian noise per site, the same for every
+     * component.
+     * \return \f$\eta\f$ per site.
+     */
+    std::vector<double> correlatedNoise(const std::vector<double> &xi);
+    /**
      * Finds the evolution step at which to save each JIMWLK snapshot:
      * after \f$k\f$ steps the Wilson lines are at
      * \f$x_k = x_0 e^{-k\,\Delta y}\f$, and each requested \f$x\f$ is saved
@@ -281,6 +291,13 @@ class JIMWLK {
         int steps);
 
   private:
+    /**
+     * Fourier transforms the noise in \c xi2_ into \c xi_ and, with the
+     * noise running coupling, multiplies it there by \c sqrtAlphasNoise_
+     * and transforms it back into \c xi2_ (Eq. (24) of
+     * \cite Lappi:2012vw).
+     */
+    void transformNoise();
     /**
      * Shared by evolution()'s projectile and target passes: runs \p
      * steps Langevin steps for \p nucleus, logging progress and writing

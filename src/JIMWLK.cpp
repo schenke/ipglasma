@@ -192,14 +192,14 @@ double JIMWLK::getAlphas(const double x, const double y) const {
     return alphas;
 }
 
-double JIMWLK::getAlphasMomentum(const double x, const double y) const {
+double JIMWLK::getAlphasMomentum(const double kx, const double ky) const {
     const double c = param_.jimwlk.c;
     const int Nf = param_.coupling.nFlavors;
     const double a = param_.lattice.L / Ngrid_;  // in fm
     const double mu0 = param_.jimwlk.mu0;
     const double Lambda2 = param_.jimwlk.LambdaQCD * param_.jimwlk.LambdaQCD;
-    const double sin_x = sin(M_PI * x);
-    const double sin_y = sin(M_PI * y);
+    const double sin_x = sin(M_PI * kx);
+    const double sin_y = sin(M_PI * ky);
     // lattice momentum squared, in GeV^2
     const double k2 =
         4. * (sin_x * sin_x + sin_y * sin_y) / (a * a * invHbarc * invHbarc);

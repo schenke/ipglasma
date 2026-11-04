@@ -227,14 +227,15 @@ class JIMWLK {
      * correlator (`jimwlkRunningCoupling 2`) at one momentum-space
      * point, used by initializeK() to build \c sqrtAlphasNoise_. It is
      * Eq. (39) of \cite Lappi:2012vw, with the lattice momentum
-     * \f$\tilde{k}^2 = (2/a)^2 [\sin^2(\pi x) + \sin^2(\pi y)]\f$.
-     * \param[in] x Momentum-space \f$x\f$ coordinate, \f$k_x a/(2\pi)\f$,
-     * in \f$[-1/2, 1/2]\f$.
-     * \param[in] y Momentum-space \f$y\f$ coordinate, same units.
+     * \f$\tilde{k}^2 = (2/a)^2 [\sin^2(\pi k_x) + \sin^2(\pi k_y)]\f$.
+     * \param[in] kx The lattice momentum \f$k_x\f$ in units of
+     * \f$2\pi/a\f$, i.e. \f$k_x a/(2\pi)\f$, in \f$[-1/2, 1/2)\f$ (the
+     * edges are the Brillouin-zone edge \f$k_x = \pm\pi/a\f$).
+     * \param[in] ky The same for \f$k_y\f$.
      * \return \f$\alpha_s(\tilde{k})\f$; at \f$k=0\f$ the infrared
      * value \f$\alpha_s(k \to 0)\f$ set by `jimwlkMu0`.
      */
-    double getAlphasMomentum(const double x, const double y) const;
+    double getAlphasMomentum(const double kx, const double ky) const;
     /**
      * Allocates the per-step Gaussian-noise buffers `xi_`/`xi2_`/\c
      * CKxi_ (idempotent: a no-op if already allocated).

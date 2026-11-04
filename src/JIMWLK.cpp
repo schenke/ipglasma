@@ -366,30 +366,26 @@ std::vector<int> JIMWLK::snapshotSteps(
     return result;
 }
 
-void JIMWLK::transformNoise() {
-    // the local xi now contains the Fourier transform of xi,
-    // while the original xi is stored in the array xi2
-    fft_ptr_->fftnArray(xi2_.data(), xi_.data(), nn_, 1, 2 * Nc2m1);
-
-    // noise running coupling: eta = F^{-1}(sqrt(alpha_s(k)) F(xi)), whose
-    // correlator is the Fourier transform of alpha_s(k) (Eq. (24) of
-    // Lappi:2012vw); xi then holds F(eta) and xi2 eta, which replaces the
-    // noise in the step
-    if (!sqrtAlphasNoise_.empty()) {
-        IPG_PROFILE_SCOPE("jimwlk.noise_coupling");
+void JIMWLK::applyNoiseCoupling() {
+    if (sqrtAlphasNoise_.empty()) {
+        return;
+    }
+    IPG_PROFILE_SCOPE("jimwlk.noise_coupling");
+    // eta = F^{-1}(sqrt(alpha_s(k)) F(xi)), whose correlator is the Fourier
+    // transform of alpha_s(k) (Eq. (24) of Lappi:2012vw); xi then holds
+    // F(eta) and xi2 eta
 #pragma omp parallel for
-        for (int i = 0; i < Ncells_; i++) {
-            for (int n = 0; n < 2 * Nc2m1; n++) {
-                xi_[i][n] *= sqrtAlphasNoise_[i];
-            }
+    for (int i = 0; i < Ncells_; i++) {
+        for (int n = 0; n < 2 * Nc2m1; n++) {
+            xi_[i][n] *= sqrtAlphasNoise_[i];
         }
-        fft_ptr_->fftnArray(xi_.data(), xi2_.data(), nn_, -1, 2 * Nc2m1);
-        // alpha_s(k) = alpha_s(-k), so eta is real up to rounding
+    }
+    fft_ptr_->fftnArray(xi_.data(), xi2_.data(), nn_, -1, 2 * Nc2m1);
+    // alpha_s(k) = alpha_s(-k), so eta is real up to rounding
 #pragma omp parallel for
-        for (int i = 0; i < Ncells_; i++) {
-            for (int n = 0; n < 2 * Nc2m1; n++) {
-                xi2_[i][n] = std::complex<double>(xi2_[i][n].real(), 0.);
-            }
+    for (int i = 0; i < Ncells_; i++) {
+        for (int n = 0; n < 2 * Nc2m1; n++) {
+            xi2_[i][n] = std::complex<double>(xi2_[i][n].real(), 0.);
         }
     }
 }
@@ -400,7 +396,8 @@ std::vector<double> JIMWLK::correlatedNoise(const std::vector<double> &xi) {
             xi2_[i][n] = std::complex<double>(xi[i], 0.);
         }
     }
-    transformNoise();
+    fft_ptr_->fftnArray(xi2_.data(), xi_.data(), nn_, 1, 2 * Nc2m1);
+    applyNoiseCoupling();
     std::vector<double> eta(Ncells_);
     for (int i = 0; i < Ncells_; i++) {
         eta[i] = xi2_[i][0].real();
@@ -442,7 +439,12 @@ void JIMWLK::evolutionStep(NucleusRole nucleus) {
         }
     }
 
-    transformNoise();
+    // Fourier transform the noise in xi2 into xi, leaving xi2 unchanged
+    fft_ptr_->fftnArray(xi2_.data(), xi_.data(), nn_, 1, 2 * Nc2m1);
+
+    // with the noise running coupling, the correlated noise eta replaces
+    // xi in both arrays, i.e. in both factors of the step below
+    applyNoiseCoupling();
 
     // now compute C(K_i,xi_i^a) = F^{-1}(F(K_i)F(xi_i^a))
     //                           = F^{-1}(F(K_x)F(xi_x^a)+F(K_y)F(xi_y^a))

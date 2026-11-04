@@ -321,6 +321,44 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "JIMWLK::getAlphas, getAlphasMomentum: a small jimwlkC does not overflow "
+    "the powers in the logarithm at the ultraviolet end of the lattice") {
+    const int N = 8;
+    Parameters param;
+    makeJimwlkTestParam(param, N);
+    param.lattice.L = 0.08;  // a = 0.01 fm, k^2 up to ~3000 GeV^2
+    param.jimwlk.mu0 = 0.28;
+    param.jimwlk.LambdaQCD = 0.04;
+    param.jimwlk.alphaS = 0.0;
+    param.jimwlk.runningCoupling = 2;
+
+    Group group;
+    Random random;
+    random.init_genrand64(42ULL);
+    Lattice lat(&param, N);
+    JIMWLK jimwlk(param, &group, &lat, &random);
+
+    // (k^2/Lambda^2)^(1/c) ~ 10^630 at c = 0.01, which once returned 0;
+    // the reference values are from 60-digit arithmetic
+    param.jimwlk.c = 0.01;
+    CHECK(
+        jimwlk.getAlphasMomentum(0.5, 0.5)
+        == doctest::Approx(0.09641539658223119));
+    // r = sqrt(2) a
+    CHECK(
+        jimwlk.getAlphas(1. / N, 1. / N)
+        == doctest::Approx(0.10662200203748787));
+    // in the ultraviolet the coupling hardly depends on c
+    param.jimwlk.c = 0.2;
+    CHECK(
+        jimwlk.getAlphasMomentum(0.5, 0.5)
+        == doctest::Approx(0.09641539658223119));
+    CHECK(
+        jimwlk.getAlphas(1. / N, 1. / N)
+        == doctest::Approx(0.10662200203748787));
+}
+
+TEST_CASE(
     "JIMWLK: with a constant alpha_s the noise and the square-root running "
     "couplings give the same evolution") {
     // With mu0 far above every momentum on the lattice, alpha_s(r) and

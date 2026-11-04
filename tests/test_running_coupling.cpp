@@ -27,6 +27,23 @@ TEST_CASE(
         == doctest::Approx(0.2764060975087722));
 }
 
+TEST_CASE(
+    "computeAlphaS: a small c does not overflow the powers in the logarithm, "
+    "and scale 0 gives the infrared value set by muZero") {
+    // (scale/lambdaQCD)^(2/c) ~ 10^740 at c = 0.01; the reference values are
+    // from 60-digit arithmetic
+    CHECK(
+        computeAlphaS(
+            /*muZero=*/0.3, /*c=*/0.01, /*lambdaQCD=*/0.2,
+            /*nFlavors=*/3, /*scale=*/1000.)
+        == doctest::Approx(0.08196734359639981));
+    CHECK(
+        computeAlphaS(
+            /*muZero=*/0.3, /*c=*/0.2, /*lambdaQCD=*/0.2,
+            /*nFlavors=*/3, /*scale=*/0.)
+        == doctest::Approx(1.7218046308721931));
+}
+
 TEST_CASE("computeAlphaS: increasing nFlavors increases alpha_s") {
     const double alphasNf3 =
         computeAlphaS(0.3, 0.2, /*lambdaQCD=*/0.2, /*nFlavors=*/3, 1.0);

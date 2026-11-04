@@ -17,6 +17,7 @@
 
 #include "Init.h"
 #include "Instrumentation.h"
+#include "RunningCoupling.h"
 #include "WilsonLineIO.h"
 
 using PhysConst::invHbarc;
@@ -173,42 +174,28 @@ double JIMWLK::getAlphas(const double x, const double y) const {
         return 1.0;
     }
 
-    const double c = param_.jimwlk.c;
-    const int Nf = param_.coupling.nFlavors;
     const double length = param_.lattice.L;
-    const double mu0 = param_.jimwlk.mu0;
-    const double Lambda2 = param_.jimwlk.LambdaQCD * param_.jimwlk.LambdaQCD;
     double phys_x = x * length;  // in fm
     double phys_y = y * length;
     double phys_r2 = phys_x * phys_x + phys_y * phys_y;
 
-    // Alphas in physical units! Lambda2 is lambda_QCD^2 in GeV
-    double alphas =
-        4. * M_PI
-        / ((11. * Nc - 2. * Nf) / 3. * c
-           * log((
-               pow(mu0 * mu0 / Lambda2, 1. / c)
-               + pow(4. / (phys_r2 * Lambda2 * invHbarc * invHbarc), 1. / c))));
-    return alphas;
+    // at the scale 2/r, in GeV
+    return computeAlphaS(
+        param_.jimwlk.mu0, param_.jimwlk.c, param_.jimwlk.LambdaQCD,
+        param_.coupling.nFlavors, 2. / (sqrt(phys_r2) * invHbarc));
 }
 
 double JIMWLK::getAlphasMomentum(const double kx, const double ky) const {
-    const double c = param_.jimwlk.c;
-    const int Nf = param_.coupling.nFlavors;
     const double a = param_.lattice.L / Ngrid_;  // in fm
-    const double mu0 = param_.jimwlk.mu0;
-    const double Lambda2 = param_.jimwlk.LambdaQCD * param_.jimwlk.LambdaQCD;
     const double sin_x = sin(M_PI * kx);
     const double sin_y = sin(M_PI * ky);
     // lattice momentum squared, in GeV^2
     const double k2 =
         4. * (sin_x * sin_x + sin_y * sin_y) / (a * a * invHbarc * invHbarc);
 
-    return 4. * M_PI
-           / ((11. * Nc - 2. * Nf) / 3. * c
-              * log(
-                  pow(mu0 * mu0 / Lambda2, 1. / c)
-                  + pow(k2 / Lambda2, 1. / c)));
+    return computeAlphaS(
+        param_.jimwlk.mu0, param_.jimwlk.c, param_.jimwlk.LambdaQCD,
+        param_.coupling.nFlavors, sqrt(k2));
 }
 
 void JIMWLK::initializeNoise() {

@@ -22,9 +22,6 @@ parts of the code against exact or published results:
   color-charge density) against its exact lattice prediction, for a scan of
   `g2muGeV`, `m` and `Ny`, optionally also of `UVDamp`, and the saturation
   scale against Lappi (2008) (see below).
-- **`jimwlk_running_coupling/`** — the JIMWLK evolution of the MV model with
-  the noise and the square-root running couplings, reproducing Fig. 6 of
-  [arXiv:1212.4825](https://arxiv.org/abs/1212.4825) (see below).
 - **`lattice_symmetries/`** — two exact symmetries of the lattice
   formulation, the transposition x ↔ y and the exchange of projectile and
   target, applied to the Wilson lines of a Pb+Pb event (see below).
@@ -40,8 +37,9 @@ parts of the code against exact or published results:
   against the lattice size and the number of threads (see below).
 - **`jimwlk_step_size/`** — the convergence of the JIMWLK evolution in its
   step size `jimwlkDs`, and its error at the recommended step sizes, in the
-  setup of arXiv:1212.4825 (with BK and the curves of that paper) and in the
-  example input (see below).
+  setup of arXiv:1212.4825 (with BK and the curves of that paper, for its
+  square-root and noise running couplings) and in the example input (see
+  below).
 
 The two regression tests parallelize over random seeds using
 `concurrent.futures.ProcessPoolExecutor`, so each event runs in its own
@@ -1054,25 +1052,34 @@ Lappi and Mäntysaari, whose curves are in `lappi_mantysaari_2012/` (see the
 README there for how they were extracted):
 - **Initial condition:** the MV model with g²μL = 31, `Ny 100` and no
   infrared regulator, on 1024².
-- **Evolution:** the square-root running coupling, the prescription
-  IP-Glasma implements (the noise prescription of the paper is #138), with
-  Λ_QCD L = 6, μ₀L = 15, c = 0.2, N_f = 3 and `jimwlkMass 0`. The coupling
-  of the paper has the scale 4e^{−2γ_E}/r² instead of 4/r², so
-  `jimwlkLambdaQCD` and `jimwlkMu0` are e^{γ_E} times its Λ_QCD and μ₀; the
-  coupling freezes at 0.76, against 0.36 in the example input.
+- **Evolution:** the running coupling with Λ_QCD L = 6, μ₀L = 15, c = 0.2,
+  N_f = 3 and `jimwlkMass 0`, in either prescription of the paper
+  (`--prescription`):
+  - `sqrt` (default): the square-root coupling, `jimwlkRunningCoupling 1`.
+    Its α_s(r) has the scale 4e^{−2γ_E}/r² in the paper and 4/r² in the
+    code, so `jimwlkLambdaQCD` and `jimwlkMu0` are e^{γ_E} times the paper's
+    Λ_QCD and μ₀.
+  - `noise`: the noise coupling, `jimwlkRunningCoupling 2`, with α_s(k) of
+    Eq. (39) of the paper and its Λ_QCD and μ₀. Its runs are tagged
+    `noise_`, so both prescriptions can share a `--datadir`.
+
+  The coupling freezes at 0.76, against 0.36 in the example input.
 - **Runs:** `jimwlkDs` 0.001, 0.0005 and 0.00025 from the same initial Wilson
   lines (two seeds, four configurations), to y = 8, with snapshots at every
   unit of y.
 - **Analysis:** at each y, ln Q_s is fitted against the step as above and
   extrapolated to zero step; the evolution speed λ = d ln Q_s²/dy comes from
   successive snapshots.
-- **BK:** `bk_sqrt.py` solves the BK equation with the same kernel, the
-  mean-field limit of this JIMWLK evolution, from the mean dipole
-  correlator of the initial Wilson lines (RK4 on a logarithmic grid in r,
-  converged to 0.2%).
+- **BK** (`sqrt` only): `bk_sqrt.py` solves the BK equation with the same
+  kernel, the mean-field limit of this JIMWLK evolution, from the mean
+  dipole correlator of the initial Wilson lines (RK4 on a logarithmic grid
+  in r, converged to 0.2%).
 - **Checks:** the initial Wilson lines agree, the step is of first order,
-  BK reproduces λ of Fig. 11 of the paper within 2%, JIMWLK at zero step is
-  slower than BK, and Q_s at zero step agrees with Fig. 6 within 10%.
+  and Q_s at zero step agrees with the curve of the same prescription in
+  Fig. 6 within 10%. With `sqrt`, also: BK reproduces λ of Fig. 11 of the
+  paper within 2%, and JIMWLK at zero step is slower than BK. If the summary
+  of the other prescription with the same settings is in `--datadir`, also:
+  the noise coupling gives a smaller Q_s at zero step at every y > 0.
 
 ```bash
 cd jimwlk_step_size
@@ -1080,7 +1087,13 @@ cd jimwlk_step_size
 python3 lappi_mantysaari.py --ipglasma-path ../.. --quick --max-workers 3
 # the setup of the paper (3.6 hours with 4 workers of 6 threads)
 python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 --max-workers 4
+# the same with the noise coupling, in the same --datadir to compare the two
+python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 --max-workers 4 \
+    --prescription noise
 ```
+
+The summary and the figure of the noise coupling are
+`lappi_mantysaari_noise_summary.json` and `lappi_mantysaari_noise.pdf`.
 
 With the defaults, the step is again of first order, but its error per unit
 of step and of rapidity is about 30 times larger than above:
@@ -1100,6 +1113,25 @@ of step and of rapidity is about 30 times larger than above:
 - **At zero step,** λ of JIMWLK is 3–8% below BK for Q_s/Λ_QCD = 10–25, so
   JIMWLK is slower than BK, as in the paper (where the difference is about
   5% in Q_s at y = 7.8, here 9%).
+
+These are the numbers of `sqrt`; `--prescription noise` has not been run
+with this script yet. Single-step runs of the same setup (two seeds at
+0.005, three at 0.001, one at 0.0005; the initial Q_s/Λ_QCD of 3.7–3.8
+agrees with Fig. 6) gave:
+
+| Q_s/Λ_QCD at y = 8 | noise | square root |
+|---|---|---|
+| `jimwlkDs 0.005` | 37.8 | 57.7 |
+| `jimwlkDs 0.001` | 21.9 | 33.0 |
+| `jimwlkDs 0.0005` | 20.2 | 30.1 |
+| Fig. 6 of the paper | 19.4 | 28.5 |
+
+The noise coupling is slower by as much as in the paper (Q_s noise/square
+root 0.67 at 0.0005 against 0.68), and both converge in the step alike. The
+step itself is normalized correctly: in a fixed-coupling evolution (128²,
+`jimwlkDs 0.0002`) dD/dy agrees within 1–3% with the exact first Balitsky
+equation evaluated on the same configurations with the code's lattice
+kernel.
 
 **The example input.** `example_input_step_size.py` evolves the example
 input itself (Pb+Pb with hot spots, b = 0) from x₀ = 0.0092 to 1.29·10⁻⁴,
@@ -1344,74 +1376,3 @@ Notes:
   end unless `--keep-logs` is passed (those of failed events stay), so pass
   `--keep-logs` if you want to inspect individual events afterwards (or
   need `--plot-only`/`--clean` to resume from an interrupted job).
-
-### JIMWLK running coupling
-
-`jimwlk_running_coupling/running_coupling.py` compares the two running-coupling
-prescriptions of JIMWLK, `jimwlkRunningCoupling 1` (the "square root"
-coupling, $\sqrt{\alpha_s(r)}$ in the kernel) and `2` (the "noise" coupling,
-the noise correlator $\propto \alpha_s(k)$), by reproducing Fig. 6 of
-T. Lappi and H. Mäntysaari, Eur. Phys. J. C 73 (2013) 2307
-([arXiv:1212.4825](https://arxiv.org/abs/1212.4825)). The setup is that of
-the paper, in units of the lattice size L: a 1024² lattice, the MV model with
-g²μL = 31 in `Ny 100` layers and `m 0` (Q_s L ≈ 22), Λ_QCD L = 6,
-μ₀L = 15, `jimwlkC 0.2`, N_f = 3. The paper's α_s(r) has the scale
-4e^{−2γ_E}/r², the code's 4/r²; the prescription `sqrt` therefore runs the
-square-root coupling with `jimwlkLambdaQCD` and `jimwlkMu0` multiplied by
-e^{γ_E}, which gives the paper's α_s(r) exactly, and `sqrt4` (optional) the
-code's scale. The script evolves both nuclei of each run (two independent
-configurations, input template `jimwlk_running_coupling/input_running_coupling`)
-over 20 units of rapidity, computes D(r) along the axes from the Wilson lines
-written every unit, and checks that both prescriptions start from the same
-Q_s (D(r_s) = e^{−1/2}, Q_s² = 2/r_s²), that the noise coupling gives a
-smaller Q_s at every later rapidity, and a smaller mean evolution speed
-λ = d ln Q_s²/dy.
-
-```bash
-cd jimwlk_running_coupling
-# quick test: 256² with the same physical size, 8 units of rapidity
-# (4 minutes on 8 cores)
-python3 running_coupling.py --ipglasma-path ../.. --quick
-# the setup of the paper, about 2 hours per run on 8 cores
-python3 running_coupling.py --ipglasma-path ../.. --seeds 2 \
-    --prescriptions noise,sqrt,sqrt4
-```
-
-The results go to `<datadir>/running_coupling_summary.json` (default
-`./running_coupling_output`), the figures to `running_coupling_fig6.pdf`
-(N = 1 − D against rΛ_QCD every `--dy-plot` units, as in Fig. 6) and
-`running_coupling_speed.pdf` (Q_s(y) and λ(Q_s)). Each run caches its D(r),
-so `--analyze-only` redoes the analysis; `--keep-files` keeps the Wilson
-lines. The script exits non-zero if a check fails.
-The result depends noticeably on the step `--ds` (`jimwlkDs`) and on the
-lattice. With `--quick` (256², 2 configurations per prescription), Q_s/Λ_QCD
-at y = 8 is
-
-| `jimwlkDs` | noise | square root |
-|---|---|---|
-| 0.005 | 23.7 | 32.7 |
-| 0.001 | 19.9 | 27.4 |
-| 0.0005 | 19.1 | 26.6 |
-
-so the step must be much smaller than the 0.003 recommended for the running
-coupling in the README (α_s frozen at 0.76 here, see `jimwlkDs` there); the
-script defaults to 0.0005. In the full setup (1024², 4 configurations per
-prescription at 0.005, 6 at 0.001, 2 at 0.0005), all checks pass, the initial
-condition is that of the paper (r_s Λ_QCD = 0.379 against 0.380, read off
-Fig. 6), and Q_s/Λ_QCD at y = 8 is
-
-| `jimwlkDs` | noise | square root |
-|---|---|---|
-| 0.005 | 37.8 | 57.7 |
-| 0.001 | 21.9 | 33.0 |
-| 0.0005 | 20.2 | 30.1 |
-| paper | 19.4 | 28.5 |
-
-The step error is about linear in the step, so at zero step Q_s comes out
-about 5% below the paper for both prescriptions, within what we can read off
-Fig. 6 and the statistics of a few configurations. The slowdown of the noise
-coupling relative to the square-root coupling agrees with the paper (λ ratio
-0.83 against 0.87 at Q_s/Λ_QCD = 16 at 0.005). The step itself is normalized
-correctly: in a fixed-coupling evolution (128², `jimwlkDs 0.0002`) dD/dy
-agrees within 1–3% with the exact first Balitsky equation evaluated on the
-same configurations with the code's lattice kernel.

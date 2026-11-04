@@ -6,17 +6,25 @@
 """
 The JIMWLK evolution in the setup of Lappi and Mantysaari, arXiv:1212.4825
 (issue #128): the step-size dependence, the evolution speed against the
-curves of that paper, and BK with the same kernel.
+curves of that paper, and BK with the same kernel, for either running-
+coupling prescription of the paper.
 
 The setup of the paper (its curves with the lower initial Q_s): the MV
 model (useNucleus 0) with g^2 mu L = 31, Ny = 100, m = 0 and no UV damping
-on a 1024^2 lattice, evolved with the square-root running coupling, the
-prescription IP-Glasma implements (jimwlkAlphaS 0), with Lambda L = 6,
-mu0 L = 15, c = 0.2, N_f = 3 and no IR regulator in the kernel
-(jimwlkMass 0). The coupling of the paper has the scale 4 e^{-2 gamma_E}/r^2
-instead of 4/r^2, so jimwlkLambdaQCD and jimwlkMu0 are e^{gamma_E} times its
-Lambda and mu0. Everything is in units of L; L only sets the units of the
-input.
+on a 1024^2 lattice, evolved with the running coupling (jimwlkAlphaS 0)
+with Lambda L = 6, mu0 L = 15, c = 0.2, N_f = 3 and no IR regulator in the
+kernel (jimwlkMass 0). --prescription selects where the coupling enters:
+
+  sqrt   the square-root coupling, sqrt(alpha_s(r)) in the kernel
+         (jimwlkRunningCoupling 1). The coupling of the paper has the scale
+         4 e^{-2 gamma_E}/r^2 instead of 4/r^2, so jimwlkLambdaQCD and
+         jimwlkMu0 are e^{gamma_E} times its Lambda and mu0.
+  noise  the noise coupling, the noise correlator alpha_s(k) of Eq. (39) of
+         the paper (jimwlkRunningCoupling 2), with its Lambda and mu0.
+
+Everything is in units of L; L only sets the units of the input. The runs
+of the noise coupling are tagged noise_, so both prescriptions can share a
+--datadir.
 
 All step sizes evolve the same seeds, i.e. the same initial Wilson lines
 (both nuclei of a run, two configurations), to y = ln(x0/x) = --ymax, with
@@ -29,23 +37,28 @@ jimwlk_step_size.py (first order, with the covariance over the
 configurations); the configurations at zero step are those of the smallest
 step minus the fitted slope times it. The evolution speed lambda =
 d ln Q_s^2/dy comes from the differences between successive snapshots. As a
-reference, bk_sqrt.py solves the BK equation with the same kernel from the
-mean dipole correlator of the initial Wilson lines; lambda of BK is computed
-with the same Delta y. The curves of the paper (lappi_mantysaari_2012/) are
-Q_s(y) from Fig. 6 and lambda of JIMWLK (Fig. 8) and BK (Fig. 11), all with
-the square-root prescription and c = 0.2.
+reference for the square-root coupling, bk_sqrt.py solves the BK equation
+with the same kernel from the mean dipole correlator of the initial Wilson
+lines; lambda of BK is computed with the same Delta y. The curves of the
+paper (lappi_mantysaari_2012/) are Q_s(y) from Fig. 6 and lambda of JIMWLK
+(Fig. 8) for the prescription of the run, and lambda of BK (Fig. 11) with
+the square-root prescription, all with c = 0.2.
 
 The script checks that
 
   1. the initial Wilson lines are the same for all step sizes,
   2. ln Q_s at the final y is consistent with a first-order step (p-value
      above --min-p-value),
-  3. the BK solution reproduces lambda of Fig. 11 within --bk-tolerance
-     (this tests the coupling and its scale, independent of the lattice),
-  4. at zero step, JIMWLK is slower than BK: Q_s at the final y is below
-     that of BK, as in the paper,
+  3. (sqrt) the BK solution reproduces lambda of Fig. 11 within
+     --bk-tolerance (this tests the coupling and its scale, independent of
+     the lattice),
+  4. (sqrt) at zero step, JIMWLK is slower than BK: Q_s at the final y is
+     below that of BK, as in the paper,
   5. Q_s at zero step agrees with Fig. 6 within --fig6-tolerance (not with
-     --quick, whose lattice is coarser than that of the paper).
+     --quick, whose lattice is coarser than that of the paper),
+  6. if the summary of the other prescription with the same settings is in
+     --datadir: at zero step, the noise coupling gives the smaller Q_s at
+     every y > 0, as in the paper.
 
 With the defaults (step sizes 0.001, 0.0005 and 0.00025 to y = 8, 2 seeds),
 the step error is about 30 times larger per unit of step and of rapidity
@@ -59,6 +72,10 @@ Usage (from validations/jimwlk_step_size/):
     # threads)
     python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 \\
         --max-workers 4
+    # the same with the noise coupling; with the summary of the square-root
+    # coupling in the same --datadir, also check 6
+    python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 \\
+        --max-workers 4 --prescription noise
 """
 
 import argparse
@@ -94,8 +111,18 @@ def snapshot_y(settings):
     return np.array([round(k / dy) * dy for k in range(settings["ymax"] + 1)])
 
 
+# jimwlkRunningCoupling and the factor of Lambda and mu0 of each prescription
+PRESCRIPTIONS = {"sqrt": (1, np.exp(np.euler_gamma)), "noise": (2, 1.)}
+
+
 def run_tag(cfg):
-    return f"ds{cfg['ds']:g}_seed{cfg['seed']}"
+    prefix = "" if cfg["prescription"] == "sqrt" else "noise_"
+    return f"{prefix}ds{cfg['ds']:g}_seed{cfg['seed']}"
+
+
+def summary_path(datadir, prescription, suffix="_summary.json"):
+    name = "lappi_mantysaari" + ("" if prescription == "sqrt" else "_noise")
+    return os.path.join(datadir, name + suffix)
 
 
 def run_one(cfg, settings):
@@ -106,6 +133,7 @@ def run_one(cfg, settings):
     cache = os.path.join(workdir, "profiles.npz")
     xs = settings["x0"] * np.exp(-snapshot_y(settings))
     L = settings["L"]
+    running_coupling, scale = PRESCRIPTIONS[cfg["prescription"]]
     overrides = {
         "size": settings["size"], "L": L,
         "g2muGeV": f"{settings['g2mu_L'] * HBARC / L:.12g}",
@@ -117,8 +145,9 @@ def run_one(cfg, settings):
         "projectileX": f"{xs[-1]:.12g}", "targetX": f"{xs[-1]:.12g}",
         "jimwlkDs": f"{cfg['ds']:.12g}", "jimwlkAlphaS": 0,
         "jimwlkMass": 0, "jimwlkC": settings["c"], "nFlavors": settings["nf"],
-        "jimwlkLambdaQCD": f"{settings['lambda_L'] * HBARC / L * np.exp(np.euler_gamma):.12g}",
-        "jimwlkMu0": f"{settings['mu0_L'] * HBARC / L * np.exp(np.euler_gamma):.12g}",
+        "jimwlkRunningCoupling": running_coupling,
+        "jimwlkLambdaQCD": f"{settings['lambda_L'] * HBARC / L * scale:.12g}",
+        "jimwlkMu0": f"{settings['mu0_L'] * HBARC / L * scale:.12g}",
         "jimwlkSaveSnapshots": 1,
         "jimwlkXSnapshotList": ",".join(f"{x:.12g}" for x in xs[1:-1]),
     }
@@ -168,16 +197,18 @@ def read_curves(name):
     return {k: np.array(sorted(v)) for k, v in curves.items()}
 
 
-def reference_curves(c):
-    """The square-root curves of arXiv:1212.4825 for c = 0.2: Q_s/Lambda at
-    y = 0, 4, ..., 20 from N(r_s) = 1 - e^{-1/2} of Fig. 6, and lambda
-    against Q_s/Lambda of JIMWLK (Fig. 8) and BK (Fig. 11)."""
+def reference_curves(c, prescription):
+    """The curves of arXiv:1212.4825 for c = 0.2 and the prescription:
+    Q_s/Lambda at y = 0, 4, ..., 20 from N(r_s) = 1 - e^{-1/2} of Fig. 6,
+    lambda against Q_s/Lambda of JIMWLK (Fig. 8) and, with the square-root
+    coupling, of BK (Fig. 11)."""
     if abs(c - 0.2) > 1e-12:
         return None
+    curve_prefix = {"sqrt": "sqrtas", "noise": "noiseas"}[prescription]
     level = 1. - np.exp(-0.5)
     fig6 = {}
     for name, curve in read_curves("fig6_dipole.csv").items():
-        if not name.startswith("sqrtas_JIMWLK_y"):
+        if not name.startswith(f"{curve_prefix}_JIMWLK_y"):
             continue
         i = int(np.argmax(curve[:, 1] > level))
         lnr = np.interp(level, curve[i - 1:i + 1, 1],
@@ -185,9 +216,10 @@ def reference_curves(c):
         fig6[int(name.split("_y")[1])] = float(np.sqrt(2.) / np.exp(lnr))
     return {"fig6_qs": dict(sorted(fig6.items())),
             "fig8_jimwlk": read_curves("fig8_lambda.csv")[
-                "sqrtas_JIMWLK_c0.2_lowQs0"].tolist(),
-            "fig11_bk": read_curves("fig11_lambda.csv")[
-                "BK_sqrtas_c0.2"].tolist()}
+                f"{curve_prefix}_JIMWLK_c0.2_lowQs0"].tolist(),
+            "fig11_bk": (read_curves("fig11_lambda.csv")[
+                "BK_sqrtas_c0.2"].tolist() if prescription == "sqrt"
+                else None)}
 
 
 def speed(y, lnq):
@@ -217,7 +249,8 @@ def analyze(runs, settings):
     lnq = np.log(np.array([[[np.sqrt(2.) / (crossing(r, p) * a) * HBARC
                              / lam_unit for p in conf_ds]
                             for conf_ds in conf] for conf in profile]))
-    result = {"y": y.tolist(), "ds": ds_list, "configurations": len(lnq),
+    result = {"prescription": settings["prescription"], "y": y.tolist(),
+              "ds": ds_list, "configurations": len(lnq),
               "initial_spread": float(np.abs(
                   profile[:, :, 0] - profile[:, -1:, 0]).max()),
               "ln_qs": {f"{ds:g}": lnq[:, i].tolist()
@@ -241,6 +274,11 @@ def analyze(runs, settings):
                        for i, ds in enumerate(ds_list)}
     result["speed"]["0"] = speed(y, zero)
 
+    result["reference"] = reference_curves(settings["c"],
+                                           settings["prescription"])
+    result["bk"] = None
+    if settings["prescription"] != "sqrt":
+        return result
     # BK with the same kernel from the mean initial dipole correlator
     D0 = profile[:, -1, 0].mean(axis=0)
     yb, qb = bk_sqrt.solve(r[1:] * a * lam_unit / HBARC, 1. - D0[1:],
@@ -257,7 +295,6 @@ def analyze(runs, settings):
                     "qs_at_snapshots": np.exp(np.interp(y, yb, lnqb)).tolist(),
                     "speed": {"qs": qb[inner][::5].tolist(),
                               "lambda": lam_bk[::5].tolist()}}
-    result["reference"] = reference_curves(settings["c"])
     return result
 
 
@@ -268,21 +305,23 @@ def checks_for(result, settings):
     checks["ln Q_s at the final y is consistent with first order"] = bool(
         final["p_value"] > settings["min_p_value"])
     zero_final = np.exp(np.array(result["ln_qs_zero"])[:, -1])
-    checks["at zero step, JIMWLK is slower than BK"] = bool(
-        zero_final.mean() < result["bk"]["qs_at_snapshots"][-1])
+    if result["bk"]:
+        checks["at zero step, JIMWLK is slower than BK"] = bool(
+            zero_final.mean() < result["bk"]["qs_at_snapshots"][-1])
     ref = result["reference"]
     if ref is None:
         return checks
-    # BK against Fig. 11 where both have points
-    fig11 = np.array(ref["fig11_bk"])
-    q = np.array(result["bk"]["speed"]["qs"])
-    lam = np.array(result["bk"]["speed"]["lambda"])
-    inside = (q > fig11[:, 0].min()) & (q < fig11[:, 0].max())
-    deviation = lam[inside] / np.interp(np.log(q[inside]),
-                                        np.log(fig11[:, 0]), fig11[:, 1]) - 1.
-    result["bk_fig11_max_deviation"] = float(np.abs(deviation).max())
-    checks[f"BK reproduces Fig. 11 within {settings['bk_tolerance']:g}"] = \
-        bool(result["bk_fig11_max_deviation"] < settings["bk_tolerance"])
+    if ref["fig11_bk"] and result["bk"]:
+        # BK against Fig. 11 where both have points
+        fig11 = np.array(ref["fig11_bk"])
+        q = np.array(result["bk"]["speed"]["qs"])
+        lam = np.array(result["bk"]["speed"]["lambda"])
+        inside = (q > fig11[:, 0].min()) & (q < fig11[:, 0].max())
+        deviation = lam[inside] / np.interp(
+            np.log(q[inside]), np.log(fig11[:, 0]), fig11[:, 1]) - 1.
+        result["bk_fig11_max_deviation"] = float(np.abs(deviation).max())
+        checks[f"BK reproduces Fig. 11 within {settings['bk_tolerance']:g}"] \
+            = bool(result["bk_fig11_max_deviation"] < settings["bk_tolerance"])
     if not settings["quick"]:
         y = np.array(result["y"])
         zero = np.exp(np.array(result["ln_qs_zero"])).mean(axis=0)
@@ -296,6 +335,31 @@ def checks_for(result, settings):
     return checks
 
 
+def compare_prescriptions(result, settings):
+    """Check 6: Q_s at zero step of this run against that of the other
+    prescription, from its summary in --datadir if it was made with the same
+    settings (the result gets the ratio noise/sqrt at each y)."""
+    other = "sqrt" if settings["prescription"] == "noise" else "noise"
+    path = summary_path(settings["datadir"], other)
+    if not os.path.exists(path):
+        return {}
+    with open(path) as f:
+        summary = json.load(f)
+    same = ("size", "L", "g2mu_L", "ny", "lambda_L", "mu0_L", "c", "nf",
+            "x0", "ds", "ymax", "seeds")
+    if "result" not in summary or any(
+            summary["settings"].get(k) != settings[k] for k in same):
+        print(f"not compared with {path}: other settings or no result")
+        return {}
+    zero = {settings["prescription"]: result["ln_qs_zero"],
+            other: summary["result"]["ln_qs_zero"]}
+    q = {k: np.exp(np.array(v)).mean(axis=0) for k, v in zero.items()}
+    ratio = q["noise"][1:] / q["sqrt"][1:]
+    result["noise_over_sqrt"] = [1.] + ratio.tolist()
+    return {"at zero step, the noise coupling gives a smaller Q_s than the "
+            "square-root coupling at every y > 0": bool(np.all(ratio < 1.))}
+
+
 def print_result(result):
     print(f"\n{result['configurations']} configurations, initial Wilson "
           f"lines equal to {result['initial_spread']:.1e}")
@@ -306,8 +370,9 @@ def print_result(result):
         print(f"  ds {k:<9g}" + " ".join(f"{v:7.2f}" for v in q))
     zero = np.exp(np.array(result["ln_qs_zero"])).mean(axis=0)
     print(f"  {'ds -> 0':12s}" + " ".join(f"{v:7.2f}" for v in zero))
-    print(f"  {'BK':12s}" + " ".join(f"{v:7.2f}" for v in
-                                     result["bk"]["qs_at_snapshots"]))
+    if result["bk"]:
+        print(f"  {'BK':12s}" + " ".join(f"{v:7.2f}" for v in
+                                         result["bk"]["qs_at_snapshots"]))
     final = result["fits"][-1]
     print(f"at y = {final['y']:.3f}: Q_s(ds)/Q_s(0) - 1 = "
           + ", ".join(f"{d:+.4f} (ds {k:g})"
@@ -318,11 +383,12 @@ def print_result(result):
           f"{final['order_interval'][1]:.2f}]")
     ref = result["reference"]
     fig8 = np.array(ref["fig8_jimwlk"]) if ref else None
-    fig11 = np.array(ref["fig11_bk"]) if ref else None
-    bk = result["bk"]["speed"]
+    fig11 = np.array(ref["fig11_bk"]) if ref and ref["fig11_bk"] else None
+    bk = result["bk"]["speed"] if result["bk"] else None
     print("lambda = d ln Q_s^2/dy:  Q_s/Lambda   ds -> 0          "
           + "".join(f"ds {k:<8g}" for k in ds)
-          + "BK     " + ("Fig. 8  Fig. 11" if ref else ""))
+          + ("BK     " if bk else "") + ("Fig. 8  " if ref else "")
+          + ("Fig. 11" if fig11 is not None else ""))
     for i, q in enumerate(result["speed"]["0"]["qs"]):
         def at(curve):
             return np.interp(np.log(q), np.log(curve[:, 0]), curve[:, 1],
@@ -332,8 +398,10 @@ def print_result(result):
               f"{z['lambda_error'][i]:.3f}  "
               + "".join(f"{result['speed'][f'{k:g}']['lambda'][i]:<11.3f}"
                         for k in ds)
-              + f"{np.interp(np.log(q), np.log(bk['qs']), bk['lambda'], left=np.nan, right=np.nan):.3f}  "
-              + (f"{at(fig8):.3f}   {at(fig11):.3f}" if ref else ""))
+              + (f"{at(np.array([bk['qs'], bk['lambda']]).T):.3f}  "
+                 if bk else "")
+              + (f"{at(fig8):.3f}   " if ref else "")
+              + (f"{at(fig11):.3f}" if fig11 is not None else ""))
     if ref:
         print("Fig. 6: Q_s/Lambda = " + ", ".join(
             f"{v:.2f} (y = {k})" for k, v in ref["fig6_qs"].items()))
@@ -344,6 +412,9 @@ def print_result(result):
         print("Q_s at zero step against Fig. 6: " + ", ".join(
             f"{100 * v:+.1f}% (y = {k})"
             for k, v in result["fig6_deviation"].items()))
+    if "noise_over_sqrt" in result:
+        print("Q_s at zero step, noise/sqrt: " + ", ".join(
+            f"{v:.3f}" for v in result["noise_over_sqrt"]))
 
 
 def plot(result, path):
@@ -355,15 +426,18 @@ def plot(result, path):
     ramp = ["#86b6ef", "#3987e5", "#1c5cab", "#0d366b"]
     fig, (left, right) = plt.subplots(1, 2, figsize=(10, 4))
     ref = result["reference"]
-    if ref:
+    if ref and ref["fig11_bk"]:
         fig11 = np.array(ref["fig11_bk"])
-        fig8 = np.array(ref["fig8_jimwlk"])
         left.plot(fig11[:, 0], fig11[:, 1], color="#1baf7a", lw=3,
                   label="arXiv:1212.4825 BK (Fig. 11)")
+    if ref:
+        fig8 = np.array(ref["fig8_jimwlk"])
         left.plot(fig8[:, 0], fig8[:, 1], color="#eb6834", lw=1.5,
                   label="arXiv:1212.4825 JIMWLK (Fig. 8)")
-    bk = result["bk"]["speed"]
-    left.plot(bk["qs"], bk["lambda"], color="#eda100", lw=1.2, label="BK")
+    if result["bk"]:
+        bk = result["bk"]["speed"]
+        left.plot(bk["qs"], bk["lambda"], color="#eda100", lw=1.2,
+                  label="BK")
     for k, color in zip(result["ds"], ramp):
         s = result["speed"][f"{k:g}"]
         left.plot(s["qs"], s["lambda"], "o-", ms=3, lw=1, color=color,
@@ -374,6 +448,7 @@ def plot(result, path):
     left.set_xscale("log")
     left.set_xlabel(r"$Q_s/\Lambda$")
     left.set_ylabel(r"$\lambda = d\ln Q_s^2/dy$")
+    left.set_title(f"{result['prescription']} coupling", fontsize=9)
     left.legend(fontsize=7)
     ds = np.array(result["ds"])
     lnq = [np.array(result["ln_qs"][f"{k:g}"])[:, -1] for k in ds]
@@ -387,8 +462,9 @@ def plot(result, path):
     zero = np.exp(np.array(result["ln_qs_zero"])[:, -1])
     right.errorbar([0.], [zero.mean()], [zero.std(ddof=1) / np.sqrt(len(zero))],
                    fmt="D", color="#2a78d6", label="ds -> 0")
-    right.axhline(result["bk"]["qs_at_snapshots"][-1], color="#eda100",
-                  label="BK")
+    if result["bk"]:
+        right.axhline(result["bk"]["qs_at_snapshots"][-1], color="#eda100",
+                      label="BK")
     y_final = result["y"][-1]
     if ref and any(abs(k - y_final) < 0.5 for k in ref["fig6_qs"]):
         k = min(ref["fig6_qs"], key=lambda k: abs(k - y_final))
@@ -411,6 +487,10 @@ def main():
     parser.add_argument("--template", default=os.path.join(HERE, "..", "..",
                                                            "input"))
     parser.add_argument("--datadir", default="./lappi_mantysaari_output")
+    parser.add_argument("--prescription", choices=sorted(PRESCRIPTIONS),
+                        default="sqrt",
+                        help="running coupling: sqrt(alpha_s(r)) in the "
+                             "kernel or alpha_s(k) in the noise correlator")
     parser.add_argument("--size", type=int, default=1024)
     parser.add_argument("--L", type=float, default=10.,
                         help="[fm]; only sets the units of the input")
@@ -463,7 +543,8 @@ def main():
         "bk_grid": dict(nr=200, ntheta=16, dy=0.04) if args.quick else {}})
     os.makedirs(settings["datadir"], exist_ok=True)
 
-    configs = [{"ds": ds, "seed": seed} for ds, seed in
+    configs = [{"ds": ds, "seed": seed, "prescription": args.prescription}
+               for ds, seed in
                itertools.product(sorted(args.ds), range(1, args.seeds + 1))]
     print(f"{len(configs)} runs of size {args.size} to y = {args.ymax} with "
           f"up to {args.max_workers} workers ...", flush=True)
@@ -485,6 +566,7 @@ def main():
         result = analyze(runs, settings)
         summary["result"] = result
         summary["checks"] = checks_for(result, settings)
+        summary["checks"].update(compare_prescriptions(result, settings))
         print_result(result)
     summary["checks"]["all runs succeeded"] = not failures
     print()
@@ -492,14 +574,13 @@ def main():
         print(f"{'OK  ' if ok else 'FAIL'} {name}")
     passed = all(summary["checks"].values())
     summary["passed"] = passed
-    with open(os.path.join(settings["datadir"],
-                           "lappi_mantysaari_summary.json"), "w") as f:
+    path = summary_path(settings["datadir"], args.prescription)
+    with open(path, "w") as f:
         json.dump(summary, f, indent=1)
     if runs:
-        plot(summary["result"], os.path.join(settings["datadir"],
-                                             "lappi_mantysaari.pdf"))
-    print(f"\n{'PASSED' if passed else 'FAILED'}; summary in "
-          f"{settings['datadir']}/lappi_mantysaari_summary.json")
+        plot(summary["result"],
+             summary_path(settings["datadir"], args.prescription, ".pdf"))
+    print(f"\n{'PASSED' if passed else 'FAILED'}; summary in {path}")
     return 0 if passed else 1
 
 

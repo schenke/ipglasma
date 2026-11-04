@@ -23,7 +23,7 @@ The main categories for changes in this file are:
 
 ### Added
 * Add the JIMWLK noise running coupling (`jimwlkRunningCoupling 2`): each step filters the Gaussian noise with $\sqrt{\alpha_s(k)}$ in momentum space, with $\alpha_s(k)$ of Eq. (39) of arXiv:1212.4825 at the lattice momentum, and the kernel carries no coupling. A unit test checks that it gives the same evolution as the square-root coupling when $\alpha_s$ is constant.
-* Add the validation setup `validations/jimwlk_running_coupling/`, which compares the two prescriptions in the setup of Fig. 6 of arXiv:1212.4825: it evolves the MV model with both on the lattice of the paper and checks that the noise coupling evolves the saturation scale more slowly.
+* `validations/jimwlk_step_size/lappi_mantysaari.py` runs either prescription (`--prescription sqrt` or `noise`): with `noise` it checks Q_s at zero step against the noise curve of Fig. 6 of arXiv:1212.4825 (BK and Fig. 11 are of the square-root coupling only), and with the summaries of both prescriptions in one `--datadir` that the noise coupling gives the smaller Q_s.
 
 ## 2.0.0
 

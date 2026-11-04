@@ -292,12 +292,12 @@ class JIMWLK {
 
   private:
     /**
-     * Fourier transforms the noise in \c xi2_ into \c xi_ and, with the
-     * noise running coupling, multiplies it there by \c sqrtAlphasNoise_
-     * and transforms it back into \c xi2_ (Eq. (24) of
-     * \cite Lappi:2012vw).
+     * With the noise running coupling, multiplies the Fourier transform of
+     * the noise in \c xi_ by \c sqrtAlphasNoise_ and transforms it back
+     * into \c xi2_ (Eq. (24) of \cite Lappi:2012vw); otherwise does
+     * nothing. Called by evolutionStep() after the forward FFT of the noise.
      */
-    void transformNoise();
+    void applyNoiseCoupling();
     /**
      * Shared by evolution()'s projectile and target passes: runs \p
      * steps Langevin steps for \p nucleus, logging progress and writing

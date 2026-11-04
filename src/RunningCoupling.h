@@ -5,6 +5,7 @@
 #ifndef SRC_RUNNINGCOUPLING_H_
 #define SRC_RUNNINGCOUPLING_H_
 
+#include <algorithm>
 #include <cmath>
 #include <vector>
 
@@ -26,11 +27,11 @@ class Parameters;
  * by every classical-evolution/hydro-output site that computes a
  * local-coupling factor from some \f$Q_s\f$- or \f$k_T\f$-like scale
  * (computeRunningCouplingGfactor() and its callers,
- * MyEigen::flowVelocity4DImpl()); distinct from JIMWLK::getAlphas(),
- * which uses its own formula and its own \c jimwlk.c/\c
- * jimwlk.LambdaQCD parameters for the separate small-x evolution
- * coupling, though it shares this \p nFlavors, since \f$N_f\f$ is the
- * same physical quantity in both.
+ * MyEigen::flowVelocity4DImpl()), and by JIMWLK::getAlphas() and
+ * JIMWLK::getAlphasMomentum(), which pass their own \c jimwlk.mu0/\c
+ * jimwlk.c/\c jimwlk.LambdaQCD for the separate small-x evolution
+ * coupling. The logarithm is evaluated without forming the powers, so
+ * it does not overflow at a small \p c.
  * \param[in] muZero \f$\mu_0\f$ [GeV], keeps \f$\alpha_s\f$ infrared
  * finite as \p scale \f$\to 0\f$.
  * \param[in] c Cutoff smoothness parameter.
@@ -43,12 +44,17 @@ class Parameters;
 inline double computeAlphaS(
     double muZero, double c, double lambdaQCD, int nFlavors, double scale) {
     const double beta0 = (11. * PhysConst::Nc - 2. * nFlavors) / 3.;
+    // the larger of the two powers is factored out of the logarithm: the
+    // powers themselves overflow a double for c below ~0.02
+    const double logMu = 2. * log(muZero / lambdaQCD);
+    if (scale == 0.) {
+        return 4. * M_PI / (beta0 * logMu);
+    }
+    const double logScale = 2. * log(scale / lambdaQCD);
     return 4. * M_PI
            / (beta0
-              * log(
-                  pow(pow(muZero / lambdaQCD, 2. / c)
-                          + pow(scale / lambdaQCD, 2. / c),
-                      c)));
+              * (std::max(logMu, logScale)
+                 + c * log1p(exp(-std::abs(logMu - logScale) / c))));
 }
 
 /**

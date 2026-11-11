@@ -579,6 +579,27 @@ bool qsSmeared(const Parameters &p) { return p.subnucleon.smearQs; }
  */
 bool posteriorUsed(const Parameters &p) { return p.posterior.used(); }
 
+/**
+ * The setting a condition of a parameter that a posterior file can set
+ * stands for, for the message about a column the input does not use.
+ * \param[in] condition The condition.
+ * \return E.g. `smearQs 1`; "" for another condition.
+ */
+std::string settingOf(Condition condition) {
+    if (condition == qsSmeared) return "smearQs 1";
+    if (condition == gaussianNucleons) return "nucleonModel gaussian";
+    if (condition == hotSpotNucleons) return "nucleonModel hotspots";
+    if (condition == hotSpotSubstructure) {
+        return "nucleonModel hotspots or strings";
+    }
+    if (condition == wsDeformParamsSet) return "useInputWSParams 1";
+    if (condition == constantColorCharge) return "useNucleus 0";
+    if (condition == fluctuatingX) return "useFluctuatingX 1";
+    if (condition == couplingRuns) return "runningCoupling 1";
+    if (condition == jimwlkEnabled) return "useJIMWLK 1";
+    return "";
+}
+
 /// Short name for the table entries.
 using P = Parameters;
 
@@ -1237,69 +1258,94 @@ std::vector<std::string> Parameters::loadPosteriorTable() {
     if (!file.is_open()) {
         return {"cannot open the posterior file " + fileName};
     }
+    std::vector<std::string> lines;
+    std::string line;
+    while (std::getline(file, line)) {
+        // skip a UTF-8 byte order mark written by some editors
+        if (lines.empty() && line.compare(0, 3, "\xEF\xBB\xBF") == 0) {
+            line.erase(0, 3);
+        }
+        lines.push_back(trimmed(line));
+    }
+    // The columns are named on the first line that does not start with #,
+    // unless that line is already a set (all parameters a posterior can set
+    // are numbers); then on the last # line before it. The # lines before
+    // the names are comments.
+    std::size_t first = 0;
+    while (first < lines.size()
+           && (lines[first].empty() || lines[first][0] == '#')) {
+        first++;
+    }
+    std::size_t header = lines.size();  // none
+    double number = 0.;
+    if (first < lines.size()
+        && !parseValue(commaSeparated(lines[first])[0], number)) {
+        header = first;
+    } else {
+        for (std::size_t i = first; i-- > 0;) {
+            if (!lines[i].empty()) {
+                header = i;
+                break;
+            }
+        }
+    }
+    if (header == lines.size()) {
+        return {fileName + " has no line naming the columns"};
+    }
+
     const std::vector<ParameterSpec> &specs = parameterTable();
     auto table = std::make_shared<PosteriorTable>();
     std::vector<std::string> errors;
-    std::size_t headerColumns = 0;
-    bool headerRead = false;
-    int malformedSets = 0;
-    std::string line;
-    for (int lineNumber = 1; std::getline(file, line); lineNumber++) {
-        std::string content = trimmed(line);
-        const std::string where =
-            fileName + ":" + std::to_string(lineNumber) + ": ";
-        if (!headerRead) {
-            if (content.empty()) continue;
-            // the first line names the columns, with an optional # in front
-            // and units in brackets after the names
-            headerRead = true;
-            if (content[0] == '#') content.erase(0, 1);
-            const std::vector<std::string> names = commaSeparated(content);
-            headerColumns = names.size();
-            for (const std::string &column : names) {
-                const std::string name = trimmed(column.substr(0, column.find('[')));
-                const auto spec = std::find_if(
-                    specs.begin(), specs.end(),
-                    [&name](const ParameterSpec &s) { return s.name == name; });
-                if (name.empty()) {
-                    errors.push_back(where + "a column has no name");
-                } else if (spec == specs.end()) {
-                    std::string message = where + "unknown parameter " + name;
-                    const std::string suggestion = closestName(name);
-                    if (!suggestion.empty())
-                        message += " (did you mean " + suggestion + "?)";
-                    errors.push_back(message);
-                } else if (!spec->posterior) {
-                    errors.push_back(
-                        where + name
-                        + " cannot be set by a posterior file, only the "
-                          "physical parameters can");
-                } else if (
-                    std::find(
-                        table->columns.begin(), table->columns.end(), name)
-                    != table->columns.end()) {
-                    errors.push_back(where + "column " + name + " appears twice");
-                } else {
-                    table->columns.push_back(name);
-                    table->specs.push_back(
-                        static_cast<std::size_t>(spec - specs.begin()));
-                }
-            }
-            continue;
+    // units in brackets after the names
+    std::string content = lines[header];
+    if (content[0] == '#') content.erase(0, 1);
+    const std::vector<std::string> names = commaSeparated(content);
+    std::string where = fileName + ":" + std::to_string(header + 1) + ": ";
+    for (const std::string &column : names) {
+        const std::string name = trimmed(column.substr(0, column.find('[')));
+        const auto spec = std::find_if(
+            specs.begin(), specs.end(),
+            [&name](const ParameterSpec &s) { return s.name == name; });
+        if (name.empty()) {
+            errors.push_back(where + "a column has no name");
+        } else if (spec == specs.end()) {
+            std::string message = where + "unknown parameter " + name;
+            const std::string suggestion = closestName(name);
+            if (!suggestion.empty())
+                message += " (did you mean " + suggestion + "?)";
+            errors.push_back(message);
+        } else if (!spec->posterior) {
+            errors.push_back(
+                where + name
+                + " cannot be set by a posterior file, only the physical "
+                  "parameters can");
+        } else if (
+            std::find(table->columns.begin(), table->columns.end(), name)
+            != table->columns.end()) {
+            errors.push_back(where + "column " + name + " appears twice");
+        } else {
+            table->columns.push_back(name);
+            table->specs.push_back(
+                static_cast<std::size_t>(spec - specs.begin()));
         }
-        if (content.empty() || content[0] == '#') continue;
-        std::vector<std::string> values = commaSeparated(content);
-        if (values.size() != headerColumns) {
+    }
+
+    int malformedSets = 0;
+    for (std::size_t i = header + 1; i < lines.size(); i++) {
+        if (lines[i].empty() || lines[i][0] == '#') continue;
+        std::vector<std::string> values = commaSeparated(lines[i]);
+        if (values.size() != names.size()) {
             if (++malformedSets <= reportedPosteriorSets) {
                 errors.push_back(
-                    where + std::to_string(values.size())
-                    + " values, but the first line names "
-                    + std::to_string(headerColumns) + " columns");
+                    fileName + ":" + std::to_string(i + 1) + ": "
+                    + std::to_string(values.size()) + " values, but line "
+                    + std::to_string(header + 1) + " names "
+                    + std::to_string(names.size()) + " columns");
             }
             continue;
         }
         table->sets.push_back(std::move(values));
-        table->lines.push_back(lineNumber);
+        table->lines.push_back(static_cast<int>(i + 1));
     }
     if (malformedSets > reportedPosteriorSets) {
         errors.push_back(
@@ -1307,9 +1353,7 @@ std::vector<std::string> Parameters::loadPosteriorTable() {
             + std::to_string(malformedSets - reportedPosteriorSets)
             + " more sets with the wrong number of values");
     }
-    if (!headerRead) {
-        errors.push_back(fileName + " has no line naming the columns");
-    } else if (errors.empty() && table->sets.empty()) {
+    if (errors.empty() && table->sets.empty()) {
         errors.push_back(fileName + " contains no parameter sets");
     }
     if (errors.empty()) posteriorTable_ = std::move(table);
@@ -1386,6 +1430,8 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
                 source + ":" + std::to_string(oldEntry->line) + ": " + oldName
                 + " was renamed to " + spec.name);
             reportedOldKeys.push_back(oldName);
+            // read, under its old name
+            if (column >= 0) columnRead[column] = true;
             continue;
         } else if (column >= 0) {
             // set from the posterior file below
@@ -1420,10 +1466,15 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     if (posteriorTable_) {
         for (std::size_t column = 0; column < columnRead.size(); column++) {
             if (columnRead[column]) continue;
+            const std::string &name = posteriorTable_->columns[column];
+            const std::string setting =
+                settingOf(table[posteriorTable_->specs[column]].condition);
             errors.push_back(
-                posterior.file + ": column "
-                + posteriorTable_->columns[column]
-                + " sets a parameter that this input does not use");
+                posterior.file + ": column " + name
+                + (setting.empty()
+                       ? " sets a parameter that this input does not use"
+                       : " is only used with " + setting
+                             + ", which this input does not set"));
         }
     }
 

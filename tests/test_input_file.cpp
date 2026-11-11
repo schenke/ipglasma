@@ -972,7 +972,8 @@ TEST_CASE(
             inputWith(
                 strings, "posteriorFile", shippedPosterior("posterior_Nq3.csv")),
             "posteriorSet", "0")),
-        "column Nq sets a parameter that this input does not use"));
+        "column Nq is only used with nucleonModel hotspots, which this input "
+        "does not set"));
 }
 
 TEST_CASE(
@@ -1109,9 +1110,14 @@ TEST_CASE(
           Case {"m [GeV], \n0.3, 4\n", ":1: a column has no name"},
           Case {
               "m, BG\n0.3\n",
-              ":2: 1 values, but the first line names 2 columns"},
+              ":2: 1 values, but line 1 names 2 columns"},
           Case {"m\n", " contains no parameter sets"},
-          Case {"\n", " has no line naming the columns"}}) {
+          Case {"\n", " has no line naming the columns"},
+          Case {"0.3, 4\n", " has no line naming the columns"},
+          // a comment before the names is not the names
+          Case {
+              "# from arXiv:2502.05138\n0.3\n",
+              ":1: unknown parameter from arXiv:2502.05138"}}) {
         CAPTURE(c.contents);
         TemporaryFile file("ipglasma_test_posterior.csv", c.contents);
         const std::vector<std::string> errors =
@@ -1122,6 +1128,38 @@ TEST_CASE(
     CHECK(anyContains(
         readErrors(exampleInputWithPosterior("no_such_posterior.csv")),
         "cannot open the posterior file no_such_posterior.csv"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: comment lines and a byte order mark before the "
+    "names of the columns of a posterior file") {
+    for (const char *contents :
+         {"# sets of a posterior\n#\n# m [GeV], BG [GeV^-2]\n0.3, 4\n",
+          "# sets of a posterior\n\nm, BG\n# the first set\n0.3, 4\n",
+          "\xEF\xBB\xBF# m [GeV], BG [GeV^-2]\n0.3, 4\n",
+          "\xEF\xBB\xBFm, BG\n0.3, 4\n"}) {
+        CAPTURE(contents);
+        TemporaryFile file("ipglasma_test_posterior.csv", contents);
+        Parameters param;
+        const std::vector<std::string> errors = param.readInput(
+            inputFromText(exampleInputWithPosterior(file.name())));
+        for (const std::string &error : errors) CAPTURE(error);
+        REQUIRE(errors.empty());
+        CHECK(param.subnucleon.m == 0.3);
+        CHECK(param.subnucleon.BG == 4.);
+    }
+}
+
+TEST_CASE(
+    "Parameters::readInput: an old name of a parameter of a posterior column "
+    "is only reported as renamed") {
+    TemporaryFile file("ipglasma_test_posterior.csv", "UVDamp\n0.1\n");
+    std::string text = exampleInputWithPosterior(file.name());
+    text.replace(text.find("\nUVDamp "), 8, "\nUVdamp ");
+    const std::vector<std::string> errors = readErrors(text);
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(anyContains(errors, "UVdamp was renamed to UVDamp"));
+    CHECK_FALSE(anyContains(errors, "column UVDamp"));
 }
 
 TEST_CASE(
@@ -1154,8 +1192,37 @@ TEST_CASE(
         readErrors(inputWith(
             exampleInputWithPosterior(hotSpots.name()), "nucleonModel",
             "gaussian")),
-        "ipglasma_test_posterior.csv: column BGq sets a parameter that this "
-        "input does not use"));
+        "ipglasma_test_posterior.csv: column BGq is only used with nucleonModel "
+        "hotspots or strings, which this input does not set"));
+
+    // the Woods-Saxon parameters need useInputWSParams 1 (the example input
+    // has 0)
+    for (const char *name :
+         {"radiusWS", "diffusenessWS", "beta2", "beta3", "beta4", "gamma",
+          "deltaRnp", "deltaAnp"}) {
+        CAPTURE(name);
+        TemporaryFile woodsSaxon(
+            "ipglasma_test_posterior_ws.csv",
+            std::string(name) + "\n0.5\n");
+        const std::string text = exampleInputWithPosterior(woodsSaxon.name());
+        CHECK(anyContains(
+            readErrors(text),
+            "column " + std::string(name)
+                + " is only used with useInputWSParams 1, which this input "
+                  "does not set"));
+        const std::vector<std::string> errors =
+            readErrors(inputWith(text, "useInputWSParams", "1"));
+        for (const std::string &error : errors) CAPTURE(error);
+        CHECK(errors.empty());
+    }
+
+    // the shipped tables set smearingWidth, which needs smearQs 1
+    CHECK(anyContains(
+        readErrors(inputWith(
+            exampleInputWithPosterior(shippedPosterior("posterior_Nq3.csv")),
+            "smearQs", "0")),
+        "column smearingWidth is only used with smearQs 1, which this input "
+        "does not set"));
 
     // jimwlkAlphaS 0 is the running coupling of JIMWLK, > 0 a fixed one
     TemporaryFile coupling(

@@ -12,6 +12,7 @@
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <cstddef>
 #include <fstream>
 #include <functional>
 #include <initializer_list>
@@ -27,6 +28,7 @@
 #include "InputFile.h"
 #include "Parameters.h"
 #include "PhysConst.h"
+#include "Random.h"
 
 namespace {
 
@@ -790,15 +792,12 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check([](const double &v) {
                 return v > -1. ? "" : "must be larger than -1";
             }),
-        // hot spots (also the ends of the strings of `strings`)
-        // the hot-spot width is 0.09 plus a log-normal number with mean
-        // BGq - 0.09, which needs a positive mean
+        // hot spots (also the ends of the strings of `strings`); with
+        // BGqVar > 0 also larger than 0.09 (validationErrors())
         param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
             .onlyIf(hotSpotSubstructure)
             .posterior()
-            .check([](const double &v) {
-                return v > 0.09 ? "" : "must be larger than 0.09 (GeV^-2)";
-            }),
+            .check(positive()),
         param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
             .onlyIf(hotSpotSubstructure)
             .posterior()
@@ -1301,12 +1300,20 @@ std::vector<std::string> Parameters::loadPosteriorTable() {
     if (content[0] == '#') content.erase(0, 1);
     const std::vector<std::string> names = commaSeparated(content);
     std::string where = fileName + ":" + std::to_string(header + 1) + ": ";
-    for (const std::string &column : names) {
+    // the column of the relative probabilities of the sets, if any
+    std::size_t weightColumn = names.size();
+    for (std::size_t index = 0; index < names.size(); index++) {
+        const std::string &column = names[index];
         const std::string name = trimmed(column.substr(0, column.find('[')));
         const auto spec = std::find_if(
             specs.begin(), specs.end(),
             [&name](const ParameterSpec &s) { return s.name == name; });
-        if (name.empty()) {
+        if (name == "weight") {
+            if (weightColumn != names.size()) {
+                errors.push_back(where + "column weight appears twice");
+            }
+            weightColumn = index;
+        } else if (name.empty()) {
             errors.push_back(where + "a column has no name");
         } else if (spec == specs.end()) {
             std::string message = where + "unknown parameter " + name;
@@ -1344,6 +1351,21 @@ std::vector<std::string> Parameters::loadPosteriorTable() {
             }
             continue;
         }
+        if (weightColumn != names.size()) {
+            const std::string &text = values[weightColumn];
+            double weight = 0.;
+            const std::string at = fileName + ":" + std::to_string(i + 1) + ": ";
+            if (!parseValue(text, weight)) {
+                errors.push_back(at + "weight '" + text + "' is not a number");
+            } else if (weight < 0.) {
+                errors.push_back(at + "weight " + text + " is negative");
+            }
+            const double sum = table->cumulativeWeights.empty()
+                                   ? 0.
+                                   : table->cumulativeWeights.back();
+            table->cumulativeWeights.push_back(sum + weight);
+            values.erase(values.begin() + static_cast<long>(weightColumn));
+        }
         table->sets.push_back(std::move(values));
         table->lines.push_back(static_cast<int>(i + 1));
     }
@@ -1355,6 +1377,10 @@ std::vector<std::string> Parameters::loadPosteriorTable() {
     }
     if (errors.empty() && table->sets.empty()) {
         errors.push_back(fileName + " contains no parameter sets");
+    } else if (
+        errors.empty() && !table->cumulativeWeights.empty()
+        && !(table->cumulativeWeights.back() > 0.)) {
+        errors.push_back(fileName + ": the weights of the sets add up to 0");
     }
     if (errors.empty()) posteriorTable_ = std::move(table);
     return errors;
@@ -1368,6 +1394,20 @@ std::string Parameters::applyPosteriorValues(std::size_t set) {
         if (!problem.empty()) return table.columns[column] + " " + problem;
     }
     return "";
+}
+
+int Parameters::drawPosteriorSet(Random &generator) const {
+    if (posteriorTable_ && !posteriorTable_->cumulativeWeights.empty()) {
+        const std::vector<double> &sums = posteriorTable_->cumulativeWeights;
+        // the first set whose sum exceeds a uniform number below the total,
+        // which is never one of weight 0
+        const double u = generator.genrand64_real2() * sums.back();
+        const auto found = std::upper_bound(sums.begin(), sums.end(), u);
+        return static_cast<int>(
+            std::min(found - sums.begin(),
+                     static_cast<std::ptrdiff_t>(sums.size()) - 1));
+    }
+    return static_cast<int>(generator.genrand64_int63() % 2147483647ULL);
 }
 
 void Parameters::applyPosteriorSet(int set) {

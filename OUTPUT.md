@@ -223,7 +223,7 @@ Little-endian by definition:
 |---|---|
 | 8 | magic `IPGGEO1\0` |
 | 8 | length M of the JSON metadata, `uint64` |
-| M | JSON metadata: `format`, `version`, `dtype` (`<f8`), `nucleus` (`projectile` or `target`), `species`, `nucleons`, `N`, `L_fm`, `g`, `QsMuRatio`, `blocks`, `native_site_index` |
+| M | JSON metadata: `format`, `version`, `dtype` (`<f8`), `nucleus` (`projectile` or `target`), `species`, `nucleons`, `N`, `L_fm`, `g`, `QsMuRatio`, `blocks`, `native_site_index`, and the event that wrote the file: `event_id` and its posterior set, `posterior_file` (`none` without one) and `posterior_set` (`-1` without one) |
 | nucleons × 4 × 8 | `float64` x, y, z [fm] and proton (1 or 0) of each nucleon, centered at the origin |
 | N² × 8 | `float64` g²μ² of each site, as stored on the lattice, sites `ix` outer and `iy` inner |
 | N² × 8 | `float64` T_p [GeV²] (the summed nucleon thickness, as stored on the lattice) of each site, in the same order |

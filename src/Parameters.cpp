@@ -79,6 +79,18 @@ std::vector<std::string> Parameters::combinationErrors() const {
         fail(message);
     }
 
+    // a fluctuating hot-spot width is 0.09 plus a log-normal number with
+    // mean BGq - 0.09, which needs a positive mean
+    if ((subnucleon.nucleonModel == "hotspots"
+         || subnucleon.nucleonModel == "strings")
+        && subnucleon.BGqVar > 0. && subnucleon.BGq <= 0.09) {
+        std::ostringstream message;
+        message << "BGq (" << subnucleon.BGq
+                << ") must be larger than 0.09 GeV^-2 with BGqVar > 0 (the "
+                   "fluctuating hot-spot width is never below 0.09 GeV^-2)";
+        fail(message);
+    }
+
     if (jimwlk.saveSnapshots && wilsonLines.writeWilsonLines == 0) {
         std::ostringstream message;
         message << "jimwlkSaveSnapshots = 1 requires writing Wilson lines "

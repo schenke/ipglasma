@@ -66,6 +66,21 @@ std::string jsonValue(const std::string &json, const std::string &key) {
     return json.substr(begin, end - begin);
 }
 
+/**
+ * Escapes the quotes and backslashes of a text for a JSON string, so that a
+ * file name cannot end the string (jsonValue() finds the first `"key":`).
+ * \param[in] text The text.
+ * \return The escaped text, without the enclosing quotes.
+ */
+std::string jsonEscaped(const std::string &text) {
+    std::string escaped;
+    for (const char c : text) {
+        if (c == '"' || c == '\\') escaped += '\\';
+        escaped += c;
+    }
+    return escaped;
+}
+
 /// Magic string at the start of a geometry file.
 const char kGeometryMagic[8] = {'I', 'P', 'G', 'G', 'E', 'O', '1', '\0'};
 
@@ -498,7 +513,14 @@ void WilsonLineIO::writeGeometry(
              << "\"QsMuRatio\":" << param->colorCharge.QsMuRatio << ","
              << "\"blocks\":[\"nucleons[nucleons][x_fm,y_fm,z_fm,proton]\","
                 "\"g2mu2[N*N]\",\"Tp_GeV2[N*N]\"],"
-             << "\"native_site_index\":\"pos=x*N+y\"}";
+             << "\"native_site_index\":\"pos=x*N+y\","
+             // which event wrote the file, with which posterior set (-1
+             // without a posterior file); last, after the keys
+             // readGeometry() looks up
+             << "\"event_id\":" << param->event.eventId << ","
+             << "\"posterior_file\":\"" << jsonEscaped(param->posterior.file)
+             << "\","
+             << "\"posterior_set\":" << param->event.posteriorSet << "}";
     const std::string metadataString = metadata.str();
 
     const std::string name = geometryFileName(param, nucleus);

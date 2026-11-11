@@ -201,8 +201,7 @@ int main(int argc, char *argv[]) {
             // sample the parameters from the posterior distribution
             int posteriorSet = param->posterior.set;
             if (posteriorSet == -1) {
-                posteriorSet =
-                    static_cast<int>(random->genrand64_int63() % 2147483647ULL);
+                posteriorSet = param->drawPosteriorSet(*random);
             }
             param->applyPosteriorSet(posteriorSet);
         }

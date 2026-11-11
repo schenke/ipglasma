@@ -612,3 +612,30 @@ TEST_CASE("HotSpotNucleon: omega != 1 gives <b^2> = (1 + omega) BG") {
             < 5. * 2. * omega * std::sqrt(varX / samples));
     }
 }
+
+TEST_CASE(
+    "HotSpotNucleon: with BGqVar 0 the hot spots have exactly the width BGq, "
+    "also below 0.09, with the random numbers of a fluctuating width") {
+    for (const double BGq : {0.05, 0.09, 0.3}) {
+        CAPTURE(BGq);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.BGq = BGq;
+        Random random;
+        random.init_genrand64(23ULL);
+        const HotSpotConfiguration fixed =
+            HotSpotNucleon(param).sampleHotSpots(random);
+        CHECK(fixed.BGq == BGq);
+        // a fluctuating width draws one random number, so the positions are
+        // those of a tiny BGqVar
+        param.subnucleon.BGq = 0.3;
+        param.subnucleon.BGqVar = 1e-12;
+        Random same;
+        same.init_genrand64(23ULL);
+        const HotSpotConfiguration fluctuating =
+            HotSpotNucleon(param).sampleHotSpots(same);
+        CHECK(fluctuating.BGq == doctest::Approx(0.3));
+        CHECK(fluctuating.x == fixed.x);
+        CHECK(fluctuating.y == fixed.y);
+    }
+}

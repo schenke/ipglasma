@@ -68,6 +68,37 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::validationErrors: BGq below 0.09 only without "
+    "fluctuations of the hot-spot width") {
+    // the fluctuating width is 0.09 plus a log-normal number with mean
+    // BGq - 0.09
+    Parameters param;
+    makeValidBaseline(param);
+    param.subnucleon.BGq = 0.05;
+    param.subnucleon.BGqVar = 0.;
+    for (const char *model : {"hotspots", "strings"}) {
+        CAPTURE(model);
+        param.subnucleon.nucleonModel = model;
+        param.subnucleon.BGqVar = 0.;
+        CHECK(param.validationErrors().empty());
+        param.subnucleon.BGqVar = 0.01;
+        const std::vector<std::string> errors = param.validationErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(
+            errors[0].rfind(
+                "BGq (0.05) must be larger than 0.09 GeV^-2 with BGqVar > 0",
+                0)
+            == 0);
+    }
+    param.subnucleon.BGq = 0.091;
+    CHECK(param.validationErrors().empty());
+    // gaussian nucleons have no hot spots
+    param.subnucleon.BGq = 0.05;
+    param.subnucleon.nucleonModel = "gaussian";
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
     "Parameters::validationErrors: rejects a posterior file when reading "
     "Wilson lines") {
     // the event comes from the files, so a posterior set would not change it

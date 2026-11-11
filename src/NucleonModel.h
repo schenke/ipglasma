@@ -223,9 +223,10 @@ class HotSpotNucleon : public NucleonModel {
     int sampleNumberOfPartons(Random &random) const;
     /**
      * Samples the hot spots of one nucleon, in this order: their common
-     * width (on average `BGq` and exactly `BGq` with `BGqVar` 0, never
-     * below 0.09 GeV\f$^{-2}\f$: 0.09 GeV\f$^{-2}\f$ plus a log-normal
-     * number with mean `BGq` - 0.09 and variance `BGqVar`), their number,
+     * width (exactly `BGq` with `BGqVar` 0; otherwise 0.09 GeV\f$^{-2}\f$
+     * plus a log-normal number with mean `BGq` - 0.09 and variance
+     * `BGqVar`, so on average `BGq` and never below 0.09
+     * GeV\f$^{-2}\f$), their number,
      * their positions
      * (for `omega 1` in 3D, each coordinate Gaussian with variance `BG`;
      * otherwise in the transverse plane at radius
@@ -244,7 +245,8 @@ class HotSpotNucleon : public NucleonModel {
     /// Width \f$B_G\f$ of the hot-spot position distribution
     /// [GeV\f$^{-2}\f$].
     double BG_;
-    /// Mean hot-spot width \f$B_q\f$ [GeV\f$^{-2}\f$], at least 0.09.
+    /// Mean hot-spot width \f$B_q\f$ [GeV\f$^{-2}\f$]: positive, and larger
+    /// than 0.09 with BGqVar_ > 0.
     double BGq_;
     /// Variance of the log-normal hot-spot width distribution.
     double BGqVar_;

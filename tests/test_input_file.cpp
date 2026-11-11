@@ -2,6 +2,7 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <cmath>
 #include <cstdio>
 #include <cstdlib>
 #include <filesystem>
@@ -13,6 +14,7 @@
 
 #include "InputFile.h"
 #include "Parameters.h"
+#include "Random.h"
 #include "doctest.h"
 
 namespace {
@@ -1163,6 +1165,75 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::drawPosteriorSet: the column weight of a posterior file "
+    "gives the probability of each set") {
+    TemporaryFile file(
+        "ipglasma_test_posterior.csv",
+        "# m [GeV], weight, BG\n0.3, 1, 4.0\n0.25, 0, 4.5\n0.35, 3, 3.9\n");
+    Parameters param;
+    const std::vector<std::string> errors =
+        param.readInput(inputFromText(exampleInputWithPosterior(file.name())));
+    for (const std::string &error : errors) CAPTURE(error);
+    REQUIRE(errors.empty());
+    // weight is no parameter: the parameters of the sets are m and BG
+    CHECK(param.subnucleon.m == 0.3);
+    CHECK(param.subnucleon.BG == 4.0);
+    param.applyPosteriorSet(2);
+    CHECK(param.subnucleon.m == 0.35);
+    CHECK(param.subnucleon.BG == 3.9);
+    std::ostringstream written;
+    param.writeInputParameters(written);
+    CHECK(written.str().find("weight") == std::string::npos);
+
+    Random random;
+    random.init_genrand64(17ULL);
+    const int draws = 40000;
+    std::vector<int> count(3, 0);
+    for (int i = 0; i < draws; i++) count.at(param.drawPosteriorSet(random))++;
+    CHECK(count[1] == 0);
+    // 1/4 of the draws, within 5 standard deviations
+    CHECK(std::abs(count[0] - draws / 4.) < 5. * std::sqrt(draws * 3. / 16.));
+    CHECK(count[0] + count[2] == draws);
+}
+
+TEST_CASE(
+    "Parameters::drawPosteriorSet: without weights, the draw of earlier "
+    "versions") {
+    TemporaryFile file("ipglasma_test_posterior.csv", "m\n0.3\n0.25\n");
+    Parameters param;
+    REQUIRE(param.readInput(inputFromText(exampleInputWithPosterior(file.name())))
+                .empty());
+    Random random, reference;
+    random.init_genrand64(5ULL);
+    reference.init_genrand64(5ULL);
+    for (int i = 0; i < 10; i++) {
+        CHECK(param.drawPosteriorSet(random)
+              == static_cast<int>(reference.genrand64_int63() % 2147483647ULL));
+    }
+}
+
+TEST_CASE(
+    "Parameters::readInput: the weights of a posterior file are numbers, not "
+    "negative, and not all 0") {
+    struct Case {
+        const char *contents;
+        const char *error;
+    };
+    for (const Case &c :
+         {Case {"m, weight\n0.3, x\n", ":2: weight 'x' is not a number"},
+          Case {"m, weight\n0.3, -1\n", ":2: weight -1 is negative"},
+          Case {"m, weight\n0.3, 0\n0.4, 0\n", ": the weights of the sets add up to 0"},
+          Case {"weight, m, weight\n1, 0.3, 1\n", ":1: column weight appears twice"}}) {
+        CAPTURE(c.contents);
+        TemporaryFile file("ipglasma_test_posterior.csv", c.contents);
+        const std::vector<std::string> errors =
+            readErrors(exampleInputWithPosterior(file.name()));
+        for (const std::string &error : errors) CAPTURE(error);
+        CHECK(anyContains(errors, c.error));
+    }
+}
+
+TEST_CASE(
     "Parameters::readInput: every set of a posterior file passes the checks "
     "of its values") {
     TemporaryFile file(
@@ -1292,8 +1363,7 @@ TEST_CASE(
     };
     for (const Case &c :
          {Case {"BG", "0", "BG 0: must be positive"},
-          Case {"BGq", "0.09", "BGq 0.09: must be larger than 0.09"},
-          Case {"BGq", "0.05", "BGq 0.05: must be larger than 0.09"},
+          Case {"BGq", "0", "BGq 0: must be positive"},
           Case {"BGqVar", "-0.1", "BGqVar -0.1: must not be negative"},
           Case {"dqMin", "-0.2", "dqMin -0.2: must not be negative"},
           Case {
@@ -1307,7 +1377,8 @@ TEST_CASE(
                 inputWith(exampleInputWith(c.key, c.value), "smearQs", "1")),
             c.error));
     }
-    CHECK(readErrors(exampleInputWith("BGq", "0.091")).empty());
+    // below 0.09 with BGqVar 0 (the example input), see validationErrors()
+    CHECK(readErrors(exampleInputWith("BGq", "0.05")).empty());
 }
 
 TEST_CASE(

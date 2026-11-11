@@ -15,6 +15,7 @@
 #include "PrettyOstream.h"
 
 class InputFile;
+class Random;
 
 /// Lattice geometry.
 struct LatticeParameters {
@@ -187,11 +188,13 @@ struct PosteriorParameters {
     /// keys of the columns, each optionally followed by its unit in
     /// brackets (`# m [GeV], BG [GeV^-2], ...`), after optional `#`
     /// comment lines; every line after it is one set. Its values replace
-    /// those of the input file. Not with Wilson
+    /// those of the input file. An optional column `weight` gives the
+    /// relative probability of each set for `posteriorSet -1`. Not with Wilson
     /// lines read from files (readInitialWilsonLines 1 or 2).
     std::string file = "none";
     /// Index of the set used, modulo the number of sets; `-1` draws a
-    /// random set every event.
+    /// random set every event, with the probabilities of the column
+    /// `weight` if the file has one.
     int set = 0;
     /// Whether the parameters come from a posterior file.
     /// \return Whether \c file is not `none`.
@@ -220,7 +223,8 @@ struct SubnucleonParameters {
     /// BGq with BGqVar = 0, otherwise fluctuating around the mean BGq but
     /// never below 0.09 GeV\f$^{-2}\f$ (0.09 GeV\f$^{-2}\f$ plus a
     /// log-normal number with mean BGq - 0.09 and variance BGqVar). So BGq
-    /// must be larger than 0.09 GeV\f$^{-2}\f$.
+    /// must be positive, and larger than 0.09 GeV\f$^{-2}\f$ with BGqVar >
+    /// 0.
     double BGq = 0.;
     /// Variance [GeV\f$^{-4}\f$] of the hot-spot width from nucleon to
     /// nucleon (see BGq).
@@ -570,6 +574,9 @@ struct PosteriorTable {
     std::vector<std::vector<std::string>> sets;
     /// Line in the file of each set.
     std::vector<int> lines;
+    /// Sums of the weights of the sets up to each set (column `weight`);
+    /// empty without weights.
+    std::vector<double> cumulativeWeights;
 };
 
 /**
@@ -652,6 +659,15 @@ class Parameters {
      * stored in \c event.posteriorSet.
      */
     void applyPosteriorSet(int set);
+    /**
+     * Draws the posterior set of an event for `posteriorSet -1`: with
+     * probability proportional to the column `weight` of the posterior
+     * file, or without one any set with the same probability (to be taken
+     * modulo the number of sets by applyPosteriorSet()).
+     * \param[in,out] generator Random-number source.
+     * \return Index of the set.
+     */
+    int drawPosteriorSet(Random &generator) const;
 
     /**
      * Sets every input parameter from \p input, using the parameter

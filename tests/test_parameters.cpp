@@ -68,6 +68,30 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::validationErrors: rejects a posterior file when reading "
+    "Wilson lines") {
+    // the event comes from the files, so a posterior set would not change it
+    Parameters param;
+    makeValidBaseline(param);
+    param.random.seed = 7;
+    param.posterior.file = "posterior.csv";
+    CHECK(param.validationErrors().empty());
+    for (int format : {1, 2}) {
+        CAPTURE(format);
+        param.wilsonLines.readInitialWilsonLines = format;
+        const std::vector<std::string> errors = param.validationErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(
+            errors[0]
+            == "posteriorFile posterior.csv cannot be used when reading "
+               "Wilson lines (readInitialWilsonLines "
+               + std::to_string(format) + "): the event comes from the files");
+    }
+    param.posterior.file = "none";
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
     "Parameters::validationErrors: rejects a missing Wilson-line directory "
     "only when Wilson lines are written") {
     Parameters param;

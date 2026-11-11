@@ -186,7 +186,8 @@ struct PosteriorParameters {
     /// CSV file of the parameter sets, or `none`. Its first line names the
     /// input keys of the columns, each optionally followed by its unit in
     /// brackets (`# m [GeV], BG [GeV^-2], ...`); every other line is one
-    /// set. Its values replace those of the input file.
+    /// set. Its values replace those of the input file. Not with Wilson
+    /// lines read from files (readInitialWilsonLines 1 or 2).
     std::string file = "none";
     /// Index of the set used, modulo the number of sets; `-1` draws a
     /// random set every event.

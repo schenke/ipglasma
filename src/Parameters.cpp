@@ -67,6 +67,18 @@ std::vector<std::string> Parameters::combinationErrors() const {
         fail(message);
     }
 
+    // the event comes from the files, so the parameters of a posterior set
+    // would have no effect (and the geometry files set QsMuRatio)
+    if (posterior.used() && wilsonLines.readInitialWilsonLines != 0) {
+        std::ostringstream message;
+        message << "posteriorFile " << posterior.file
+                << " cannot be used when reading Wilson lines "
+                   "(readInitialWilsonLines "
+                << wilsonLines.readInitialWilsonLines
+                << "): the event comes from the files";
+        fail(message);
+    }
+
     if (jimwlk.saveSnapshots && wilsonLines.writeWilsonLines == 0) {
         std::ostringstream message;
         message << "jimwlkSaveSnapshots = 1 requires writing Wilson lines "

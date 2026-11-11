@@ -7,8 +7,8 @@ omega 1
 UVDamp 0.
 jacobianMass 0.35
 g 1.
-subNucleonParamType 0
-subNucleonParamSet -1
+posteriorFile none
+posteriorSet -1
 BG 4.
 BGq 0.3
 BGqVar 0.0

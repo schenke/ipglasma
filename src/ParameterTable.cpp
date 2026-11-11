@@ -12,10 +12,12 @@
 #include <algorithm>
 #include <cctype>
 #include <charconv>
+#include <fstream>
 #include <functional>
 #include <initializer_list>
 #include <limits>
 #include <map>
+#include <memory>
 #include <ostream>
 #include <sstream>
 #include <string>
@@ -42,6 +44,9 @@ struct ParameterSpec {
     /// true for the parameters read so far; otherwise its key is accepted
     /// but ignored.
     Condition condition = nullptr;
+    /// Whether a posterior file can set the parameter (see
+    /// Param::posterior()).
+    bool posterior = false;
     /// Parses \p text into \p param; returns an error message, or "" on
     /// success.
     std::function<std::string(Parameters &param, const std::string &text)>
@@ -158,6 +163,16 @@ class Param {
         return *this;
     }
     /**
+     * Lets a posterior file set the parameter, as a column of its sets;
+     * only for physical parameters, not for those of the lattice, the
+     * time steps, the collision system or the switches between models.
+     * \return This builder.
+     */
+    Param &posterior() {
+        posterior_ = true;
+        return *this;
+    }
+    /**
      * Adds a check that every value of the parameter must pass.
      * \param[in] check The check, e.g. positive() or even().
      * \return This builder.
@@ -177,6 +192,7 @@ class Param {
         spec.name = name_;
         spec.defaultValue = defaultValue_;
         spec.condition = condition_;
+        spec.posterior = posterior_;
         spec.apply = [set = set_, checks = checks_](
                          Parameters &p, const std::string &text) {
             T value {};
@@ -201,6 +217,8 @@ class Param {
     std::string defaultValue_;
     /// Condition for reading the parameter; `nullptr` to always read it.
     Condition condition_ = nullptr;
+    /// Whether a posterior file can set the parameter.
+    bool posterior_ = false;
     /// Stores a parsed value in its field.
     std::function<void(Parameters &, const T &)> set_;
     /// Writes the field's value in input-file syntax.
@@ -548,51 +566,18 @@ bool hotSpotSubstructure(const Parameters &p) {
 }
 
 /**
- * Condition for the parameters a posterior parameter set replaces.
- * \param[in] p The parameters read so far.
- * \return Whether `subNucleonParamType` is 0 (no posterior set).
- */
-bool inputParameters(const Parameters &p) {
-    return p.subnucleon.subNucleonParamType == 0;
-}
-
-/**
  * Condition for the width of the Q_s fluctuations.
  * \param[in] p The parameters read so far.
- * \return Whether `smearQs` is set and no posterior set replaces the
- * width.
+ * \return Whether `smearQs` is set.
  */
-bool smearingWidthFromInput(const Parameters &p) {
-    return inputParameters(p) && p.subnucleon.smearQs;
-}
+bool qsSmeared(const Parameters &p) { return p.subnucleon.smearQs; }
 
 /**
- * Condition for the parameters of a posterior parameter set.
+ * Condition for the index of the posterior set.
  * \param[in] p The parameters read so far.
- * \return Whether `subNucleonParamType` selects a posterior set.
+ * \return Whether `posteriorFile` is not `none`.
  */
-bool posteriorParameters(const Parameters &p) {
-    return p.subnucleon.subNucleonParamType != 0;
-}
-
-/**
- * Condition for the hot-spot parameters a posterior set replaces.
- * \param[in] p The parameters read so far.
- * \return Whether `nucleonModel` is `hotspots` or `strings` without a
- * posterior set.
- */
-bool hotSpotsFromInput(const Parameters &p) {
-    return hotSpotSubstructure(p) && inputParameters(p);
-}
-
-/**
- * Condition for the number of hot spots, which a posterior set replaces.
- * \param[in] p The parameters read so far.
- * \return Whether `nucleonModel` is `hotspots` without a posterior set.
- */
-bool numberOfHotSpotsFromInput(const Parameters &p) {
-    return hotSpotNucleons(p) && inputParameters(p);
-}
+bool posteriorUsed(const Parameters &p) { return p.posterior.used(); }
 
 /// Short name for the table entries.
 using P = Parameters;
@@ -629,6 +614,16 @@ const std::vector<ParameterSpec> &parameterTable() {
             "inverseQsForMaxTime", &P::evolution,
             &EvolutionParameters::inverseQsForMaxTime),
 
+        // posterior parameter sets; before every parameter marked
+        // posterior(), since its columns need not be in the input
+        param("posteriorFile", &P::posterior, &PosteriorParameters::file)
+            .optional("none"),
+        param("posteriorSet", &P::posterior, &PosteriorParameters::set)
+            .onlyIf(posteriorUsed)
+            .check([](const int &v) {
+                return v >= -1 ? "" : "must be -1 (random) or a set index >= 0";
+            }),
+
         // random seed
         param("seed", &P::random, &RandomParameters::seed)
             .check(atLeast(-1LL, " (-1 draws a random seed)")),
@@ -640,6 +635,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         // without a cross section no nucleons collide, and the impact
         // parameter would be resampled forever
         param("sigmaNN", &P::collision, &CollisionParameters::sigmaNN)
+            .posterior()
             .check(positive()),
         param("useNucleus", &P::collision, &CollisionParameters::useNucleus),
         // before the nucleon positions, which are only sampled (and their
@@ -668,6 +664,7 @@ const std::vector<ParameterSpec> &parameterTable() {
             .onlyIf(nucleiCollide),
         param("g2muGeV", &P::collision, &CollisionParameters::g2muGeV)
             .onlyIf(constantColorCharge)
+            .posterior()
             .check(positive()),
         param(
             "useSmoothNucleus", &P::nucleus,
@@ -725,55 +722,49 @@ const std::vector<ParameterSpec> &parameterTable() {
             &NucleusParameters::useInputWSParams),
         param("radiusWS", &P::nucleus, &NucleusParameters::radiusWS)
             .onlyIf(wsDeformParamsSet)
+            .posterior()
             .check(positive()),
         param("diffusenessWS", &P::nucleus, &NucleusParameters::diffusenessWS)
             .onlyIf(wsDeformParamsSet)
+            .posterior()
             .check(positive()),
         param("beta2", &P::nucleus, &NucleusParameters::beta2)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .posterior(),
         param("beta3", &P::nucleus, &NucleusParameters::beta3)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .posterior(),
         param("beta4", &P::nucleus, &NucleusParameters::beta4)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .posterior(),
         param("gamma", &P::nucleus, &NucleusParameters::gamma)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .posterior(),
         param("deltaRnp", &P::nucleus, &NucleusParameters::deltaRnp)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .posterior(),
         param("deltaAnp", &P::nucleus, &NucleusParameters::deltaAnp)
-            .onlyIf(wsDeformParamsSet),
+            .onlyIf(wsDeformParamsSet)
+            .posterior(),
         // Glauber::findNucleusData applies these regardless of
         // setWSDeformParams
         param("forceDMin", &P::nucleus, &NucleusParameters::forceDMin),
-        param("dMin", &P::nucleus, &NucleusParameters::dMin),
+        param("dMin", &P::nucleus, &NucleusParameters::dMin).posterior(),
 
         // nucleon substructure and color charges
         param(
             "nucleonModel", &P::subnucleon, &SubnucleonParameters::nucleonModel)
             .check(oneOf<std::string>({"gaussian", "hotspots", "strings"})),
-        // a posterior parameter set replaces m, BG, BGq, smearingWidth,
-        // Nq, QsMuRatio and dqMin every event, so those are only read
-        // without one
-        param(
-            "subNucleonParamType", &P::subnucleon,
-            &SubnucleonParameters::subNucleonParamType)
-            .check(oneOf({0, 1, 2, 4}, " (0: use the input values)")),
-        param(
-            "subNucleonParamSet", &P::subnucleon,
-            &SubnucleonParameters::subNucleonParamSet)
-            .onlyIf(posteriorParameters)
-            .check([](const int &v) {
-                return v >= -1 ? "" : "must be -1 (random) or a set index >= 0";
-            }),
-        param("m", &P::subnucleon, &SubnucleonParameters::m)
-            .onlyIf(inputParameters),
+        param("m", &P::subnucleon, &SubnucleonParameters::m).posterior(),
         param("BG", &P::subnucleon, &SubnucleonParameters::BG)
-            .onlyIf(inputParameters)
+            .posterior()
             .check(positive()),
         // gaussian nucleons
         param(
             "protonAnisotropy", &P::subnucleon,
             &SubnucleonParameters::protonAnisotropy)
             .onlyIf(gaussianNucleons)
+            .posterior()
             // the thickness is normalized with sqrt(1 + protonAnisotropy)
             .check([](const double &v) {
                 return v > -1. ? "" : "must be larger than -1";
@@ -782,44 +773,51 @@ const std::vector<ParameterSpec> &parameterTable() {
         // the hot-spot width is 0.09 plus a log-normal number with mean
         // BGq - 0.09, which needs a positive mean
         param("BGq", &P::subnucleon, &SubnucleonParameters::BGq)
-            .onlyIf(hotSpotsFromInput)
+            .onlyIf(hotSpotSubstructure)
+            .posterior()
             .check([](const double &v) {
                 return v > 0.09 ? "" : "must be larger than 0.09 (GeV^-2)";
             }),
-        // not part of the posterior sets, so 0 with one, as in their fits
         param("BGqVar", &P::subnucleon, &SubnucleonParameters::BGqVar)
-            .onlyIf(hotSpotsFromInput)
+            .onlyIf(hotSpotSubstructure)
+            .posterior()
             .check(nonNegative()),
         param("dqMin", &P::subnucleon, &SubnucleonParameters::dqMin)
-            .onlyIf(hotSpotsFromInput)
+            .onlyIf(hotSpotSubstructure)
+            .posterior()
             .check(nonNegative()),
         param("omega", &P::subnucleon, &SubnucleonParameters::omega)
             .onlyIf(hotSpotSubstructure)
+            .posterior()
             .check(positive()),
         // the number of hot spots (`strings` always has three)
         param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
-            .onlyIf(numberOfHotSpotsFromInput)
+            .onlyIf(hotSpotNucleons)
+            .posterior()
             .check([](const double &v) {
                 return v >= 1. ? "" : "must be at least 1";
             }),
         param("NqFluc", &P::subnucleon, &SubnucleonParameters::NqFluc)
-            .onlyIf(numberOfHotSpotsFromInput),
+            .onlyIf(hotSpotNucleons)
+            .posterior(),
         param(
             "shiftConstituentQuarkProtonOrigin", &P::subnucleon,
             &SubnucleonParameters::shiftConstituentQuarkProtonOrigin)
             .onlyIf(hotSpotSubstructure),
         // g^2 mu = Q_s / QsMuRatio
         param("QsMuRatio", &P::colorCharge, &ColorChargeParameters::QsMuRatio)
-            .onlyIf(inputParameters)
+            .posterior()
             .check(positive()),
         param("smearQs", &P::subnucleon, &SubnucleonParameters::smearQs),
         param(
             "smearingWidth", &P::subnucleon,
             &SubnucleonParameters::smearingWidth)
-            .onlyIf(smearingWidthFromInput)
+            .onlyIf(qsSmeared)
+            .posterior()
             .check(nonNegative()),
         // a negative damping length would amplify the UV
         param("UVDamp", &P::subnucleon, &SubnucleonParameters::UVDamp)
+            .posterior()
             .check(nonNegative()),
         param(
             "removeZeroMode", &P::subnucleon,
@@ -828,6 +826,7 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "minimumQs2ST", &P::colorCharge,
             &ColorChargeParameters::minimumQs2ST)
+            .posterior()
             .check(nonNegative()),
         param(
             "nucleusQsTableFileName", &P::colorCharge,
@@ -857,6 +856,7 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check(positive()),
         param("xQsFactor", &P::colorCharge, &ColorChargeParameters::xQsFactor)
             .onlyIf(fluctuatingX)
+            .posterior()
             .check(positive()),
 
         // running coupling
@@ -864,9 +864,11 @@ const std::vector<ParameterSpec> &parameterTable() {
             "runningCoupling", &P::coupling,
             &CouplingParameters::runningCoupling),
         param("mu0", &P::coupling, &CouplingParameters::mu0)
-            .onlyIf(couplingRuns),
+            .onlyIf(couplingRuns)
+            .posterior(),
         param("c", &P::coupling, &CouplingParameters::c)
             .onlyIf(couplingRuns)
+            .posterior()
             .check(positive()),
         param("nFlavors", &P::coupling, &CouplingParameters::nFlavors)
             .optional("3")
@@ -876,6 +878,7 @@ const std::vector<ParameterSpec> &parameterTable() {
                 "2*nFlavors must be positive)")),
         param("LambdaQCD", &P::coupling, &CouplingParameters::LambdaQCD)
             .onlyIf(couplingRuns)
+            .posterior()
             .optional("0.2")
             .check(positive()),
         param("runWithQs", &P::coupling, &CouplingParameters::runWithQs)
@@ -884,7 +887,8 @@ const std::vector<ParameterSpec> &parameterTable() {
         param(
             "runningCouplingQsFactor", &P::coupling,
             &CouplingParameters::runningCouplingQsFactor)
-            .onlyIf(couplingRuns),
+            .onlyIf(couplingRuns)
+            .posterior(),
         param(
             "runWithLocalQs", &P::coupling, &CouplingParameters::runWithLocalQs)
             .onlyIf(couplingRuns),
@@ -981,21 +985,27 @@ const std::vector<ParameterSpec> &parameterTable() {
         // JIMWLK
         param("useJIMWLK", &P::jimwlk, &JimwlkParameters::enabled),
         param("jimwlkMu0", &P::jimwlk, &JimwlkParameters::mu0)
-            .onlyIf(jimwlkEnabled),
+            .onlyIf(jimwlkEnabled)
+            .posterior(),
         param(
             "jimwlkLambdaQCD", &P::jimwlk,
             &JimwlkParameters::LambdaQCD)
             .onlyIf(jimwlkEnabled)
+            .posterior()
             .check(positive()),  // in GeV
         param("jimwlkC", &P::jimwlk, &JimwlkParameters::c)
             .onlyIf(jimwlkEnabled)
+            .posterior()
             .optional("0.2")
             .check(positive()),
         param("jimwlkMass", &P::jimwlk, &JimwlkParameters::mass)
-            .onlyIf(jimwlkEnabled),
-        // 0 selects the running coupling, > 0 a fixed coupling
+            .onlyIf(jimwlkEnabled)
+            .posterior(),
+        // 0 selects the running coupling, > 0 a fixed coupling; a posterior
+        // set cannot switch between the two (readInput())
         param("jimwlkAlphaS", &P::jimwlk, &JimwlkParameters::alphaS)
             .onlyIf(jimwlkEnabled)
+            .posterior()
             .check(nonNegative()),
         param(
             "jimwlkRunningCoupling", &P::jimwlk,
@@ -1009,6 +1019,7 @@ const std::vector<ParameterSpec> &parameterTable() {
             .check(positive()),
         param("jimwlkInitialX", &P::jimwlk, &JimwlkParameters::initialX)
             .onlyIf(jimwlkEnabled)
+            .posterior()
             .check(positive()),
         param(
             "jimwlkSaveSnapshots", &P::jimwlk, &JimwlkParameters::saveSnapshots)
@@ -1045,8 +1056,8 @@ const std::map<std::string, std::string> &renamedKeys() {
         {"da_np", "deltaAnp"},
         {"force_dmin_flag", "forceDMin"},
         {"d_min", "dMin"},
-        {"SubNucleonParamType", "subNucleonParamType"},
-        {"SubNucleonParamSet", "subNucleonParamSet"},
+        {"SubNucleonParamSet", "posteriorSet"},
+        {"subNucleonParamSet", "posteriorSet"},
         {"UVdamp", "UVDamp"},
         {"QsmuRatio", "QsMuRatio"},
         {"NucleusQsTableFileName", "nucleusQsTableFileName"},
@@ -1069,6 +1080,14 @@ const std::map<std::string, std::string> &renamedKeys() {
  */
 const std::map<std::string, std::string> &replacedKeys() {
     static const std::map<std::string, std::string> replaced = {
+        {"subNucleonParamType",
+         "replaced by posteriorFile: none for 0, tables/posterior.csv for 1, "
+         "tables/posterior_Nq3.csv for 2 and tables/posterior5020_Nq3.csv "
+         "for 4"},
+        {"SubNucleonParamType",
+         "replaced by posteriorFile: none for 0, tables/posterior.csv for 1, "
+         "tables/posterior_Nq3.csv for 2 and tables/posterior5020_Nq3.csv "
+         "for 4"},
         {"useConstituentQuarkProton",
          "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},
         {"Rapidity",
@@ -1117,15 +1136,16 @@ const std::map<std::string, std::string> &replacedKeys() {
 }
 
 /**
- * Looks up the pre-2.0 name of a parameter.
+ * Looks up the old names of a parameter.
  * \param[in] name Current input-file key.
- * \return Its old key, or "" if it was not renamed.
+ * \return Its old keys, empty if it was not renamed.
  */
-std::string oldNameOf(const std::string &name) {
+std::vector<std::string> oldNamesOf(const std::string &name) {
+    std::vector<std::string> oldNames;
     for (const auto &[oldName, newName] : renamedKeys()) {
-        if (newName == name) return oldName;
+        if (newName == name) oldNames.push_back(oldName);
     }
-    return "";
+    return oldNames;
 }
 
 /**
@@ -1176,33 +1196,199 @@ std::string closestName(const std::string &key) {
                                                                       : "";
 }
 
+/**
+ * Removes the spaces, tabs and carriage returns around a text.
+ * \param[in] text The text.
+ * \return \p text without them.
+ */
+std::string trimmed(const std::string &text) {
+    const std::size_t first = text.find_first_not_of(" \t\r");
+    if (first == std::string::npos) return "";
+    const std::size_t last = text.find_last_not_of(" \t\r");
+    return text.substr(first, last - first + 1);
+}
+
+/**
+ * Splits a line of a posterior file into its comma-separated values.
+ * \param[in] line The line.
+ * \return Its values, without the spaces around them.
+ */
+std::vector<std::string> commaSeparated(const std::string &line) {
+    std::vector<std::string> values;
+    std::size_t start = 0;
+    while (true) {
+        const std::size_t comma = line.find(',', start);
+        values.push_back(trimmed(line.substr(start, comma - start)));
+        if (comma == std::string::npos) return values;
+        start = comma + 1;
+    }
+}
+
+/// Number of sets of a posterior file whose problems are reported; the
+/// others are only counted.
+constexpr int reportedPosteriorSets = 10;
+
 }  // namespace
+
+std::vector<std::string> Parameters::loadPosteriorTable() {
+    posteriorTable_.reset();
+    const std::string &fileName = posterior.file;
+    std::ifstream file(fileName);
+    if (!file.is_open()) {
+        return {"cannot open the posterior file " + fileName};
+    }
+    const std::vector<ParameterSpec> &specs = parameterTable();
+    auto table = std::make_shared<PosteriorTable>();
+    std::vector<std::string> errors;
+    std::size_t headerColumns = 0;
+    bool headerRead = false;
+    int malformedSets = 0;
+    std::string line;
+    for (int lineNumber = 1; std::getline(file, line); lineNumber++) {
+        std::string content = trimmed(line);
+        const std::string where =
+            fileName + ":" + std::to_string(lineNumber) + ": ";
+        if (!headerRead) {
+            if (content.empty()) continue;
+            // the first line names the columns, with an optional # in front
+            // and units in brackets after the names
+            headerRead = true;
+            if (content[0] == '#') content.erase(0, 1);
+            const std::vector<std::string> names = commaSeparated(content);
+            headerColumns = names.size();
+            for (const std::string &column : names) {
+                const std::string name = trimmed(column.substr(0, column.find('[')));
+                const auto spec = std::find_if(
+                    specs.begin(), specs.end(),
+                    [&name](const ParameterSpec &s) { return s.name == name; });
+                if (name.empty()) {
+                    errors.push_back(where + "a column has no name");
+                } else if (spec == specs.end()) {
+                    std::string message = where + "unknown parameter " + name;
+                    const std::string suggestion = closestName(name);
+                    if (!suggestion.empty())
+                        message += " (did you mean " + suggestion + "?)";
+                    errors.push_back(message);
+                } else if (!spec->posterior) {
+                    errors.push_back(
+                        where + name
+                        + " cannot be set by a posterior file, only the "
+                          "physical parameters can");
+                } else if (
+                    std::find(
+                        table->columns.begin(), table->columns.end(), name)
+                    != table->columns.end()) {
+                    errors.push_back(where + "column " + name + " appears twice");
+                } else {
+                    table->columns.push_back(name);
+                    table->specs.push_back(
+                        static_cast<std::size_t>(spec - specs.begin()));
+                }
+            }
+            continue;
+        }
+        if (content.empty() || content[0] == '#') continue;
+        std::vector<std::string> values = commaSeparated(content);
+        if (values.size() != headerColumns) {
+            if (++malformedSets <= reportedPosteriorSets) {
+                errors.push_back(
+                    where + std::to_string(values.size())
+                    + " values, but the first line names "
+                    + std::to_string(headerColumns) + " columns");
+            }
+            continue;
+        }
+        table->sets.push_back(std::move(values));
+        table->lines.push_back(lineNumber);
+    }
+    if (malformedSets > reportedPosteriorSets) {
+        errors.push_back(
+            fileName + ": "
+            + std::to_string(malformedSets - reportedPosteriorSets)
+            + " more sets with the wrong number of values");
+    }
+    if (!headerRead) {
+        errors.push_back(fileName + " has no line naming the columns");
+    } else if (errors.empty() && table->sets.empty()) {
+        errors.push_back(fileName + " contains no parameter sets");
+    }
+    if (errors.empty()) posteriorTable_ = std::move(table);
+    return errors;
+}
+
+std::string Parameters::applyPosteriorValues(std::size_t set) {
+    const PosteriorTable &table = *posteriorTable_;
+    for (std::size_t column = 0; column < table.columns.size(); column++) {
+        const std::string problem = parameterTable()[table.specs[column]].apply(
+            *this, table.sets[set][column]);
+        if (!problem.empty()) return table.columns[column] + " " + problem;
+    }
+    return "";
+}
+
+void Parameters::applyPosteriorSet(int set) {
+    if (!posteriorTable_) return;
+    set %= static_cast<int>(posteriorTable_->sets.size());
+    event.posteriorSet = set;
+    messager_ << "[Parameters::applyPosteriorSet]: Using parameter set " << set
+              << " of the posterior file " << posterior.file << ".";
+    messager_.flush("info");
+    // readInput() checked the values of every set
+    applyPosteriorValues(static_cast<std::size_t>(set));
+}
 
 std::vector<std::string> Parameters::readInput(const InputFile &input) {
     std::vector<std::string> errors = input.errors();
     if (!input.isOpen()) return errors;
     const std::string &source = input.sourceName();
+    inputWarnings_.clear();
+    posteriorTable_.reset();
 
     // old keys already reported as "renamed", so they are not reported
     // again as unknown below
     std::vector<std::string> reportedOldKeys;
-    for (const ParameterSpec &spec : parameterTable()) {
+    // the columns of the posterior file whose parameter this input reads
+    std::vector<bool> columnRead;
+    const std::vector<ParameterSpec> &table = parameterTable();
+    for (std::size_t index = 0; index < table.size(); index++) {
+        const ParameterSpec &spec = table[index];
         if (spec.condition && !spec.condition(*this)) continue;
+        // the column of the posterior file that sets this parameter, if any
+        int column = -1;
+        if (posteriorTable_) {
+            const std::vector<std::size_t> &specs = posteriorTable_->specs;
+            const auto found = std::find(specs.begin(), specs.end(), index);
+            if (found != specs.end())
+                column = static_cast<int>(found - specs.begin());
+        }
         const InputFile::Entry *entry = input.find(spec.name);
-        const std::string oldName = oldNameOf(spec.name);
-        const InputFile::Entry *oldEntry =
-            oldName.empty() ? nullptr : input.find(oldName);
+        std::string oldName;
+        const InputFile::Entry *oldEntry = nullptr;
+        for (const std::string &name : oldNamesOf(spec.name)) {
+            oldEntry = input.find(name);
+            if (oldEntry) {
+                oldName = name;
+                break;
+            }
+        }
         std::string problem;
         std::string where = source + ": ";
         if (entry) {
             where = source + ":" + std::to_string(entry->line) + ": ";
             problem = spec.apply(*this, entry->value);
+            if (problem.empty() && column >= 0) {
+                inputWarnings_.push_back(
+                    where + spec.name + " " + entry->value
+                    + " is replaced by the posterior file " + posterior.file);
+            }
         } else if (oldEntry) {
             errors.push_back(
                 source + ":" + std::to_string(oldEntry->line) + ": " + oldName
                 + " was renamed to " + spec.name);
             reportedOldKeys.push_back(oldName);
             continue;
+        } else if (column >= 0) {
+            // set from the posterior file below
         } else if (!spec.defaultValue.empty()) {
             problem = spec.apply(*this, spec.defaultValue);
         } else {
@@ -1210,10 +1396,38 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
         }
         if (!problem.empty())
             errors.push_back(where + spec.name + " " + problem);
+        if (column >= 0) {
+            // the first set, so the parameters read after this one see its
+            // value, as they will see that of every set (checked below)
+            columnRead[column] = true;
+            const std::string valueProblem = spec.apply(
+                *this, posteriorTable_->sets[0][column]);
+            if (!valueProblem.empty()) {
+                errors.push_back(
+                    posterior.file + ":"
+                    + std::to_string(posteriorTable_->lines[0]) + ": "
+                    + spec.name + " " + valueProblem);
+            }
+        }
+        // the parameters of the columns are read after the posterior file
+        if (spec.name == "posteriorFile" && posterior.used()) {
+            for (const std::string &error : loadPosteriorTable())
+                errors.push_back(error);
+            if (posteriorTable_)
+                columnRead.assign(posteriorTable_->columns.size(), false);
+        }
+    }
+    if (posteriorTable_) {
+        for (std::size_t column = 0; column < columnRead.size(); column++) {
+            if (columnRead[column]) continue;
+            errors.push_back(
+                posterior.file + ": column "
+                + posteriorTable_->columns[column]
+                + " sets a parameter that this input does not use");
+        }
     }
 
     for (const auto &[key, entry] : input.entries()) {
-        const auto &table = parameterTable();
         const bool known = std::any_of(
             table.begin(), table.end(),
             [&key](const ParameterSpec &spec) { return spec.name == key; });
@@ -1239,6 +1453,39 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     }
     if (!errors.empty()) return errors;
 
+    // Every set must pass the checks of its values and use the same
+    // parameters as the first: a set cannot switch between models (e.g.
+    // jimwlkAlphaS between a fixed and the running coupling).
+    if (posteriorTable_) {
+        Parameters withSet(*this);
+        int failingSets = 0;
+        for (std::size_t set = 1; set < posteriorTable_->sets.size(); set++) {
+            std::string problem = withSet.applyPosteriorValues(set);
+            for (std::size_t index = 0; index < table.size() && problem.empty();
+                 index++) {
+                const Condition condition = table[index].condition;
+                if (condition && condition(withSet) != condition(*this)) {
+                    problem = "the set changes whether " + table[index].name
+                              + " is used";
+                }
+            }
+            if (problem.empty()) continue;
+            if (++failingSets <= reportedPosteriorSets) {
+                errors.push_back(
+                    posterior.file + ":"
+                    + std::to_string(posteriorTable_->lines[set]) + ": "
+                    + problem);
+            }
+        }
+        if (failingSets > reportedPosteriorSets) {
+            errors.push_back(
+                posterior.file + ": "
+                + std::to_string(failingSets - reportedPosteriorSets)
+                + " more sets with problems");
+        }
+        if (!errors.empty()) return errors;
+    }
+
     // Derived settings.
     // dtau (in lattice units) is ~1/timeStepsPerLatticeSpacing, adjusted so
     // maxTime is a whole number of steps. With fewer than one step (e.g.
@@ -1261,14 +1508,6 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
     if (nucleus.polarizationProjectile != 0
         || nucleus.polarizationTarget != 0) {
         nucleus.nucleonPositionsFromFile = true;
-    }
-    // the posterior sets are fits of hot-spot nucleons; validationErrors()
-    // reports any other model, so don't require the table for it
-    if (subnucleon.subNucleonParamType > 0
-        && subnucleon.nucleonModel == "hotspots") {
-        const std::string problem =
-            loadPosteriorParameterSets(subnucleon.subNucleonParamType);
-        if (!problem.empty()) errors.push_back(problem);
     }
     return errors;
 }

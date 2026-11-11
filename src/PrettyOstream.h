@@ -48,6 +48,17 @@ class PrettyOstream {
      */
     PrettyOstream();
     /**
+     * Constructs a PrettyOstream with an empty message buffer: a copy
+     * does not take over a message being built (so Parameters can be
+     * copied).
+     */
+    PrettyOstream(const PrettyOstream &) : PrettyOstream() {}
+    /**
+     * Keeps this PrettyOstream's own message buffer.
+     * \return This PrettyOstream.
+     */
+    PrettyOstream &operator=(const PrettyOstream &) { return *this; }
+    /**
      * Destroys this PrettyOstream (nothing to release; any
      * un-flushed, buffered message is silently discarded).
      */

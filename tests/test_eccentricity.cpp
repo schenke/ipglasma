@@ -16,9 +16,6 @@
 #include "doctest.h"
 
 namespace {
-// Parameters holds a PrettyOstream member, which holds a
-// non-copyable/non-movable std::ostringstream, so this takes an
-// out-parameter rather than returning by value.
 void makeEccentricityTestParam(Parameters &param, int size) {
     param.lattice.size = size;
     param.lattice.L = static_cast<double>(size);  // a = 1 fm

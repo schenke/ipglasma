@@ -77,6 +77,33 @@ bool anyContains(
     }
     return false;
 }
+
+// A file in the working directory, removed again at the end of the test.
+class TemporaryFile {
+  public:
+    TemporaryFile(const std::string &name, const std::string &contents)
+        : name_(name) {
+        std::ofstream out(name_);
+        out << contents;
+    }
+    ~TemporaryFile() { std::remove(name_.c_str()); }
+    const std::string &name() const { return name_; }
+
+  private:
+    std::string name_;
+};
+
+// The shipped example input, with the first parameter set of the posterior
+// file `file`.
+std::string exampleInputWithPosterior(const std::string &file) {
+    return inputWith(
+        exampleInputWith("posteriorFile", file), "posteriorSet", "0");
+}
+
+// A posterior file shipped in tables/.
+std::string shippedPosterior(const std::string &name) {
+    return std::string(IPGLASMA_SOURCE_DIR) + "/tables/" + name;
+}
 }  // namespace
 
 // ---- InputFile ----
@@ -452,7 +479,6 @@ TEST_CASE("Parameters::readInput: per-value checks") {
              {"nucleonModel", "stringy", "must be one of gaussian, hotspots"},
              {"size", "255", "must be even"},
              {"omega", "0", "must be positive"},
-             {"subNucleonParamType", "3", "must be one of 0, 1, 2, 4"},
              {"runWithQs", "3", "must be one of 0, 1, 2"},
              {"nFlavors", "17", "must be between 0 and 16"},
              {"LambdaQCD", "0", "must be positive"},
@@ -909,8 +935,7 @@ TEST_CASE(
 
 TEST_CASE(
     "Parameters::readInput: nucleonModel strings reads the hot-spot "
-    "parameters except the number of hot spots, and allows no posterior "
-    "set") {
+    "parameters except the number of hot spots") {
     std::string strings;
     {
         std::istringstream in(exampleInputWith("nucleonModel", "strings"));
@@ -941,101 +966,222 @@ TEST_CASE(
     }
     CHECK(anyContains(readErrors(withoutBGq), "BGq is required"));
 
-    // the posterior sets are fits of hot-spot nucleons
-    std::string posterior;
-    {
-        std::istringstream in(strings);
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line.rfind("subNucleonParamType ", 0) == 0) {
-                line = "subNucleonParamType 2";
-            }
-            posterior += line + "\n";
-        }
-    }
-    Parameters withPosterior;
-    REQUIRE(withPosterior.readInput(inputFromText(posterior)).empty());
+    // so a posterior file cannot set the number of hot spots
     CHECK(anyContains(
-        withPosterior.validationErrors(),
-        "requires nucleonModel hotspots, not strings"));
+        readErrors(inputWith(
+            inputWith(
+                strings, "posteriorFile", shippedPosterior("posterior_Nq3.csv")),
+            "posteriorSet", "0")),
+        "column Nq sets a parameter that this input does not use"));
 }
 
 TEST_CASE(
-    "Parameters::readInput: a posterior parameter set replaces m, BG, BGq, "
-    "smearingWidth, QsMuRatio, dqMin and Nq, which are then not read") {
-    // readInput() loads tables/posterior_Nq3.csv for type 2; provide a
-    // one-row table if none exists in the working directory
-    const std::string table = "tables/posterior_Nq3.csv";
-    const bool ownTable = !std::filesystem::exists(table);
-    const bool ownDirectory = !std::filesystem::exists("tables");
-    if (ownTable) {
-        std::filesystem::create_directories("tables");
-        std::ofstream out(table);
-        out << "m,BG,BGq,smearingWidth,QsmuRatio,dqmin\n"
-            << "0.3,4.0,0.3,0.5,0.6,0.2\n";
-    }
+    "Parameters::readInput: a posterior file sets the parameters of its "
+    "columns, which the input need not give") {
+    TemporaryFile file(
+        "ipglasma_test_posterior.csv",
+        "# m [GeV], BG [GeV^-2], QsMuRatio\r\n"
+        "0.3, 4.0, 0.6\r\n"
+        "\n"
+        "# a comment\n"
+        "0.25,4.5,0.7\n");
+    // m only in the posterior file; BG and QsMuRatio also in the input
+    Parameters param;
+    const std::vector<std::string> errors = param.readInput(inputFromText(
+        inputWith(exampleInputWithPosterior(file.name()), "m", "")));
+    for (const std::string &error : errors) CAPTURE(error);
+    REQUIRE(errors.empty());
+    CHECK(param.validationErrors().empty());
+    // the first set, exactly as written (not rounded to float)
+    CHECK(param.subnucleon.m == 0.3);
+    CHECK(param.subnucleon.BG == 4.0);
+    CHECK(param.colorCharge.QsMuRatio == 0.6);
+    // the values of the input are replaced, with a warning
+    const std::vector<std::string> &warnings = param.inputWarnings();
+    REQUIRE(warnings.size() == 2);
+    CHECK(anyContains(
+        warnings,
+        "BG 3.3 is replaced by the posterior file ipglasma_test_posterior.csv"));
+    CHECK(anyContains(warnings, "QsMuRatio 0.643 is replaced"));
 
-    std::string text;
-    {
-        std::istringstream in(exampleInputWith("subNucleonParamType", "2"));
-        std::string line;
-        while (std::getline(in, line)) {
-            bool replaced = false;
-            for (const char *key :
-                 {"m ", "BG ", "BGq ", "smearingWidth ", "QsMuRatio ", "dqMin ",
-                  "Nq "}) {
-                if (line.rfind(key, 0) == 0) replaced = true;
-            }
-            if (!replaced) text += line + "\n";
+    param.applyPosteriorSet(1);
+    CHECK(param.event.posteriorSet == 1);
+    CHECK(param.subnucleon.m == 0.25);
+    CHECK(param.subnucleon.BG == 4.5);
+    CHECK(param.colorCharge.QsMuRatio == 0.7);
+    // modulo the number of sets
+    param.applyPosteriorSet(4);
+    CHECK(param.event.posteriorSet == 0);
+    CHECK(param.subnucleon.m == 0.3);
+
+    // the parameters written are those of the set
+    param.applyPosteriorSet(1);
+    std::ostringstream written;
+    param.writeInputParameters(written);
+    CHECK(written.str().find("\nm 0.25\n") != std::string::npos);
+    CHECK(written.str().find("\nBG 4.5\n") != std::string::npos);
+
+    // without a posterior file, no warnings
+    Parameters withoutPosterior;
+    REQUIRE(withoutPosterior.readInput(inputFromText(readSourceFile("input")))
+                .empty());
+    CHECK(withoutPosterior.inputWarnings().empty());
+}
+
+TEST_CASE(
+    "Parameters::readInput: the shipped posterior files set every parameter "
+    "of their sets") {
+    for (const char *name :
+         {"posterior.csv", "posterior_Nq3.csv", "posterior5020_Nq3.csv"}) {
+        CAPTURE(name);
+        Parameters param;
+        const std::vector<std::string> errors = param.readInput(
+            inputFromText(exampleInputWithPosterior(shippedPosterior(name))));
+        for (const std::string &error : errors) CAPTURE(error);
+        REQUIRE(errors.empty());
+        CHECK(param.validationErrors().empty());
+        // m, BG, BGq, smearingWidth, Nq, QsMuRatio, dqMin, BGqVar, NqFluc
+        CHECK(param.inputWarnings().size() == 9);
+        CHECK(param.subnucleon.BGqVar == 0.);
+        CHECK(param.subnucleon.NqFluc == 0.);
+        if (std::string(name) == "posterior.csv") {
+            CHECK(param.subnucleon.m == 0.506);
+            CHECK(param.subnucleon.Nq == 6.79);
+            CHECK(param.colorCharge.QsMuRatio == 0.598);
+        } else {
+            CHECK(param.subnucleon.Nq == 3.);
         }
     }
+}
+
+TEST_CASE(
+    "Parameters::readInput: the columns of a posterior file are physical "
+    "input keys, each once") {
+    struct Case {
+        const char *contents;
+        const char *error;
+    };
+    for (const Case &c :
+         {Case {
+              "Qsg2muRatio\n0.6\n",
+              ":1: unknown parameter Qsg2muRatio (did you mean QsMuRatio?)"},
+          Case {
+              "size\n128\n",
+              ":1: size cannot be set by a posterior file, only the physical "
+              "parameters can"},
+          Case {"jimwlkDs\n0.003\n", ":1: jimwlkDs cannot be set"},
+          Case {"g\n1\n", ":1: g cannot be set"},
+          Case {"jacobianMass\n0.35\n", ":1: jacobianMass cannot be set"},
+          Case {"posteriorSet\n1\n", ":1: posteriorSet cannot be set"},
+          Case {"BG, BG\n4, 4\n", ":1: column BG appears twice"},
+          Case {"m [GeV], \n0.3, 4\n", ":1: a column has no name"},
+          Case {
+              "m, BG\n0.3\n",
+              ":2: 1 values, but the first line names 2 columns"},
+          Case {"m\n", " contains no parameter sets"},
+          Case {"\n", " has no line naming the columns"}}) {
+        CAPTURE(c.contents);
+        TemporaryFile file("ipglasma_test_posterior.csv", c.contents);
+        const std::vector<std::string> errors =
+            readErrors(exampleInputWithPosterior(file.name()));
+        for (const std::string &error : errors) CAPTURE(error);
+        CHECK(anyContains(errors, c.error));
+    }
+    CHECK(anyContains(
+        readErrors(exampleInputWithPosterior("no_such_posterior.csv")),
+        "cannot open the posterior file no_such_posterior.csv"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: every set of a posterior file passes the checks "
+    "of its values") {
+    TemporaryFile file(
+        "ipglasma_test_posterior.csv", "m, BG\n0.3, 4\n0.3, 0\n0.3, x\n");
+    const std::vector<std::string> errors =
+        readErrors(exampleInputWithPosterior(file.name()));
+    for (const std::string &error : errors) CAPTURE(error);
+    CHECK(errors.size() == 2);
+    CHECK(anyContains(
+        errors, "ipglasma_test_posterior.csv:3: BG 0: must be positive"));
+    CHECK(anyContains(
+        errors, "ipglasma_test_posterior.csv:4: BG 'x' is not a number"));
+
+    // also the first set, which readInput() applies
+    TemporaryFile first("ipglasma_test_posterior_first.csv", "BG\n0\n4\n");
+    CHECK(anyContains(
+        readErrors(exampleInputWithPosterior(first.name())),
+        "ipglasma_test_posterior_first.csv:2: BG 0: must be positive"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: a posterior file sets only parameters the input "
+    "uses, and its sets do not switch between models") {
+    // gaussian nucleons have no hot spots
+    TemporaryFile hotSpots("ipglasma_test_posterior.csv", "BGq\n0.3\n");
+    CHECK(anyContains(
+        readErrors(inputWith(
+            exampleInputWithPosterior(hotSpots.name()), "nucleonModel",
+            "gaussian")),
+        "ipglasma_test_posterior.csv: column BGq sets a parameter that this "
+        "input does not use"));
+
+    // jimwlkAlphaS 0 is the running coupling of JIMWLK, > 0 a fixed one
+    TemporaryFile coupling(
+        "ipglasma_test_posterior_coupling.csv", "jimwlkAlphaS\n0\n0.2\n");
+    CHECK(anyContains(
+        readErrors(exampleInputWithPosterior(coupling.name())),
+        "ipglasma_test_posterior_coupling.csv:3: the set changes whether "
+        "jimwlkRunningCoupling is used"));
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: the checks combining parameters run with "
+    "every set of a posterior file") {
+    TemporaryFile file(
+        "ipglasma_test_posterior.csv", "LambdaQCD\n0.2\n0.25\n0.35\n");
     Parameters param;
     const std::vector<std::string> errors =
-        param.readInput(inputFromText(text));
+        param.readInput(inputFromText(inputWith(
+            exampleInputWithPosterior(file.name()), "runningCoupling", "1")));
     for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.empty());
-    CHECK(param.validationErrors().empty());
-
-    // BGqVar and NqFluc are not part of the posterior sets: 0, not read
-    Parameters fluctuating;
-    REQUIRE(fluctuating
-                .readInput(inputFromText(inputWith(
-                    inputWith(text, "BGqVar", "0.2"), "NqFluc", "1.5")))
-                .empty());
-    CHECK(fluctuating.subnucleon.BGqVar == 0.);
-    CHECK(fluctuating.subnucleon.NqFluc == 0.);
-
-    // the replaced keys are accepted and ignored when present
-    Parameters withReplacedKeys;
-    const std::vector<std::string> replacedErrors = withReplacedKeys.readInput(
-        inputFromText(exampleInputWith("subNucleonParamType", "2")));
-    for (const std::string &error : replacedErrors) CAPTURE(error);
-    CHECK(replacedErrors.empty());
-
-    if (ownTable) std::remove(table.c_str());
-    if (ownDirectory) {
-        std::error_code ignored;  // keep a directory that is not empty
-        std::filesystem::remove("tables", ignored);
-    }
+    REQUIRE(errors.empty());
+    const std::vector<std::string> validation = param.validationErrors();
+    REQUIRE(validation.size() == 1);
+    CHECK(
+        validation[0].rfind(
+            "ipglasma_test_posterior.csv:4: with this set, LambdaQCD (0.35) "
+            "must be smaller than mu0 (0.3)",
+            0)
+        == 0);
 }
 
 TEST_CASE(
-    "Parameters::readInput: subNucleonParamSet must be -1 (random) or a set "
-    "index") {
-    std::string text;
-    {
-        std::istringstream in(exampleInputWith("subNucleonParamType", "2"));
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line.rfind("subNucleonParamSet ", 0) == 0) {
-                line = "subNucleonParamSet -2";
-            }
-            text += line + "\n";
-        }
-    }
+    "Parameters::readInput: subNucleonParamType and subNucleonParamSet point "
+    "to posteriorFile and posteriorSet") {
     CHECK(anyContains(
-        readErrors(text),
-        "subNucleonParamSet -2: must be -1 (random) or a set index >= 0"));
+        readErrors(insertBeforeEndOfFile(
+            readSourceFile("input"), "subNucleonParamType 2\n")),
+        "unknown parameter subNucleonParamType (replaced by posteriorFile: "
+        "none for 0, tables/posterior.csv for 1, tables/posterior_Nq3.csv "
+        "for 2"));
+    CHECK(anyContains(
+        readErrors(insertBeforeEndOfFile(
+            inputWith(
+                exampleInputWith(
+                    "posteriorFile", shippedPosterior("posterior_Nq3.csv")),
+                "posteriorSet", ""),
+            "subNucleonParamSet -1\n")),
+        "subNucleonParamSet was renamed to posteriorSet"));
+}
+
+TEST_CASE(
+    "Parameters::readInput: posteriorSet must be -1 (random) or a set "
+    "index") {
+    CHECK(anyContains(
+        readErrors(inputWith(
+            exampleInputWithPosterior(shippedPosterior("posterior_Nq3.csv")),
+            "posteriorSet", "-2")),
+        "posteriorSet -2: must be -1 (random) or a set index >= 0"));
 }
 
 TEST_CASE(
@@ -1136,29 +1282,4 @@ TEST_CASE(
         "nucleonModel"));
     CHECK(anyContains(errors, "nucleonModel is required"));
     CHECK_FALSE(anyContains(errors, "renamed to Nq"));
-}
-
-TEST_CASE(
-    "Parameters::readInput: a posterior set with gaussian nucleons is "
-    "reported as such, without needing the posterior table") {
-    Parameters param;
-    std::string text;
-    {
-        std::istringstream in(exampleInputWith("nucleonModel", "gaussian"));
-        std::string line;
-        while (std::getline(in, line)) {
-            if (line.rfind("subNucleonParamType ", 0) == 0) {
-                line = "subNucleonParamType 4";
-            }
-            text += line + "\n";
-        }
-    }
-    const std::vector<std::string> errors =
-        param.readInput(inputFromText(text));
-    for (const std::string &error : errors) CAPTURE(error);
-    CHECK(errors.empty());
-    CHECK(anyContains(
-        param.validationErrors(),
-        "subNucleonParamType = 4 (a posterior parameter set) requires "
-        "nucleonModel hotspots"));
 }

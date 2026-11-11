@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <ctime>
 #include <fstream>
-#include <iomanip>
 #include <iostream>
 #include <random>
 #include <sstream>
@@ -197,16 +196,15 @@ int main(int argc, char *argv[]) {
         // welcome
         if (rank == 0) display_logo();
 
-        if (param->subnucleon.subNucleonParamType > 0) {
-            IPG_PROFILE_SCOPE("initialization.subnucleon_parameters");
-            // sample the sub-nucleon parameters from the posterior distribution
-            int iSubNucleonParamSet = param->subnucleon.subNucleonParamSet;
-            if (iSubNucleonParamSet == -1) {
-                iSubNucleonParamSet =
+        if (param->posterior.used()) {
+            IPG_PROFILE_SCOPE("initialization.posterior_parameters");
+            // sample the parameters from the posterior distribution
+            int posteriorSet = param->posterior.set;
+            if (posteriorSet == -1) {
+                posteriorSet =
                     static_cast<int>(random->genrand64_int63() % 2147483647ULL);
             }
-            param->setParamsWithPosteriorParameterSet(
-                param->subnucleon.subNucleonParamType, iSubNucleonParamSet);
+            param->applyPosteriorSet(posteriorSet);
         }
 
         // initialize helper class objects
@@ -465,6 +463,12 @@ bool readInput(Parameters *param, int argc, char *argv[], int rank) {
     std::vector<string> errors = param->readInput(input);
     // checks combining several parameters need all values read
     if (errors.empty()) errors = param->validationErrors();
+    if (rank == 0) {
+        for (const string &warning : param->inputWarnings()) {
+            messager << "[main::readInput]: " << warning;
+            messager.flush("warning");
+        }
+    }
     if (!errors.empty()) {
         if (rank == 0) {
             for (const string &error : errors) {
@@ -493,19 +497,12 @@ void writeparams(Parameters *param) {
              "reproduce this event:\n"
              "# the random numbers also depend on the MPI rank and the "
              "event's position in\n"
-             "# the run, and subNucleonParamSet -1\n"
+             "# the run, and posteriorSet -1\n"
              "# draws a new posterior parameter set.\n";
     param->writeInputParameters(fout1);
-    if (param->subnucleon.subNucleonParamType > 0) {
-        // these values are not input parameters in this case, so they are
-        // not in the list above
-        fout1 << std::setprecision(9) << "# Posterior parameter set used: "
-              << param->event.subNucleonParamSet << "\n#   m "
-              << param->subnucleon.m << ", BG " << param->subnucleon.BG
-              << ", BGq " << param->subnucleon.BGq << ", smearingWidth "
-              << param->subnucleon.smearingWidth << ", Nq "
-              << param->subnucleon.Nq << ", QsMuRatio "
-              << param->colorCharge.QsMuRatio << ", dqMin "
-              << param->subnucleon.dqMin << "\n";
+    if (param->posterior.used()) {
+        // the values of the set are those of the list above
+        fout1 << "# Posterior parameter set used: "
+              << param->event.posteriorSet << "\n";
     }
 }

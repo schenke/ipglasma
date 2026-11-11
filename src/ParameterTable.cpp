@@ -1516,7 +1516,12 @@ void Parameters::writeInputParameters(std::ostream &out) const {
     for (const ParameterSpec &spec : parameterTable()) {
         if (spec.condition && !spec.condition(*this)) continue;
         out << spec.name << " ";
-        spec.write(*this, out);
+        // the set the event used, whose values are those written
+        if (spec.name == "posteriorSet" && event.posteriorSet >= 0) {
+            out << event.posteriorSet;
+        } else {
+            spec.write(*this, out);
+        }
         out << "\n";
     }
 }

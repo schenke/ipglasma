@@ -676,7 +676,10 @@ class Parameters {
     /**
      * Writes every input parameter's current value, one `key value` line
      * each in input-file syntax and table order, so the output can be
-     * used as an input file again.
+     * used as an input file again. `posteriorSet` is the set the event
+     * used (\c event.posteriorSet), once applyPosteriorSet() chose one, so
+     * the output gives the parameters of the event also with
+     * `posteriorSet -1`.
      * \param[out] out Stream to write to.
      */
     void writeInputParameters(std::ostream &out) const;

@@ -1020,12 +1020,44 @@ TEST_CASE(
     param.writeInputParameters(written);
     CHECK(written.str().find("\nm 0.25\n") != std::string::npos);
     CHECK(written.str().find("\nBG 4.5\n") != std::string::npos);
+    CHECK(written.str().find("\nposteriorSet 1\n") != std::string::npos);
 
     // without a posterior file, no warnings
     Parameters withoutPosterior;
     REQUIRE(withoutPosterior.readInput(inputFromText(readSourceFile("input")))
                 .empty());
     CHECK(withoutPosterior.inputWarnings().empty());
+}
+
+TEST_CASE(
+    "Parameters::writeInputParameters: with a posterior file, the output "
+    "reads back to the parameters of the event, also with posteriorSet -1") {
+    TemporaryFile file(
+        "ipglasma_test_posterior.csv",
+        "m, BG\n0.3, 4.0\n0.25, 4.5\n0.35, 3.9\n");
+    Parameters param;
+    REQUIRE(param
+                .readInput(inputFromText(inputWith(
+                    exampleInputWithPosterior(file.name()), "posteriorSet",
+                    "-1")))
+                .empty());
+    // as main() does with the set it drew
+    param.applyPosteriorSet(2);
+    std::ostringstream written;
+    param.writeInputParameters(written);
+
+    Parameters reread;
+    const std::vector<std::string> errors =
+        reread.readInput(inputFromText(written.str()));
+    for (const std::string &error : errors) CAPTURE(error);
+    REQUIRE(errors.empty());
+    CHECK(reread.posterior.set == 2);
+    reread.applyPosteriorSet(reread.posterior.set);
+    std::ostringstream rewritten;
+    reread.writeInputParameters(rewritten);
+    CHECK(rewritten.str() == written.str());
+    CHECK(reread.subnucleon.m == 0.35);
+    CHECK(reread.subnucleon.BG == 3.9);
 }
 
 TEST_CASE(

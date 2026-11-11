@@ -497,12 +497,12 @@ void writeparams(Parameters *param) {
              "reproduce this event:\n"
              "# the random numbers also depend on the MPI rank and the "
              "event's position in\n"
-             "# the run, and posteriorSet -1\n"
-             "# draws a new posterior parameter set.\n";
-    param->writeInputParameters(fout1);
+             "# the run.";
     if (param->posterior.used()) {
-        // the values of the set are those of the list above
-        fout1 << "# Posterior parameter set used: "
-              << param->event.posteriorSet << "\n";
+        fout1 << " posteriorSet is the posterior parameter set this event "
+                 "used,\n"
+                 "# whose values are those below.";
     }
+    fout1 << "\n";
+    param->writeInputParameters(fout1);
 }

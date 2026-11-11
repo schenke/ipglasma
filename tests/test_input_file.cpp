@@ -968,7 +968,8 @@ TEST_CASE(
     }
     CHECK(anyContains(readErrors(withoutBGq), "BGq is required"));
 
-    // so a posterior file cannot set the number of hot spots
+    // strings always have three hot spots, so with strings a posterior file
+    // cannot set Nq (it can with hotspots)
     CHECK(anyContains(
         readErrors(inputWith(
             inputWith(

@@ -40,14 +40,18 @@ set(TEST_SOURCES
     test_gluon_multiplicity.cpp
     test_jimwlk.cpp
     test_running_coupling.cpp
+    test_device.cpp
     )
 
-add_executable(ipglasma_tests ${TEST_SOURCES} ${LIB_SOURCES})
+add_executable(ipglasma_tests ${TEST_SOURCES} ${LIB_SOURCES}
+    ${IPGLASMA_DEVICE_SOURCES})
 target_include_directories(ipglasma_tests PRIVATE
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_CURRENT_SOURCE_DIR}/third_party
     )
-target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS} ${OPENMP_LIBS})
+target_link_libraries(ipglasma_tests ${GSL_LIBRARIES} ${FFTW_LIBRARIES} Threads::Threads ${FILESYSTEM_LIBS} ${OPENMP_LIBS} ${IPGLASMA_DEVICE_LIBS})
+target_compile_definitions(ipglasma_tests PRIVATE ${IPGLASMA_DEVICE_DEFINITIONS})
+target_include_directories(ipglasma_tests PRIVATE ${IPGLASMA_DEVICE_INCLUDES})
 # lets tests read the shipped input files (input, validations/input_*)
 target_compile_definitions(ipglasma_tests PRIVATE
     IPGLASMA_SOURCE_DIR="${CMAKE_SOURCE_DIR}")

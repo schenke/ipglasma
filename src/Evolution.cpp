@@ -19,6 +19,7 @@
 #include "MyEigen.h"
 #include "PhysConst.h"
 #include "SU3.h"
+#include "device/DeviceDrivers.h"
 
 using PhysConst::hbarc;
 using PhysConst::Nc;
@@ -709,10 +710,29 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
     // E and Pi at tau=dtau/2 are equal to the initial ones (at tau=0)
     // now evolve phi and U to time tau=dtau.
+    // on a device (IPGLASMA_DEVICE), the fields stay there during the
+    // evolution; they are copied back where the host measures
+    std::unique_ptr<ipgdev::YangMillsDevice> device;
+    if (ipgdev::runBackend() != nullptr && ipgdev::runConfig().yangMills) {
+        ipgdev::Backend &backend = *ipgdev::runBackend();
+        messager_ << "[Evolution::run]: on the device " << backend.name()
+                  << " (" << backend.description() << ")";
+        messager_.flush("info");
+        device.reset(new ipgdev::YangMillsDevice(
+            backend, N, lat->isPeriodic(), param->coupling.g));
+        IPG_PROFILE_SCOPE("evolution.device_upload");
+        device->upload(*lat);
+    }
+
     {
         IPG_PROFILE_SCOPE("evolution.initial_coordinate_half_step");
-        evolvePhi(lat, param, dtau, 0.);
-        evolveU(lat, param, dtau, 0.);
+        if (device) {
+            device->evolvePhi(dtau, 0.);
+            device->evolveU(dtau, 0.);
+        } else {
+            evolvePhi(lat, param, dtau, 0.);
+            evolveU(lat, param, dtau, 0.);
+        }
     }
 
     int itmax = static_cast<int>(maxtime / (a * dtau) + 0.00000000001);
@@ -752,7 +772,15 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         const bool measureTmunu =
             finalTmunuMeasurement || intermediateTmunuMeasurement;
 
-        if (measureTmunu) {
+        if (measureTmunu && device) {
+            // the same half step of the momenta on the device, from a
+            // backup that is restored after the measurement; the host gets
+            // the fields at the time of the measurement
+            IPG_PROFILE_SCOPE("evolution.device_measurement_sync");
+            device->backupMomenta();
+            device->step(dtau / 2., it * dtau, false);
+            device->download(*lat);
+        } else if (measureTmunu) {
             std::copy(lat->U.begin(), lat->U.end(), tmunuE1Backup.begin());
             std::copy(lat->U2.begin(), lat->U2.end(), tmunuE2Backup.begin());
             std::copy(lat->Ux2.begin(), lat->Ux2.end(), tmunuPiBackup.begin());
@@ -781,7 +809,9 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
             }
         }
 
-        if (measureTmunu) {
+        if (measureTmunu && device) {
+            device->restoreMomenta();
+        } else if (measureTmunu) {
             std::copy(
                 tmunuE1Backup.begin(), tmunuE1Backup.end(), lat->U.begin());
             std::copy(
@@ -799,7 +829,17 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
         // Keep one OpenMP team alive across all leapfrog kernels in this
         // time step. The worksharing loops retain their implicit barriers,
         // preserving the Pi -> E -> phi -> U update order.
-        if (it < itmax) {
+        if (device) {
+            IPG_PROFILE_SCOPE("evolution.parallel_step");
+            if (it < itmax) {
+                device->step(dtau, it * dtau, true);
+            } else {
+                // the final half step of the momenta; the observables
+                // below read the fields on the host
+                device->step(dtau / 2., it * dtau, false);
+                device->downloadMomenta(*lat);
+            }
+        } else if (it < itmax) {
             evolveStepPersistent(lat, param, dtau, (it)*dtau, true);
         } else {
             evolveStepPersistent(lat, param, dtau / 2., (it)*dtau, false);
@@ -822,6 +862,9 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
 
         if (success == 0) break;
     }
+    // without any step, the fields of the initial half step are still on
+    // the device
+    if (device && itmax < 1) device->download(*lat);
 }
 
 std::vector<int> Evolution::outputSteps(

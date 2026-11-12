@@ -33,6 +33,7 @@
 #include "PrettyOstream.h"
 #include "Random.h"
 #include "WilsonLineIO.h"
+#include "device/DeviceBackend.h"
 
 // IPGLASMA_GIT_DESCRIBE, generated at every build by
 // CMakeModules/GitDescribe.cmake (src/CMakeLists.txt)
@@ -183,6 +184,41 @@ int main(int argc, char *argv[]) {
         messager << "[main::main]: Random seed on rank " << rank << " = "
                  << seedList[rank] << " read from list.";
         messager.flush("info");
+    }
+
+    // the device of the run (IPGLASMA_DEVICE), if any: created here, so
+    // that a wrong setting stops the run before the first event
+    try {
+        if (ipgdev::Backend *device = ipgdev::runBackend()) {
+            const ipgdev::Config &deviceConfig = ipgdev::runConfig();
+            messager << "[main::main]: Device " << device->name() << ": "
+                     << device->description()
+                     << "; on it:" << (deviceConfig.jimwlk ? " JIMWLK" : "")
+                     << (deviceConfig.yangMills ? " Yang-Mills" : "")
+                     << (deviceConfig.noiseOnDevice
+                             ? "; JIMWLK noise drawn on the device."
+                             : "; JIMWLK noise drawn on the host.");
+            messager.flush("info");
+            if (device->singlePrecision()) {
+                messager << "[main::main]: The device computes in single "
+                            "precision: the fields it evolves are accurate "
+                            "to about 1e-6, not 1e-15 (see README.md, GPU).";
+                messager.flush("warning");
+            }
+            if (param->jimwlk.enabled && deviceConfig.jimwlk
+                && !device->fftAvailable(param->lattice.size)) {
+                messager << "[main::main]: The FFT of the device needs an "
+                            "even lattice size with prime factors up to 32; "
+                            "size = "
+                         << param->lattice.size << " is not. Exiting.";
+                messager.flush("error");
+                exit(1);
+            }
+        }
+    } catch (const std::exception &e) {
+        messager << "[main::main]: " << e.what() << ". Exiting.";
+        messager.flush("error");
+        exit(1);
     }
 
     // event loop starts ...

@@ -35,6 +35,8 @@ parts of the code against exact or published results:
   against the published classical Yang-Mills results of Lappi (see below).
 - **`performance/`** — the time per stage of an event and the peak memory
   against the lattice size and the number of threads (see below).
+- **`device_vs_cpu/`** — a whole event on a GPU (or another backend of
+  the device layer) against the same event on the CPU (see below).
 - **`jimwlk_step_size/`** — the convergence of the JIMWLK evolution in its
   step size `jimwlkDs`, and its error at the recommended step sizes, in the
   setup of arXiv:1212.4825 (with BK and the curves of that paper, for its
@@ -901,6 +903,55 @@ On a lattice with clamped boundaries, as `useNucleus 0` had before #139,
 the pure-gauge fields of the nuclei become physical fields along the
 edges; averaged over the whole lattice, f_E and f_N on 512² were then 20–43%
 too large.
+
+### Device against CPU
+
+`device_vs_cpu/device_vs_cpu.py` runs one Pb+Pb event of the example input
+(b = 0, a fixed seed) on the CPU and once per requested device and
+precision of the device layer (`IPGLASMA_DEVICE`, see "Running on a GPU" in
+the main `README.md`), and compares what the two runs write:
+- **Wilson lines** of both nuclei after the JIMWLK evolution (binary files,
+  all digits) and their unitarity.
+- **Integrated observables:** dN/dy, dE/dy and ⟨k_T⟩ of the gluons, the
+  eccentricities ε₂ to ε₆ (with `eccentricityCutoff 0.1`: with the default
+  cutoff 0, the columns of the eccentricity file that count the cells above
+  the cutoff depend on the sign of the rounding in the vacuum, on the CPU
+  as well).
+- **Hydro fields:** ε and u^μ in three bands of ε/max(ε): above 0.1, 0.01
+  to 0.1, and 0.001 to 0.01.
+- **Times** of the JIMWLK evolution, the Yang–Mills evolution and the event,
+  from the profiles.
+
+The noise of the JIMWLK evolution is drawn on the host from the random
+numbers of the run in both runs, so they are compared site by site. (With
+`IPGLASMA_DEVICE_NOISE=device` a device run is another event; the unit test
+"JIMWLK with noise drawn on the device ..." compares that mode
+statistically.)
+
+```
+cd validations/device_vs_cpu
+# the host backend (always built), 128², both precisions: 1-2 minutes
+python3 device_vs_cpu.py --ipglasma-path ../.. --quick
+# an NVIDIA GPU (build with -DIPGLASMA_CUDA=ON)
+python3 device_vs_cpu.py --ipglasma-path ../.. --devices cuda
+# an Apple M GPU (build with -DIPGLASMA_OPENCL=ON)
+python3 device_vs_cpu.py --ipglasma-path ../.. --devices opencl
+```
+`--devices` takes `device[:precision]` entries (`cuda:single`,
+`host:double`, ...), `--size` the lattice size (default 256). The script
+prints the differences with their tolerances, PASSED or FAILED per run, and
+writes everything to `device_vs_cpu_output/device_vs_cpu_summary.json`.
+
+In double precision the device repeats the CPU arithmetic up to rounding:
+the Wilson lines agree to 10⁻¹⁴, dN/dy and dE/dy to 10⁻¹², and the hydro
+file in all printed digits (up to the last one in a few cells). In single
+precision (Apple M GPUs) the fields carry the rounding of single precision
+through the about 300 JIMWLK steps: the Wilson lines agree to a few 10⁻⁶,
+the integrated observables and the eccentricities to 10⁻⁵–10⁻⁴, and ε to
+10⁻⁴ or better down to 0.1% of its maximum, at 256² and at 512². This
+relies on the projection onto SU(3) of what a single-precision device
+returns (see the main `README.md`); the script checks the unitarity of the
+Wilson lines.
 
 ### Performance
 

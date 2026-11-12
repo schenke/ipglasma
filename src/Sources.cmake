@@ -31,4 +31,8 @@ set (IPGLASMA_LIB_SOURCES
     PrettyOstream.cpp
     Parameters.cpp
     Instrumentation.cpp
+    device/DeviceBackend.cpp
+    device/DeviceDrivers.cpp
+    device/HostBackendDouble.cpp
+    device/HostBackendSingle.cpp
     )

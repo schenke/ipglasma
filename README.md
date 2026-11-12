@@ -79,6 +79,67 @@ srun --ntasks=4 --cpus-per-task=8 ./ipglasma input                # SLURM
 ```
 
 
+## Running on a GPU
+The two stages that take most of the time of an event, the JIMWLK evolution and the time steps of the classical Yang-Mills evolution (together about 90% of the example input on the CPU), can run on a GPU. Everything else (the nuclei, the Wilson lines of the initial condition, the light-cone fields, $T^{\mu\nu}$, the flow velocity, the gluon multiplicity and all output) runs on the CPU as before, and the input and output files do not change.
+
+The GPU code is the device layer in `src/device/`. Its kernels (`ipg_kernels.h`: the JIMWLK step, the leapfrog updates, an FFT and a random number generator) are written once, in the common subset of C, CUDA C++ and OpenCL C, and compiled for three backends:
+
+| Backend | Build option | Hardware | Precision | FFT |
+|---|---|---|---|---|
+| `cuda` | `-DIPGLASMA_CUDA=ON` | NVIDIA GPUs | double (default) or single | cuFFT |
+| `opencl` | `-DIPGLASMA_OPENCL=ON` | the GPU of Apple M processors; any other OpenCL 1.2 device | single on Apple M (their GPUs have no double precision); double elsewhere | mixed-radix FFT of the kernels |
+| `host` | always built | the CPU | double (default) or single | mixed-radix FFT of the kernels |
+
+The `host` backend runs the same kernels on the CPU. It is slower than the normal CPU code and is there to test the device layer, and the effect of single precision, on any machine.
+
+### Building
+```
+# NVIDIA (CUDA toolkit with cuFFT; CMake 3.17 or newer)
+cmake -B build -DIPGLASMA_CUDA=ON
+# Apple M (OpenCL is part of macOS, nothing to install)
+cmake -B build -DIPGLASMA_OPENCL=ON
+cmake --build build
+```
+Both options can be on. `-DCMAKE_CUDA_ARCHITECTURES=80` selects the GPU generation (80: A100), and `-DCUDAToolkit_ROOT=...` a toolkit that is not on the path. On Perlmutter, load `cudatoolkit` before running CMake.
+
+### Running
+The device is chosen at run time with environment variables. Without `IPGLASMA_DEVICE` the code runs on the CPU as before.
+
+| Variable | Values | |
+|---|---|---|
+| `IPGLASMA_DEVICE` | `cuda`, `opencl`, `host`; unset or `cpu` for the CPU code | the backend |
+| `IPGLASMA_DEVICE_PRECISION` | `double`, `single` | default: double if the device has it |
+| `IPGLASMA_DEVICE_STAGES` | comma separated list of `jimwlk`, `yangmills` | the stages on the device; default: both |
+| `IPGLASMA_DEVICE_NOISE` | `host` (default), `device` | where the noise of the JIMWLK evolution is drawn, see below |
+| `IPGLASMA_CUDA_DEVICE` | number | the GPU (default 0) |
+| `IPGLASMA_CUDA_FFT` | `cufft` (default), `kernel` | `kernel`: the FFT of the kernels instead of cuFFT, to cross-check it |
+| `IPGLASMA_OPENCL_DEVICE` | number, part of the device name, or `list` | the OpenCL device (default: the first GPU); `list` prints the devices |
+
+```
+IPGLASMA_DEVICE=cuda ./ipglasma input
+IPGLASMA_DEVICE=opencl ./ipglasma input
+```
+The log names the device and its precision. With MPI, every rank uses the device by itself.
+
+**Lattice size.** With cuFFT, any even `size`. The FFT of the kernels (`opencl`, `host`) needs an even `size` whose prime factors are at most 32, e.g. 512, 600, 800 or 1024; the run stops at start-up otherwise.
+
+**Noise of the JIMWLK evolution.** By default the Gaussian noise of every JIMWLK step is drawn on the CPU from the random numbers of the run and copied to the device. A device run then uses the random numbers exactly like a CPU run and gives the same event for the same seed, which is what the comparison with the CPU needs. The generator is serial, however, and on a fast GPU it takes longer than the step itself. `IPGLASMA_DEVICE_NOISE=device` draws the noise on the device instead (Threefry-2x32 with 20 rounds, a counter-based generator, with a key from the random numbers of the run, and the Box-Muller transformation). The events are then statistically equivalent, but not the events a CPU run gives for the same seeds.
+
+**Memory.** The device holds about 250 real numbers per lattice site during the JIMWLK evolution and 160 during the Yang-Mills evolution: 1.3 GB at 800² in double precision, half of that in single precision.
+
+### Precision
+In double precision the device repeats the arithmetic of the CPU code up to rounding. For a Pb+Pb event of the example input at 256² (`validations/device_vs_cpu`, with the `host` and `opencl` backends in double precision), the Wilson lines after the JIMWLK evolution differ by $10^{-14}$ from those of the CPU run, dN/dy and dE/dy by $10^{-12}$, and the hydro output agrees in all printed digits.
+
+In single precision, which is all the GPU of an Apple M processor has, every operation rounds at $6\times10^{-8}$, and the about 300 JIMWLK steps accumulate this. This rounding is not unitary, and the energy density is linear in a non-unitary error of the links, so the Wilson lines and links that a single-precision device returns are projected onto SU(3) in double precision on the host; without this the vacuum around the nuclei gets a spurious energy density that grows with the lattice size as $a^{-4}$ relative to the fields. In the same comparison, at 256² and at 512², the Wilson lines differ by $4\times10^{-6}$ from those of the CPU run, dN/dy and dE/dy by $4\times10^{-5}$ or less, the eccentricities and the summed energy density by less than $10^{-5}$, the energy density by at most $3\times10^{-5}$ where it is above 1% of its maximum and $10^{-4}$ between 0.1% and 1%, and the flow velocity there by $5\times10^{-4}$. These numbers are from the `host` backend (and `opencl` on a CPU driver at 256²) in single precision; the run prints a warning when the device computes in single precision.
+
+### Testing a build
+The unit tests (`-Dunittest=ON`, see above) compare the FFT, the JIMWLK step and the leapfrog of every backend the build has, in both precisions, with the CPU code, and skip the backends without a device on the machine. `validations/device_vs_cpu/device_vs_cpu.py` compares a whole event (see `validations/README.md`):
+```
+cd validations/device_vs_cpu
+python3 device_vs_cpu.py --ipglasma-path ../.. --devices cuda      # or opencl
+```
+Run both on a new machine before production. As of this version, the `host` backend and the `opencl` backend (on PoCL, an OpenCL implementation for CPUs) have been run and compared with the CPU code in both precisions; the `cuda` backend has been compiled and linked with the CUDA toolkit 13.5 (and its kernels assembled for the A100) but not yet run on a GPU, and the `opencl` backend has not yet been run on an Apple GPU.
+
 ## Input parameters
 Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
 

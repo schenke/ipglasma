@@ -123,6 +123,9 @@ if (IPGLASMA_DETERMINISTIC_FFT)
     add_definitions(-DIPGLASMA_DETERMINISTIC_FFT)
 endif()
 
+# GPU backends of the device layer (-DIPGLASMA_CUDA=ON, -DIPGLASMA_OPENCL=ON)
+include(${CMAKE_CURRENT_LIST_DIR}/src/device/Device.cmake)
+
 add_subdirectory (src)
 
 # Doctest-based unit test suite (tests/), covering small, fast, deterministic

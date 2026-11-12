@@ -147,7 +147,7 @@ def run_event(ipglasma_path, rundir, input_file, environment, threads):
     shutil.copy(input_file, os.path.join(rundir, "input"))
     env = dict(os.environ)
     for key in ("IPGLASMA_DEVICE", "IPGLASMA_DEVICE_PRECISION",
-                "IPGLASMA_DEVICE_STAGES"):
+                "IPGLASMA_DEVICE_STAGES", "IPGLASMA_DEVICE_PROFILE"):
         env.pop(key, None)
     env.update(environment)
     env["OMP_NUM_THREADS"] = str(threads)
@@ -280,6 +280,10 @@ def main():
     parser.add_argument("--datadir", default="device_vs_cpu_output")
     parser.add_argument("--quick", action="store_true",
                         help="a quick test: size 128")
+    parser.add_argument("--kernel-timing", action="store_true",
+                        help="time every kernel, FFT and copy of the device "
+                        "runs (IPGLASMA_DEVICE_PROFILE=1) and list them; "
+                        "the device runs get slower")
     parser.add_argument("--no-check", action="store_true",
                         help="report the differences without applying the "
                         "tolerances")
@@ -308,6 +312,8 @@ def main():
     for spec in args.devices:
         device, _, precision = spec.partition(":")
         environment = {"IPGLASMA_DEVICE": device}
+        if args.kernel_timing:
+            environment["IPGLASMA_DEVICE_PROFILE"] = "1"
         if precision:
             environment["IPGLASMA_DEVICE_PRECISION"] = precision
         label = spec.replace(":", "-")
@@ -393,6 +399,21 @@ def main():
         print(f"{label:<14s}" + "".join(
             f"{profile.get(phase, float('nan')):19.2f}"
             for phase, _ in stages) + f"{wall.get(label, float('nan')):19.2f}")
+
+    if args.kernel_timing:
+        for label, profile in profiles.items():
+            device = {phase[len("device."):]: seconds
+                      for phase, seconds in profile.items()
+                      if phase.startswith("device.")}
+            if not device:
+                continue
+            total = sum(device.values())
+            print(f"\n{label}: time on the device, every call waited for "
+                  f"({total:.2f} s in all)")
+            for phase, seconds in sorted(device.items(),
+                                         key=lambda item: -item[1]):
+                print(f"  {phase:<32s}{seconds:10.3f} s"
+                      f"{100. * seconds / total:8.1f} %")
 
     summary = {"settings": vars(args), "results": results,
                "profiles": profiles, "wall_seconds": wall}

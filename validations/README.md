@@ -939,8 +939,11 @@ python3 device_vs_cpu.py --ipglasma-path ../.. --devices opencl
 ```
 `--devices` takes `device[:precision]` entries (`cuda:single`,
 `host:double`, ...), `--size` the lattice size (default 256). The script
-prints the differences with their tolerances, PASSED or FAILED per run, and
-writes everything to `device_vs_cpu_output/device_vs_cpu_summary.json`.
+prints the differences with their tolerances, PASSED or FAILED per run, the
+times of the stages, and writes everything to
+`device_vs_cpu_output/device_vs_cpu_summary.json`. `--kernel-timing` also
+times every kernel, FFT and copy of the device runs and lists them (the
+device runs then get slower; the comparison is unaffected).
 
 In double precision the device repeats the CPU arithmetic up to rounding:
 the Wilson lines agree to 10⁻¹⁴, dN/dy and dE/dy to 10⁻¹², and the hydro

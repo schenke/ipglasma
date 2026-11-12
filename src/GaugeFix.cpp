@@ -23,10 +23,15 @@ constexpr double kGaugeFixTolerance = 1e-12;
 constexpr double kGaugeFixReferenceSpacing = 0.1;
 /// Iterations without a new minimum of the residual after which the gauge
 /// fixing stops.
-constexpr int kGaugeFixStagnation = 500;
-/// The same for a device in single precision: the residual of its links
-/// cannot fall below their rounding, about 3e-15, and the host continues
-/// from there in double precision.
+constexpr int kGaugeFixStagnation = 1000;
+/// A device in single precision cannot measure a residual below the
+/// rounding of its links, about 3e-15. Once its lowest residual is below
+/// kGaugeFixSingleFloor, a stagnation of kGaugeFixStagnationSingle
+/// iterations means it has reached that rounding, and the host continues
+/// in double precision. Above the floor the rule of the host applies
+/// (kGaugeFixStagnation): the residual can rise for more than 100
+/// iterations before it falls again.
+constexpr double kGaugeFixSingleFloor = 2e-14;
 constexpr int kGaugeFixStagnationSingle = 50;
 
 // chi is a traceless Hermitian SU(3) algebra element,
@@ -207,10 +212,14 @@ void GaugeFix::fftChi(
     bool converged = false;
     int iterations = max_gfiter;
 
-    // The residual can stay flat, or rise by a factor of 30, for up to about
-    // 100 iterations before it falls again (512^2, a = 0.0075 fm); only when
-    // it has not reached a new minimum in kGaugeFixStagnation iterations has
-    // it stopped converging (e.g. at the rounding level, about 1e-35).
+    // The residual can stay flat, or rise by a factor of 30, for a few
+    // hundred iterations before it falls again: in a central Pb+Pb event
+    // with JIMWLK at 512^2 (a = 0.059 fm) its minimum of 5.0e-12 at
+    // iteration 285 was first undercut at iteration 790, and the gauge was
+    // fixed at iteration 943; with a limit of 500 iterations the fixing
+    // stopped at 785 with dN/dy 0.6% low. Only when the residual has not
+    // reached a new minimum in kGaugeFixStagnation iterations has it
+    // stopped converging (e.g. at the rounding level, about 1e-35).
     double bestResidual = 0.;
     int bestIteration = 0;
     double gresidual = 0.;
@@ -247,9 +256,6 @@ void GaugeFix::fftChi(
         messager_ << "[GaugeFix::fftChi]: on the device " << backend.name()
                   << " (" << backend.description() << ")";
         messager_.flush("info");
-        const int stagnation = backend.singlePrecision()
-                                   ? kGaugeFixStagnationSingle
-                                   : kGaugeFixStagnation;
         ipgdev::GaugeFixDevice device(backend, N);
         device.upload(lat->Ux, lat->Uy);
         double deviceResidual = 0.;
@@ -264,9 +270,15 @@ void GaugeFix::fftChi(
             if (gfiter == 0 || deviceResidual < bestResidual) {
                 bestResidual = deviceResidual;
                 bestIteration = gfiter;
-            } else if (gfiter - bestIteration >= stagnation) {
-                // in double precision the host would not get further
-                deviceGaveUp = !backend.singlePrecision();
+            } else if (
+                backend.singlePrecision()
+                && bestResidual < kGaugeFixSingleFloor
+                && gfiter - bestIteration >= kGaugeFixStagnationSingle) {
+                // at the rounding of single precision: the host continues
+                break;
+            } else if (gfiter - bestIteration >= kGaugeFixStagnation) {
+                // the host would not get further either
+                deviceGaveUp = true;
                 break;
             }
             device.relax();

@@ -4,6 +4,7 @@
 
 #include <stdio.h>
 
+#include <chrono>
 #include <cmath>
 #include <complex>
 #include <cstdlib>
@@ -189,7 +190,10 @@ int main(int argc, char *argv[]) {
     // the device of the run (IPGLASMA_DEVICE), if any: created here, so
     // that a wrong setting stops the run before the first event
     try {
+        const auto deviceStart = std::chrono::steady_clock::now();
         if (ipgdev::Backend *device = ipgdev::runBackend()) {
+            const std::chrono::duration<double> deviceSetup =
+                std::chrono::steady_clock::now() - deviceStart;
             const ipgdev::Config &deviceConfig = ipgdev::runConfig();
             messager << "[main::main]: Device " << device->name() << ": "
                      << device->description()
@@ -201,6 +205,10 @@ int main(int argc, char *argv[]) {
                      << (deviceConfig.noiseOnDevice
                              ? "; random numbers drawn on the device."
                              : "; random numbers drawn on the host.");
+            messager.flush("info");
+            // for OpenCL this includes compiling the kernels
+            messager << "[main::main]: The device was set up in "
+                     << deviceSetup.count() << " s.";
             messager.flush("info");
             if (device->singlePrecision()) {
                 messager << "[main::main]: The device computes in single "

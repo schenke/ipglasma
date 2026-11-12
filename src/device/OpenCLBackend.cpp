@@ -44,29 +44,7 @@ const char *const kKernelSource =
 #include "ipg_kernels_source.inc"
     ;
 
-// one OpenCL kernel per device kernel; the order of ipgdev::Kernel
-const char *const kKernelNames[ipgdev::kNumKernels] = {
-    "ipg_k_copy",
-    "ipg_k_real_to_complex",
-    "ipg_k_complex_to_real",
-    "ipg_k_scale_by_site",
-    "ipg_k_checker_scale",
-    "ipg_k_fft_pass",
-    "ipg_k_gauss_noise",
-    "ipg_k_jimwlk_kernel_noise",
-    "ipg_k_jimwlk_rotate",
-    "ipg_k_jimwlk_kernel_matrix",
-    "ipg_k_jimwlk_update",
-    "ipg_k_cym_pi",
-    "ipg_k_cym_e",
-    "ipg_k_cym_phi",
-    "ipg_k_cym_u",
-    "ipg_k_gf_divergence",
-    "ipg_k_gf_update",
-    "ipg_k_gf_transform",
-    "ipg_k_wilson_charge",
-    "ipg_k_wilson_exponent",
-};
+
 
 // ipg_params of ipg_kernels.h for the two precisions
 struct ParamsSingle {
@@ -254,7 +232,7 @@ class OpenCLBackend : public ipgdev::Backend {
             throw std::runtime_error(message.str());
         }
         for (int k = 0; k < ipgdev::kNumKernels; k++) {
-            const std::string name = std::string(kKernelNames[k]) + "_cl";
+            const std::string name = std::string(ipgdev::kernelName(static_cast<ipgdev::Kernel>(k))) + "_cl";
             kernels_[k] = clCreateKernel(program_, name.c_str(), &status);
             check(status, "clCreateKernel");
         }

@@ -5,10 +5,14 @@
 #include "DeviceBackend.h"
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <cstdlib>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
+
+#include "../Instrumentation.h"
 
 namespace ipgdev {
 
@@ -86,6 +90,42 @@ void Backend::releaseShared() {
     for (const auto &entry : twiddles_) releaseBuffer(entry.second);
     scratch_.clear();
     twiddles_.clear();
+}
+
+namespace {
+
+// the order of ipgdev::Kernel
+const char *const kKernelNames[kNumKernels] = {
+    "ipg_k_copy",
+    "ipg_k_real_to_complex",
+    "ipg_k_complex_to_real",
+    "ipg_k_scale_by_site",
+    "ipg_k_checker_scale",
+    "ipg_k_fft_pass",
+    "ipg_k_gauss_noise",
+    "ipg_k_jimwlk_kernel_noise",
+    "ipg_k_jimwlk_rotate",
+    "ipg_k_jimwlk_kernel_matrix",
+    "ipg_k_jimwlk_update",
+    "ipg_k_cym_pi",
+    "ipg_k_cym_e",
+    "ipg_k_cym_phi",
+    "ipg_k_cym_u",
+    "ipg_k_gf_divergence",
+    "ipg_k_gf_update",
+    "ipg_k_gf_transform",
+    "ipg_k_wilson_charge",
+    "ipg_k_wilson_exponent",
+};
+static_assert(
+    sizeof(kKernelNames) / sizeof(kKernelNames[0]) == kNumKernels,
+    "one name per kernel");
+
+}  // namespace
+
+const char *kernelName(Kernel kernel) {
+    const int k = static_cast<int>(kernel);
+    return (k >= 0 && k < kNumKernels) ? kKernelNames[k] : "unknown";
 }
 
 void Backend::centeredFft(Buffer field, int n, int ncomp, int isign) {
@@ -223,6 +263,11 @@ Config configFromEnvironment() {
         }
     }
 
+    const std::string profile = lower(environment("IPGLASMA_DEVICE_PROFILE"));
+    config.profileKernels = !profile.empty() && profile != "0"
+                            && profile != "false" && profile != "off"
+                            && profile != "no";
+
     const std::string noise = environment("IPGLASMA_DEVICE_NOISE");
     if (noise == "device") {
         config.noiseOnDevice = true;
@@ -247,7 +292,104 @@ std::vector<std::string> availableBackends() {
     return backends;
 }
 
+namespace {
+
+/**
+ * A backend that times every launch, FFT and copy of another
+ * (IPGLASMA_DEVICE_PROFILE): it waits for the device before and after
+ * each, so that a time is the work of that call alone, and adds it to the
+ * profile of the run. The waiting removes the overlap of host and device,
+ * so the run is slower than without.
+ */
+class ProfilingBackend : public Backend {
+  public:
+    explicit ProfilingBackend(std::unique_ptr<Backend> inner)
+        : inner_(std::move(inner)) {}
+
+    std::string name() const override { return inner_->name(); }
+    std::string description() const override {
+        return inner_->description() + ", every launch timed";
+    }
+    bool singlePrecision() const override { return inner_->singlePrecision(); }
+    Buffer createBuffer(std::size_t nReals) override {
+        return inner_->createBuffer(nReals);
+    }
+    void releaseBuffer(Buffer buffer) override {
+        inner_->releaseBuffer(buffer);
+    }
+    std::size_t bufferSize(Buffer buffer) const override {
+        return inner_->bufferSize(buffer);
+    }
+    void upload(Buffer buffer, const double *source, std::size_t nReals)
+        override {
+        Timer timer(*inner_, "device.upload");
+        inner_->upload(buffer, source, nReals);
+    }
+    void download(Buffer buffer, double *destination, std::size_t nReals)
+        override {
+        Timer timer(*inner_, "device.download");
+        inner_->download(buffer, destination, nReals);
+    }
+    void swapBuffers(Buffer a, Buffer b) override {
+        inner_->swapBuffers(a, b);
+    }
+    void launch(
+        Kernel kernel, std::size_t count, const Params &params,
+        std::initializer_list<Buffer> buffers) override {
+        // "ipg_k_" left out
+        Timer timer(
+            *inner_, std::string("device.kernel.") + (kernelName(kernel) + 6));
+        inner_->launch(kernel, count, params, buffers);
+    }
+    void finish() override { inner_->finish(); }
+    void centeredFft(Buffer field, int n, int ncomp, int isign) override {
+        Timer timer(*inner_, "device.fft");
+        inner_->centeredFft(field, n, ncomp, isign);
+    }
+    bool fftAvailable(int n) const override { return inner_->fftAvailable(n); }
+
+  private:
+    /// Times its scope, from an idle device to an idle device.
+    class Timer {
+      public:
+        Timer(Backend &backend, std::string phase)
+            : backend_(backend), phase_(std::move(phase)) {
+            backend_.finish();
+            start_ = std::chrono::steady_clock::now();
+        }
+        ~Timer() {
+            backend_.finish();
+            const std::chrono::duration<double> elapsed =
+                std::chrono::steady_clock::now() - start_;
+            ipg::Profiler::instance().add(phase_, elapsed.count());
+        }
+        Timer(const Timer &) = delete;
+        Timer &operator=(const Timer &) = delete;
+
+      private:
+        Backend &backend_;
+        const std::string phase_;
+        std::chrono::steady_clock::time_point start_;
+    };
+
+    std::unique_ptr<Backend> inner_;
+};
+
+std::unique_ptr<Backend> createPlainBackend(const Config &config);
+
+}  // namespace
+
 std::unique_ptr<Backend> createBackend(const Config &config) {
+    std::unique_ptr<Backend> backend = createPlainBackend(config);
+    if (config.profileKernels) {
+        backend.reset(new ProfilingBackend(std::move(backend)));
+    }
+    return backend;
+}
+
+namespace {
+
+std::unique_ptr<Backend> createPlainBackend(const Config &config) {
     if (config.backend == "host") {
         return (config.precision == 1) ? createHostBackendSingle()
                                        : createHostBackendDouble();
@@ -272,6 +414,8 @@ std::unique_ptr<Backend> createBackend(const Config &config) {
     }
     throw std::runtime_error("unknown device backend '" + config.backend + "'");
 }
+
+}  // namespace
 
 Backend *runBackend() {
     RunDevice &device = runDevice();

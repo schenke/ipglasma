@@ -24,6 +24,8 @@ authors:
     given-names: Chun
   - family-names: Tribedy
     given-names: Prithwish
+  - family-names: Venugopalan
+    given-names: Raju
   - family-names: Zhao
     given-names: Wenbin
 repository-code: "https://github.com/schenke/ipglasma"

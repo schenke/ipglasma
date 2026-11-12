@@ -63,6 +63,7 @@ inline void launchKernel(
         IPG_CUDA_CASE(kCymPhi, ipg_k_cym_phi)
         IPG_CUDA_CASE(kCymU, ipg_k_cym_u)
         IPG_CUDA_CASE(kGfDivergence, ipg_k_gf_divergence)
+        IPG_CUDA_CASE(kPartialSum, ipg_k_partial_sum)
         IPG_CUDA_CASE(kGfUpdate, ipg_k_gf_update)
         IPG_CUDA_CASE(kGfTransform, ipg_k_gf_transform)
         IPG_CUDA_CASE(kWilsonCharge, ipg_k_wilson_charge)

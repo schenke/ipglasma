@@ -1046,6 +1046,18 @@ IPG_FN void ipg_k_gf_divergence(IPG_KERNEL_ARGS) {
             / IPG_C(3.);
 }
 
+/* Partial sums of b0[0 .. i0 - 1]: b1[i] = sum of b0[i + j count] over j,
+ * with count the number of elements of the launch; i over the partial
+ * sums. Consecutive elements read consecutive addresses. */
+IPG_FN void ipg_k_partial_sum(IPG_KERNEL_ARGS) {
+    const int total = p.i0;
+    const int stride = p.i1;
+    ipg_real sum = IPG_C(0.);
+    int j;
+    for (j = i; j < total; j += stride) sum += b0[j];
+    b1[i] = sum;
+}
+
 /* G <- exp(i chi) G, followed by one Newton-Schulz step
  * G <- G (3 - G^dagger G) / 2, which keeps G unitary to rounding over the
  * iterations.
@@ -1139,6 +1151,7 @@ IPG_FN void ipg_k_wilson_exponent(IPG_KERNEL_ARGS) {
     X(ipg_k_cym_phi)              \
     X(ipg_k_cym_u)                \
     X(ipg_k_gf_divergence)        \
+    X(ipg_k_partial_sum)          \
     X(ipg_k_gf_update)            \
     X(ipg_k_gf_transform)         \
     X(ipg_k_wilson_charge)        \

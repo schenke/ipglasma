@@ -112,6 +112,7 @@ const char *const kKernelNames[kNumKernels] = {
     "ipg_k_cym_phi",
     "ipg_k_cym_u",
     "ipg_k_gf_divergence",
+    "ipg_k_partial_sum",
     "ipg_k_gf_update",
     "ipg_k_gf_transform",
     "ipg_k_wilson_charge",

@@ -1101,12 +1101,16 @@ const std::map<std::string, std::string> &renamedKeys() {
 const std::map<std::string, std::string> &replacedKeys() {
     static const std::map<std::string, std::string> replaced = {
         {"subNucleonParamType",
-         "replaced by posteriorFile: none for 0, tables/posterior.csv for 1, "
-         "tables/posterior_Nq3.csv for 2 and tables/posterior5020_Nq3.csv "
+         "replaced by posteriorFile: none for 0, "
+         "tables/posterior_jpsi_2202.01998_Nq_free.csv for 1, "
+         "tables/posterior_jpsi_2202.01998_Nq_3.csv for 2 and "
+         "tables/posterior5020_Nq3.csv "
          "for 4"},
         {"SubNucleonParamType",
-         "replaced by posteriorFile: none for 0, tables/posterior.csv for 1, "
-         "tables/posterior_Nq3.csv for 2 and tables/posterior5020_Nq3.csv "
+         "replaced by posteriorFile: none for 0, "
+         "tables/posterior_jpsi_2202.01998_Nq_free.csv for 1, "
+         "tables/posterior_jpsi_2202.01998_Nq_3.csv for 2 and "
+         "tables/posterior5020_Nq3.csv "
          "for 4"},
         {"useConstituentQuarkProton",
          "replaced by nucleonModel: gaussian, or hotspots with Nq hot spots"},

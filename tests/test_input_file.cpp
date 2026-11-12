@@ -973,7 +973,8 @@ TEST_CASE(
     CHECK(anyContains(
         readErrors(inputWith(
             inputWith(
-                strings, "posteriorFile", shippedPosterior("posterior_Nq3.csv")),
+                strings, "posteriorFile",
+                shippedPosterior("posterior_jpsi_2202.01998_Nq_3.csv")),
             "posteriorSet", "0")),
         "column Nq is only used with nucleonModel hotspots, which this input "
         "does not set"));
@@ -1068,7 +1069,8 @@ TEST_CASE(
     "Parameters::readInput: the shipped posterior files set every parameter "
     "of their sets") {
     for (const char *name :
-         {"posterior.csv", "posterior_Nq3.csv", "posterior5020_Nq3.csv"}) {
+         {"posterior_jpsi_2202.01998_Nq_free.csv",
+          "posterior_jpsi_2202.01998_Nq_3.csv", "posterior5020_Nq3.csv"}) {
         CAPTURE(name);
         Parameters param;
         const std::vector<std::string> errors = param.readInput(
@@ -1080,7 +1082,7 @@ TEST_CASE(
         CHECK(param.inputWarnings().size() == 9);
         CHECK(param.subnucleon.BGqVar == 0.);
         CHECK(param.subnucleon.NqFluc == 0.);
-        if (std::string(name) == "posterior.csv") {
+        if (std::string(name) == "posterior_jpsi_2202.01998_Nq_free.csv") {
             CHECK(param.subnucleon.m == 0.506);
             CHECK(param.subnucleon.Nq == 6.79);
             CHECK(param.colorCharge.QsMuRatio == 0.598);
@@ -1291,7 +1293,8 @@ TEST_CASE(
     // the shipped tables set smearingWidth, which needs smearQs 1
     CHECK(anyContains(
         readErrors(inputWith(
-            exampleInputWithPosterior(shippedPosterior("posterior_Nq3.csv")),
+            exampleInputWithPosterior(
+                shippedPosterior("posterior_jpsi_2202.01998_Nq_3.csv")),
             "smearQs", "0")),
         "column smearingWidth is only used with smearQs 1, which this input "
         "does not set"));
@@ -1333,13 +1336,15 @@ TEST_CASE(
         readErrors(insertBeforeEndOfFile(
             readSourceFile("input"), "subNucleonParamType 2\n")),
         "unknown parameter subNucleonParamType (replaced by posteriorFile: "
-        "none for 0, tables/posterior.csv for 1, tables/posterior_Nq3.csv "
+        "none for 0, tables/posterior_jpsi_2202.01998_Nq_free.csv for 1, "
+        "tables/posterior_jpsi_2202.01998_Nq_3.csv "
         "for 2"));
     CHECK(anyContains(
         readErrors(insertBeforeEndOfFile(
             inputWith(
                 exampleInputWith(
-                    "posteriorFile", shippedPosterior("posterior_Nq3.csv")),
+                    "posteriorFile",
+                    shippedPosterior("posterior_jpsi_2202.01998_Nq_3.csv")),
                 "posteriorSet", ""),
             "subNucleonParamSet -1\n")),
         "subNucleonParamSet was renamed to posteriorSet"));
@@ -1350,7 +1355,8 @@ TEST_CASE(
     "index") {
     CHECK(anyContains(
         readErrors(inputWith(
-            exampleInputWithPosterior(shippedPosterior("posterior_Nq3.csv")),
+            exampleInputWithPosterior(
+                shippedPosterior("posterior_jpsi_2202.01998_Nq_3.csv")),
             "posteriorSet", "-2")),
         "posteriorSet -2: must be -1 (random) or a set index >= 0"));
 }

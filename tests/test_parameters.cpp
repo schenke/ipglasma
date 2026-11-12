@@ -105,7 +105,7 @@ TEST_CASE(
     Parameters param;
     makeValidBaseline(param);
     param.random.seed = 7;
-    param.posterior.file = "posterior.csv";
+    param.posterior.file = "posterior_jpsi_2202.01998_Nq_free.csv";
     CHECK(param.validationErrors().empty());
     for (int format : {1, 2}) {
         CAPTURE(format);
@@ -114,8 +114,8 @@ TEST_CASE(
         REQUIRE(errors.size() == 1);
         CHECK(
             errors[0]
-            == "posteriorFile posterior.csv cannot be used when reading "
-               "Wilson lines (readInitialWilsonLines "
+            == "posteriorFile posterior_jpsi_2202.01998_Nq_free.csv cannot be "
+               "used when reading Wilson lines (readInitialWilsonLines "
                + std::to_string(format) + "): the event comes from the files");
     }
     param.posterior.file = "none";

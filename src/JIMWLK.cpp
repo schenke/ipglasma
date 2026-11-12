@@ -320,6 +320,39 @@ void JIMWLK::runEvolutionLoop(
     };
 
     saveSnapshotsAfter(0);
+
+    // on a device (IPGLASMA_DEVICE), the Wilson lines of the nucleus stay
+    // there during the evolution and come back for the snapshots and at
+    // the end
+    std::vector<Matrix> &wilsonLines =
+        (nucleus == NucleusRole::Projectile) ? lat_ptr_->U : lat_ptr_->U2;
+    std::unique_ptr<ipgdev::JimwlkDevice> device;
+    if (steps > 0 && ipgdev::runBackend() != nullptr
+        && ipgdev::runConfig().jimwlk) {
+        ipgdev::Backend &backend = *ipgdev::runBackend();
+        messager_ << "[JIMWLK::evolution]: on the device " << backend.name()
+                  << " (" << backend.description() << ")";
+        messager_.flush("info");
+        device = makeDevice(backend);
+        device->upload(wilsonLines);
+    }
+    // IPGLASMA_DEVICE_NOISE=device: the noise comes from the generator of
+    // the device, with a key from the random numbers of the run
+    const bool deviceNoise = device && ipgdev::runConfig().noiseOnDevice;
+    unsigned int noiseKey0 = 0;
+    unsigned int noiseKey1 = 0;
+    if (deviceNoise) {
+        drawDeviceNoiseKey(noiseKey0, noiseKey1);
+        messager_ << "[JIMWLK::evolution]: the noise is drawn on the device "
+                     "(IPGLASMA_DEVICE_NOISE=device): this is not the event "
+                     "a CPU run gives for this seed.";
+        messager_.flush("info");
+    }
+    auto snapshotDueAfter = [&](int step) {
+        return std::find(snapshotStep.begin(), snapshotStep.end(), step)
+               != snapshotStep.end();
+    };
+
     for (int ids = 0; ids < steps; ids++) {
         // steps (from user-configurable JIMWLK parameters, no lower bound
         // enforced) can be under 10, making this 0; guard against the
@@ -329,7 +362,22 @@ void JIMWLK::runEvolutionLoop(
             messager_ << "[JIMWLK::evolution]: Step " << ids;
             messager_.flush("info");
         }
-        evolutionStep(nucleus);
+        if (device) {
+            if (deviceNoise) {
+                IPG_PROFILE_SCOPE("jimwlk.step");
+                IPG_PROFILE_SCOPE("jimwlk.device_step");
+                device->stepWithDeviceNoise(
+                    noiseKey0, noiseKey1, static_cast<unsigned int>(ids));
+            } else {
+                evolutionStepOnDevice(*device);
+            }
+            if (ids + 1 == steps || snapshotDueAfter(ids + 1)) {
+                IPG_PROFILE_SCOPE("jimwlk.device_download");
+                device->download(wilsonLines);
+            }
+        } else {
+            evolutionStep(nucleus);
+        }
         saveSnapshotsAfter(ids + 1);
     }
     messager_ << "[JIMWLK::evolution]: Done.";
@@ -390,6 +438,51 @@ std::vector<double> JIMWLK::correlatedNoise(const std::vector<double> &xi) {
         eta[i] = xi2_[i][0].real();
     }
     return eta;
+}
+
+std::unique_ptr<ipgdev::JimwlkDevice> JIMWLK::makeDevice(
+    ipgdev::Backend &backend) {
+    std::vector<double> generators(8 * 18);
+    for (int a = 0; a < Nc2m1; a++) {
+        const Matrix &Ta = group_ptr_->getT(a);
+        for (int k = 0; k < 9; k++) {
+            generators[18 * a + 2 * k] = Ta(k).real();
+            generators[18 * a + 2 * k + 1] = Ta(k).imag();
+        }
+    }
+    std::vector<double> kernel(4 * static_cast<std::size_t>(Ncells_));
+    for (int i = 0; i < Ncells_; i++) {
+        for (int d = 0; d < 2; d++) {
+            kernel[4 * static_cast<std::size_t>(i) + 2 * d] =
+                (*K_[i])[d].real();
+            kernel[4 * static_cast<std::size_t>(i) + 2 * d + 1] =
+                (*K_[i])[d].imag();
+        }
+    }
+    return std::unique_ptr<ipgdev::JimwlkDevice>(new ipgdev::JimwlkDevice(
+        backend, Ngrid_, generators.data(), kernel.data(),
+        sqrtAlphasNoise_.empty() ? nullptr : sqrtAlphasNoise_.data(),
+        param_.jimwlk.Ds));
+}
+
+void JIMWLK::drawDeviceNoiseKey(unsigned int &key0, unsigned int &key1) {
+    const unsigned long long word = random_ptr_->genrand64_int64();
+    key0 = static_cast<unsigned int>(word & 0xFFFFFFFFULL);
+    key1 = static_cast<unsigned int>(word >> 32);
+}
+
+void JIMWLK::evolutionStepOnDevice(ipgdev::JimwlkDevice &device) {
+    IPG_PROFILE_SCOPE("jimwlk.step");
+    // the same draw as in evolutionStep(), so that the random numbers of
+    // the run are consumed identically
+    const std::size_t count = static_cast<std::size_t>(Ncells_) * 2 * Nc2m1;
+    {
+        IPG_PROFILE_SCOPE("jimwlk.gauss_bulk");
+        gaussNoise_.resize(count);
+        random_ptr_->gaussBulk(gaussNoise_.data(), count, gaussNoiseScratch_);
+    }
+    IPG_PROFILE_SCOPE("jimwlk.device_step");
+    device.step(gaussNoise_.data());
 }
 
 void JIMWLK::evolutionStep(NucleusRole nucleus) {

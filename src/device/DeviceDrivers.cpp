@@ -4,6 +4,7 @@
 
 #include "DeviceDrivers.h"
 
+#include <algorithm>
 #include <cmath>
 #include <complex>
 #include <stdexcept>
@@ -342,8 +343,12 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
     g_ = backend_.createBuffer(18 * sites_);
     chi_ = backend_.createBuffer(18 * sites_);
     residual_ = backend_.createBuffer(sites_);
+    // the residual is summed on the device into partialCount_ partial
+    // sums, which the host adds up: a small download per iteration
+    partialCount_ = std::min<std::size_t>(sites_, 1024);
+    partial_ = backend_.createBuffer(partialCount_);
+    partialSums_.resize(partialCount_);
     poisson_ = backend_.createBuffer(sites_);
-    residualSite_.resize(sites_);
 
     // the factor of the Poisson step of GaugeFix::fftChi()
     std::vector<double> factor(sites_);
@@ -373,7 +378,7 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
 
 GaugeFixDevice::~GaugeFixDevice() {
     for (const Buffer buffer :
-         {ux0_, uy0_, ux_, uy_, g_, chi_, residual_, poisson_}) {
+         {ux0_, uy0_, ux_, uy_, g_, chi_, residual_, partial_, poisson_}) {
         backend_.releaseBuffer(buffer);
     }
 }
@@ -396,12 +401,15 @@ double GaugeFixDevice::divergence() {
     Params p;
     p.n = n_;
     backend_.launch(kGfDivergence, sites_, p, {ux_, uy_, chi_, residual_});
-    backend_.download(residual_, residualSite_.data(), sites_);
-    // in the order of the sites, as on the host
+    // in another order than on the host: the residual differs from that of
+    // the host in the last digits; the host checks it again after the
+    // device (GaugeFix::fftChi())
+    p.i0 = static_cast<int>(sites_);
+    p.i1 = static_cast<int>(partialCount_);
+    backend_.launch(kPartialSum, partialCount_, p, {residual_, partial_});
+    backend_.download(partial_, partialSums_.data(), partialCount_);
     double sum = 0.;
-    for (std::size_t site = 0; site < sites_; site++) {
-        sum += residualSite_[site];
-    }
+    for (const double partial : partialSums_) sum += partial;
     return sum / static_cast<double>(sites_);
 }
 

@@ -154,8 +154,10 @@ eturn The residual, the mean of Tr(chi^2)/3 over the lattice.
     Backend &backend_;
     const int n_;
     const std::size_t sites_;
-    Buffer ux0_, uy0_, ux_, uy_, g_, chi_, residual_, poisson_;
-    std::vector<double> residualSite_;
+    Buffer ux0_, uy0_, ux_, uy_, g_, chi_, residual_, partial_, poisson_;
+    /// The number of partial sums of the residual the device returns.
+    std::size_t partialCount_;
+    std::vector<double> partialSums_;
 };
 
 /**

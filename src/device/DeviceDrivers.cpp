@@ -44,6 +44,8 @@ void checkIndexRange(std::size_t sites) {
     }
 }
 
+}  // namespace
+
 /**
  * Projects the nearly unitary 3x3 matrices of \p field onto SU(3), in
  * double precision on the host: the unitary factor of the polar
@@ -103,8 +105,6 @@ void projectOnSU3(std::vector<Matrix> &field) {
         for (int k = 0; k < 9; k++) x[k] *= phase;
     }
 }
-
-}  // namespace
 
 JimwlkDevice::JimwlkDevice(
     Backend &backend, int n, const double *generators, const double *kernel,
@@ -323,6 +323,172 @@ void YangMillsDevice::restoreMomenta() {
     backend_.launch(kCopy, 18 * sites_, p, {e1Backup_, e1_});
     backend_.launch(kCopy, 18 * sites_, p, {e2Backup_, e2_});
     backend_.launch(kCopy, 18 * sites_, p, {piBackup_, pi_});
+}
+
+// ---------------------------------------------------------------------
+
+GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
+    : backend_(backend), n_(n), sites_(static_cast<std::size_t>(n) * n) {
+    checkIndexRange(sites_);
+    if (!backend_.fftAvailable(n)) {
+        throw std::runtime_error(
+            "device gauge fixing: the FFT of the device is not available "
+            "for this lattice size");
+    }
+    ux0_ = backend_.createBuffer(18 * sites_);
+    uy0_ = backend_.createBuffer(18 * sites_);
+    ux_ = backend_.createBuffer(18 * sites_);
+    uy_ = backend_.createBuffer(18 * sites_);
+    g_ = backend_.createBuffer(18 * sites_);
+    chi_ = backend_.createBuffer(18 * sites_);
+    residual_ = backend_.createBuffer(sites_);
+    poisson_ = backend_.createBuffer(sites_);
+    residualSite_.resize(sites_);
+
+    // the factor of the Poisson step of GaugeFix::fftChi()
+    std::vector<double> factor(sites_);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            const double kx = std::sin(
+                M_PI
+                * (-0.5 + static_cast<double>(i) / static_cast<double>(n)));
+            const double ky = std::sin(
+                M_PI
+                * (-0.5 + static_cast<double>(j) / static_cast<double>(n)));
+            const double kt2 = 4. * (kx * kx + ky * ky);
+            factor[static_cast<std::size_t>(i) * n + j] =
+                -1.5 * (1. / (kt2 + 1e-9));
+        }
+    }
+    // The zero mode of chi is the sum of the divergence over the lattice,
+    // zero up to rounding, and GaugeFix::fftChi() multiplies it by 1.5e9.
+    // In double precision that is a global rotation of 1e-10 per
+    // iteration; in single precision it would be of order 0.1, harmless
+    // for the gauge condition but pointless: leave the zero mode out.
+    if (backend_.singlePrecision()) {
+        factor[static_cast<std::size_t>(n / 2) * n + n / 2] = 0.;
+    }
+    backend_.upload(poisson_, factor.data(), sites_);
+}
+
+GaugeFixDevice::~GaugeFixDevice() {
+    for (const Buffer buffer :
+         {ux0_, uy0_, ux_, uy_, g_, chi_, residual_, poisson_}) {
+        backend_.releaseBuffer(buffer);
+    }
+}
+
+void GaugeFixDevice::upload(
+    const std::vector<Matrix> &ux, const std::vector<Matrix> &uy) {
+    checkSites(ux, sites_);
+    checkSites(uy, sites_);
+    backend_.upload(ux0_, reals(ux), 18 * sites_);
+    backend_.upload(uy0_, reals(uy), 18 * sites_);
+    Params p;
+    p.n = n_;
+    backend_.launch(kCopy, 18 * sites_, p, {ux0_, ux_});
+    backend_.launch(kCopy, 18 * sites_, p, {uy0_, uy_});
+    const std::vector<Matrix> one(sites_, Matrix(1.));
+    backend_.upload(g_, reals(one), 18 * sites_);
+}
+
+double GaugeFixDevice::divergence() {
+    Params p;
+    p.n = n_;
+    backend_.launch(kGfDivergence, sites_, p, {ux_, uy_, chi_, residual_});
+    backend_.download(residual_, residualSite_.data(), sites_);
+    // in the order of the sites, as on the host
+    double sum = 0.;
+    for (std::size_t site = 0; site < sites_; site++) {
+        sum += residualSite_[site];
+    }
+    return sum / static_cast<double>(sites_);
+}
+
+void GaugeFixDevice::relax() {
+    Params p;
+    p.n = n_;
+    backend_.centeredFft(chi_, n_, 9, 1);
+    p.ncomp = 9;
+    backend_.launch(kScaleBySite, 9 * sites_, p, {chi_, poisson_});
+    backend_.centeredFft(chi_, n_, 9, -1);
+    backend_.launch(kGfUpdate, sites_, p, {chi_, g_});
+    backend_.launch(kGfTransform, sites_, p, {g_, ux0_, uy0_, ux_, uy_});
+}
+
+void GaugeFixDevice::download(std::vector<Matrix> &g) {
+    g.resize(sites_);
+    backend_.download(g_, reals(g), 18 * sites_);
+    // Also in double precision: the zero mode of chi, rounding times
+    // 1.5e9, is not exactly Hermitian and traceless, which leaves G with a
+    // phase and a non-unitary part of 1e-9.
+    projectOnSU3(g);
+}
+
+// ---------------------------------------------------------------------
+
+WilsonLineDevice::WilsonLineDevice(
+    Backend &backend, int n, const double *momentumKernel)
+    : backend_(backend), n_(n), sites_(static_cast<std::size_t>(n) * n) {
+    checkIndexRange(sites_);
+    if (!backend_.fftAvailable(n)) {
+        throw std::runtime_error(
+            "device Wilson lines: the FFT of the device is not available "
+            "for this lattice size");
+    }
+    wilson_ = backend_.createBuffer(18 * sites_);
+    kernel_ = backend_.createBuffer(sites_);
+    scale_ = backend_.createBuffer(sites_);
+    gauss_ = backend_.createBuffer(8 * sites_);
+    rho_ = backend_.createBuffer(16 * sites_);
+    backend_.upload(kernel_, momentumKernel, sites_);
+}
+
+WilsonLineDevice::~WilsonLineDevice() {
+    for (const Buffer buffer : {wilson_, kernel_, scale_, gauss_, rho_}) {
+        backend_.releaseBuffer(buffer);
+    }
+}
+
+void WilsonLineDevice::upload(
+    const std::vector<Matrix> &wilsonLines, const double *scale) {
+    checkSites(wilsonLines, sites_);
+    backend_.upload(wilson_, reals(wilsonLines), 18 * sites_);
+    backend_.upload(scale_, scale, sites_);
+}
+
+void WilsonLineDevice::download(std::vector<Matrix> &wilsonLines) {
+    checkSites(wilsonLines, sites_);
+    backend_.download(wilson_, reals(wilsonLines), 18 * sites_);
+    if (backend_.singlePrecision()) projectOnSU3(wilsonLines);
+}
+
+void WilsonLineDevice::sheet(const double *gauss) {
+    backend_.upload(gauss_, gauss, 8 * sites_);
+    multiplySheet();
+}
+
+void WilsonLineDevice::sheetWithDeviceNoise(
+    unsigned int key0, unsigned int key1, unsigned int sheetNumber) {
+    Params p;
+    p.n = n_;
+    p.i0 = static_cast<int>(key0);
+    p.i1 = static_cast<int>(key1);
+    p.i2 = static_cast<int>(sheetNumber);
+    // 8 numbers per site, two per element of the launch
+    backend_.launch(kGaussNoise, 4 * sites_, p, {gauss_});
+    multiplySheet();
+}
+
+void WilsonLineDevice::multiplySheet() {
+    Params p;
+    p.n = n_;
+    p.ncomp = 8;
+    backend_.launch(kWilsonCharge, 8 * sites_, p, {gauss_, scale_, rho_});
+    backend_.centeredFft(rho_, n_, 8, 1);
+    backend_.launch(kScaleBySite, 8 * sites_, p, {rho_, kernel_});
+    backend_.centeredFft(rho_, n_, 8, -1);
+    backend_.launch(kWilsonExponent, sites_, p, {rho_, wilson_});
 }
 
 }  // namespace ipgdev

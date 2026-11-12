@@ -23,6 +23,7 @@
 
 #include "Evolution.h"
 #include "FFT.h"
+#include "GaugeFix.h"
 #include "Group.h"
 #include "JIMWLK.h"
 #include "Lattice.h"
@@ -41,7 +42,15 @@ namespace kernels {
 #define IPG_REAL double
 #define IPG_FN static inline
 #define IPG_GLOBAL
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
 #include "device/ipg_kernels.h"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 }  // namespace kernels
 
 struct DeviceCase {
@@ -390,6 +399,280 @@ TEST_CASE("the Yang-Mills leapfrog on a device agrees with Evolution") {
     }
 }
 
+TEST_CASE("the Wilson lines of a nucleus on a device agree with the host") {
+    for (DeviceCase &device : deviceCases()) {
+        CAPTURE(device.label);
+        for (const int N : {16, 20}) {
+            CAPTURE(N);
+            const int sites = N * N;
+            const int nn[2] = {N, N};
+            const int sheets = 5;
+            FFT fft(nn);
+            std::mt19937 engine(77 + N);
+            std::normal_distribution<double> gauss(0., 1.);
+
+            // the kernel of Init::computeWilsonLineMomentumKernel() with a
+            // mass, and a color-charge scale that varies over the lattice
+            std::vector<double> kernel(sites), scale(sites);
+            for (int ix = 0; ix < N; ix++) {
+                for (int iy = 0; iy < N; iy++) {
+                    const double sx = std::sin(M_PI * (-0.5 + 1. * ix / N));
+                    const double sy = std::sin(M_PI * (-0.5 + 1. * iy / N));
+                    const double kt2 = 4. * (sx * sx + sy * sy);
+                    kernel[ix * N + iy] =
+                        std::exp(-0.1 * std::sqrt(kt2)) / (kt2 + 0.04);
+                    scale[ix * N + iy] =
+                        0.3 * (1.2 + std::cos(2. * M_PI * ix / N)
+                               * std::sin(2. * M_PI * iy / N));
+                }
+            }
+            std::vector<Matrix> reference(sites, Matrix(1.));
+            std::vector<Matrix> result(sites, Matrix(1.));
+            ipgdev::WilsonLineDevice wilson(*device.backend, N, kernel.data());
+            wilson.upload(result, scale.data());
+
+            std::vector<std::complex<double>> rhoData(8 * sites);
+            std::vector<std::complex<double> *> rho(8);
+            for (int a = 0; a < 8; a++) rho[a] = rhoData.data() + a * sites;
+            std::vector<double> numbers(8 * sites);
+            for (int sheet = 0; sheet < sheets; sheet++) {
+                for (double &number : numbers) number = gauss(engine);
+                wilson.sheet(numbers.data());
+                // the sheet as in Init::setV()
+                for (int pos = 0; pos < sites; pos++) {
+                    for (int a = 0; a < 8; a++) {
+                        rho[a][pos] = scale[pos] * numbers[8 * pos + a];
+                    }
+                }
+                fft.fftnComplexArray(rho.data(), rho.data(), nn, 1, 8);
+                for (int a = 0; a < 8; a++) {
+                    for (int pos = 0; pos < sites; pos++) {
+                        rho[a][pos] *= kernel[pos];
+                    }
+                }
+                fft.fftnComplexArray(rho.data(), rho.data(), nn, -1, 8);
+                std::vector<double> in(8);
+                for (int pos = 0; pos < sites; pos++) {
+                    for (int a = 0; a < 8; a++) in[a] = -rho[a][pos].real();
+                    reference[pos] =
+                        Matrix::fromAlgebraExponent(in) * reference[pos];
+                }
+            }
+            wilson.download(result);
+            report(
+                device.label + " Wilson lines N=" + std::to_string(N),
+                maxDifference(reference, result));
+            // not the unit matrix
+            CHECK(maxDifference(reference, std::vector<Matrix>(
+                                               sites, Matrix(1.)))
+                  > 0.3);
+            CHECK(maxDifference(reference, result) < 10. * device.tolerance);
+            CHECK(maxNonUnitarity(result) < 1e-13);
+        }
+    }
+}
+
+TEST_CASE("the color charges drawn on a device give Wilson lines") {
+    for (DeviceCase &device : deviceCases()) {
+        CAPTURE(device.label);
+        const int N = 16;
+        const int sites = N * N;
+        std::vector<double> kernel(sites, 0.5), scale(sites, 0.2);
+        std::vector<Matrix> first(sites, Matrix(1.)), second = first;
+        std::vector<Matrix> other = first;
+        ipgdev::WilsonLineDevice wilson(*device.backend, N, kernel.data());
+        // the same key and sheet numbers give the same lines, other sheet
+        // numbers other lines
+        wilson.upload(first, scale.data());
+        wilson.sheetWithDeviceNoise(11u, 22u, 0u);
+        wilson.sheetWithDeviceNoise(11u, 22u, 1u);
+        wilson.download(first);
+        wilson.upload(second, scale.data());
+        wilson.sheetWithDeviceNoise(11u, 22u, 0u);
+        wilson.sheetWithDeviceNoise(11u, 22u, 1u);
+        wilson.download(second);
+        wilson.upload(other, scale.data());
+        wilson.sheetWithDeviceNoise(11u, 22u, 2u);
+        wilson.sheetWithDeviceNoise(11u, 22u, 3u);
+        wilson.download(other);
+        CHECK(maxDifference(first, second) == 0.);
+        CHECK(maxDifference(first, other) > 0.01);
+        CHECK(maxNonUnitarity(first) < 1e-13);
+    }
+}
+
+// The gauge fixing of GaugeFix::fftChi() on the CPU and on every device,
+// for a lattice of spacing `spacing` [fm]: the threshold of the residual
+// is 1e-12 (spacing / 0.1)^4.
+void checkDeviceGaugeFixing(const double spacing) {
+    CAPTURE(spacing);
+    const int N = 16;
+    const int sites = N * N;
+    const int nn[2] = {N, N};
+    Parameters param;
+    makeDeviceTestParam(param, N);
+    param.lattice.L = spacing * N;
+    Group group;
+
+    // smooth links in a rough gauge, and adjoint fields
+    Lattice initial(&param, N, LatticeBoundary::Periodic);
+    {
+        std::mt19937 engine(4711);
+        std::vector<Matrix> g(sites);
+        for (Matrix &m : g) m = randomSU3(engine, 0.7);
+        for (int ix = 0; ix < N; ix++) {
+            for (int iy = 0; iy < N; iy++) {
+                const int pos = ix * N + iy;
+                std::vector<double> qx(8, 0.), qy(8, 0.);
+                qx[0] = 0.5 * std::cos(2. * M_PI * iy / N);
+                qx[4] = 0.4 * std::sin(2. * M_PI * (ix + 2 * iy) / N);
+                qy[2] = 0.5 * std::sin(2. * M_PI * ix / N);
+                qy[6] = 0.3 * std::cos(2. * M_PI * (2 * ix - iy) / N);
+                Matrix gX = g[((ix + 1) % N) * N + iy];
+                Matrix gY = g[ix * N + (iy + 1) % N];
+                gX.conjg();
+                gY.conjg();
+                initial.Ux[pos] =
+                    g[pos] * Matrix::fromAlgebraExponent(qx) * gX;
+                initial.Uy[pos] =
+                    g[pos] * Matrix::fromAlgebraExponent(qy) * gY;
+                initial.U[pos] = randomAlgebraElement(engine, group, 0.3);
+                initial.U2[pos] = randomAlgebraElement(engine, group, 0.3);
+                initial.Ux2[pos] = randomAlgebraElement(engine, group, 0.3);
+                initial.Uy2[pos] = randomAlgebraElement(engine, group, 0.3);
+            }
+        }
+    }
+    auto copyFields = [](const Lattice &from, Lattice &to) {
+        to.U = from.U;
+        to.U2 = from.U2;
+        to.Ux = from.Ux;
+        to.Uy = from.Uy;
+        to.Ux2 = from.Ux2;
+        to.Uy2 = from.Uy2;
+    };
+    // the mean of Tr(chi^2)/3, chi the projected divergence of the links
+    auto residual = [&](const Lattice &lattice) {
+        double sum = 0.;
+        for (int ix = 0; ix < N; ix++) {
+            for (int iy = 0; iy < N; iy++) {
+                const int pos = ix * N + iy;
+                Matrix d = lattice.Ux[pos] + lattice.Uy[pos]
+                           - lattice.Ux[((ix + N - 1) % N) * N + iy]
+                           - lattice.Uy[ix * N + (iy + N - 1) % N];
+                Matrix dDagger = d;
+                dDagger.conjg();
+                Matrix chi =
+                    std::complex<double>(0., -0.25) * (d - dDagger);
+                chi = chi - (chi.trace() / 3.) * Matrix(1.);
+                sum += (chi * chi).trace().real() / 3.;
+            }
+        }
+        return sum / sites;
+    };
+    // gauge-invariant: the traces of the plaquettes and of E^2
+    auto invariants = [&](const Lattice &lattice) {
+        std::vector<double> values;
+        for (int ix = 0; ix < N; ix++) {
+            for (int iy = 0; iy < N; iy++) {
+                const int pos = ix * N + iy;
+                const int posX = ((ix + 1) % N) * N + iy;
+                const int posY = ix * N + (iy + 1) % N;
+                Matrix uxDagger = lattice.Ux[posY];
+                Matrix uyDagger = lattice.Uy[pos];
+                uxDagger.conjg();
+                uyDagger.conjg();
+                const Matrix plaquette = lattice.Ux[pos] * lattice.Uy[posX]
+                                         * uxDagger * uyDagger;
+                values.push_back(plaquette.trace().real());
+                values.push_back(plaquette.trace().imag());
+                values.push_back(
+                    (lattice.U[pos] * lattice.U[pos]).trace().real());
+                values.push_back(
+                    (lattice.U2[pos] * lattice.Uy2[pos]).trace().real());
+            }
+        }
+        return values;
+    };
+    const double tolerance = 1e-12 * std::pow(spacing / 0.1, 4);
+    const std::vector<double> initialInvariants = invariants(initial);
+    CHECK(residual(initial) > 1e-3);
+
+    Lattice cpuLattice(&param, N, LatticeBoundary::Periodic);
+    copyFields(initial, cpuLattice);
+    {
+        ipgdev::setRunBackend(ipgdev::Config());
+        FFT fft(nn);
+        GaugeFix gaugeFix;
+        gaugeFix.fftChi(&fft, &cpuLattice, &group, &param, 4000);
+    }
+    CHECK(residual(cpuLattice) < tolerance);
+    report("host gauge fixing non-unitarity", maxNonUnitarity(cpuLattice.Ux));
+
+    for (const std::string &name : ipgdev::availableBackends()) {
+        for (int precision = 1; precision <= 2; precision++) {
+            ipgdev::Config config;
+            config.backend = name;
+            config.precision = precision;
+            const std::string label =
+                name + (precision == 1 ? "/single" : "/double");
+            CAPTURE(label);
+            try {
+                ipgdev::setRunBackend(config);
+            } catch (const std::exception &e) {
+                continue;
+            }
+            Lattice deviceLattice(&param, N, LatticeBoundary::Periodic);
+            copyFields(initial, deviceLattice);
+            {
+                FFT fft(nn);
+                GaugeFix gaugeFix;
+                gaugeFix.fftChi(&fft, &deviceLattice, &group, &param, 4000);
+            }
+            ipgdev::setRunBackend(ipgdev::Config());
+
+            // the gauge is fixed to the threshold of the host, in double
+            // precision also from a device in single precision
+            report(label + " gauge fixing residual", residual(deviceLattice));
+            CHECK(residual(deviceLattice) < tolerance);
+            // by a gauge transformation: what is gauge invariant is
+            // unchanged to rounding, whatever the precision of the device
+            const std::vector<double> after = invariants(deviceLattice);
+            double invariantDifference = 0.;
+            for (std::size_t k = 0; k < after.size(); k++) {
+                invariantDifference = std::max(
+                    invariantDifference,
+                    std::abs(after[k] - initialInvariants[k]));
+            }
+            report(label + " gauge fixing invariants", invariantDifference);
+            report(
+                label + " gauge fixing non-unitarity",
+                maxNonUnitarity(deviceLattice.Ux));
+            CHECK(invariantDifference < 1e-12);
+            CHECK(maxNonUnitarity(deviceLattice.Ux) < 1e-12);
+            // the same gauge as on the host, within what the threshold
+            // and the rounding of the zero mode (a global rotation, see
+            // GaugeFixDevice) leave open
+            const double fieldDifference = std::max(
+                maxDifference(cpuLattice.Ux, deviceLattice.Ux),
+                maxDifference(cpuLattice.U, deviceLattice.U));
+            report(label + " gauge fixing fields", fieldDifference);
+            CHECK(fieldDifference < 1e-5);
+        }
+    }
+}
+
+TEST_CASE("the Coulomb gauge fixing on a device agrees with GaugeFix") {
+    checkDeviceGaugeFixing(0.1);
+}
+
+TEST_CASE("the host completes the gauge fixing of a single-precision device") {
+    // a threshold of 1.6e-16, below the residual that links in single
+    // precision can have: the device stops improving and the host
+    // continues in double precision
+    checkDeviceGaugeFixing(0.01);
+}
+
 TEST_CASE("configFromEnvironment reads the device of the run") {
     auto withEnvironment = [](const char *device, const char *precision,
                               const char *stages) {
@@ -420,6 +703,15 @@ TEST_CASE("configFromEnvironment reads the device of the run") {
     CHECK(config.precision == 0);
     CHECK(config.jimwlk);
     CHECK(config.yangMills);
+    CHECK(config.wilsonLines);
+    CHECK(config.gaugeFix);
+
+    withEnvironment("host", nullptr, "wilsonlines,gaugefix");
+    config = ipgdev::configFromEnvironment();
+    CHECK(config.wilsonLines);
+    CHECK(config.gaugeFix);
+    CHECK_FALSE(config.jimwlk);
+    CHECK_FALSE(config.yangMills);
 
     withEnvironment("opencl", "single", "jimwlk");
     config = ipgdev::configFromEnvironment();
@@ -427,6 +719,8 @@ TEST_CASE("configFromEnvironment reads the device of the run") {
     CHECK(config.precision == 1);
     CHECK(config.jimwlk);
     CHECK_FALSE(config.yangMills);
+    CHECK_FALSE(config.wilsonLines);
+    CHECK_FALSE(config.gaugeFix);
 
     withEnvironment("host", "double", "yangmills");
     config = ipgdev::configFromEnvironment();

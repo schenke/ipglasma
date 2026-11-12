@@ -193,11 +193,14 @@ int main(int argc, char *argv[]) {
             const ipgdev::Config &deviceConfig = ipgdev::runConfig();
             messager << "[main::main]: Device " << device->name() << ": "
                      << device->description()
-                     << "; on it:" << (deviceConfig.jimwlk ? " JIMWLK" : "")
+                     << "; on it:"
+                     << (deviceConfig.wilsonLines ? " Wilson-lines" : "")
+                     << (deviceConfig.jimwlk ? " JIMWLK" : "")
                      << (deviceConfig.yangMills ? " Yang-Mills" : "")
+                     << (deviceConfig.gaugeFix ? " gauge-fixing" : "")
                      << (deviceConfig.noiseOnDevice
-                             ? "; JIMWLK noise drawn on the device."
-                             : "; JIMWLK noise drawn on the host.");
+                             ? "; random numbers drawn on the device."
+                             : "; random numbers drawn on the host.");
             messager.flush("info");
             if (device->singlePrecision()) {
                 messager << "[main::main]: The device computes in single "

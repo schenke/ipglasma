@@ -3,8 +3,8 @@
  * This file is part of IP-Glasma; the license text is in LICENSE.
  *
  * Device kernels of IP-Glasma: the per-site (or per-element) bodies of the
- * JIMWLK step, of the classical Yang-Mills leapfrog and of a mixed-radix
- * FFT, in the common subset of C99, C++, CUDA C++ and OpenCL C 1.2, so
+ * JIMWLK step, of the classical Yang-Mills leapfrog, of the Coulomb gauge
+ * fixing, of the Wilson lines of a nucleus and of a mixed-radix FFT, in the common subset of C99, C++, CUDA C++ and OpenCL C 1.2, so
  * that the same source runs
  *
  *   - on the host (HostBackend.cpp, the reference of the device layer),
@@ -857,6 +857,136 @@ IPG_FN void ipg_k_cym_u(IPG_KERNEL_ARGS) {
             ipg_load(b1, i)));
 }
 
+/* ---- Coulomb gauge fixing (GaugeFix.cpp) ----
+ * The device iterates the gauge transformation G alone and forms the
+ * links from the original ones in every iteration, Ux = G(x) Ux0
+ * G^dagger(x + ex): they then carry the rounding of one product, not of
+ * all iterations, which matters in single precision. */
+
+/* chi = the Hermitian traceless projection of the lattice divergence
+ * D = Ux(x) - Ux(x - ex) + Uy(x) - Uy(x - ey), and Tr(chi^2)/3
+ * (projectGaugeDivergenceSU3()); periodic.
+ *   b0 Ux, b1 Uy, b2 chi [site] su3, b3 residual [site] */
+IPG_FN void ipg_k_gf_divergence(IPG_KERNEL_ARGS) {
+    const int n = p.n;
+    const int ix = i / n;
+    const int iy = i % n;
+    const int mX = ipg_coord(ix, -1, n, 1) * n + iy;
+    const int mY = ix * n + ipg_coord(iy, -1, n, 1);
+    const ipg_su3 x = ipg_load(b0, i);
+    const ipg_su3 y = ipg_load(b1, i);
+    const ipg_su3 xm = ipg_load(b0, mX);
+    const ipg_su3 ym = ipg_load(b1, mY);
+    ipg_su3 d, g;
+    ipg_real shift, g00, g11, g22;
+    int k;
+    for (k = 0; k < 18; k++) d.e[k] = x.e[k] - xm.e[k] + y.e[k] - ym.e[k];
+    shift = (d.e[1] + d.e[9] + d.e[17]) / IPG_C(6.);
+    g00 = IPG_C(0.5) * d.e[1] - shift;
+    g11 = IPG_C(0.5) * d.e[9] - shift;
+    g22 = IPG_C(0.5) * d.e[17] - shift;
+    g = ipg_zero();
+    g.e[0] = g00;
+    g.e[8] = g11;
+    g.e[16] = g22;
+    /* g01 from d01 (element 1) and d10 (element 3) */
+    g.e[2] = IPG_C(0.25) * (d.e[3] + d.e[7]);
+    g.e[3] = IPG_C(0.25) * (d.e[6] - d.e[2]);
+    g.e[6] = g.e[2];
+    g.e[7] = -g.e[3];
+    /* g02 from d02 (2) and d20 (6) */
+    g.e[4] = IPG_C(0.25) * (d.e[5] + d.e[13]);
+    g.e[5] = IPG_C(0.25) * (d.e[12] - d.e[4]);
+    g.e[12] = g.e[4];
+    g.e[13] = -g.e[5];
+    /* g12 from d12 (5) and d21 (7) */
+    g.e[10] = IPG_C(0.25) * (d.e[11] + d.e[15]);
+    g.e[11] = IPG_C(0.25) * (d.e[14] - d.e[10]);
+    g.e[14] = g.e[10];
+    g.e[15] = -g.e[11];
+    ipg_store(b2, i, g);
+    b3[i] = (g00 * g00 + g11 * g11 + g22 * g22
+             + IPG_C(2.)
+                   * (g.e[2] * g.e[2] + g.e[3] * g.e[3] + g.e[4] * g.e[4]
+                      + g.e[5] * g.e[5] + g.e[10] * g.e[10]
+                      + g.e[11] * g.e[11]))
+            / IPG_C(3.);
+}
+
+/* G <- exp(i chi) G, followed by one Newton-Schulz step
+ * G <- G (3 - G^dagger G) / 2, which keeps G unitary to rounding over the
+ * iterations.
+ *   b0 chi [site] su3 (Hermitian traceless), b1 G */
+IPG_FN void ipg_k_gf_update(IPG_KERNEL_ARGS) {
+    ipg_su3 g = ipg_expi_hermitian(ipg_load(b0, i));
+    ipg_su3 G, h;
+    int k;
+    /* as GaugeFix::fftChi(): no transformation where the exponential
+     * failed */
+    if (g.e[4] != g.e[4]) g = ipg_identity();
+    G = ipg_mul(g, ipg_load(b1, i));
+    h = ipg_adj_mul(G, G);
+    for (k = 0; k < 18; k++) h.e[k] = -h.e[k];
+    h = ipg_add_diag(h, IPG_C(3.));
+    ipg_store(b1, i, ipg_scale(ipg_mul(G, h), IPG_C(0.5)));
+}
+
+/* Ux = G(x) Ux0 G^dagger(x + ex), Uy = G(x) Uy0 G^dagger(x + ey);
+ * periodic.
+ *   b0 G, b1 Ux0, b2 Uy0, b3 Ux, b4 Uy */
+IPG_FN void ipg_k_gf_transform(IPG_KERNEL_ARGS) {
+    const int n = p.n;
+    const int ix = i / n;
+    const int iy = i % n;
+    const int pX = ipg_coord(ix, 1, n, 1) * n + iy;
+    const int pY = ix * n + ipg_coord(iy, 1, n, 1);
+    const ipg_su3 G = ipg_load(b0, i);
+    ipg_store(
+        b3, i,
+        ipg_mul_adj(ipg_mul(G, ipg_load(b1, i)), ipg_load(b0, pX)));
+    ipg_store(
+        b4, i,
+        ipg_mul_adj(ipg_mul(G, ipg_load(b2, i)), ipg_load(b0, pY)));
+}
+
+/* ---- Wilson lines of a nucleus (Init::setV()) ---- */
+
+/* The color charges of a sheet: complex rho[site][a] = scale[site] *
+ * gauss[site][a]; i over the 8 complex elements per site.
+ *   b0 gauss [site][8] real, b1 scale [site], b2 rho [site][8] complex */
+IPG_FN void ipg_k_wilson_charge(IPG_KERNEL_ARGS) {
+    b2[2 * i] = b1[i / 8] * b0[i];
+    b2[2 * i + 1] = IPG_C(0.);
+}
+
+/* V <- exp(-i Re(rho^a) t_a) V, with t_a = lambda_a / 2
+ * (Matrix::fromAlgebraExponent()).
+ *   b0 rho [site][8] complex, b1 V */
+IPG_FN void ipg_k_wilson_exponent(IPG_KERNEL_ARGS) {
+    const ipg_real s3 = IPG_C(0.57735026918962576450914878050196);
+    ipg_real q[8];
+    ipg_su3 H;
+    int a;
+    for (a = 0; a < 8; a++) q[a] = -b0[16 * i + 2 * a];
+    H = ipg_zero();
+    H.e[0] = IPG_C(0.5) * (q[2] + s3 * q[7]);
+    H.e[8] = IPG_C(0.5) * (-q[2] + s3 * q[7]);
+    H.e[16] = -s3 * q[7];
+    H.e[2] = IPG_C(0.5) * q[0];
+    H.e[3] = -IPG_C(0.5) * q[1];
+    H.e[6] = H.e[2];
+    H.e[7] = -H.e[3];
+    H.e[4] = IPG_C(0.5) * q[3];
+    H.e[5] = -IPG_C(0.5) * q[4];
+    H.e[12] = H.e[4];
+    H.e[13] = -H.e[5];
+    H.e[10] = IPG_C(0.5) * q[5];
+    H.e[11] = -IPG_C(0.5) * q[6];
+    H.e[14] = H.e[10];
+    H.e[15] = -H.e[11];
+    ipg_store(b1, i, ipg_mul(ipg_expi_hermitian(H), ipg_load(b1, i)));
+}
+
 /* The kernels, for the launch tables of the backends: X(name). The order
  * defines the kernel ids (DeviceBackend.h). */
 #define IPG_KERNEL_LIST(X)        \
@@ -874,6 +1004,11 @@ IPG_FN void ipg_k_cym_u(IPG_KERNEL_ARGS) {
     X(ipg_k_cym_pi)               \
     X(ipg_k_cym_e)                \
     X(ipg_k_cym_phi)              \
-    X(ipg_k_cym_u)
+    X(ipg_k_cym_u)                \
+    X(ipg_k_gf_divergence)        \
+    X(ipg_k_gf_update)            \
+    X(ipg_k_gf_transform)         \
+    X(ipg_k_wilson_charge)        \
+    X(ipg_k_wilson_exponent)
 
 #endif /* SRC_DEVICE_IPG_KERNELS_H_ */

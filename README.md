@@ -80,9 +80,9 @@ srun --ntasks=4 --cpus-per-task=8 ./ipglasma input                # SLURM
 
 
 ## Running on a GPU
-The two stages that take most of the time of an event, the JIMWLK evolution and the time steps of the classical Yang-Mills evolution (together about 90% of the example input on the CPU), can run on a GPU. Everything else (the nuclei, the Wilson lines of the initial condition, the light-cone fields, $T^{\mu\nu}$, the flow velocity, the gluon multiplicity and all output) runs on the CPU as before, and the input and output files do not change.
+The four stages that take almost all of the time of an event can run on a GPU: the Wilson lines of the nuclei, the JIMWLK evolution, the time steps of the classical Yang-Mills evolution, and the Coulomb gauge fixing for the gluon multiplicity. Everything else (the nuclei, the light-cone fields, $T^{\mu\nu}$, the flow velocity, the gluon spectrum and all output) runs on the CPU as before, and the input and output files do not change.
 
-The GPU code is the device layer in `src/device/`. Its kernels (`ipg_kernels.h`: the JIMWLK step, the leapfrog updates, an FFT and a random number generator) are written once, in the common subset of C, CUDA C++ and OpenCL C, and compiled for three backends:
+The GPU code is the device layer in `src/device/`. Its kernels (`ipg_kernels.h`: the sheets of the Wilson lines, the JIMWLK step, the leapfrog updates, the gauge-fixing iteration, an FFT and a random number generator) are written once, in the common subset of C, CUDA C++ and OpenCL C, and compiled for three backends:
 
 | Backend | Build option | Hardware | Precision | FFT |
 |---|---|---|---|---|
@@ -109,8 +109,8 @@ The device is chosen at run time with environment variables. Without `IPGLASMA_D
 |---|---|---|
 | `IPGLASMA_DEVICE` | `cuda`, `opencl`, `host`; unset or `cpu` for the CPU code | the backend |
 | `IPGLASMA_DEVICE_PRECISION` | `double`, `single` | default: double if the device has it |
-| `IPGLASMA_DEVICE_STAGES` | comma separated list of `jimwlk`, `yangmills` | the stages on the device; default: both |
-| `IPGLASMA_DEVICE_NOISE` | `host` (default), `device` | where the noise of the JIMWLK evolution is drawn, see below |
+| `IPGLASMA_DEVICE_STAGES` | comma separated list of `wilsonlines`, `jimwlk`, `yangmills`, `gaugefix` | the stages on the device; default: all |
+| `IPGLASMA_DEVICE_NOISE` | `host` (default), `device` | where the random numbers of the color charges and of the JIMWLK noise are drawn, see below |
 | `IPGLASMA_CUDA_DEVICE` | number | the GPU (default 0) |
 | `IPGLASMA_CUDA_FFT` | `cufft` (default), `kernel` | `kernel`: the FFT of the kernels instead of cuFFT, to cross-check it |
 | `IPGLASMA_OPENCL_DEVICE` | number, part of the device name, or `list` | the OpenCL device (default: the first GPU); `list` prints the devices |
@@ -123,9 +123,11 @@ The log names the device and its precision. With MPI, every rank uses the device
 
 **Lattice size.** With cuFFT, any even `size`. The FFT of the kernels (`opencl`, `host`) needs an even `size` whose prime factors are at most 32, e.g. 512, 600, 800 or 1024; the run stops at start-up otherwise.
 
-**Noise of the JIMWLK evolution.** By default the Gaussian noise of every JIMWLK step is drawn on the CPU from the random numbers of the run and copied to the device. A device run then uses the random numbers exactly like a CPU run and gives the same event for the same seed, which is what the comparison with the CPU needs. The generator is serial, however, and on a fast GPU it takes longer than the step itself. `IPGLASMA_DEVICE_NOISE=device` draws the noise on the device instead (Threefry-2x32 with 20 rounds, a counter-based generator, with a key from the random numbers of the run, and the Box-Muller transformation). The events are then statistically equivalent, but not the events a CPU run gives for the same seeds.
+**Random numbers.** By default the Gaussian numbers of the color charges of every sheet of the Wilson lines and of the noise of every JIMWLK step are drawn on the CPU from the random numbers of the run and copied to the device. A device run then uses the random numbers exactly like a CPU run and gives the same event for the same seed, which is what the comparison with the CPU needs. The generator is serial, however, and on a fast GPU it takes longer than the step itself. `IPGLASMA_DEVICE_NOISE=device` draws them on the device instead (Threefry-2x32 with 20 rounds, a counter-based generator, with a key from the random numbers of the run, and the Box-Muller transformation). The events are then statistically equivalent, but not the events a CPU run gives for the same seeds.
 
 **Memory.** The device holds about 250 real numbers per lattice site during the JIMWLK evolution and 160 during the Yang-Mills evolution: 1.3 GB at 800² in double precision, half of that in single precision.
+
+**Gauge fixing.** The device iterates the gauge transformation $G(x)$ only, and forms the links from the original ones in every iteration. The host applies $G$, projected onto SU(3), to its fields in double precision, and then checks the residual with the criterion of the CPU code, continuing the iteration there if necessary. The gauge-fixed fields are therefore an exact gauge transformation of the fields of the evolution also when the device computes in single precision, and the gauge is fixed to the same threshold. In single precision the residual the device measures cannot fall below the rounding of its links, about $3\times10^{-15}$; the threshold is lower than that for `size` above about 1300 at `L` = 30 fm. The device then stops when its residual no longer improves and the remaining iterations run on the CPU (two in the unit test of this case).
 
 ### Precision
 In double precision the device repeats the arithmetic of the CPU code up to rounding. For a Pb+Pb event of the example input at 256² (`validations/device_vs_cpu`, with the `host` and `opencl` backends in double precision), the Wilson lines after the JIMWLK evolution differ by $10^{-14}$ from those of the CPU run, dN/dy and dE/dy by $10^{-12}$, and the hydro output agrees in all printed digits.

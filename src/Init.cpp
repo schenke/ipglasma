@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <limits>
+#include <memory>
 #include <utility>
 #include <vector>
 
@@ -13,6 +14,8 @@
 #include "NucleonModel.h"
 #include "PhysConst.h"
 #include "WilsonLineIO.h"
+#include "device/DeviceBackend.h"
+#include "device/DeviceDrivers.h"
 
 using PhysConst::hbarc;
 using PhysConst::mbToFm2;
@@ -507,10 +510,64 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         }
     };
 
+    // IPGLASMA_DEVICE: the sheets of a nucleus on the device. The Gaussian
+    // numbers come from the host, in the order of the CPU code, or with
+    // IPGLASMA_DEVICE_NOISE=device from the generator of the device.
+    std::unique_ptr<ipgdev::WilsonLineDevice> device;
+    bool deviceNoise = false;
+    unsigned int noiseKey0 = 0;
+    unsigned int noiseKey1 = 0;
+    unsigned int deviceSheet = 0;
+    if (ipgdev::runBackend() != nullptr && ipgdev::runConfig().wilsonLines
+        && ipgdev::runBackend()->fftAvailable(N)) {
+        ipgdev::Backend &backend = *ipgdev::runBackend();
+        messager_ << "[Init::setV]: on the device " << backend.name() << " ("
+                  << backend.description() << ")";
+        messager_.flush("info");
+        device.reset(
+            new ipgdev::WilsonLineDevice(backend, N, momentumKernel.data()));
+        deviceNoise = ipgdev::runConfig().noiseOnDevice;
+        if (deviceNoise) {
+            const unsigned long long word = random->genrand64_int64();
+            noiseKey0 = static_cast<unsigned int>(word & 0xFFFFFFFFULL);
+            noiseKey1 = static_cast<unsigned int>(word >> 32);
+            messager_ << "[Init::setV]: the color charges are drawn on the "
+                         "device (IPGLASMA_DEVICE_NOISE=device): this is not "
+                         "the event a CPU run gives for this seed.";
+            messager_.flush("info");
+        }
+    }
+    auto evolveNucleusWilsonLineOnDevice =
+        [&](const std::vector<double> &colorChargeScale,
+            std::vector<Matrix> &U) {
+            IPG_PROFILE_SCOPE("initialization.wilson_device");
+            device->upload(U, colorChargeScale.data());
+            for (int k = 0; k < Ny; k++) {
+                if (deviceNoise) {
+                    device->sheetWithDeviceNoise(
+                        noiseKey0, noiseKey1, deviceSheet++);
+                } else {
+                    {
+                        IPG_PROFILE_SCOPE("initialization.wilson_random");
+                        IPG_PROFILE_SCOPE("initialization.wilson_random.gauss");
+                        random->gaussBulk(
+                            gaussianField.data(), gaussianField.size(),
+                            gaussianScratch);
+                    }
+                    device->sheet(gaussianField.data());
+                }
+            }
+            device->download(U);
+        };
+
     // loop over longitudinal direction, once for each nucleus
     auto evolveNucleusWilsonLine =
         [&](const std::vector<double> &colorChargeScale,
             std::vector<Matrix> &U) {
+            if (device) {
+                evolveNucleusWilsonLineOnDevice(colorChargeScale, U);
+                return;
+            }
             for (int k = 0; k < Ny; k++) {
                 {
                     IPG_PROFILE_SCOPE("initialization.wilson_random");

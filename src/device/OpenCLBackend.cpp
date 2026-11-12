@@ -61,6 +61,11 @@ const char *const kKernelNames[ipgdev::kNumKernels] = {
     "ipg_k_cym_e",
     "ipg_k_cym_phi",
     "ipg_k_cym_u",
+    "ipg_k_gf_divergence",
+    "ipg_k_gf_update",
+    "ipg_k_gf_transform",
+    "ipg_k_wilson_charge",
+    "ipg_k_wilson_exponent",
 };
 
 // ipg_params of ipg_kernels.h for the two precisions

@@ -55,6 +55,7 @@ enum Kernel {
     kCymPhi,
     kCymU,
     kGfDivergence,
+    kPartialSum,
     kGfUpdate,
     kGfTransform,
     kWilsonCharge,

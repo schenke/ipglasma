@@ -137,6 +137,7 @@ class HostBackend : public ipgdev::Backend {
             IPG_HOST_CASE(kCymPhi, ipg_k_cym_phi)
             IPG_HOST_CASE(kCymU, ipg_k_cym_u)
             IPG_HOST_CASE(kGfDivergence, ipg_k_gf_divergence)
+            IPG_HOST_CASE(kPartialSum, ipg_k_partial_sum)
             IPG_HOST_CASE(kGfUpdate, ipg_k_gf_update)
             IPG_HOST_CASE(kGfTransform, ipg_k_gf_transform)
             IPG_HOST_CASE(kWilsonCharge, ipg_k_wilson_charge)

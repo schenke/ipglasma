@@ -4,112 +4,15 @@
 
 #include "Parameters.h"
 
-#include <exception>
 #include <filesystem>
-#include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
-#include <utility>
 #include <vector>
 
 #include "Glauber.h"
 #include "NucleusSampler.h"
 #include "PhysConst.h"
-
-std::string Parameters::loadPosteriorParameterSetsFromFile(
-    std::string posteriorFileName, std::vector<std::vector<float>> &ParamSet) {
-    std::ifstream posteriorFile(posteriorFileName.c_str());
-    if (!posteriorFile.is_open()) {
-        return "cannot open the posterior parameter file " + posteriorFileName;
-    }
-    std::string tempLine;
-    std::getline(posteriorFile, tempLine);
-    int lineNumber = 1;
-    while (std::getline(posteriorFile, tempLine)) {
-        lineNumber++;
-        std::stringstream lineStream(tempLine);
-        std::string cell;
-        std::vector<float> parsedRow;
-        while (std::getline(lineStream, cell, ',')) {
-            try {
-                parsedRow.push_back(std::stof(cell));
-            } catch (const std::exception &) {
-                return posteriorFileName + ":" + std::to_string(lineNumber)
-                       + ": " + cell + " is not a number";
-            }
-        }
-        ParamSet.push_back(parsedRow);
-    }
-    posteriorFile.close();
-    return "";
-}
-
-std::string Parameters::loadPosteriorParameterSets(const int itype) {
-    std::string fileName;
-    std::vector<std::vector<float>> *table = nullptr;
-    std::size_t columns = 0;
-    if (itype == 1) {
-        fileName = "tables/posterior.csv";
-        table = &posteriorParamSets_;
-        columns = 7;  // m, BG, BGq, smearingWidth, Nq, QsMuRatio, dqMin
-    } else if (itype == 2 || itype == 4) {
-        fileName = (itype == 2) ? "tables/posterior_Nq3.csv"
-                                : "tables/posterior5020_Nq3.csv";
-        table = &posteriorParamSetsNq3_;
-        columns = 6;  // m, BG, BGq, smearingWidth, QsMuRatio, dqMin
-    } else {
-        return "";
-    }
-    const std::string problem =
-        loadPosteriorParameterSetsFromFile(fileName, *table);
-    if (!problem.empty()) return problem;
-    if (table->empty()) {
-        return fileName + " contains no parameter sets";
-    }
-    for (std::size_t row = 0; row < table->size(); row++) {
-        if ((*table)[row].size() < columns) {
-            return fileName + ": parameter set " + std::to_string(row) + " has "
-                   + std::to_string((*table)[row].size()) + " values, expected "
-                   + std::to_string(columns);
-        }
-    }
-    return "";
-}
-
-void Parameters::setParamsWithPosteriorParameterSet(const int itype, int iset) {
-    if (itype == 1) {
-        // variant Nq
-        iset = (iset % posteriorParamSets_.size());
-        event.subNucleonParamSet = iset;
-        messager_ << "[Parameters::setParamsWithPosteriorParameterSet]: "
-                     "Using subnucleon parameter set "
-                  << iset << " (variable Nq).";
-        messager_.flush("info");
-        subnucleon.m = posteriorParamSets_[iset][0];
-        subnucleon.BG = posteriorParamSets_[iset][1];
-        subnucleon.BGq = posteriorParamSets_[iset][2];
-        subnucleon.smearingWidth = posteriorParamSets_[iset][3];
-        subnucleon.Nq = posteriorParamSets_[iset][4];
-        colorCharge.QsMuRatio = posteriorParamSets_[iset][5];
-        subnucleon.dqMin = posteriorParamSets_[iset][6];
-    } else if (itype == 2 || itype == 4) {
-        // fixed Nq = 3
-        iset = (iset % posteriorParamSetsNq3_.size());
-        event.subNucleonParamSet = iset;
-        messager_ << "[Parameters::setParamsWithPosteriorParameterSet]: "
-                     "Using subnucleon parameter set "
-                  << iset << " (Nq = 3).";
-        messager_.flush("info");
-        subnucleon.m = posteriorParamSetsNq3_[iset][0];
-        subnucleon.BG = posteriorParamSetsNq3_[iset][1];
-        subnucleon.BGq = posteriorParamSetsNq3_[iset][2];
-        subnucleon.smearingWidth = posteriorParamSetsNq3_[iset][3];
-        subnucleon.Nq = 3.;
-        colorCharge.QsMuRatio = posteriorParamSetsNq3_[iset][4];
-        subnucleon.dqMin = posteriorParamSetsNq3_[iset][5];
-    }
-}
 
 double Parameters::initialX(NucleusRole role) const {
     if (jimwlk.enabled) return jimwlk.initialX;
@@ -127,6 +30,25 @@ double Parameters::xBeforeJimwlk(NucleusRole role) const {
 }
 
 std::vector<std::string> Parameters::validationErrors() const {
+    std::vector<std::string> errors = combinationErrors();
+    if (!errors.empty() || !posteriorTable_) return errors;
+    // the checks with every set of the posterior file, up to the first set
+    // failing them
+    Parameters withSet(*this);
+    for (std::size_t set = 0; set < posteriorTable_->sets.size(); set++) {
+        // readInput() checked the values of every set
+        withSet.applyPosteriorValues(set);
+        for (const std::string &error : withSet.combinationErrors()) {
+            errors.push_back(
+                posterior.file + ":" + std::to_string(posteriorTable_->lines[set])
+                + ": with this set, " + error);
+        }
+        if (!errors.empty()) break;
+    }
+    return errors;
+}
+
+std::vector<std::string> Parameters::combinationErrors() const {
     // Checks of a single value are part of the input parameter table (see
     // ParameterTable.cpp) and run while reading; these combine several.
     std::vector<std::string> errors;
@@ -142,6 +64,30 @@ std::vector<std::string> Parameters::validationErrors() const {
                    "1 or 2): their file names contain the seed, so give the "
                    "seed of the run that wrote them; for other random numbers "
                    "with the same files, use useSeedList 1 with that seed";
+        fail(message);
+    }
+
+    // the event comes from the files, so the parameters of a posterior set
+    // would have no effect (and the geometry files set QsMuRatio)
+    if (posterior.used() && wilsonLines.readInitialWilsonLines != 0) {
+        std::ostringstream message;
+        message << "posteriorFile " << posterior.file
+                << " cannot be used when reading Wilson lines "
+                   "(readInitialWilsonLines "
+                << wilsonLines.readInitialWilsonLines
+                << "): the event comes from the files";
+        fail(message);
+    }
+
+    // a fluctuating hot-spot width is 0.09 plus a log-normal number with
+    // mean BGq - 0.09, which needs a positive mean
+    if ((subnucleon.nucleonModel == "hotspots"
+         || subnucleon.nucleonModel == "strings")
+        && subnucleon.BGqVar > 0. && subnucleon.BGq <= 0.09) {
+        std::ostringstream message;
+        message << "BGq (" << subnucleon.BGq
+                << ") must be larger than 0.09 GeV^-2 with BGqVar > 0 (the "
+                   "fluctuating hot-spot width is never below 0.09 GeV^-2)";
         fail(message);
     }
 
@@ -346,17 +292,6 @@ std::vector<std::string> Parameters::validationErrors() const {
         message << "nucleiToAverage = " << collision.nucleiToAverage
                 << " (averaging over nuclei) is not supported for collisions "
                    "with a proton";
-        fail(message);
-    }
-
-    // the posterior parameter sets are fits of hot-spot nucleons
-    if (subnucleon.subNucleonParamType != 0
-        && subnucleon.nucleonModel != "hotspots") {
-        std::ostringstream message;
-        message << "subNucleonParamType = " << subnucleon.subNucleonParamType
-                << " (a posterior parameter set) requires nucleonModel "
-                   "hotspots, not "
-                << subnucleon.nucleonModel;
         fail(message);
     }
 

@@ -2,8 +2,6 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
-#include <cstdio>
-#include <fstream>
 #include <string>
 #include <vector>
 
@@ -14,9 +12,6 @@
 namespace {
 // Parameters' default constructor does not initialize every member, so every
 // field validationErrors() reads must be set explicitly.
-//
-// Takes an out-parameter rather than returning by value: Parameters holds a
-// PrettyOstream member, which holds a non-copyable std::ostringstream.
 //
 // Checks of a single value run while reading the input file and are tested
 // in test_input_file.cpp; these tests cover the checks that combine several
@@ -69,6 +64,61 @@ TEST_CASE(
     CHECK(param.validationErrors().empty());
     param.random.useSeedList = false;
     param.random.seed = 7;
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: BGq below 0.09 only without "
+    "fluctuations of the hot-spot width") {
+    // the fluctuating width is 0.09 plus a log-normal number with mean
+    // BGq - 0.09
+    Parameters param;
+    makeValidBaseline(param);
+    param.subnucleon.BGq = 0.05;
+    param.subnucleon.BGqVar = 0.;
+    for (const char *model : {"hotspots", "strings"}) {
+        CAPTURE(model);
+        param.subnucleon.nucleonModel = model;
+        param.subnucleon.BGqVar = 0.;
+        CHECK(param.validationErrors().empty());
+        param.subnucleon.BGqVar = 0.01;
+        const std::vector<std::string> errors = param.validationErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(
+            errors[0].rfind(
+                "BGq (0.05) must be larger than 0.09 GeV^-2 with BGqVar > 0",
+                0)
+            == 0);
+    }
+    param.subnucleon.BGq = 0.091;
+    CHECK(param.validationErrors().empty());
+    // gaussian nucleons have no hot spots
+    param.subnucleon.BGq = 0.05;
+    param.subnucleon.nucleonModel = "gaussian";
+    CHECK(param.validationErrors().empty());
+}
+
+TEST_CASE(
+    "Parameters::validationErrors: rejects a posterior file when reading "
+    "Wilson lines") {
+    // the event comes from the files, so a posterior set would not change it
+    Parameters param;
+    makeValidBaseline(param);
+    param.random.seed = 7;
+    param.posterior.file = "posterior.csv";
+    CHECK(param.validationErrors().empty());
+    for (int format : {1, 2}) {
+        CAPTURE(format);
+        param.wilsonLines.readInitialWilsonLines = format;
+        const std::vector<std::string> errors = param.validationErrors();
+        REQUIRE(errors.size() == 1);
+        CHECK(
+            errors[0]
+            == "posteriorFile posterior.csv cannot be used when reading "
+               "Wilson lines (readInitialWilsonLines "
+               + std::to_string(format) + "): the event comes from the files");
+    }
+    param.posterior.file = "none";
     CHECK(param.validationErrors().empty());
 }
 
@@ -238,57 +288,6 @@ TEST_CASE(
 }
 
 TEST_CASE(
-    "Parameters::validationErrors: posterior parameter sets require hot-spot "
-    "nucleons") {
-    Parameters param;
-    makeValidBaseline(param);
-    for (int type : {1, 2, 4}) {
-        CAPTURE(type);
-        param.subnucleon.subNucleonParamType = type;
-        param.subnucleon.nucleonModel = "hotspots";
-        CHECK(param.validationErrors().empty());
-        param.subnucleon.nucleonModel = "gaussian";
-        CHECK(param.validationErrors().size() == 1);
-    }
-}
-
-namespace {
-class TempCsvFile {
-  public:
-    explicit TempCsvFile(const std::string &contents) {
-        path_ = "ipglasma_test_parameters_tmp_posterior.csv";
-        std::ofstream out(path_);
-        out << contents;
-    }
-    ~TempCsvFile() { std::remove(path_.c_str()); }
-    const std::string &path() const { return path_; }
-
-  private:
-    std::string path_;
-};
-}  // namespace
-
-TEST_CASE(
-    "Parameters::loadPosteriorParameterSetsFromFile parses a CSV, skipping the "
-    "header") {
-    TempCsvFile file(
-        "m,BG,BGq,smearingWidth,NqBase,QsmuRatio,dqmin\n"
-        "0.4,3.3,0.3,0.6,3,0.643,0.2\n"
-        "0.5,3.1,0.25,0.55,4,0.6,0.3\n");
-    Parameters param;
-
-    std::vector<std::vector<float>> parsed;
-    CHECK(param.loadPosteriorParameterSetsFromFile(file.path(), parsed) == "");
-
-    REQUIRE(parsed.size() == 2);
-    REQUIRE(parsed[0].size() == 7);
-    CHECK(parsed[0][0] == doctest::Approx(0.4));
-    CHECK(parsed[0][1] == doctest::Approx(3.3));
-    CHECK(parsed[1][4] == doctest::Approx(4.0));
-    CHECK(parsed[1][6] == doctest::Approx(0.3));
-}
-
-TEST_CASE(
     "Parameters::validationErrors: rejects an x above the Q_s table only "
     "where Q_s^2 is looked up at it") {
     Parameters param;
@@ -322,23 +321,6 @@ TEST_CASE(
     param.wilsonLines.readInitialWilsonLines = 0;
     param.collision.useNucleus = false;
     CHECK(param.validationErrors().empty());
-}
-
-TEST_CASE(
-    "Parameters::loadPosteriorParameterSetsFromFile reports a missing file "
-    "and a value that is not a number") {
-    Parameters param;
-    std::vector<std::vector<float>> parsed;
-    CHECK(
-        param.loadPosteriorParameterSetsFromFile(
-            "no_such_posterior_file.csv", parsed)
-        == "cannot open the posterior parameter file "
-           "no_such_posterior_file.csv");
-
-    TempCsvFile file("m,BG\n0.4,3.3\n0.5,x\n");
-    const std::string problem =
-        param.loadPosteriorParameterSetsFromFile(file.path(), parsed);
-    CHECK(problem == file.path() + ":3: x is not a number");
 }
 
 TEST_CASE(

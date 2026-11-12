@@ -40,10 +40,6 @@ inline std::string writeLinearQsTable() {
     return fileName;
 }
 
-// Matches test_lattice.cpp's makeLatticeParam: Parameters holds a
-// PrettyOstream member, which holds a non-copyable/non-movable
-// std::ostringstream, so this takes an out-parameter rather than
-// returning by value.
 inline void makeInitTestParam(Parameters &param, int size) {
     param.lattice.size = size;
     param.lattice.L = static_cast<double>(size);  // a = 1 fm
@@ -79,9 +75,6 @@ inline bool matricesClose(const Matrix &a, const Matrix &b, double tol) {
     return true;
 }
 
-// Takes an out-parameter rather than returning by value: Parameters holds
-// a PrettyOstream member, which holds a non-copyable/non-movable
-// std::ostringstream -- see the identical note in test_parameters.cpp.
 inline void makeLatticeParam(Parameters &param, int size) {
     param.lattice.L = 10.0;
     param.run.MPIRank = 0;

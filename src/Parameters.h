@@ -5,7 +5,9 @@
 #ifndef SRC_PARAMETERS_H_
 #define SRC_PARAMETERS_H_
 
+#include <cstddef>
 #include <iosfwd>
+#include <memory>
 #include <string>
 #include <vector>
 
@@ -13,6 +15,7 @@
 #include "PrettyOstream.h"
 
 class InputFile;
+class Random;
 
 /// Lattice geometry.
 struct LatticeParameters {
@@ -177,10 +180,28 @@ struct NucleusParameters {
     double dMin = 0.;
 };
 
-/// Nucleon substructure (constituent quarks) and its Bayesian-posterior
-/// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,
-/// Nq, QsMuRatio and dqMin are overwritten from the posterior set every
-/// event.
+/// Parameter sets of a Bayesian posterior, one of which sets the physical
+/// parameters named in its columns every event (see
+/// Parameters::applyPosteriorSet()).
+struct PosteriorParameters {
+    /// CSV file of the parameter sets, or `none`. One line names the input
+    /// keys of the columns, each optionally followed by its unit in
+    /// brackets (`# m [GeV], BG [GeV^-2], ...`), after optional `#`
+    /// comment lines; every line after it is one set. Its values replace
+    /// those of the input file. An optional column `weight` gives the
+    /// relative probability of each set for `posteriorSet -1`. Not with Wilson
+    /// lines read from files (readInitialWilsonLines 1 or 2).
+    std::string file = "none";
+    /// Index of the set used, modulo the number of sets; `-1` draws a
+    /// random set every event, with the probabilities of the column
+    /// `weight` if the file has one.
+    int set = 0;
+    /// Whether the parameters come from a posterior file.
+    /// \return Whether \c file is not `none`.
+    bool used() const { return file != "none"; }
+};
+
+/// Nucleon substructure (constituent quarks).
 struct SubnucleonParameters {
     /// Infrared mass regulator [GeV] cutting off the Coulomb tail;
     /// should be of order \f$\Lambda_{QCD}=0.2\f$ GeV. With `0`, the
@@ -198,16 +219,15 @@ struct SubnucleonParameters {
     /// distribution (see omega).
     double BG = 0.;
     /// Mean width \f$B_q\f$ [GeV\f$^{-2}\f$] of the Gaussian describing
-    /// one constituent quark's ("hot spot") shape; fitted in the posterior
-    /// parameter sets. The hot spots of a nucleon share one width: exactly
+    /// one constituent quark's ("hot spot") shape. The hot spots of a nucleon share one width: exactly
     /// BGq with BGqVar = 0, otherwise fluctuating around the mean BGq but
     /// never below 0.09 GeV\f$^{-2}\f$ (0.09 GeV\f$^{-2}\f$ plus a
     /// log-normal number with mean BGq - 0.09 and variance BGqVar). So BGq
-    /// must be larger than 0.09 GeV\f$^{-2}\f$.
+    /// must be positive, and larger than 0.09 GeV\f$^{-2}\f$ with BGqVar >
+    /// 0.
     double BGq = 0.;
     /// Variance [GeV\f$^{-4}\f$] of the hot-spot width from nucleon to
-    /// nucleon (see BGq); not part of the posterior parameter sets, so 0
-    /// with one.
+    /// nucleon (see BGq).
     double BGqVar = 0.;
     /// Minimum distance [fm] between the hot spots of a nucleon, in 3D
     /// for `omega 1` and in the transverse plane otherwise; best effort
@@ -228,12 +248,10 @@ struct SubnucleonParameters {
     /// `nucleonModel hotspots`, at least 1 (`strings` always has 3), before
     /// the NqFluc fluctuation: each nucleon gets floor(Nq) hot spots, one
     /// more with probability equal to the fractional part, plus a Poisson
-    /// fluctuation of mean NqFluc. A posterior parameter set overwrites it
-    /// (see setParamsWithPosteriorParameterSet()).
+    /// fluctuation of mean NqFluc.
     double Nq = 0.;
     /// Mean of a Poisson-distributed number of additional hot spots per
-    /// nucleon (`nucleonModel hotspots`); not part of the posterior parameter
-    /// sets, so 0 with one.
+    /// nucleon (`nucleonModel hotspots`).
     double NqFluc = 0.;
     /// Whether to shift the constituent-quark center of mass to the
     /// origin after sampling hot-spot positions (`1`).
@@ -244,15 +262,6 @@ struct SubnucleonParameters {
     /// random angle \f$\phi\f$ per nucleon, i.e. narrower along \f$\hat
     /// n\f$ for \f$\delta>0\f$ (an initial test parameter).
     double protonAnisotropy = 0.;
-    /// Selects which Bayesian-posterior-fit table
-    /// setParamsWithPosteriorParameterSet() draws from: `1` (variable
-    /// \f$N_q\f$) or `2`/`4` (fixed
-    /// \f$N_q=3\f$); see loadPosteriorParameterSets().
-    int subNucleonParamType = 0;
-    /// Index into the posterior parameter set selected by \c
-    /// subNucleonParamType, modulo the table's row count; `-1` draws a
-    /// random set every event.
-    int subNucleonParamSet = 0;
     /// Whether \f$Q_s\f$ fluctuates (`1`) or not (`0`): the thickness of
     /// each nucleon (`gaussian`) or each hot spot (`hotspots`, `strings`)
     /// is multiplied by a log-normal factor
@@ -550,8 +559,24 @@ struct EventState {
     /// \f$Q_s\f$.
     double alphas = 0.;
     /// Index of the posterior parameter set used by this event (see
-    /// setParamsWithPosteriorParameterSet()); `-1` if none.
-    int subNucleonParamSet = -1;
+    /// Parameters::applyPosteriorSet()); `-1` if none.
+    int posteriorSet = -1;
+};
+
+/// The parameter sets read from a posterior file (see PosteriorParameters).
+struct PosteriorTable {
+    /// Input key of each column.
+    std::vector<std::string> columns;
+    /// Position of each column's parameter in the parameter table (see
+    /// ParameterTable.cpp).
+    std::vector<std::size_t> specs;
+    /// The sets, each with one value per column, as written in the file.
+    std::vector<std::vector<std::string>> sets;
+    /// Line in the file of each set.
+    std::vector<int> lines;
+    /// Sums of the weights of the sets up to each set (column `weight`);
+    /// empty without weights.
+    std::vector<double> cumulativeWeights;
 };
 
 /**
@@ -568,14 +593,32 @@ class Parameters {
     /// Log sink for error/info messages.
     PrettyOstream messager_;
 
-    /// Loaded rows of `tables/posterior.csv` (variable \f$N_q\f$),
-    /// each `{m, BG, BGq, smearingWidth, Nq, QsmuRatio, dq_min}`.
-    std::vector<std::vector<float>> posteriorParamSets_;
+    /// The sets of the posterior file, if one is used; shared by copies,
+    /// since it does not change after readInput().
+    std::shared_ptr<const PosteriorTable> posteriorTable_;
+    /// Warnings of the last readInput(): input values that the posterior
+    /// file replaces.
+    std::vector<std::string> inputWarnings_;
 
-    /// Loaded rows of `tables/posterior_Nq3.csv` or
-    /// `tables/posterior5020_Nq3.csv` (fixed \f$N_q=3\f$), each
-    /// `{m, BG, BGq, smearingWidth, QsmuRatio, dq_min}`.
-    std::vector<std::vector<float>> posteriorParamSetsNq3_;
+    /**
+     * Reads the posterior file \c posterior.file into \c posteriorTable_
+     * and checks its header: every column must be an input key that a
+     * posterior can set (see Param::posterior()), and appear once.
+     * \return One message per problem; empty on success.
+     */
+    std::vector<std::string> loadPosteriorTable();
+    /**
+     * Sets the parameters of the columns from one set, with the checks of
+     * their values.
+     * \param[in] set Index of the set in \c posteriorTable_.
+     * \return The first problem with a value, or "" if there is none.
+     */
+    std::string applyPosteriorValues(std::size_t set);
+    /**
+     * The checks of validationErrors() on the current values.
+     * \return One message per failed check; empty if all pass.
+     */
+    std::vector<std::string> combinationErrors() const;
 
   public:
     /// Lattice geometry.
@@ -589,10 +632,9 @@ class Parameters {
     /// Nucleon positions: configuration files, polarization and the nuclear
     /// density profiles.
     NucleusParameters nucleus;
-    /// Nucleon substructure (constituent quarks) and its Bayesian-posterior
-    /// parameter sets. With subNucleonParamType > 0, m, BG, BGq, smearingWidth,
-    /// Nq, QsMuRatio and dqMin are overwritten from the posterior set every
-    /// event.
+    /// Parameter sets of a Bayesian posterior.
+    PosteriorParameters posterior;
+    /// Nucleon substructure (constituent quarks).
     SubnucleonParameters subnucleon;
     /// Saturation scale, color charges and rapidity/x of the nuclei.
     ColorChargeParameters colorCharge;
@@ -610,48 +652,30 @@ class Parameters {
     EventState event;
 
     /**
-     * Loads a posterior-fit parameter table from a CSV file (skipping
-     * its header row) into \p ParamSet.
-     * \param[in] posteriorFileName Path to the CSV file.
-     * \param[out] ParamSet Appended with one row per CSV data line,
-     * each a vector of the comma-separated values parsed as `float`.
-     * \return An error message if the file can't be opened or a value is
-     * not a number, otherwise an empty string.
+     * Sets the parameters of the posterior file's columns from one of its
+     * sets, all of which readInput() checked. Does nothing without a
+     * posterior file.
+     * \param[in] set Index of the set, taken modulo the number of sets;
+     * stored in \c event.posteriorSet.
      */
-    std::string loadPosteriorParameterSetsFromFile(
-        std::string posteriorFileName,
-        std::vector<std::vector<float>> &ParamSet);
+    void applyPosteriorSet(int set);
     /**
-     * Loads the posterior-fit parameter table selected by \p itype into
-     * \c posteriorParamSets_ or \c posteriorParamSetsNq3_.
-     * \param[in] itype `1` loads `tables/posterior.csv` (variable
-     * \f$N_q\f$); `2` loads `tables/posterior_Nq3.csv`; `4` loads
-     * `tables/posterior5020_Nq3.csv` (both fixed \f$N_q=3\f$); any
-     * other value is a no-op.
-     * \return An error message if the file can't be read, the table is
-     * empty or a row has too few values, otherwise an empty string.
+     * Draws the posterior set of an event for `posteriorSet -1`: with
+     * probability proportional to the column `weight` of the posterior
+     * file, or without one any set with the same probability (to be taken
+     * modulo the number of sets by applyPosteriorSet()).
+     * \param[in,out] generator Random-number source.
+     * \return Index of the set.
      */
-    std::string loadPosteriorParameterSets(const int itype);
-    /**
-     * Applies one row of a loaded posterior-fit table to this
-     * instance's
-     * `subnucleon.m`/`subnucleon.BG`/`subnucleon.BGq`/`subnucleon.smearingWidth`/`subnucleon.Nq`/\c
-     * colorCharge.QsMuRatio/\c subnucleon.dqMin.
-     * \param[in] itype `1` uses \c posteriorParamSets_ (also sets \c
-     * subnucleon.Nq from the table); `2` or `4` use \c
-     * posteriorParamSetsNq3_ (fixing \c subnucleon.Nq to `3`); any other
-     * value is a no-op.
-     * \param[in] iset Row index, taken modulo the selected table's row
-     * count.
-     */
-    void setParamsWithPosteriorParameterSet(const int itype, int iset);
+    int drawPosteriorSet(Random &generator) const;
 
     /**
      * Sets every input parameter from \p input, using the parameter
      * table in ParameterTable.cpp: parses and checks each value, applies
      * the defaults of optional parameters, and then sets the derived
-     * values (time step, posterior parameter sets). Nothing
-     * derived is set if there are errors.
+     * values (time step). With a posterior file, its columns are set from
+     * its first set, and every set is checked like the input values.
+     * Nothing derived is set if there are errors.
      * \param[in] input The parsed input file.
      * \return Every problem found (including those from reading the
      * file): unknown keys, missing required keys, malformed values and
@@ -659,16 +683,29 @@ class Parameters {
      */
     std::vector<std::string> readInput(const InputFile &input);
     /**
+     * Warnings of the last readInput(): input values that a column of the
+     * posterior file replaces.
+     * \return One message per replaced value.
+     */
+    const std::vector<std::string> &inputWarnings() const {
+        return inputWarnings_;
+    }
+    /**
      * Writes every input parameter's current value, one `key value` line
      * each in input-file syntax and table order, so the output can be
-     * used as an input file again.
+     * used as an input file again. `posteriorSet` is the set the event
+     * used (\c event.posteriorSet), once applyPosteriorSet() chose one, so
+     * the output gives the parameters of the event also with
+     * `posteriorSet -1`.
      * \param[out] out Stream to write to.
      */
     void writeInputParameters(std::ostream &out) const;
     /**
      * Checks that combine several parameters (e.g. snapshots require
      * writing Wilson lines, LambdaQCD < mu0 with running coupling).
-     * Checks of a single value run in readInput().
+     * Checks of a single value run in readInput(). With a posterior file,
+     * the checks run with every set, and stop at the first set failing
+     * them.
      * \return One message per failed check; empty if all pass.
      */
     std::vector<std::string> validationErrors() const;

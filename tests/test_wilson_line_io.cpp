@@ -4,6 +4,7 @@
 
 #include <cmath>
 #include <complex>
+#include <cstdint>
 #include <cstdio>
 #include <fstream>
 #include <set>
@@ -443,4 +444,60 @@ TEST_CASE(
         CHECK(lat2.cells[pos]->getTpA() == lat.cells[pos]->getTpA());
         CHECK(lat2.cells[pos]->getTpB() == lat.cells[pos]->getTpB());
     }
+}
+
+TEST_CASE(
+    "WilsonLineIO::writeGeometry records the event and its posterior set in "
+    "the JSON header") {
+    const int N = 4;
+    Parameters param;
+    makeInitTestParam(param, N);
+    param.wilsonLines.wilsonLinePath = ".";
+    param.run.eventsPerRank = 1;
+    param.collision.projectile = "Pb";
+    param.collision.target = "Pb";
+    param.coupling.g = 1.;
+    param.colorCharge.QsMuRatio = 0.643;
+    Lattice lat(&param, N);
+    const std::vector<ReturnValue> nucleons(1);
+
+    // the JSON header of the projectile's file
+    auto header = [&param]() {
+        std::ifstream in(
+            WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile),
+            std::ios::binary);
+        char magic[8];
+        std::uint64_t length = 0;
+        in.read(magic, sizeof(magic));
+        in.read(reinterpret_cast<char *>(&length), sizeof(length));
+        std::string json(length, ' ');
+        in.read(&json[0], static_cast<std::streamsize>(length));
+        return json;
+    };
+
+    // without a posterior file
+    WilsonLineIO io;
+    io.writeGeometry(&lat, &param, NucleusRole::Projectile, nucleons);
+    CHECK(
+        header().find(
+            "\"event_id\":0,\"posterior_file\":\"none\",\"posterior_set\":-1}")
+        != std::string::npos);
+
+    // with one, whose name a quote cannot end early
+    param.posterior.file = "tables/post \"q\".csv";
+    param.event.posteriorSet = 7;
+    io.writeGeometry(&lat, &param, NucleusRole::Projectile, nucleons);
+    CHECK(
+        header().find(
+            "\"event_id\":0,\"posterior_file\":\"tables/post \\\"q\\\".csv\","
+            "\"posterior_set\":7}")
+        != std::string::npos);
+    // and readGeometry() still finds its keys
+    param.colorCharge.QsMuRatio = 0.5;
+    Lattice lat2(&param, N);
+    CHECK(
+        io.readGeometry(&lat2, &param, NucleusRole::Projectile).QsMuRatio
+        == 0.643);
+    std::remove(
+        WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile).c_str());
 }

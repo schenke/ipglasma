@@ -21,10 +21,6 @@
 #include "test_helpers.h"
 
 namespace {
-// Matches test_lattice.cpp's makeLatticeParam: Parameters holds a
-// PrettyOstream member, which holds a non-copyable/non-movable
-// std::ostringstream, so this takes an out-parameter rather than
-// returning by value.
 void makeEvolutionTestParam(Parameters &param, int size) {
     param.lattice.size = size;
     param.lattice.L = static_cast<double>(size);  // a = 1 fm

@@ -18,9 +18,9 @@ files themselves.
   `0.0996094`).
 - **Text precision.** Text files use 6 significant digits unless stated
   otherwise. Exceptions: the parameter values in `usedParameters` are
-  written exactly (shortest round-trip form), the posterior-set values there
-  with 9 digits, the Wilson-line text files with 15, the gluon-spectrum JSON
-  and the fingerprint file with 17, and the profile file with 12.
+  written exactly (shortest round-trip form), the Wilson-line text files
+  with 15, the gluon-spectrum JSON and the fingerprint file with 17, and
+  the profile file with 12.
 - **Lattice coordinates.** The lattice has `size` × `size` sites with spacing
   `a = L/size`. Site `(ix, iy)` sits at `x = -L/2 + a*ix`, `y = -L/2 + a*iy`
   [fm]. In memory and in the Wilson-line files the site index is
@@ -136,9 +136,6 @@ information:
 - a header with the IP-Glasma version and, for a build from a git checkout,
   its git description (as printed by `ipglasma --version`, see the README),
   the event id and the date;
-- with a posterior parameter set (`subNucleonParamType` > 0), the set that
-  was used and its values of `m`, `BG`, `BGq`, `smearingWidth`, `Nq`,
-  `QsMuRatio` and `dqMin`;
 - `# Random seed used on rank <rank>: <seed>`;
 - with `runEvolution 1` and `useNucleus 1`, once an impact parameter is accepted, a
   block starting with `# Collision geometry of this event:`:
@@ -153,8 +150,10 @@ information:
 
 Running the file again gives the same parameters, but not the same event:
 the random numbers also depend on the MPI rank and on the event's position
-in the run, and `subNucleonParamSet -1` draws a new posterior set. With
-`seed -1`, the file has the seed that was drawn.
+in the run. With a posterior file (`posteriorFile`), `posteriorSet` is the
+set the event used, also with `posteriorSet -1`, and the values of the set
+are those of its parameters in the file. With `seed -1`, the file has the
+seed that was drawn.
 
 ## Wilson lines
 
@@ -224,7 +223,7 @@ Little-endian by definition:
 |---|---|
 | 8 | magic `IPGGEO1\0` |
 | 8 | length M of the JSON metadata, `uint64` |
-| M | JSON metadata: `format`, `version`, `dtype` (`<f8`), `nucleus` (`projectile` or `target`), `species`, `nucleons`, `N`, `L_fm`, `g`, `QsMuRatio`, `blocks`, `native_site_index` |
+| M | JSON metadata: `format`, `version`, `dtype` (`<f8`), `nucleus` (`projectile` or `target`), `species`, `nucleons`, `N`, `L_fm`, `g`, `QsMuRatio`, `blocks`, `native_site_index`, and the event that wrote the file: `event_id` and its posterior set, `posterior_file` (`none` without one) and `posterior_set` (`-1` without one) |
 | nucleons × 4 × 8 | `float64` x, y, z [fm] and proton (1 or 0) of each nucleon, centered at the origin |
 | N² × 8 | `float64` g²μ² of each site, as stored on the lattice, sites `ix` outer and `iy` inner |
 | N² × 8 | `float64` T_p [GeV²] (the summed nucleon thickness, as stored on the lattice) of each site, in the same order |

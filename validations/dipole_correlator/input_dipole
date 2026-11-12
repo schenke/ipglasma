@@ -32,7 +32,7 @@ useInputWSParams 0
 forceDMin 0
 dMin 0.9
 nucleonModel hotspots
-subNucleonParamType 0
+posteriorFile none
 m 0.2
 BG 3.3
 BGq 0.3

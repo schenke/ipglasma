@@ -148,12 +148,16 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
     Random &random, int number) const {
     std::vector<double> x_array, y_array, z_array;
     const double sqrtBG = sqrt(BG_) * hbarc;  // fm
-    // one width for all hot spots of the nucleon: on average BGq_ (exactly
-    // BGq_ with BGqVar_ = 0), never below 0.09 GeV^-2
-    const double BGqMean = BGq_;
-    const double BGqVar = BGqVar_;
-    const double BGq =
-        (0.09 + sampleLogNormalDistribution(random, BGqMean - 0.09, BGqVar));
+    // one width for all hot spots of the nucleon: exactly BGq_ with
+    // BGqVar_ = 0; otherwise on average BGq_ and never below 0.09 GeV^-2
+    double BGq = BGq_;
+    if (BGqVar_ > 0.) {
+        BGq = 0.09 + sampleLogNormalDistribution(random, BGq_ - 0.09, BGqVar_);
+    } else {
+        // the random number of a fluctuating width all the same, so that the
+        // following random numbers do not depend on BGqVar
+        random.gauss();
+    }
     const int Nq = (number > 0) ? number : sampleNumberOfPartons(random);
     const double dq_min = dqMin_;  // fm
     const double dq_min_sq = dq_min * dq_min;

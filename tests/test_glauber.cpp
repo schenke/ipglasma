@@ -2,6 +2,7 @@
 // Copyright (C) 2011-2026 The IP-Glasma authors (see AUTHORS)
 // This file is part of IP-Glasma; the license text is in LICENSE.
 
+#include <array>
 #include <cmath>
 #include <string>
 
@@ -189,4 +190,29 @@ TEST_CASE(
         }
         CHECK(integral / sigmaFm2 == doctest::Approx(A).epsilon(1e-3));
     }
+}
+
+TEST_CASE(
+    "Glauber::interNuPInSP, interNuTInST: the thickness tables shared by all "
+    "instances follow the Woods-Saxon parameters and sigma_NN") {
+    // a posterior file can change these from event to event, each event
+    // with its own Glauber
+    auto thickness = [](double sigmaNN, double radius, double diffuseness) {
+        Glauber glauber;
+        glauber.initGlauber(
+            sigmaNN, "Pb", "Pb", 0., /*setWSDeformParams=*/true, radius,
+            diffuseness, 0., 0., 0., 0., /*forceDminFlag=*/false, 0., 0., 0.,
+            100);
+        return std::array<double, 2> {
+            glauber.interNuPInSP(5.), glauber.interNuTInST(5.)};
+    };
+    const std::array<double, 2> first = thickness(67., 6.62, 0.546);
+    for (const std::array<double, 2> &other :
+         {thickness(67., 6.8, 0.546), thickness(67., 6.62, 0.6),
+          thickness(50., 6.62, 0.546)}) {
+        CHECK(other[0] != first[0]);
+        CHECK(other[1] != first[1]);
+    }
+    // the same values again after the tables were rebuilt for the others
+    CHECK(thickness(67., 6.62, 0.546) == first);
 }

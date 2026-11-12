@@ -13,7 +13,9 @@
 # nucleons (nucleonModel hotspots, smearQs 1) and JIMWLK from x = 0.01 (useJIMWLK 1,
 # jimwlkInitialX 0.01) with the square-root running coupling (jimwlkRunningCoupling 1)
 # and nFlavors 3.
-# m [GeV], BG [GeV^-2], BGq [GeV^-2], smearingWidth, QsMuRatio, jimwlkMass [GeV], jimwlkLambdaQCD [GeV], Nq, BGqVar [GeV^-4], NqFluc, omega, UVDamp [GeV^-1], jimwlkAlphaS, jimwlkMu0 [GeV], jimwlkC, weight
+# The first line is the MAP parametrization
+m [GeV], BG [GeV^-2], BGq [GeV^-2], smearingWidth, QsMuRatio, jimwlkMass [GeV], jimwlkLambdaQCD [GeV], Nq, BGqVar [GeV^-4], NqFluc, omega, UVDamp [GeV^-1], jimwlkAlphaS, jimwlkMu0 [GeV], jimwlkC, weight
+0.51,3.83,0.3,0.88,0.37,0.16,0.0348, 3,0,0,1,0,0,0.28,0.2,0
 0.637709, 3.85071, 0.246113, 1.06461, 0.322265, 0.589394, 0.0973802, 3, 0, 0, 1, 0, 0, 0.28, 0.2, 3.56685e-06
 0.831748, 5.23149, 0.333468, 0.874661, 0.268706, 0.791295, 0.128592, 3, 0, 0, 1, 0, 0, 0.28, 0.2, 2.33549e-06
 0.587657, 3.76511, 0.245056, 0.999521, 0.333134, 0.390922, 0.0669838, 3, 0, 0, 1, 0, 0, 0.28, 0.2, 5.03204e-06

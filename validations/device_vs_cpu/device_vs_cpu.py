@@ -381,14 +381,18 @@ def main():
             print("  PASSED")
         print()
 
-    stages = [("jimwlk.evolution", "JIMWLK"),
-              ("evolution.total", "Yang-Mills + observables"),
-              ("event.total", "event")]
-    print("time [s]" + "".join(f"{name:>28s}" for _, name in stages))
+    # the stages from the profiles; the whole run from the wall clock of
+    # this script (the profile entry event.total is not the event with MPI)
+    stages = [("initialization.wilson_lines", "Wilson lines"),
+              ("jimwlk.evolution", "JIMWLK"),
+              ("evolution.total", "Yang-Mills + obs."),
+              ("observables.gluon_multiplicity", "of it: gluons")]
+    print(f"{'time [s]':<14s}" + "".join(f"{name:>19s}" for _, name in stages)
+          + f"{'whole run':>19s}")
     for label, profile in profiles.items():
-        print(f"{label:<8s}" + "".join(
-            f"{profile.get(phase, float('nan')):28.2f}"
-            for phase, _ in stages))
+        print(f"{label:<14s}" + "".join(
+            f"{profile.get(phase, float('nan')):19.2f}"
+            for phase, _ in stages) + f"{wall.get(label, float('nan')):19.2f}")
 
     summary = {"settings": vars(args), "results": results,
                "profiles": profiles, "wall_seconds": wall}

@@ -174,7 +174,10 @@ void Backend::centeredFft(Buffer field, int n, int ncomp, int isign) {
                 if (checker) p.i4 |= 2;
                 p.r0 = globalSign * norm;
             }
-            launch(kFftPass, elements, p, {source, destination, table});
+            // one element per butterfly of radix `radix`
+            launch(
+                kFftPass, elements / static_cast<std::size_t>(radix), p,
+                {source, destination, table});
             std::swap(source, destination);
             s *= radix;
             pass++;

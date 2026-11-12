@@ -219,12 +219,12 @@ struct SubnucleonParameters {
     /// distribution (see omega).
     double BG = 0.;
     /// Mean width \f$B_q\f$ [GeV\f$^{-2}\f$] of the Gaussian describing
-    /// one constituent quark's ("hot spot") shape. The hot spots of a nucleon share one width: exactly
-    /// BGq with BGqVar = 0, otherwise fluctuating around the mean BGq but
-    /// never below 0.09 GeV\f$^{-2}\f$ (0.09 GeV\f$^{-2}\f$ plus a
-    /// log-normal number with mean BGq - 0.09 and variance BGqVar). So BGq
-    /// must be positive, and larger than 0.09 GeV\f$^{-2}\f$ with BGqVar >
-    /// 0.
+    /// one constituent quark's ("hot spot") shape. The hot spots of a nucleon
+    /// share one width: exactly BGq with BGqVar = 0, otherwise fluctuating
+    /// around the mean BGq but never below 0.09 GeV\f$^{-2}\f$ (0.09
+    /// GeV\f$^{-2}\f$ plus a log-normal number with mean BGq - 0.09 and
+    /// variance BGqVar). So BGq must be positive, and larger than 0.09
+    /// GeV\f$^{-2}\f$ with BGqVar > 0.
     double BGq = 0.;
     /// Variance [GeV\f$^{-4}\f$] of the hot-spot width from nucleon to
     /// nucleon (see BGq).

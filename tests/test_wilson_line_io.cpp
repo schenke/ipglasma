@@ -498,6 +498,6 @@ TEST_CASE(
     CHECK(
         io.readGeometry(&lat2, &param, NucleusRole::Projectile).QsMuRatio
         == 0.643);
-    std::remove(
-        WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile).c_str());
+    std::remove(WilsonLineIO::geometryFileName(&param, NucleusRole::Projectile)
+                    .c_str());
 }

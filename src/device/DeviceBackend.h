@@ -54,6 +54,11 @@ enum Kernel {
     kCymE,
     kCymPhi,
     kCymU,
+    kGfDivergence,
+    kGfUpdate,
+    kGfTransform,
+    kWilsonCharge,
+    kWilsonExponent,
     kNumKernels
 };
 
@@ -157,7 +162,12 @@ struct Config {
     /// device.
     bool jimwlk = true;
     bool yangMills = true;
-    /// Where the Gaussian noise of the JIMWLK evolution is drawn: on the
+    /// Whether the Wilson lines of the nuclei (Init::setV()) and the
+    /// Coulomb gauge fixing (GaugeFix::fftChi()) run on the device.
+    bool wilsonLines = true;
+    bool gaugeFix = true;
+    /// Where the Gaussian numbers of the color charges and the noise of
+    /// the JIMWLK evolution are drawn: on the
     /// host from the random numbers of the run, exactly as in a CPU run
     /// (false), or on the device with a counter-based generator (true):
     /// faster, statistically equivalent, but not the same event as the
@@ -172,8 +182,8 @@ struct Config {
  *     `none` or `off` for the CPU code,
  *   - `IPGLASMA_DEVICE_PRECISION` = `single` or `double` (default: double
  *     if the device has it, e.g. not on the GPUs of Apple M processors),
- *   - `IPGLASMA_DEVICE_STAGES` = a comma separated list of `jimwlk` and
- *     `yangmills` (default: both),
+ *   - `IPGLASMA_DEVICE_STAGES` = a comma separated list of `wilsonlines`,
+ *     `jimwlk`, `yangmills` and `gaugefix` (default: all),
  *   - `IPGLASMA_DEVICE_NOISE` = `host` (default) or `device`, see
  *     Config::noiseOnDevice.
  * Throws std::runtime_error for other values.

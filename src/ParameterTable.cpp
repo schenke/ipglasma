@@ -1358,7 +1358,8 @@ std::vector<std::string> Parameters::loadPosteriorTable() {
         if (weightColumn != names.size()) {
             const std::string &text = values[weightColumn];
             double weight = 0.;
-            const std::string at = fileName + ":" + std::to_string(i + 1) + ": ";
+            const std::string at =
+                fileName + ":" + std::to_string(i + 1) + ": ";
             if (!parseValue(text, weight)) {
                 errors.push_back(at + "weight '" + text + "' is not a number");
             } else if (weight < 0.) {
@@ -1407,9 +1408,9 @@ int Parameters::drawPosteriorSet(Random &generator) const {
         // which is never one of weight 0
         const double u = generator.genrand64_real2() * sums.back();
         const auto found = std::upper_bound(sums.begin(), sums.end(), u);
-        return static_cast<int>(
-            std::min(found - sums.begin(),
-                     static_cast<std::ptrdiff_t>(sums.size()) - 1));
+        return static_cast<int>(std::min(
+            found - sums.begin(),
+            static_cast<std::ptrdiff_t>(sums.size()) - 1));
     }
     return static_cast<int>(generator.genrand64_int63() % 2147483647ULL);
 }
@@ -1490,8 +1491,8 @@ std::vector<std::string> Parameters::readInput(const InputFile &input) {
             // the first set, so the parameters read after this one see its
             // value, as they will see that of every set (checked below)
             columnRead[column] = true;
-            const std::string valueProblem = spec.apply(
-                *this, posteriorTable_->sets[0][column]);
+            const std::string valueProblem =
+                spec.apply(*this, posteriorTable_->sets[0][column]);
             if (!valueProblem.empty()) {
                 errors.push_back(
                     posterior.file + ":"

@@ -463,13 +463,12 @@ TEST_CASE(
                 param.jimwlk.LambdaQCD * param.jimwlk.LambdaQCD;
             return 4. * M_PI
                    / (beta
-                      * std::log(
+                      * std::log(std::pow(
                           std::pow(
-                              std::pow(
-                                  param.jimwlk.mu0 * param.jimwlk.mu0 / Lambda2,
-                                  1. / c)
-                                  + std::pow(k2 / Lambda2, 1. / c),
-                              c)));
+                              param.jimwlk.mu0 * param.jimwlk.mu0 / Lambda2,
+                              1. / c)
+                              + std::pow(k2 / Lambda2, 1. / c),
+                          c)));
         };
         double maxDiff = 0.;
         for (int x = 0; x < N * N; ++x) {

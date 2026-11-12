@@ -570,8 +570,13 @@ IPG_FN void ipg_k_checker_scale(IPG_KERNEL_ARGS) {
     b0[2 * i + 1] *= s;
 }
 
+/* The largest radix of ipg_k_fft_pass (ipgdev::fftRadices()). */
+#define IPG_FFT_MAX_RADIX 32
+
 /* One pass of a mixed-radix Stockham FFT along one axis of a field with
- * p.ncomp complex components per site; i over the complex elements.
+ * p.ncomp complex components per site; i over the butterflies, N / r per
+ * line and component, with the component fastest:
+ * i = ((line * (N / r)) + b) * ncomp + comp.
  *   b0 source, b1 destination (a different buffer), b2 the table
  *   (cos, sin)(2 pi t / N), t = 0 .. N-1
  *   i0 axis: 0 along iy, 1 along ix
@@ -580,49 +585,177 @@ IPG_FN void ipg_k_checker_scale(IPG_KERNEL_ARGS) {
  *   i3 +1 forward (exp(-i...), FFTW_FORWARD), -1 backward
  *   i4 bit 0: multiply the source by (-1)^(ix+iy); bit 1: the destination
  *   r0 factor of the destination (the normalization and global sign)
- * With n = N / s the length of the subsequences and m = n / r, the
- * destination t = q + s (r pp + k) (q < s, k < r, pp < m) is
- *   sum_j source[q + s (pp + j m)] exp(-/+ 2 pi i k (pp + j m) / n).
- * After the passes of all radices the axis is transformed, in natural
- * order. */
+ * With m = N / (s r) and the butterfly b = q + s pp (q < s, pp < m), the
+ * destinations t = q + s (k + r pp), k < r, are
+ *   W^(k s pp) sum_j source[q + s (pp + j m)] w^(k j),
+ * W = exp(-/+ 2 pi i / N), w = W^(N / r): a DFT of length r of the r
+ * sources and a twiddle factor. Every element is read and written once
+ * per pass. After the passes of all radices the axis is transformed, in
+ * natural order. */
+/* In-place DFT of length 4, exponent sign d, of the elements o, o + st,
+ * o + 2 st, o + 3 st of (xr, xi). */
+IPG_FN void ipg_fft_dft4(
+    ipg_real *xr, ipg_real *xi, const int o, const int st, const ipg_real d) {
+    const ipg_real t0r = xr[o] + xr[o + 2 * st];
+    const ipg_real t0i = xi[o] + xi[o + 2 * st];
+    const ipg_real t1r = xr[o] - xr[o + 2 * st];
+    const ipg_real t1i = xi[o] - xi[o + 2 * st];
+    const ipg_real t2r = xr[o + st] + xr[o + 3 * st];
+    const ipg_real t2i = xi[o + st] + xi[o + 3 * st];
+    /* (x[1] - x[3]) times w^1 = d i */
+    const ipg_real t3r = -d * (xi[o + st] - xi[o + 3 * st]);
+    const ipg_real t3i = d * (xr[o + st] - xr[o + 3 * st]);
+    xr[o] = t0r + t2r;
+    xi[o] = t0i + t2i;
+    xr[o + st] = t1r + t3r;
+    xi[o + st] = t1i + t3i;
+    xr[o + 2 * st] = t0r - t2r;
+    xi[o + 2 * st] = t0i - t2i;
+    xr[o + 3 * st] = t1r - t3r;
+    xi[o + 3 * st] = t1i - t3i;
+}
+
+/* Source j of the butterfly (q, pp) of ipg_k_fft_pass into (xr[j],
+ * xi[j]), with the checkerboard sign. */
+IPG_FN void ipg_fft_load(
+    IPG_GLOBAL const ipg_real *b0, const ipg_params p, const int line,
+    const int q, const int pp, const int m, const int j, const int comp,
+    ipg_real *xr, ipg_real *xi) {
+    const int n = p.n;
+    const int tj = q + p.i2 * (pp + j * m);
+    const int site = (p.i0 == 0) ? (line * n + tj) : (tj * n + line);
+    const int src = site * p.ncomp + comp;
+    ipg_real vr = b0[2 * src];
+    ipg_real vi = b0[2 * src + 1];
+    if ((p.i4 & 1) != 0 && ((tj + line) & 1) != 0) {
+        vr = -vr;
+        vi = -vi;
+    }
+    xr[j] = vr;
+    xi[j] = vi;
+}
+
+/* One destination of ipg_k_fft_pass: the result (re, im) of the DFT for
+ * index k, times the twiddle factor, with the checkerboard sign and the
+ * factor of the pass. */
+IPG_FN void ipg_fft_store(
+    IPG_GLOBAL ipg_real *b1, IPG_GLOBAL const ipg_real *b2, const ipg_params p,
+    const int line, const int q, const int pp, const int k, const ipg_real d,
+    const ipg_real re, const ipg_real im, const int comp) {
+    const int n = p.n;
+    const int s = p.i2;
+    const int t = q + s * (k + p.i1 * pp);
+    const int site = (p.i0 == 0) ? (line * n + t) : (t * n + line);
+    const int dst = site * p.ncomp + comp;
+    /* k s pp < N */
+    const int tw = k * s * pp;
+    const ipg_real wr = b2[2 * tw];
+    const ipg_real wi = d * b2[2 * tw + 1];
+    ipg_real f = p.r0;
+    if ((p.i4 & 2) != 0 && ((t + line) & 1) != 0) f = -f;
+    b1[2 * dst] = f * (re * wr - im * wi);
+    b1[2 * dst + 1] = f * (re * wi + im * wr);
+}
+
 IPG_FN void ipg_k_fft_pass(IPG_KERNEL_ARGS) {
     const int n = p.n;
-    const int comp = i % p.ncomp;
-    const int site = i / p.ncomp;
-    const int ix = site / n;
-    const int iy = site % n;
-    const int t = (p.i0 == 0) ? iy : ix;
-    const int other = (p.i0 == 0) ? ix : iy;
     const int r = p.i1;
     const int s = p.i2;
-    const int m = (n / s) / r;
-    const int q = t % s;
-    const int k = (t / s) % r;
-    const int pp = (t / s) / r;
-    ipg_real re = IPG_C(0.);
-    ipg_real im = IPG_C(0.);
-    ipg_real f = p.r0;
-    int j;
-    for (j = 0; j < r; j++) {
-        const int l = pp + j * m;
-        const int tj = q + s * l;
-        const int srcSite = (p.i0 == 0) ? (ix * n + tj) : (tj * n + iy);
-        const int src = srcSite * p.ncomp + comp;
-        const int tw = (k * l * s) % n;
-        const ipg_real wr = b2[2 * tw];
-        const ipg_real wi = (p.i3 > 0) ? -b2[2 * tw + 1] : b2[2 * tw + 1];
-        ipg_real xr = b0[2 * src];
-        ipg_real xi = b0[2 * src + 1];
-        if ((p.i4 & 1) != 0 && ((tj + other) & 1) != 0) {
-            xr = -xr;
-            xi = -xi;
+    const int butterflies = n / r;
+    const int m = butterflies / s;
+    const int comp = i % p.ncomp;
+    const int rest = i / p.ncomp;
+    const int b = rest % butterflies;
+    const int line = rest / butterflies;
+    const int q = b % s;
+    const int pp = b / s;
+    /* the sign of the exponent: W = cos - i sin forward */
+    const ipg_real d = (p.i3 > 0) ? IPG_C(-1.) : IPG_C(1.);
+    ipg_real xr[IPG_FFT_MAX_RADIX];
+    ipg_real xi[IPG_FFT_MAX_RADIX];
+    int j, k;
+    /* the loads with a fixed count for the radices 8, 4 and 2, which lets
+     * the compiler keep xr, xi in registers */
+    if (r == 8) {
+        for (j = 0; j < 8; j++) {
+            ipg_fft_load(b0, p, line, q, pp, m, j, comp, xr, xi);
         }
-        re += xr * wr - xi * wi;
-        im += xr * wi + xi * wr;
+    } else if (r == 4) {
+        for (j = 0; j < 4; j++) {
+            ipg_fft_load(b0, p, line, q, pp, m, j, comp, xr, xi);
+        }
+    } else if (r == 2) {
+        for (j = 0; j < 2; j++) {
+            ipg_fft_load(b0, p, line, q, pp, m, j, comp, xr, xi);
+        }
+    } else {
+        for (j = 0; j < r; j++) {
+            ipg_fft_load(b0, p, line, q, pp, m, j, comp, xr, xi);
+        }
     }
-    if ((p.i4 & 2) != 0 && ((ix + iy) & 1) != 0) f = -f;
-    b1[2 * i] = f * re;
-    b1[2 * i + 1] = f * im;
+    if (r == 8) {
+        const ipg_real h = IPG_C(0.70710678118654752440084436210485);
+        ipg_real or_, oi;
+        /* even and odd elements, then X_k = E_k + w^k O_k and
+         * X_{k+4} = E_k - w^k O_k with w = exp(d i pi / 4) */
+        ipg_fft_dft4(xr, xi, 0, 2, d);
+        ipg_fft_dft4(xr, xi, 1, 2, d);
+        ipg_fft_store(b1, b2, p, line, q, pp, 0, d, xr[0] + xr[1],
+                      xi[0] + xi[1], comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 4, d, xr[0] - xr[1],
+                      xi[0] - xi[1], comp);
+        /* w^1 = (1 + d i) / sqrt 2 */
+        or_ = h * (xr[3] - d * xi[3]);
+        oi = h * (xi[3] + d * xr[3]);
+        ipg_fft_store(b1, b2, p, line, q, pp, 1, d, xr[2] + or_, xi[2] + oi,
+                      comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 5, d, xr[2] - or_, xi[2] - oi,
+                      comp);
+        /* w^2 = d i */
+        or_ = -d * xi[5];
+        oi = d * xr[5];
+        ipg_fft_store(b1, b2, p, line, q, pp, 2, d, xr[4] + or_, xi[4] + oi,
+                      comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 6, d, xr[4] - or_, xi[4] - oi,
+                      comp);
+        /* w^3 = (-1 + d i) / sqrt 2 */
+        or_ = h * (-xr[7] - d * xi[7]);
+        oi = h * (-xi[7] + d * xr[7]);
+        ipg_fft_store(b1, b2, p, line, q, pp, 3, d, xr[6] + or_, xi[6] + oi,
+                      comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 7, d, xr[6] - or_, xi[6] - oi,
+                      comp);
+    } else if (r == 4) {
+        ipg_fft_dft4(xr, xi, 0, 1, d);
+        ipg_fft_store(b1, b2, p, line, q, pp, 0, d, xr[0], xi[0], comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 1, d, xr[1], xi[1], comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 2, d, xr[2], xi[2], comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 3, d, xr[3], xi[3], comp);
+    } else if (r == 2) {
+        ipg_fft_store(b1, b2, p, line, q, pp, 0, d, xr[0] + xr[1],
+                      xi[0] + xi[1], comp);
+        ipg_fft_store(b1, b2, p, line, q, pp, 1, d, xr[0] - xr[1],
+                      xi[0] - xi[1], comp);
+    } else {
+        /* other radices: the DFT of length r directly, with
+         * w^(k j) = W^((k j mod r) N / r) from the table */
+        const int rootStep = n / r;
+        for (k = 0; k < r; k++) {
+            ipg_real re = xr[0];
+            ipg_real im = xi[0];
+            int e = 0;
+            for (j = 1; j < r; j++) {
+                ipg_real cr, ci;
+                e += k;
+                if (e >= r) e -= r;
+                cr = b2[2 * e * rootStep];
+                ci = d * b2[2 * e * rootStep + 1];
+                re += xr[j] * cr - xi[j] * ci;
+                im += xr[j] * ci + xi[j] * cr;
+            }
+            ipg_fft_store(b1, b2, p, line, q, pp, k, d, re, im, comp);
+        }
+    }
 }
 
 /* ---- JIMWLK (JIMWLK::evolutionStep) ---- */

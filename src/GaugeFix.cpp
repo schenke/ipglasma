@@ -10,6 +10,8 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "device/DeviceBackend.h"
+#include "device/DeviceDrivers.h"
 #include "Matrix.h"
 
 namespace {
@@ -22,6 +24,10 @@ constexpr double kGaugeFixReferenceSpacing = 0.1;
 /// Iterations without a new minimum of the residual after which the gauge
 /// fixing stops.
 constexpr int kGaugeFixStagnation = 500;
+/// The same for a device in single precision: the residual of its links
+/// cannot fall below their rounding, about 3e-15, and the host continues
+/// from there in double precision.
+constexpr int kGaugeFixStagnationSingle = 50;
 
 // chi is a traceless Hermitian SU(3) algebra element,
 // chi = q[a] t[a], with t[a] = lambda[a]/2.  Recover the eight real
@@ -101,6 +107,75 @@ inline double projectGaugeDivergenceSU3(
     return frobeniusSquared / 3.0;
 }
 
+/**
+ * Applies the gauge transformation \f$g(x)\f$ stored in Lattice::Ux1 to
+ * the links and to the adjoint fields:
+ * \f$U_i(x) \to g(x) U_i(x) g^\dagger(x+\hat i)\f$ (periodic),
+ * \f$E(x) \to g(x) E(x) g^\dagger(x)\f$.
+ */
+void applyGaugeTransformation(Lattice *lat, const int N) {
+    {
+        IPG_PROFILE_SCOPE(
+            "observables.gluon_multiplicity.gauge_fix.transform");
+
+        // Apply the complete gauge transformation directly to each field
+        // element.  Ux1 stores the already-computed g(x) and is read-only
+        // throughout this pass, so each lattice site can be updated by an
+        // independent OpenMP iteration without neighboring threads writing
+        // the same link.
+#pragma omp parallel
+        {
+            Matrix g, gdag, gdagX, gdagY;
+
+#pragma omp for collapse(2)
+            for (int i = 0; i < N; i++) {
+                for (int j = 0; j < N; j++) {
+                    const int localpos = lat->positionFromXY(i, j);
+                    const int localpospX =
+                        (i == N - 1) ? lat->positionFromXY(0, j)
+                                     : lat->positionFromXY(i + 1, j);
+                    const int localpospY =
+                        (j == N - 1) ? lat->positionFromXY(i, 0)
+                                     : lat->positionFromXY(i, j + 1);
+
+                    g = lat->Ux1[localpos];
+                    gdag = g;
+                    gdag.conjg();
+
+                    gdagX = lat->Ux1[localpospX];
+                    gdagX.conjg();
+                    gdagY = lat->Ux1[localpospY];
+                    gdagY.conjg();
+
+                    // The old serial sweep left-multiplied an outgoing link
+                    // at x and right-multiplied it when visiting x+e_i.
+                    // Preserve that operation order.  Across the periodic
+                    // wrap the neighbor was visited first, so preserve the
+                    // right-then-left order for those boundary links.
+                    if (i == N - 1) {
+                        lat->Ux[localpos] = g * (lat->Ux[localpos] * gdagX);
+                    } else {
+                        lat->Ux[localpos] = (g * lat->Ux[localpos]) * gdagX;
+                    }
+                    if (j == N - 1) {
+                        lat->Uy[localpos] = g * (lat->Uy[localpos] * gdagY);
+                    } else {
+                        lat->Uy[localpos] = (g * lat->Uy[localpos]) * gdagY;
+                    }
+
+                    // Site-local adjoint fields are independent once g(x)
+                    // is known and retain the original left-to-right matrix
+                    // multiplication order.
+                    lat->U[localpos] = (g * lat->U[localpos]) * gdag;
+                    lat->U2[localpos] = (g * lat->U2[localpos]) * gdag;
+                    lat->Uy2[localpos] = (g * lat->Uy2[localpos]) * gdag;
+                    lat->Ux2[localpos] = (g * lat->Ux2[localpos]) * gdag;
+                }
+            }
+        }
+    }
+}
+
 }  // namespace
 
 //**************************************************************************
@@ -158,7 +233,54 @@ void GaugeFix::fftChi(
               << max_gfiter << " iterations.";
     messager_.flush("info");
 
-    for (int gfiter = 0; gfiter < max_gfiter; gfiter++) {
+    // IPGLASMA_DEVICE: the iterations run on the device, which finds the
+    // gauge transformation; the host applies it to its fields in double
+    // precision. The loop below then starts from the fixed gauge: it
+    // checks the residual and, should it still be above the threshold
+    // (a device in single precision on a very fine lattice), continues.
+    int deviceIterations = 0;
+    bool deviceGaveUp = false;
+    if (ipgdev::runBackend() != nullptr && ipgdev::runConfig().gaugeFix
+        && ipgdev::runBackend()->fftAvailable(N)) {
+        IPG_PROFILE_SCOPE("observables.gluon_multiplicity.gauge_fix.device");
+        ipgdev::Backend &backend = *ipgdev::runBackend();
+        messager_ << "[GaugeFix::fftChi]: on the device " << backend.name()
+                  << " (" << backend.description() << ")";
+        messager_.flush("info");
+        const int stagnation = backend.singlePrecision()
+                                   ? kGaugeFixStagnationSingle
+                                   : kGaugeFixStagnation;
+        ipgdev::GaugeFixDevice device(backend, N);
+        device.upload(lat->Ux, lat->Uy);
+        double deviceResidual = 0.;
+        for (int gfiter = 0; gfiter < max_gfiter; gfiter++) {
+            deviceResidual = device.divergence();
+            if (gfiter % 10 == 0) {
+                messager_ << "[GaugeFix::fftChi]: iteration " << gfiter
+                          << ", residual = " << deviceResidual;
+                messager_.flush("info");
+            }
+            if (deviceResidual < tolerance) break;
+            if (gfiter == 0 || deviceResidual < bestResidual) {
+                bestResidual = deviceResidual;
+                bestIteration = gfiter;
+            } else if (gfiter - bestIteration >= stagnation) {
+                // in double precision the host would not get further
+                deviceGaveUp = !backend.singlePrecision();
+                break;
+            }
+            device.relax();
+            deviceIterations++;
+        }
+        messager_ << "[GaugeFix::fftChi]: " << deviceIterations
+                  << " iterations on the device, residual there "
+                  << deviceResidual << ".";
+        messager_.flush("info");
+        device.download(lat->Ux1);
+        applyGaugeTransformation(lat, N);
+    }
+
+    for (int gfiter = 0; gfiter < max_gfiter - deviceIterations; gfiter++) {
         gresidual = 0.;
         {
             IPG_PROFILE_SCOPE(
@@ -198,27 +320,29 @@ void GaugeFix::fftChi(
         gresidual /= N * N;
 
         if (gfiter % 10 == 0) {
-            messager_ << "[GaugeFix::fftChi]: iteration " << gfiter
+            messager_ << "[GaugeFix::fftChi]: iteration "
+                      << gfiter + deviceIterations
                       << ", residual = " << gresidual;
             messager_.flush("info");
         }
 
         if (gresidual < tolerance) {
             converged = true;
-            iterations = gfiter;
+            iterations = gfiter + deviceIterations;
             break;
         }
 
         if (gfiter == 0 || gresidual < bestResidual) {
             bestResidual = gresidual;
             bestIteration = gfiter;
-        } else if (gfiter - bestIteration >= kGaugeFixStagnation) {
-            iterations = gfiter;
+        }
+        if (deviceGaveUp || gfiter - bestIteration >= kGaugeFixStagnation) {
+            iterations = gfiter + deviceIterations;
             messager_ << "[GaugeFix::fftChi]: the residual stopped decreasing: "
-                      << gresidual << " after " << gfiter
+                      << gresidual << " after " << gfiter + deviceIterations
                       << " iterations, above the threshold " << tolerance
                       << " (lowest " << bestResidual << " at iteration "
-                      << bestIteration
+                      << bestIteration + deviceIterations
                       << "); the gauge is fixed less accurately.";
             messager_.flush("warning");
             break;
@@ -293,66 +417,7 @@ void GaugeFix::fftChi(
             }
         }
 
-        {
-            IPG_PROFILE_SCOPE(
-                "observables.gluon_multiplicity.gauge_fix.transform");
-
-            // Apply the complete gauge transformation directly to each field
-            // element.  Ux1 stores the already-computed g(x) and is read-only
-            // throughout this pass, so each lattice site can be updated by an
-            // independent OpenMP iteration without neighboring threads writing
-            // the same link.
-#pragma omp parallel
-            {
-                Matrix g, gdag, gdagX, gdagY;
-
-#pragma omp for collapse(2)
-                for (int i = 0; i < N; i++) {
-                    for (int j = 0; j < N; j++) {
-                        const int localpos = lat->positionFromXY(i, j);
-                        const int localpospX =
-                            (i == N - 1) ? lat->positionFromXY(0, j)
-                                         : lat->positionFromXY(i + 1, j);
-                        const int localpospY =
-                            (j == N - 1) ? lat->positionFromXY(i, 0)
-                                         : lat->positionFromXY(i, j + 1);
-
-                        g = lat->Ux1[localpos];
-                        gdag = g;
-                        gdag.conjg();
-
-                        gdagX = lat->Ux1[localpospX];
-                        gdagX.conjg();
-                        gdagY = lat->Ux1[localpospY];
-                        gdagY.conjg();
-
-                        // The old serial sweep left-multiplied an outgoing link
-                        // at x and right-multiplied it when visiting x+e_i.
-                        // Preserve that operation order.  Across the periodic
-                        // wrap the neighbor was visited first, so preserve the
-                        // right-then-left order for those boundary links.
-                        if (i == N - 1) {
-                            lat->Ux[localpos] = g * (lat->Ux[localpos] * gdagX);
-                        } else {
-                            lat->Ux[localpos] = (g * lat->Ux[localpos]) * gdagX;
-                        }
-                        if (j == N - 1) {
-                            lat->Uy[localpos] = g * (lat->Uy[localpos] * gdagY);
-                        } else {
-                            lat->Uy[localpos] = (g * lat->Uy[localpos]) * gdagY;
-                        }
-
-                        // Site-local adjoint fields are independent once g(x)
-                        // is known and retain the original left-to-right matrix
-                        // multiplication order.
-                        lat->U[localpos] = (g * lat->U[localpos]) * gdag;
-                        lat->U2[localpos] = (g * lat->U2[localpos]) * gdag;
-                        lat->Uy2[localpos] = (g * lat->Uy2[localpos]) * gdag;
-                        lat->Ux2[localpos] = (g * lat->Ux2[localpos]) * gdag;
-                    }
-                }
-            }
-        }
+        applyGaugeTransformation(lat, N);
     }  // gfiter loop
 
     if (converged) {

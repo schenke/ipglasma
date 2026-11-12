@@ -121,6 +121,90 @@ class YangMillsDevice {
     Buffer e1Backup_, e2Backup_, piBackup_;
 };
 
+/**
+ * The iterations of the Coulomb gauge fixing (GaugeFix::fftChi()) on a
+ * device. The device finds the gauge transformation G(x); it keeps the
+ * original links and forms Ux = G(x) Ux0 G^dagger(x + ex) from them in
+ * every iteration, so that the links carry the rounding of one product
+ * and not of all iterations. The host applies G to its fields, in double
+ * precision, and checks the residual there (GaugeFix::fftChi()).
+ */
+class GaugeFixDevice {
+  public:
+    GaugeFixDevice(Backend &backend, int n);
+    ~GaugeFixDevice();
+    GaugeFixDevice(const GaugeFixDevice &) = delete;
+    GaugeFixDevice &operator=(const GaugeFixDevice &) = delete;
+
+    /// Copies the links to the device and sets G = 1.
+    void upload(const std::vector<Matrix> &ux, const std::vector<Matrix> &uy);
+    /**
+     * Computes chi, the projected divergence of the links, on the device.
+     *
+eturn The residual, the mean of Tr(chi^2)/3 over the lattice.
+     */
+    double divergence();
+    /// The step after divergence(): the Poisson equation for chi,
+    /// G <- exp(i chi) G, and the links from the new G.
+    void relax();
+    /// Copies G back, projected onto SU(3).
+    void download(std::vector<Matrix> &g);
+
+  private:
+    Backend &backend_;
+    const int n_;
+    const std::size_t sites_;
+    Buffer ux0_, uy0_, ux_, uy_, g_, chi_, residual_, poisson_;
+    std::vector<double> residualSite_;
+};
+
+/**
+ * The Wilson lines of a nucleus on a device (Init::setV()): for every
+ * longitudinal sheet the Poisson equation for the color charges and
+ * V <- exp(-i rho^a t_a / (nabla^2 - m^2)) V.
+ */
+class WilsonLineDevice {
+  public:
+    /**
+     * \param[in] backend The device.
+     * \param[in] n Lattice side.
+     * \param[in] momentumKernel The kernel of the Poisson equation in
+     * momentum space, per site (Init::computeWilsonLineMomentumKernel()).
+     */
+    WilsonLineDevice(Backend &backend, int n, const double *momentumKernel);
+    ~WilsonLineDevice();
+    WilsonLineDevice(const WilsonLineDevice &) = delete;
+    WilsonLineDevice &operator=(const WilsonLineDevice &) = delete;
+
+    /// Starts a nucleus: its Wilson lines so far and the scale of its
+    /// color charges per site, g sqrt(g^2 mu^2 / Ny).
+    void upload(const std::vector<Matrix> &wilsonLines, const double *scale);
+    /// Copies the Wilson lines back, projected onto SU(3) from single
+    /// precision.
+    void download(std::vector<Matrix> &wilsonLines);
+    /// One sheet with the Gaussian numbers \p gauss, [site][8], of unit
+    /// variance.
+    void sheet(const double *gauss);
+    /// One sheet with numbers drawn on the device, see
+    /// JimwlkDevice::stepWithDeviceNoise(); every sheet of a key needs
+    /// another \p sheetNumber.
+    void sheetWithDeviceNoise(
+        unsigned int key0, unsigned int key1, unsigned int sheetNumber);
+
+  private:
+    Backend &backend_;
+    const int n_;
+    const std::size_t sites_;
+    Buffer wilson_, kernel_, scale_, gauss_, rho_;
+
+    /// The sheet once the numbers are in gauss_.
+    void multiplySheet();
+};
+
+/// Projects nearly unitary matrices onto SU(3) in double precision (the
+/// unitary factor of the polar decomposition, with unit determinant).
+void projectOnSU3(std::vector<Matrix> &field);
+
 }  // namespace ipgdev
 
 #endif  // SRC_DEVICE_DEVICEDRIVERS_H_

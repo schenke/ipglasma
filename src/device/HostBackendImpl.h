@@ -27,7 +27,15 @@ namespace {
 #define IPG_ACOS(x) std::acos(x)
 #define IPG_LOG(x) std::log(x)
 #define IPG_FABS(x) std::fabs(x)
+// every kernel has the same arguments and uses some of them
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-parameter"
+#endif
 #include "ipg_kernels.h"
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
 
 class HostBackend : public ipgdev::Backend {
   public:
@@ -128,6 +136,11 @@ class HostBackend : public ipgdev::Backend {
             IPG_HOST_CASE(kCymE, ipg_k_cym_e)
             IPG_HOST_CASE(kCymPhi, ipg_k_cym_phi)
             IPG_HOST_CASE(kCymU, ipg_k_cym_u)
+            IPG_HOST_CASE(kGfDivergence, ipg_k_gf_divergence)
+            IPG_HOST_CASE(kGfUpdate, ipg_k_gf_update)
+            IPG_HOST_CASE(kGfTransform, ipg_k_gf_transform)
+            IPG_HOST_CASE(kWilsonCharge, ipg_k_wilson_charge)
+            IPG_HOST_CASE(kWilsonExponent, ipg_k_wilson_exponent)
 #undef IPG_HOST_CASE
             default:
                 throw std::runtime_error("unknown device kernel");

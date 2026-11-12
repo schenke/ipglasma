@@ -201,6 +201,8 @@ Config configFromEnvironment() {
     if (!stages.empty()) {
         config.jimwlk = false;
         config.yangMills = false;
+        config.wilsonLines = false;
+        config.gaugeFix = false;
         std::stringstream list(stages);
         std::string stage;
         while (std::getline(list, stage, ',')) {
@@ -208,10 +210,14 @@ Config configFromEnvironment() {
                 config.jimwlk = true;
             } else if (stage == "yangmills" || stage == "cym") {
                 config.yangMills = true;
+            } else if (stage == "wilsonlines") {
+                config.wilsonLines = true;
+            } else if (stage == "gaugefix") {
+                config.gaugeFix = true;
             } else if (!stage.empty()) {
                 throw std::runtime_error(
                     "IPGLASMA_DEVICE_STAGES is a comma separated list of "
-                    "jimwlk and yangmills, not '"
+                    "wilsonlines, jimwlk, yangmills and gaugefix, not '"
                     + stage + "'");
             }
         }

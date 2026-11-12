@@ -951,7 +951,11 @@ the integrated observables and the eccentricities to 10⁻⁵–10⁻⁴, and ε
 10⁻⁴ or better down to 0.1% of its maximum, at 256² and at 512². This
 relies on the projection onto SU(3) of what a single-precision device
 returns (see the main `README.md`); the script checks the unitarity of the
-Wilson lines.
+Wilson lines. These numbers are from the `host` backend and from `opencl`
+on a CPU driver, with all four stages on the device at 256². On the GPU of
+an Apple M1 Pro (`opencl`, single precision, with the JIMWLK and
+Yang–Mills stages on the device) the script passed at 256² and 512² with
+the same differences. The `cuda` backend has not yet been run.
 
 ### Performance
 

@@ -121,6 +121,16 @@ bool drawsOnlySamples(const Parameters &param, int last) {
     }
     return true;
 }
+
+// Whether the posterior file of `param` has the sets 0 to `last`: set
+// `last` is used as such, and set `last` + 1 is set 0 again (the index is
+// taken modulo the number of sets). Leaves set 0 applied.
+bool hasSets(Parameters &param, int last) {
+    param.applyPosteriorSet(last);
+    const bool lastIsASet = param.event.posteriorSet == last;
+    param.applyPosteriorSet(last + 1);
+    return lastIsASet && param.event.posteriorSet == 0;
+}
 }  // namespace
 
 // ---- InputFile ----
@@ -1105,14 +1115,16 @@ TEST_CASE(
         } else {
             CHECK(param.subnucleon.Nq == 3.);
         }
-        if (std::string(name) == "posterior5020_Nq3.csv") {
-            // the MAP parametrization of arXiv:2409.19064, then 999 sets
+        // the MAP parametrization, then 1000 sets (999 in posterior5020)
+        const bool lhc = std::string(name) == "posterior5020_Nq3.csv";
+        const int last = lhc ? 999 : 1000;
+        if (lhc) {
+            // the MAP parametrization of arXiv:2409.19064
             CHECK(param.subnucleon.m == 0.1791);
             CHECK(param.colorCharge.QsMuRatio == 0.5505);
-            CHECK(drawsOnlySamples(param, 999));
-        } else {
-            CHECK(drawsOnlySamples(param, 1000));
         }
+        CHECK(drawsOnlySamples(param, last));
+        CHECK(hasSets(param, last));
     }
 }
 
@@ -1121,20 +1133,25 @@ TEST_CASE(
     "parameter of their sets, the MAP parametrization first") {
     struct Case {
         const char *name;
-        // the MAP parametrization, set 0
-        double m, BG, QsMuRatio, jimwlkLambdaQCD;
+        // the MAP parametrization, set 0: the samples of the chains that
+        // Table I of arXiv:2507.14087 gives rounded, and those with the
+        // largest likelihood for arXiv:2606.20362
+        double m, BG, BGq, smearingWidth, QsMuRatio, jimwlkMass,
+            jimwlkLambdaQCD;
     };
     for (const Case &c :
          {Case {
-              "posterior_jpsi_2507.14087_Kfactor.csv", 0.51, 3.83, 0.37,
-              0.0348},
-          Case {"posterior_jpsi_2507.14087_K1.csv", 0.31, 2.99, 0.63, 0.0097},
+              "posterior_jpsi_2507.14087_Kfactor.csv", 0.507464, 3.83327,
+              0.295357, 0.881765, 0.369074, 0.157217, 0.0348476},
+          Case {
+              "posterior_jpsi_2507.14087_K1.csv", 0.313639, 2.98571, 0.0660834,
+              0.985449, 0.626232, 0.123824, 0.00967638},
           Case {
               "posterior_jpsi_2606.20362_Kfactor.csv", 0.520561, 4.65407,
-              0.520885, 0.0636506},
+              0.33099, 0.777775, 0.520885, 0.541489, 0.0636506},
           Case {
-              "posterior_jpsi_2606.20362_K1.csv", 0.503721, 4.53702, 0.538761,
-              0.0629003}}) {
+              "posterior_jpsi_2606.20362_K1.csv", 0.503721, 4.53702, 0.330308,
+              0.833804, 0.538761, 0.538317, 0.0629003}}) {
         CAPTURE(c.name);
         Parameters param;
         const std::vector<std::string> errors = param.readInput(
@@ -1143,16 +1160,23 @@ TEST_CASE(
         REQUIRE(errors.empty());
         CHECK(param.validationErrors().empty());
         // m, BG, BGq, smearingWidth, QsMuRatio, jimwlkMass, jimwlkLambdaQCD,
-        // Nq, BGqVar, NqFluc, omega, UVDamp, jimwlkAlphaS, jimwlkMu0, jimwlkC
-        CHECK(param.inputWarnings().size() == 15);
+        // Nq, dqMin, BGqVar, NqFluc, omega, UVDamp, jimwlkAlphaS, jimwlkMu0,
+        // jimwlkC, jimwlkInitialX
+        CHECK(param.inputWarnings().size() == 17);
         CHECK(param.subnucleon.m == c.m);
         CHECK(param.subnucleon.BG == c.BG);
+        CHECK(param.subnucleon.BGq == c.BGq);
+        CHECK(param.subnucleon.smearingWidth == c.smearingWidth);
         CHECK(param.colorCharge.QsMuRatio == c.QsMuRatio);
+        CHECK(param.jimwlk.mass == c.jimwlkMass);
         CHECK(param.jimwlk.LambdaQCD == c.jimwlkLambdaQCD);
         CHECK(param.subnucleon.Nq == 3.);
+        CHECK(param.subnucleon.dqMin == 0.);
         CHECK(param.subnucleon.omega == 1.);
         CHECK(param.jimwlk.mu0 == 0.28);
+        CHECK(param.jimwlk.initialX == 0.01);
         CHECK(drawsOnlySamples(param, 1000));
+        CHECK(hasSets(param, 1000));
     }
 }
 

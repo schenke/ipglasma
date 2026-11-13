@@ -1021,7 +1021,8 @@ TEST_CASE(
     REQUIRE(warnings.size() == 2);
     CHECK(anyContains(
         warnings,
-        "BG 3.3 is replaced by the posterior file ipglasma_test_posterior.csv"));
+        "BG 3.3 is replaced by the posterior file "
+        "ipglasma_test_posterior.csv"));
     CHECK(anyContains(warnings, "QsMuRatio 0.643 is replaced"));
 
     param.applyPosteriorSet(1);
@@ -1056,11 +1057,11 @@ TEST_CASE(
         "ipglasma_test_posterior.csv",
         "m, BG\n0.3, 4.0\n0.25, 4.5\n0.35, 3.9\n");
     Parameters param;
-    REQUIRE(param
-                .readInput(inputFromText(inputWith(
-                    exampleInputWithPosterior(file.name()), "posteriorSet",
-                    "-1")))
-                .empty());
+    REQUIRE(
+        param
+            .readInput(inputFromText(inputWith(
+                exampleInputWithPosterior(file.name()), "posteriorSet", "-1")))
+            .empty());
     // as main() does with the set it drew
     param.applyPosteriorSet(2);
     std::ostringstream written;
@@ -1176,9 +1177,7 @@ TEST_CASE(
           Case {"posteriorSet\n1\n", ":1: posteriorSet cannot be set"},
           Case {"BG, BG\n4, 4\n", ":1: column BG appears twice"},
           Case {"m [GeV], \n0.3, 4\n", ":1: a column has no name"},
-          Case {
-              "m, BG\n0.3\n",
-              ":2: 1 values, but line 1 names 2 columns"},
+          Case {"m, BG\n0.3\n", ":2: 1 values, but line 1 names 2 columns"},
           Case {"m\n", " contains no parameter sets"},
           Case {"\n", " has no line naming the columns"},
           Case {"0.3, 4\n", " has no line naming the columns"},
@@ -1267,14 +1266,16 @@ TEST_CASE(
     "versions") {
     TemporaryFile file("ipglasma_test_posterior.csv", "m\n0.3\n0.25\n");
     Parameters param;
-    REQUIRE(param.readInput(inputFromText(exampleInputWithPosterior(file.name())))
-                .empty());
+    REQUIRE(
+        param.readInput(inputFromText(exampleInputWithPosterior(file.name())))
+            .empty());
     Random random, reference;
     random.init_genrand64(5ULL);
     reference.init_genrand64(5ULL);
     for (int i = 0; i < 10; i++) {
-        CHECK(param.drawPosteriorSet(random)
-              == static_cast<int>(reference.genrand64_int63() % 2147483647ULL));
+        CHECK(
+            param.drawPosteriorSet(random)
+            == static_cast<int>(reference.genrand64_int63() % 2147483647ULL));
     }
 }
 
@@ -1288,8 +1289,12 @@ TEST_CASE(
     for (const Case &c :
          {Case {"m, weight\n0.3, x\n", ":2: weight 'x' is not a number"},
           Case {"m, weight\n0.3, -1\n", ":2: weight -1 is negative"},
-          Case {"m, weight\n0.3, 0\n0.4, 0\n", ": the weights of the sets add up to 0"},
-          Case {"weight, m, weight\n1, 0.3, 1\n", ":1: column weight appears twice"}}) {
+          Case {
+              "m, weight\n0.3, 0\n0.4, 0\n",
+              ": the weights of the sets add up to 0"},
+          Case {
+              "weight, m, weight\n1, 0.3, 1\n",
+              ":1: column weight appears twice"}}) {
         CAPTURE(c.contents);
         TemporaryFile file("ipglasma_test_posterior.csv", c.contents);
         const std::vector<std::string> errors =
@@ -1329,7 +1334,8 @@ TEST_CASE(
         readErrors(inputWith(
             exampleInputWithPosterior(hotSpots.name()), "nucleonModel",
             "gaussian")),
-        "ipglasma_test_posterior.csv: column BGq is only used with nucleonModel "
+        "ipglasma_test_posterior.csv: column BGq is only used with "
+        "nucleonModel "
         "hotspots or strings, which this input does not set"));
 
     // the Woods-Saxon parameters need useInputWSParams 1 (the example input
@@ -1339,8 +1345,7 @@ TEST_CASE(
           "deltaRnp", "deltaAnp"}) {
         CAPTURE(name);
         TemporaryFile woodsSaxon(
-            "ipglasma_test_posterior_ws.csv",
-            std::string(name) + "\n0.5\n");
+            "ipglasma_test_posterior_ws.csv", std::string(name) + "\n0.5\n");
         const std::string text = exampleInputWithPosterior(woodsSaxon.name());
         CHECK(anyContains(
             readErrors(text),

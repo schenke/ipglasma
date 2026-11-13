@@ -40,7 +40,8 @@ std::vector<std::string> Parameters::validationErrors() const {
         withSet.applyPosteriorValues(set);
         for (const std::string &error : withSet.combinationErrors()) {
             errors.push_back(
-                posterior.file + ":" + std::to_string(posteriorTable_->lines[set])
+                posterior.file + ":"
+                + std::to_string(posteriorTable_->lines[set])
                 + ": with this set, " + error);
         }
         if (!errors.empty()) break;

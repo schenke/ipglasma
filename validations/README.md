@@ -1048,8 +1048,9 @@ The error depends strongly on the setup. Two more scripts measure it in
 other setups.
 
 **The setup of arXiv:1212.4825.** `lappi_mantysaari.py` runs the setup of
-Lappi and Mäntysaari, whose curves are in `lappi_mantysaari_2012/` (see the
-README there for how they were extracted):
+Lappi and Mäntysaari, whose curves are in `lappi_mantysaari_2012/` (see
+[their README](jimwlk_step_size/lappi_mantysaari_2012/README.md) for how they
+were extracted):
 - **Initial condition:** the MV model with g²μL = 31, `Ny 100` and no
   infrared regulator, on 1024².
 - **Evolution:** the running coupling with Λ_QCD L = 6, μ₀L = 15, c = 0.2,

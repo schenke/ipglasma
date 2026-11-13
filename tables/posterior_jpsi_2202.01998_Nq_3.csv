@@ -1,6 +1,6 @@
 # Posterior samples from H. Mäntysaari, B. Schenke, C. Shen and W. Zhao,
 #  Phys.Lett.B 833 (2022) 137348, arXiv:2202.01998 [hep-ph]
-# Setup with the number of hot spots as a free parameter
+# Setup with the number of hot spots fixed to Nq = 3
 # The first line is the MAP parametrization
 m [GeV], BG [GeV^{-2}], BGq [GeV^{-2}], smearingWidth, QsMuRatio, dqMin [fm], Nq, BGqVar [GeV^{-4}], NqFluc,weight
 0.246, 4.45,  0.346, 0.563, 0.747, 0.254, 3, 0, 0, 0

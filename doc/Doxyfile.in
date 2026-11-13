@@ -36,8 +36,8 @@ WARN_NO_PARAMDOC       = YES
 
 #---------------------------------------------------------------------------
 # Input: every header/source in src/, plus the top-level narrative docs, the
-# README of the posterior files in tables/ and this directory's own
-# \mainpage. Deliberately excludes tests/ (vendors
+# READMEs of tables/ (posterior files) and validations/ (and that of the
+# curves of arXiv:1212.4825 there) and this directory's own \mainpage. Deliberately excludes tests/ (vendors
 # doctest.h) and utilities/ (standalone scripts, not part of the simulation
 # library's own API). Paths are relative to PROJECT_SOURCE_DIR (the
 # WORKING_DIRECTORY every custom target in doc/CMakeLists.txt runs from),
@@ -59,6 +59,8 @@ INPUT                  = doc/mainpage.dox \
                           CONTRIBUTING.md \
                           CHANGELOG.md \
                           tables/README.md \
+                          validations/README.md \
+                          validations/jimwlk_step_size/lappi_mantysaari_2012/README.md \
                           src
 STRIP_FROM_PATH        = @PROJECT_SOURCE_DIR@
 FILE_PATTERNS          = *.h *.cpp *.dox *.md

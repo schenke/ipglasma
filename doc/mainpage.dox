@@ -3,8 +3,8 @@
 
 This is the full developer reference for IP-Glasma: every class, function,
 and member variable in `src/`, plus the top-level project documentation
-(README, OUTPUT, CONTRIBUTING, CHANGELOG and the README of the posterior
-files in tables/) reproduced as browsable pages below.
+(README, OUTPUT, CONTRIBUTING, CHANGELOG and the READMEs of tables/ and
+validations/) reproduced as browsable pages below.
 Classes are listed alphabetically (see the "Classes" tab) rather than
 grouped by physics topic.
 
@@ -18,6 +18,8 @@ grouped by physics topic.
 - \ref md_CHANGELOG -- what changed between versions.
 - \ref md_tables_2README -- the posterior parameter sets shipped in
   tables/: their sources and how they were made.
+- \ref md_validations_2README -- the regression tests and the validation
+  setups in validations/: how to run them and their results.
 
 \par The simulation pipeline, in the order a run actually executes it
 -# \ref InputFile / \ref Parameters -- read and validate the input file

@@ -1093,6 +1093,45 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "Parameters::readInput: the shipped J/psi posterior files set every "
+    "parameter of their sets, the MAP parametrization first") {
+    struct Case {
+        const char *name;
+        // the MAP parametrization, set 0
+        double m, BG, QsMuRatio, jimwlkLambdaQCD;
+    };
+    for (const Case &c :
+         {Case {
+              "posterior_jpsi_2507.14087_Kfactor.csv", 0.51, 3.83, 0.37,
+              0.0348},
+          Case {"posterior_jpsi_2507.14087_K1.csv", 0.31, 2.99, 0.63, 0.0097},
+          Case {
+              "posterior_jpsi_2606.20362_Kfactor.csv", 0.520561, 4.65407,
+              0.520885, 0.0636506},
+          Case {
+              "posterior_jpsi_2606.20362_K1.csv", 0.503721, 4.53702, 0.538761,
+              0.0629003}}) {
+        CAPTURE(c.name);
+        Parameters param;
+        const std::vector<std::string> errors = param.readInput(
+            inputFromText(exampleInputWithPosterior(shippedPosterior(c.name))));
+        for (const std::string &error : errors) CAPTURE(error);
+        REQUIRE(errors.empty());
+        CHECK(param.validationErrors().empty());
+        // m, BG, BGq, smearingWidth, QsMuRatio, jimwlkMass, jimwlkLambdaQCD,
+        // Nq, BGqVar, NqFluc, omega, UVDamp, jimwlkAlphaS, jimwlkMu0, jimwlkC
+        CHECK(param.inputWarnings().size() == 15);
+        CHECK(param.subnucleon.m == c.m);
+        CHECK(param.subnucleon.BG == c.BG);
+        CHECK(param.colorCharge.QsMuRatio == c.QsMuRatio);
+        CHECK(param.jimwlk.LambdaQCD == c.jimwlkLambdaQCD);
+        CHECK(param.subnucleon.Nq == 3.);
+        CHECK(param.subnucleon.omega == 1.);
+        CHECK(param.jimwlk.mu0 == 0.28);
+    }
+}
+
+TEST_CASE(
     "Parameters::readInput: the columns of a posterior file are physical "
     "input keys, each once") {
     struct Case {

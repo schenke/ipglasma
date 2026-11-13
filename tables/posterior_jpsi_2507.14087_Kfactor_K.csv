@@ -1,7 +1,7 @@
 # Posterior of the global fit to exclusive J/psi production in gamma+p and gamma+Pb
 # collisions of H. Mantysaari, H. Roch, F. Salazar, B. Schenke, C. Shen and W. Zhao,
-# arXiv:2507.14087, with the cross sections scaled by a free factor K (column "variable
-# K" of Table I).
+# Phys. Rev. D 113 (2026) 014038, arXiv:2507.14087, with the cross sections scaled by a
+# free factor K (column "variable K" of Table I).
 # 1000 samples drawn with probabilities proportional to their weights (systematic
 # resampling, numpy default_rng(250714087); in the order of the chain) from the 114759
 # weighted samples of mcmc_full_Kfactor/chain.pkl in posterior_chain_full_fit.tar.gz of
@@ -11,10 +11,10 @@
 # The K factor of each set of posterior_jpsi_2507.14087_Kfactor.csv, in the same order:
 # posteriorSet is the index of the set (as in usedParameters<event>.dat), sample the row
 # of the sample in chain.pkl (counted from 0), K the factor that scales the cross
-# sections. Set 0 is the MAP parametrization, which is no sample of the chain (sample
-# -1). Not an IP-Glasma input file.
+# sections. Set 0 is the MAP parametrization; its K is the one refitted in the paper
+# (0.303981 in the chain). Not an IP-Glasma input file.
 # posteriorSet, sample, K
-0, -1, 0.308
+0, 39324, 0.308
 1, 266, 0.291245
 2, 516, 0.325321
 3, 771, 0.462916

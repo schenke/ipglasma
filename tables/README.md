@@ -24,7 +24,7 @@ short:
 | `posterior_jpsi_2202.01998_Nq_free.csv` | exclusive J/ψ production in γ+p, number of hot spots free | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `Nq`, `QsMuRatio`, `dqMin` (`BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1` |
 | `posterior_jpsi_2202.01998_Nq_3.csv` | the same with `Nq` = 3 | MAP + 1000 | the same | the same |
 | `posterior5020_Nq3.csv` | proton structure at $x_p = 2\times 10^{-4}$ (LHC energies) with `Nq` = 3, from J/ψ pseudodata of JIMWLK evolution; not recommended for new calculations | MAP + 999 | the same | the same |
-| `posterior_jpsi_2507.14087_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb, free K factor | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `jimwlkMass`, `jimwlkLambdaQCD` (`Nq` 3, `omega` 1, `UVDamp` 0, `jimwlkAlphaS` 0, `jimwlkMu0` 0.28, `jimwlkC` 0.2, `BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1`, `useJIMWLK 1`, `jimwlkInitialX 0.01`, `jimwlkRunningCoupling 1` |
+| `posterior_jpsi_2507.14087_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb, free K factor | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `jimwlkMass`, `jimwlkLambdaQCD` (`Nq` 3, `dqMin` 0, `omega` 1, `UVDamp` 0, `jimwlkAlphaS` 0, `jimwlkMu0` 0.28, `jimwlkC` 0.2, `jimwlkInitialX` 0.01, `BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1`, `useJIMWLK 1`, `jimwlkRunningCoupling 1` |
 | `posterior_jpsi_2507.14087_K1.csv` | the same with K = 1 | MAP + 1000 | the same | the same |
 | `posterior_jpsi_2606.20362_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb with the γ+Pb data corrected for electromagnetic dissociation, free K factor | MAP + 1000 | the same | the same |
 | `posterior_jpsi_2606.20362_K1.csv` | the same with K = 1 | MAP + 1000 | the same | the same |
@@ -36,13 +36,12 @@ short:
   exclusive J/ψ production in γ+p.
 - **posterior5020_Nq3.csv** (the sub-nucleon structure at 5 TeV): set 0 is
   the MAP parametrization of arXiv:2409.19064 (H. Mäntysaari, B. Schenke,
-  C. Shen, W. Zhao, Phys. Rev. C 110 (2024) 054913; Table 2, rounded to 3
-  digits). There, J/ψ photoproduction computed with JIMWLK evolution and
-  constrained by HERA and LHC ultraperipheral data gives pseudodata at
-  $x_p = 2\times 10^{-4}$, a typical $x$ of heavy-ion collisions at the LHC,
-  and the
-  parameters are fitted to them as in arXiv:2202.01998. Where the other 999
-  sets come from is not documented.
+  C. Shen, W. Zhao, Phys. Rev. C 110 (2024) 054913), whose Table 2 gives it
+  rounded to 3 digits. There, J/ψ photoproduction computed with JIMWLK
+  evolution and constrained by HERA and LHC ultraperipheral data gives
+  pseudodata at $x_p = 2\times 10^{-4}$, a typical $x$ of heavy-ion
+  collisions at the LHC, and the parameters are fitted to them as in
+  arXiv:2202.01998. Where the other 999 sets come from is not documented.
   **Not recommended for new calculations**: the global fits of
   arXiv:2507.14087 and arXiv:2606.20362 are newer. The publications that used
   this file took only its MAP parametrization (`posteriorSet 0`):
@@ -54,12 +53,16 @@ short:
   IP-Glasma versions. IP-Glasma 2.0 added its `weight` column (0 for the
   MAP, 1 for the other sets) and the comment lines with its source.
 - **arXiv:2507.14087**: H. Mäntysaari, H. Roch, F. Salazar, B. Schenke,
-  C. Shen, W. Zhao, the global fit to exclusive J/ψ production in γ+p and
-  γ+Pb collisions; the MCMC chains are in `posterior_chain_full_fit.tar.gz`
-  of [Zenodo record 15880667](https://doi.org/10.5281/zenodo.15880667)
-  (`mcmc_full_Kfactor/` and `mcmc_full_vanilla/`). Set 0 is the MAP of
-  Table I of the paper, the posterior sample with the smallest $\chi^2$/dof among
-  25 runs of the full model (with K refitted for the free K).
+  C. Shen, W. Zhao, Phys. Rev. D 113 (2026) 014038, the global fit to
+  exclusive J/ψ production in γ+p and γ+Pb collisions; the MCMC chains are in
+  `posterior_chain_full_fit.tar.gz` of
+  [Zenodo record 15880667](https://doi.org/10.5281/zenodo.15880667)
+  (`mcmc_full_Kfactor/` and `mcmc_full_vanilla/`). Set 0 is the sample of
+  each chain that the MAP of Table I of the paper gives rounded (sample 39324
+  with the free K, 109648 with K = 1): of 25 runs of the full model with
+  posterior samples, the one with the smallest $\chi^2$/dof. For it, the
+  paper refitted K to 0.308 (0.304 in the chain), the K of set 0 in the K
+  file.
 - **arXiv:2606.20362**: H. Mäntysaari, H. Roch, B. Schenke, C. Shen,
   W. Zhao, Phys. Rev. D 114 (2026) L031505, the same global fit with the
   γ+Pb data corrected for electromagnetic dissociation; the chains are in
@@ -68,7 +71,9 @@ short:
   (`MCMC_SETUP/mcmc_PCGP_full_Kfactor_tCorr/` and
   `MCMC_SETUP/mcmc_PCGP_full_vanilla_tCorr/`). The paper gives no MAP
   values; set 0 is the sample of each chain with the largest likelihood
-  (the prior is flat).
+  (the prior is flat), whose parameters are also in
+  `OSG_RUNS/max_likelihood_K_tCorr` and
+  `OSG_RUNS/max_likelihood_vanilla_tCorr` of the record.
 
 ## The K factor
 
@@ -76,8 +81,9 @@ The fits with a free K factor scale the vector-meson cross sections by K,
 which is not an IP-Glasma parameter. `posterior_jpsi_<arXiv>_Kfactor_K.csv`
 gives it for each set of `posterior_jpsi_<arXiv>_Kfactor.csv`, in the same
 order: `posteriorSet` (as in `usedParameters<event>.dat`), `sample` (the row
-of the sample in `chain.pkl`, counted from 0; `-1` for a MAP set that is no
-sample of the chain) and `K`. It is not an input file.
+of the sample in `chain.pkl`, counted from 0) and `K`. For set 0 of
+arXiv:2507.14087 it is the K refitted in the paper. It is not an input
+file.
 
 ## How the J/ψ files of arXiv:2507.14087 and arXiv:2606.20362 are made
 
@@ -93,8 +99,9 @@ python3 make_jpsi_posterior_tables.py 2606.20362 path/to/analysis_and_data_files
 - **Chains:** each `chain.pkl` (written by pocoMC) has weighted samples of
   `m`, `BG`, `BGq`, `Nq`, `smearingWidth`, `QsMuRatio`, `jimwlkMass`,
   `jimwlkLambdaQCD`, `UVDamp`, `omega` and K, with their weights and
-  log-likelihoods. The script reads them with an unpickler that only allows
-  numpy arrays.
+  log-likelihoods. The script only reads a tar file with the MD5 sum of the
+  Zenodo record, unpickles the chains with an unpickler that only constructs
+  numpy arrays and dtypes, and only uses numeric arrays from them.
 - **Sets:** 1000 samples drawn with probabilities proportional to their
   weights by systematic resampling (the first uniform number of numpy's
   `default_rng(seed)`, with the seeds 250714087 and 260620362, as the offset,
@@ -103,9 +110,13 @@ python3 make_jpsi_posterior_tables.py 2606.20362 path/to/analysis_and_data_files
   the order of the chain. The medians and the 90% intervals of the sets agree
   with the weighted ones of the chains within the sampling error of 1000
   sets.
+- **MAP:** the script checks set 0: that the sample rounds to the values of
+  Table I (arXiv:2507.14087) or has those of the `max_likelihood` file of the
+  record (arXiv:2606.20362).
 - **Fixed parameters:** `Nq`, `omega` and `UVDamp` (and K in the fits with
   K = 1) were fixed in the fits, so their chain values are draws of the prior;
-  the files have the fixed values instead (3, 1, 0). The settings of the
-  fits that a posterior file can set (`jimwlkAlphaS` 0, `jimwlkMu0` 0.28 GeV,
-  `jimwlkC` 0.2, `BGqVar` and `NqFluc` 0) are constant columns.
+  the files have the fixed values instead (3, 1, 0). The other settings of the
+  fits that a posterior file can set are constant columns too: `dqMin`,
+  `BGqVar`, `NqFluc` and `jimwlkAlphaS` 0 (running coupling), `jimwlkMu0`
+  0.28 GeV, `jimwlkC` 0.2 and `jimwlkInitialX` 0.01.
 - **Values** are written to 6 digits.

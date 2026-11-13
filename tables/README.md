@@ -10,12 +10,12 @@ short:
 - `posteriorSet n` uses set `n` (counted from 0); `posteriorSet -1` draws a
   set for every event, with the probabilities of the column `weight` if the
   file has one. `usedParameters<event>.dat` records the set of each event.
-- Set 0 is the maximum a posteriori (MAP) parametrization, with `weight` 0
-  so that `posteriorSet -1` never draws it; the posterior samples follow with
-  `weight` 1, so they are equally probable and events of fixed sets need no
-  weights. `posterior5020_Nq3.csv` has no `weight` column: its set 0 is the
-  parametrization of arXiv:2409.19064, and `posteriorSet -1` draws each of
-  its sets with the same probability.
+- In every file, set 0 is the maximum a posteriori (MAP) parametrization,
+  with `weight` 0 so that `posteriorSet -1` never draws it; the posterior
+  samples follow with `weight` 1, so they are equally probable and events of
+  fixed sets need no weights.
+- `posterior5020_Nq3.csv` is only kept for the configurations of earlier
+  publications and is not recommended for new calculations (see Sources).
 - The comment lines at the top of each file give its source and the
   settings of the fit.
 
@@ -23,7 +23,7 @@ short:
 |---|---|---|---|---|
 | `posterior_jpsi_2202.01998_Nq_free.csv` | exclusive J/ψ production in γ+p, number of hot spots free | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `Nq`, `QsMuRatio`, `dqMin` (`BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1` |
 | `posterior_jpsi_2202.01998_Nq_3.csv` | the same with `Nq` = 3 | MAP + 1000 | the same | the same |
-| `posterior5020_Nq3.csv` | proton structure at x_p = 2×10⁻⁴ (LHC energies) with `Nq` = 3, from J/ψ pseudodata of JIMWLK evolution | the set of arXiv:2409.19064 + 999, no weights | the same | the same |
+| `posterior5020_Nq3.csv` | proton structure at x_p = 2×10⁻⁴ (LHC energies) with `Nq` = 3, from J/ψ pseudodata of JIMWLK evolution; not recommended for new calculations | MAP + 999 | the same | the same |
 | `posterior_jpsi_2507.14087_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb, free K factor | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `jimwlkMass`, `jimwlkLambdaQCD` (`Nq` 3, `omega` 1, `UVDamp` 0, `jimwlkAlphaS` 0, `jimwlkMu0` 0.28, `jimwlkC` 0.2, `BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1`, `useJIMWLK 1`, `jimwlkInitialX 0.01`, `jimwlkRunningCoupling 1` |
 | `posterior_jpsi_2507.14087_K1.csv` | the same with K = 1 | MAP + 1000 | the same | the same |
 | `posterior_jpsi_2606.20362_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb with the γ+Pb data corrected for electromagnetic dissociation, free K factor | MAP + 1000 | the same | the same |
@@ -35,15 +35,23 @@ short:
   Phys. Lett. B 833 (2022) 137348, the proton shape fluctuations from
   exclusive J/ψ production in γ+p.
 - **posterior5020_Nq3.csv** (the sub-nucleon structure at 5 TeV): set 0 is
-  the parametrization of Table 2 of arXiv:2409.19064 (H. Mäntysaari,
-  B. Schenke, C. Shen, W. Zhao, Phys. Rev. C 110 (2024) 054913), where it is
-  rounded to 3 digits. There, J/ψ photoproduction computed with JIMWLK
-  evolution and constrained by HERA and LHC ultraperipheral data gives
-  pseudodata at x_p = 2×10⁻⁴, a typical x of heavy-ion collisions at the LHC,
-  and the parameters are fitted to them as in arXiv:2202.01998. Where the
-  other 999 sets come from is not documented yet. The iEBE-MUSIC
-  configurations of arXiv:2409.19064, arXiv:2410.22160, arXiv:2506.02930 and
-  arXiv:2508.05292 (`config/arXiv_<number>/`) use set 0.
+  the MAP parametrization of arXiv:2409.19064 (H. Mäntysaari, B. Schenke,
+  C. Shen, W. Zhao, Phys. Rev. C 110 (2024) 054913; Table 2, rounded to 3
+  digits). There, J/ψ photoproduction computed with JIMWLK evolution and
+  constrained by HERA and LHC ultraperipheral data gives pseudodata at
+  x_p = 2×10⁻⁴, a typical x of heavy-ion collisions at the LHC, and the
+  parameters are fitted to them as in arXiv:2202.01998. Where the other 999
+  sets come from is not documented.
+  **Not recommended for new calculations**: the global fits of
+  arXiv:2507.14087 and arXiv:2606.20362 are newer. The publications that used
+  this file took only its MAP parametrization (`posteriorSet 0`):
+  arXiv:2409.19064; J. Gong, H. Roch, C. Shen, Phys. Rev. C 111 (2025) 044912,
+  arXiv:2410.22160; O. Horecny, C. Shen, Phys. Rev. C 112 (2025) 034912,
+  arXiv:2506.02930; C. Chiu, G. Denicol, M. Luzum, C. Shen, J. Phys. G 53
+  (2026) 095105, arXiv:2508.05292. The file is kept so that their
+  configurations in iEBE-MUSIC (`config/arXiv_<number>/`) work with newer
+  IP-Glasma versions. IP-Glasma 2.0 added its `weight` column (0 for the
+  MAP, 1 for the other sets) and the comment lines with its source.
 - **arXiv:2507.14087**: H. Mäntysaari, H. Roch, F. Salazar, B. Schenke,
   C. Shen, W. Zhao, the global fit to exclusive J/ψ production in γ+p and
   γ+Pb collisions; the MCMC chains are in `posterior_chain_full_fit.tar.gz`

@@ -106,6 +106,21 @@ std::string exampleInputWithPosterior(const std::string &file) {
 std::string shippedPosterior(const std::string &name) {
     return std::string(IPGLASMA_SOURCE_DIR) + "/tables/" + name;
 }
+
+// Whether `posteriorSet -1` with the posterior file of `param` draws only
+// its sets 1 to `last` in 10000 draws: never set 0, the MAP parametrization
+// with weight 0, which equally likely sets would give about 10 times, and
+// only indices of sets, which drawPosteriorSet() returns with a column
+// `weight` (without one, a large random number).
+bool drawsOnlySamples(const Parameters &param, int last) {
+    Random random;
+    random.init_genrand64(7ULL);
+    for (int i = 0; i < 10000; i++) {
+        const int set = param.drawPosteriorSet(random);
+        if (set < 1 || set > last) return false;
+    }
+    return true;
+}
 }  // namespace
 
 // ---- InputFile ----
@@ -1067,7 +1082,7 @@ TEST_CASE(
 
 TEST_CASE(
     "Parameters::readInput: the shipped posterior files set every parameter "
-    "of their sets") {
+    "of their sets, the MAP parametrization first, with weight 0") {
     for (const char *name :
          {"posterior_jpsi_2202.01998_Nq_free.csv",
           "posterior_jpsi_2202.01998_Nq_3.csv", "posterior5020_Nq3.csv"}) {
@@ -1088,6 +1103,14 @@ TEST_CASE(
             CHECK(param.colorCharge.QsMuRatio == 0.598);
         } else {
             CHECK(param.subnucleon.Nq == 3.);
+        }
+        if (std::string(name) == "posterior5020_Nq3.csv") {
+            // the MAP parametrization of arXiv:2409.19064, then 999 sets
+            CHECK(param.subnucleon.m == 0.1791);
+            CHECK(param.colorCharge.QsMuRatio == 0.5505);
+            CHECK(drawsOnlySamples(param, 999));
+        } else {
+            CHECK(drawsOnlySamples(param, 1000));
         }
     }
 }
@@ -1128,6 +1151,7 @@ TEST_CASE(
         CHECK(param.subnucleon.Nq == 3.);
         CHECK(param.subnucleon.omega == 1.);
         CHECK(param.jimwlk.mu0 == 0.28);
+        CHECK(drawsOnlySamples(param, 1000));
     }
 }
 

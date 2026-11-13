@@ -106,6 +106,31 @@ std::string exampleInputWithPosterior(const std::string &file) {
 std::string shippedPosterior(const std::string &name) {
     return std::string(IPGLASMA_SOURCE_DIR) + "/tables/" + name;
 }
+
+// Whether `posteriorSet -1` with the posterior file of `param` draws only
+// its sets 1 to `last` in 10000 draws: never set 0, the MAP parametrization
+// with weight 0, which equally likely sets would give about 10 times, and
+// only indices of sets, which drawPosteriorSet() returns with a column
+// `weight` (without one, a large random number).
+bool drawsOnlySamples(const Parameters &param, int last) {
+    Random random;
+    random.init_genrand64(7ULL);
+    for (int i = 0; i < 10000; i++) {
+        const int set = param.drawPosteriorSet(random);
+        if (set < 1 || set > last) return false;
+    }
+    return true;
+}
+
+// Whether the posterior file of `param` has the sets 0 to `last`: set
+// `last` is used as such, and set `last` + 1 is set 0 again (the index is
+// taken modulo the number of sets). Leaves set 0 applied.
+bool hasSets(Parameters &param, int last) {
+    param.applyPosteriorSet(last);
+    const bool lastIsASet = param.event.posteriorSet == last;
+    param.applyPosteriorSet(last + 1);
+    return lastIsASet && param.event.posteriorSet == 0;
+}
 }  // namespace
 
 // ---- InputFile ----
@@ -1006,7 +1031,8 @@ TEST_CASE(
     REQUIRE(warnings.size() == 2);
     CHECK(anyContains(
         warnings,
-        "BG 3.3 is replaced by the posterior file ipglasma_test_posterior.csv"));
+        "BG 3.3 is replaced by the posterior file "
+        "ipglasma_test_posterior.csv"));
     CHECK(anyContains(warnings, "QsMuRatio 0.643 is replaced"));
 
     param.applyPosteriorSet(1);
@@ -1041,11 +1067,11 @@ TEST_CASE(
         "ipglasma_test_posterior.csv",
         "m, BG\n0.3, 4.0\n0.25, 4.5\n0.35, 3.9\n");
     Parameters param;
-    REQUIRE(param
-                .readInput(inputFromText(inputWith(
-                    exampleInputWithPosterior(file.name()), "posteriorSet",
-                    "-1")))
-                .empty());
+    REQUIRE(
+        param
+            .readInput(inputFromText(inputWith(
+                exampleInputWithPosterior(file.name()), "posteriorSet", "-1")))
+            .empty());
     // as main() does with the set it drew
     param.applyPosteriorSet(2);
     std::ostringstream written;
@@ -1067,7 +1093,7 @@ TEST_CASE(
 
 TEST_CASE(
     "Parameters::readInput: the shipped posterior files set every parameter "
-    "of their sets") {
+    "of their sets, the MAP parametrization first, with weight 0") {
     for (const char *name :
          {"posterior_jpsi_2202.01998_Nq_free.csv",
           "posterior_jpsi_2202.01998_Nq_3.csv", "posterior5020_Nq3.csv"}) {
@@ -1089,6 +1115,68 @@ TEST_CASE(
         } else {
             CHECK(param.subnucleon.Nq == 3.);
         }
+        // the MAP parametrization, then 1000 sets (999 in posterior5020)
+        const bool lhc = std::string(name) == "posterior5020_Nq3.csv";
+        const int last = lhc ? 999 : 1000;
+        if (lhc) {
+            // the MAP parametrization of arXiv:2409.19064
+            CHECK(param.subnucleon.m == 0.1791);
+            CHECK(param.colorCharge.QsMuRatio == 0.5505);
+        }
+        CHECK(drawsOnlySamples(param, last));
+        CHECK(hasSets(param, last));
+    }
+}
+
+TEST_CASE(
+    "Parameters::readInput: the shipped J/psi posterior files set every "
+    "parameter of their sets, the MAP parametrization first") {
+    struct Case {
+        const char *name;
+        // the MAP parametrization, set 0: the samples of the chains that
+        // Table I of arXiv:2507.14087 gives rounded, and those with the
+        // largest likelihood for arXiv:2606.20362
+        double m, BG, BGq, smearingWidth, QsMuRatio, jimwlkMass,
+            jimwlkLambdaQCD;
+    };
+    for (const Case &c :
+         {Case {
+              "posterior_jpsi_2507.14087_Kfactor.csv", 0.507464, 3.83327,
+              0.295357, 0.881765, 0.369074, 0.157217, 0.0348476},
+          Case {
+              "posterior_jpsi_2507.14087_K1.csv", 0.313639, 2.98571, 0.0660834,
+              0.985449, 0.626232, 0.123824, 0.00967638},
+          Case {
+              "posterior_jpsi_2606.20362_Kfactor.csv", 0.520561, 4.65407,
+              0.33099, 0.777775, 0.520885, 0.541489, 0.0636506},
+          Case {
+              "posterior_jpsi_2606.20362_K1.csv", 0.503721, 4.53702, 0.330308,
+              0.833804, 0.538761, 0.538317, 0.0629003}}) {
+        CAPTURE(c.name);
+        Parameters param;
+        const std::vector<std::string> errors = param.readInput(
+            inputFromText(exampleInputWithPosterior(shippedPosterior(c.name))));
+        for (const std::string &error : errors) CAPTURE(error);
+        REQUIRE(errors.empty());
+        CHECK(param.validationErrors().empty());
+        // m, BG, BGq, smearingWidth, QsMuRatio, jimwlkMass, jimwlkLambdaQCD,
+        // Nq, dqMin, BGqVar, NqFluc, omega, UVDamp, jimwlkAlphaS, jimwlkMu0,
+        // jimwlkC, jimwlkInitialX
+        CHECK(param.inputWarnings().size() == 17);
+        CHECK(param.subnucleon.m == c.m);
+        CHECK(param.subnucleon.BG == c.BG);
+        CHECK(param.subnucleon.BGq == c.BGq);
+        CHECK(param.subnucleon.smearingWidth == c.smearingWidth);
+        CHECK(param.colorCharge.QsMuRatio == c.QsMuRatio);
+        CHECK(param.jimwlk.mass == c.jimwlkMass);
+        CHECK(param.jimwlk.LambdaQCD == c.jimwlkLambdaQCD);
+        CHECK(param.subnucleon.Nq == 3.);
+        CHECK(param.subnucleon.dqMin == 0.);
+        CHECK(param.subnucleon.omega == 1.);
+        CHECK(param.jimwlk.mu0 == 0.28);
+        CHECK(param.jimwlk.initialX == 0.01);
+        CHECK(drawsOnlySamples(param, 1000));
+        CHECK(hasSets(param, 1000));
     }
 }
 
@@ -1113,9 +1201,7 @@ TEST_CASE(
           Case {"posteriorSet\n1\n", ":1: posteriorSet cannot be set"},
           Case {"BG, BG\n4, 4\n", ":1: column BG appears twice"},
           Case {"m [GeV], \n0.3, 4\n", ":1: a column has no name"},
-          Case {
-              "m, BG\n0.3\n",
-              ":2: 1 values, but line 1 names 2 columns"},
+          Case {"m, BG\n0.3\n", ":2: 1 values, but line 1 names 2 columns"},
           Case {"m\n", " contains no parameter sets"},
           Case {"\n", " has no line naming the columns"},
           Case {"0.3, 4\n", " has no line naming the columns"},
@@ -1204,14 +1290,16 @@ TEST_CASE(
     "versions") {
     TemporaryFile file("ipglasma_test_posterior.csv", "m\n0.3\n0.25\n");
     Parameters param;
-    REQUIRE(param.readInput(inputFromText(exampleInputWithPosterior(file.name())))
-                .empty());
+    REQUIRE(
+        param.readInput(inputFromText(exampleInputWithPosterior(file.name())))
+            .empty());
     Random random, reference;
     random.init_genrand64(5ULL);
     reference.init_genrand64(5ULL);
     for (int i = 0; i < 10; i++) {
-        CHECK(param.drawPosteriorSet(random)
-              == static_cast<int>(reference.genrand64_int63() % 2147483647ULL));
+        CHECK(
+            param.drawPosteriorSet(random)
+            == static_cast<int>(reference.genrand64_int63() % 2147483647ULL));
     }
 }
 
@@ -1225,8 +1313,12 @@ TEST_CASE(
     for (const Case &c :
          {Case {"m, weight\n0.3, x\n", ":2: weight 'x' is not a number"},
           Case {"m, weight\n0.3, -1\n", ":2: weight -1 is negative"},
-          Case {"m, weight\n0.3, 0\n0.4, 0\n", ": the weights of the sets add up to 0"},
-          Case {"weight, m, weight\n1, 0.3, 1\n", ":1: column weight appears twice"}}) {
+          Case {
+              "m, weight\n0.3, 0\n0.4, 0\n",
+              ": the weights of the sets add up to 0"},
+          Case {
+              "weight, m, weight\n1, 0.3, 1\n",
+              ":1: column weight appears twice"}}) {
         CAPTURE(c.contents);
         TemporaryFile file("ipglasma_test_posterior.csv", c.contents);
         const std::vector<std::string> errors =
@@ -1266,7 +1358,8 @@ TEST_CASE(
         readErrors(inputWith(
             exampleInputWithPosterior(hotSpots.name()), "nucleonModel",
             "gaussian")),
-        "ipglasma_test_posterior.csv: column BGq is only used with nucleonModel "
+        "ipglasma_test_posterior.csv: column BGq is only used with "
+        "nucleonModel "
         "hotspots or strings, which this input does not set"));
 
     // the Woods-Saxon parameters need useInputWSParams 1 (the example input
@@ -1276,8 +1369,7 @@ TEST_CASE(
           "deltaRnp", "deltaAnp"}) {
         CAPTURE(name);
         TemporaryFile woodsSaxon(
-            "ipglasma_test_posterior_ws.csv",
-            std::string(name) + "\n0.5\n");
+            "ipglasma_test_posterior_ws.csv", std::string(name) + "\n0.5\n");
         const std::string text = exampleInputWithPosterior(woodsSaxon.name());
         CHECK(anyContains(
             readErrors(text),

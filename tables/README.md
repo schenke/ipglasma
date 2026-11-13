@@ -19,11 +19,11 @@ short:
 - The comment lines at the top of each file give its source and the
   settings of the fit.
 
-| File | Analysis | Sets | Parameters | The input needs |
+| File | Analysis | Sets | Columns | The input needs |
 |---|---|---|---|---|
 | `posterior_jpsi_2202.01998_Nq_free.csv` | exclusive J/ψ production in γ+p, number of hot spots free | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `Nq`, `QsMuRatio`, `dqMin` (`BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1` |
 | `posterior_jpsi_2202.01998_Nq_3.csv` | the same with `Nq` = 3 | MAP + 1000 | the same | the same |
-| `posterior5020_Nq3.csv` | proton structure at x_p = 2×10⁻⁴ (LHC energies) with `Nq` = 3, from J/ψ pseudodata of JIMWLK evolution; not recommended for new calculations | MAP + 999 | the same | the same |
+| `posterior5020_Nq3.csv` | proton structure at $x_p = 2\times 10^{-4}$ (LHC energies) with `Nq` = 3, from J/ψ pseudodata of JIMWLK evolution; not recommended for new calculations | MAP + 999 | the same | the same |
 | `posterior_jpsi_2507.14087_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb, free K factor | MAP + 1000 | `m`, `BG`, `BGq`, `smearingWidth`, `QsMuRatio`, `jimwlkMass`, `jimwlkLambdaQCD` (`Nq` 3, `omega` 1, `UVDamp` 0, `jimwlkAlphaS` 0, `jimwlkMu0` 0.28, `jimwlkC` 0.2, `BGqVar`, `NqFluc` 0) | `nucleonModel hotspots`, `smearQs 1`, `useJIMWLK 1`, `jimwlkInitialX 0.01`, `jimwlkRunningCoupling 1` |
 | `posterior_jpsi_2507.14087_K1.csv` | the same with K = 1 | MAP + 1000 | the same | the same |
 | `posterior_jpsi_2606.20362_Kfactor.csv` | global fit of J/ψ production in γ+p and γ+Pb with the γ+Pb data corrected for electromagnetic dissociation, free K factor | MAP + 1000 | the same | the same |
@@ -39,7 +39,8 @@ short:
   C. Shen, W. Zhao, Phys. Rev. C 110 (2024) 054913; Table 2, rounded to 3
   digits). There, J/ψ photoproduction computed with JIMWLK evolution and
   constrained by HERA and LHC ultraperipheral data gives pseudodata at
-  x_p = 2×10⁻⁴, a typical x of heavy-ion collisions at the LHC, and the
+  $x_p = 2\times 10^{-4}$, a typical $x$ of heavy-ion collisions at the LHC,
+  and the
   parameters are fitted to them as in arXiv:2202.01998. Where the other 999
   sets come from is not documented.
   **Not recommended for new calculations**: the global fits of
@@ -57,7 +58,7 @@ short:
   γ+Pb collisions; the MCMC chains are in `posterior_chain_full_fit.tar.gz`
   of [Zenodo record 15880667](https://doi.org/10.5281/zenodo.15880667)
   (`mcmc_full_Kfactor/` and `mcmc_full_vanilla/`). Set 0 is the MAP of
-  Table I of the paper, the posterior sample with the smallest χ²/dof among
+  Table I of the paper, the posterior sample with the smallest $\chi^2$/dof among
   25 runs of the full model (with K refitted for the free K).
 - **arXiv:2606.20362**: H. Mäntysaari, H. Roch, B. Schenke, C. Shen,
   W. Zhao, Phys. Rev. D 114 (2026) L031505, the same global fit with the
@@ -75,7 +76,7 @@ The fits with a free K factor scale the vector-meson cross sections by K,
 which is not an IP-Glasma parameter. `posterior_jpsi_<arXiv>_Kfactor_K.csv`
 gives it for each set of `posterior_jpsi_<arXiv>_Kfactor.csv`, in the same
 order: `posteriorSet` (as in `usedParameters<event>.dat`), `sample` (the row
-of the sample in `chain.pkl`, counted from 0; −1 for a MAP set that is no
+of the sample in `chain.pkl`, counted from 0; `-1` for a MAP set that is no
 sample of the chain) and `K`. It is not an input file.
 
 ## How the J/ψ files of arXiv:2507.14087 and arXiv:2606.20362 are made

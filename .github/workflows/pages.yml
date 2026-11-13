@@ -1,8 +1,8 @@
 name: Publish documentation
 
 # Builds the Doxygen documentation (the `doc` CMake target: README,
-# OUTPUT, CONTRIBUTING and CHANGELOG as pages, and every class and
-# function) and publishes it with GitHub Pages at
+# OUTPUT, CONTRIBUTING, CHANGELOG and tables/README as pages, and every
+# class and function) and publishes it with GitHub Pages at
 # https://schenke.github.io/ipglasma/. It documents the released code, so
 # it runs on every push to main; it can also be started by hand from the
 # Actions tab (e.g. after Pages was enabled).

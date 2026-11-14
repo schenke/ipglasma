@@ -1088,6 +1088,7 @@ python3 lappi_mantysaari.py --ipglasma-path ../.. --quick --max-workers 3
 # the setup of the paper (3.6 hours with 4 workers of 6 threads)
 python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 --max-workers 4
 # the same with the noise coupling, in the same --datadir to compare the two
+# (5.5 hours with --threads 7 --max-workers 2)
 python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 --max-workers 4 \
     --prescription noise
 ```
@@ -1095,40 +1096,37 @@ python3 lappi_mantysaari.py --ipglasma-path ../.. --threads 6 --max-workers 4 \
 The summary and the figure of the noise coupling are
 `lappi_mantysaari_noise_summary.json` and `lappi_mantysaari_noise.pdf`.
 
-With the defaults, the step is again of first order, but its error per unit
-of step and of rapidity is about 30 times larger than above:
+With the defaults, the step is again of first order in both prescriptions,
+but its error per unit of step and of rapidity is about 30 times larger than
+above:
 
-| Q_s/Λ_QCD at y = 8 | |
-|---|---|
-| `jimwlkDs 0.001` | 33.1 |
-| `jimwlkDs 0.0005` | 30.2 |
-| `jimwlkDs 0.00025` | 28.7 |
-| zero step | 27.3 |
-| BK | 30.2 |
-| Fig. 6 of the paper | 28.5 |
-
-- **The paper matches a step of about 0.00025:** Q_s within 0.6% of its
-  Fig. 6 at y = 4 and 8, and λ along its Fig. 8.
-- **BK** reproduces λ of Fig. 11 within 0.6%.
-- **At zero step,** λ of JIMWLK is 3–8% below BK for Q_s/Λ_QCD = 10–25, so
-  JIMWLK is slower than BK, as in the paper (where the difference is about
-  5% in Q_s at y = 7.8, here 9%).
-
-These are the numbers of `sqrt`; `--prescription noise` has not been run
-with this script yet. Single-step runs of the same setup (two seeds at
-0.005, three at 0.001, one at 0.0005; the initial Q_s/Λ_QCD of 3.7–3.8
-agrees with Fig. 6) gave:
-
-| Q_s/Λ_QCD at y = 8 | noise | square root |
+| Q_s/Λ_QCD at y = 8 | square root | noise |
 |---|---|---|
-| `jimwlkDs 0.005` | 37.8 | 57.7 |
-| `jimwlkDs 0.001` | 21.9 | 33.0 |
-| `jimwlkDs 0.0005` | 20.2 | 30.1 |
-| Fig. 6 of the paper | 19.4 | 28.5 |
+| `jimwlkDs 0.001` | 33.1 | 22.0 |
+| `jimwlkDs 0.0005` | 30.2 | 20.4 |
+| `jimwlkDs 0.00025` | 28.7 | 19.4 |
+| zero step | 27.3 | 18.6 |
+| BK | 30.2 | |
+| Fig. 6 of the paper | 28.5 | 19.4 |
 
-The noise coupling is slower by as much as in the paper (Q_s noise/square
-root 0.67 at 0.0005 against 0.68), and both converge in the step alike. The
-step itself is normalized correctly: in a fixed-coupling evolution (128²,
+- **The paper matches a step of about 0.00025** in both prescriptions: Q_s
+  within 1% of its Fig. 6 at y = 4 and 8 (square root 11.76 and 28.69
+  against 11.76 and 28.53, noise 8.66 and 19.35 against 8.74 and 19.37),
+  and λ along its Fig. 8 (the noise coupling within 6%).
+- **First order:** at y = 8, the fitted order is 0.84 [0.63, 1.03] with the
+  square root and 0.61 [0.22, 1.04] with the noise coupling. The noise
+  coupling evolves more slowly, so its error is somewhat smaller, 4.3% in
+  Q_s at y = 8 with 0.00025 against 4.9%, but it is the same fraction,
+  about 2.5%, of the growth of ln Q_s.
+- **The noise coupling is slower:** at zero step, its Q_s is smaller at
+  every y > 0, by as much as in the paper (Q_s noise/square root 0.68 at
+  y = 8, as in its Fig. 6).
+- **BK** reproduces λ of Fig. 11 within 0.6%.
+- **At zero step,** λ of JIMWLK with the square root is 3–8% below BK for
+  Q_s/Λ_QCD = 10–25, so JIMWLK is slower than BK, as in the paper (where
+  the difference is about 5% in Q_s at y = 7.8, here 9%).
+
+The step itself is normalized correctly: in a fixed-coupling evolution (128²,
 `jimwlkDs 0.0002`) dD/dy agrees within 1–3% with the exact first Balitsky
 equation evaluated on the same configurations with the code's lattice
 kernel.

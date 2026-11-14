@@ -86,8 +86,7 @@ TEST_CASE(
         REQUIRE(errors.size() == 1);
         CHECK(
             errors[0].rfind(
-                "BGq (0.05) must be larger than 0.09 GeV^-2 with BGqVar > 0",
-                0)
+                "BGq (0.05) must be larger than 0.09 GeV^-2 with BGqVar > 0", 0)
             == 0);
     }
     param.subnucleon.BGq = 0.091;

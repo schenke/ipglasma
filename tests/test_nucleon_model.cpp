@@ -445,6 +445,76 @@ TEST_CASE(
 }
 
 TEST_CASE(
+    "StringyNucleon::sampleStrings: with stringHotSpotPower k, the position "
+    "t on the string has the density (k + 1) t^k") {
+    for (const double k : {-0.5, 0., 1., 3.}) {
+        CAPTURE(k);
+        Parameters param;
+        makeHotSpotParam(param);
+        param.subnucleon.nucleonModel = "strings";
+        param.subnucleon.stringHotSpotPower = k;
+        const StringyNucleon model(param);
+        Random random;
+        random.init_genrand64(41ULL);
+        double sum = 0., sumSquares = 0., below = 0.;
+        int n = 0;
+        for (int i = 0; i < 20000; ++i) {
+            for (const double t : model.sampleStrings(random).t) {
+                sum += t;
+                sumSquares += t * t;
+                if (t < 0.5) below += 1.;
+                ++n;
+            }
+        }
+        // <t^m> = (k+1)/(k+m+1) and P(t < 1/2) = 2^-(k+1), each within
+        // four standard errors
+        auto moment = [k](double m) { return (k + 1.) / (k + m + 1.); };
+        const double fraction = std::pow(0.5, k + 1.);
+        const double sigmaMean =
+            std::sqrt((moment(2.) - moment(1.) * moment(1.)) / n);
+        const double sigmaSquare =
+            std::sqrt((moment(4.) - moment(2.) * moment(2.)) / n);
+        const double sigmaFraction = std::sqrt(fraction * (1. - fraction) / n);
+        CHECK(std::abs(sum / n - moment(1.)) < 4. * sigmaMean);
+        CHECK(std::abs(sumSquares / n - moment(2.)) < 4. * sigmaSquare);
+        CHECK(std::abs(below / n - fraction) < 4. * sigmaFraction);
+    }
+}
+
+TEST_CASE(
+    "StringyNucleon::sampleStrings: every stringHotSpotPower uses the same "
+    "random numbers, so the strings stay and only t moves to u^(1/(k+1))") {
+    Parameters param;
+    makeHotSpotParam(param);
+    param.subnucleon.nucleonModel = "strings";
+    const StringyNucleon uniform(param);  // the default k = 0
+    const double k = 1.5;
+    param.subnucleon.stringHotSpotPower = k;
+    const StringyNucleon moved(param);
+    Random randomUniform, randomMoved;
+    randomUniform.init_genrand64(43ULL);
+    randomMoved.init_genrand64(43ULL);
+    for (int n = 0; n < 50; ++n) {
+        const StringConfiguration a = uniform.sampleStrings(randomUniform);
+        const StringConfiguration b = moved.sampleStrings(randomMoved);
+        CHECK(a.junction == b.junction);
+        for (int i = 0; i < 3; i++) {
+            CHECK(a.hotSpots.x[i] == b.hotSpots.x[i]);
+            CHECK(a.hotSpots.y[i] == b.hotSpots.y[i]);
+            CHECK(a.hotSpots.z[i] == b.hotSpots.z[i]);
+            // k = 0 is the uniform number itself
+            CHECK(
+                b.t[i]
+                == doctest::Approx(std::pow(a.t[i], 1. / (k + 1.)))
+                       .epsilon(1e-14));
+            CHECK(b.t[i] >= a.t[i]);
+        }
+    }
+    // and the generators are in the same state afterwards
+    CHECK(randomUniform.genrand64_int64() == randomMoved.genrand64_int64());
+}
+
+TEST_CASE(
     "StringyNucleon: three moved hot spots whose profile integrates to the "
     "Qs normalization") {
     Parameters param;

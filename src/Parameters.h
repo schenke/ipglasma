@@ -244,6 +244,15 @@ struct SubnucleonParameters {
     /// the density becomes \f$\propto e^{-b^2/2B_G}\f$, the transverse
     /// projection of the `1` case.
     double omega = 0.;
+    /// Distribution of the moved hot spots of `nucleonModel strings`
+    /// along their strings: the position \f$t\f$, from 0 at the junction
+    /// to 1 at the end of the string, has the density
+    /// \f$(k+1)\,t^k\f$ for this \f$k > -1\f$ (sampled as
+    /// \f$t = u^{1/(k+1)}\f$ with \f$u\f$ uniform), so \f$\langle t\rangle
+    /// = (k+1)/(k+2)\f$. `0` (the default) is uniform; \f$k > 0\f$ moves
+    /// the hot spots towards the ends of the strings, \f$k < 0\f$
+    /// towards the junction. See StringyNucleon::sampleStrings().
+    double stringHotSpotPower = 0.;
     /// Mean number of hot spots (constituent quarks) per nucleon for
     /// `nucleonModel hotspots`, at least 1 (`strings` always has 3), before
     /// the NqFluc fluctuation: each nucleon gets floor(Nq) hot spots, one

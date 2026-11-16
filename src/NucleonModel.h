@@ -297,8 +297,10 @@ struct StringConfiguration {
  * strings that meet at a junction. The three hot spots are sampled as
  * for `nucleonModel hotspots` (in 3D for `omega 1`), and the junction is
  * their Fermat point, which minimizes the total string length. Each hot
- * spot is then moved to a uniformly random point on its string, from
- * the junction to its sampled position, and the nucleon's thickness is
+ * spot is then moved to a random point on its string, from the junction
+ * (\f$t = 0\f$) to its sampled position (\f$t = 1\f$), with the density
+ * \f$(k+1)\,t^k\f$ of \f$k\f$ = `stringHotSpotPower` (uniform for the
+ * default \f$k = 0\f$), and the nucleon's thickness is
  * that of hot spots at the projections of these points onto the
  * transverse plane (a HotSpotProfile). The minimum distance `dqMin`
  * applies to the sampled hot spots, the ends of the strings, not to the
@@ -311,7 +313,7 @@ class StringyNucleon : public NucleonModel {
     /**
      * \param[in] param Simulation parameters (`BG`, `BGq`, `BGqVar`,
      * `dqMin`, `omega`, `shiftConstituentQuarkProtonOrigin`, `smearQs`,
-     * `smearingWidth`).
+     * `smearingWidth`, `stringHotSpotPower`).
      */
     explicit StringyNucleon(const Parameters &param);
     std::unique_ptr<NucleonProfile> sample(
@@ -340,6 +342,9 @@ class StringyNucleon : public NucleonModel {
   private:
     /// Samples the hot spots the strings end on.
     HotSpotNucleon hotSpots_;
+    /// The power \f$k\f$ of the density \f$(k+1)\,t^k\f$ of the moved
+    /// hot spots along their strings (`stringHotSpotPower`).
+    double hotSpotPower_;
 };
 
 #endif  // SRC_NUCLEONMODEL_H_

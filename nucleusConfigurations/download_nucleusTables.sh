@@ -17,15 +17,16 @@ cd "$(dirname "$0")"
 
 REPO_URL="https://bitbucket.org/wayne_state_nuclear_theory/glaubernucleusconfigs.git"
 COMMIT="945fe00aabb5cd83af350a799f9646dc138d956d"  # 2026-09-11
-TMP="glaubernucleusconfigs"
+# a new directory of its own here (same file system as the files), removed
+# on exit also after an error or an interruption
+TMP="$(mktemp -d glaubernucleusconfigs.XXXXXX)"
+trap 'rm -rf "$TMP"' EXIT
 
-rm -rf "$TMP"
 git init -q "$TMP"
 git -C "$TMP" fetch -q --depth 1 "$REPO_URL" "$COMMIT"
 git -C "$TMP" checkout -q FETCH_HEAD
 mv "$TMP"/nucleusConfigurations/*.bin.in .
 mv "$TMP"/polarizedConfigurations/*.bin.in .
-rm -rf "$TMP"
 
 if command -v sha256sum > /dev/null; then
     sha256sum -c --quiet SHA256SUMS

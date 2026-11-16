@@ -248,7 +248,8 @@ HotSpotConfiguration HotSpotNucleon::sampleHotSpots(
     return hotSpots;
 }
 
-StringyNucleon::StringyNucleon(const Parameters &param) : hotSpots_(param) {}
+StringyNucleon::StringyNucleon(const Parameters &param)
+    : hotSpots_(param), hotSpotPower_(param.subnucleon.stringHotSpotPower) {}
 
 std::unique_ptr<NucleonProfile> StringyNucleon::sample(
     Random &random, const ReturnValue &nucleon) const {
@@ -270,9 +271,14 @@ StringConfiguration StringyNucleon::sampleStrings(Random &random) const {
     strings.junction = fermatPoint(ends);
     const Point3 &J = strings.junction;
     for (int i = 0; i < numberOfHotSpots; i++) {
-        // uniform in (0, 1): a point on the string from the junction
-        // (t = 0) to the hot spot (t = 1)
-        const double t = random.genrand64_real3();
+        // a point on the string from the junction (t = 0) to the hot spot
+        // (t = 1), with the density (k + 1) t^k: t = u^(1/(k+1)) for u
+        // uniform in (0, 1). k = 0 takes u itself, so that the default
+        // gives the same t, bit for bit, as the uniform sampling before;
+        // every k uses one random number per hot spot.
+        const double u = random.genrand64_real3();
+        const double t =
+            hotSpotPower_ == 0. ? u : std::pow(u, 1. / (hotSpotPower_ + 1.));
         strings.t.push_back(t);
         // the z component only enters through the junction
         strings.x.push_back(J[0] + t * (ends[i][0] - J[0]));

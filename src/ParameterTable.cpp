@@ -558,13 +558,22 @@ bool hotSpotNucleons(const Parameters &p) {
 }
 
 /**
+ * Condition for the parameters of the string nucleon model only.
+ * \param[in] p The parameters read so far.
+ * \return Whether `nucleonModel` is `strings`.
+ */
+bool stringNucleons(const Parameters &p) {
+    return p.subnucleon.nucleonModel == "strings";
+}
+
+/**
  * Condition for the hot-spot parameters, which the hot-spot and the
  * string nucleon models share.
  * \param[in] p The parameters read so far.
  * \return Whether `nucleonModel` is `hotspots` or `strings`.
  */
 bool hotSpotSubstructure(const Parameters &p) {
-    return hotSpotNucleons(p) || p.subnucleon.nucleonModel == "strings";
+    return hotSpotNucleons(p) || stringNucleons(p);
 }
 
 /**
@@ -810,6 +819,17 @@ const std::vector<ParameterSpec> &parameterTable() {
             .onlyIf(hotSpotSubstructure)
             .posterior()
             .check(positive()),
+        // where the moved hot spots of `strings` sit on their strings
+        param(
+            "stringHotSpotPower", &P::subnucleon,
+            &SubnucleonParameters::stringHotSpotPower)
+            .onlyIf(stringNucleons)
+            .optional("0")
+            .posterior()
+            // the density (k + 1) t^k is normalizable only for k > -1
+            .check([](const double &v) {
+                return v > -1. ? "" : "must be larger than -1";
+            }),
         // the number of hot spots (`strings` always has three)
         param("Nq", &P::subnucleon, &SubnucleonParameters::Nq)
             .onlyIf(hotSpotNucleons)

@@ -1534,6 +1534,42 @@ TEST_CASE("Parameters::readInput: protonAnisotropy must be larger than -1") {
 }
 
 TEST_CASE(
+    "Parameters::readInput: stringHotSpotPower is optional, only read with "
+    "nucleonModel strings, and larger than -1") {
+    const std::string strings = exampleInputWith("nucleonModel", "strings");
+    auto withPower = [&strings](const std::string &value) {
+        return insertBeforeEndOfFile(
+            strings, "stringHotSpotPower " + value + "\n");
+    };
+    {
+        // the default 0, which is also written out
+        Parameters param;
+        REQUIRE(param.readInput(inputFromText(strings)).empty());
+        CHECK(param.subnucleon.stringHotSpotPower == 0.);
+        std::ostringstream used;
+        param.writeInputParameters(used);
+        CHECK(used.str().find("\nstringHotSpotPower ") != std::string::npos);
+    }
+    {
+        Parameters param;
+        REQUIRE(param.readInput(inputFromText(withPower("1.5"))).empty());
+        CHECK(param.subnucleon.stringHotSpotPower == 1.5);
+    }
+    CHECK(anyContains(
+        readErrors(withPower("-1")),
+        "stringHotSpotPower -1: must be larger than -1"));
+    CHECK(readErrors(withPower("-0.5")).empty());
+
+    // the example input has hot spots: accepted and ignored
+    Parameters param;
+    REQUIRE(param
+                .readInput(inputFromText(insertBeforeEndOfFile(
+                    readSourceFile("input"), "stringHotSpotPower 2\n")))
+                .empty());
+    CHECK(param.subnucleon.stringHotSpotPower == 0.);
+}
+
+TEST_CASE(
     "Parameters::readInput: useConstituentQuarkProton points to "
     "nucleonModel") {
     std::istringstream in(readSourceFile("input"));

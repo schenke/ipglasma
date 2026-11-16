@@ -197,19 +197,18 @@ Without configuration files, the nucleons of a nucleus with $A > 2$ are sampled 
 | 3-parameter Gauss | $(1 + w r^2/R^2) / (1 + e^{(r^2-R^2)/a^2})$ | S |
 | harmonic oscillator | $(1 + w r^2/a^2) e^{-r^2/a^2}$ | C |
 
-He3 and He4 have no built-in profile, so they need configuration files (`nucleonPositionsFromFile 1`) or Woods-Saxon parameters from the input (`useInputWSParams 1`); a smooth He3 or He4 nucleus (`useSmoothNucleus 1`) needs the input parameters. A deformed nucleus is sampled from the 3-parameter Fermi profile with the angle-dependent radius $R(\theta, \phi) = R [1 + \beta_2 (\cos(\gamma) Y_{20} + \sin(\gamma) Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. These species are deformed by default (all with $\beta_3 = \gamma = 0$):
+He3 and He4 have no built-in profile, so they need configuration files (`nucleonPositionsFromFile 1`) or Woods-Saxon parameters from the input (`useInputWSParams 1`); a smooth He3 or He4 nucleus (`useSmoothNucleus 1`) needs the input parameters. A deformed nucleus is sampled from the 3-parameter Fermi profile with the angle-dependent radius $R(\theta, \phi) = R [1 + \beta_2 (\cos(\gamma) Y_{20} + \sin(\gamma) Y_{22}) + \beta_3 Y_{30} + \beta_4 Y_{40}]$. These species are deformed by default:
 
-| Species | $\beta_2$ | $\beta_4$ |
-|---|---|---|
-| O | −0.01 | −0.122 |
-| Ar | 0.1668 | 0.00695 |
-| Cu | 0.162 | 0.006 |
-| Ru | 0.158 | 0 |
-| Xe | 0.162 | −0.003 |
-| Au | −0.13 | −0.03 |
-| U | 0.28 | 0.093 |
+| Species | $\beta_2$ | $\beta_3$ | $\beta_4$ | $\gamma$ |
+|---|---|---|---|---|
+| O | −0.01 | −0.258 | −0.122 | 0 |
+| Cu | 0.162 | 0 | −0.006 | 0 |
+| Ru | 0.158 | 0 | 0 | 0 |
+| Xe | 0.207 | 0 | 0 | 26.93° (0.4700 rad) |
+| Au | −0.13 | 0 | −0.03 | 0 |
+| U | 0.28 | 0 | 0.093 | 0 |
 
-The sources are given with the parameters in `src/Glauber.cpp`, and [#177](https://github.com/schenke/ipglasma/issues/177) collects the open questions. $R$, $a$ and $w$ are those of the nuclear charge densities from elastic electron scattering compiled by [De Vries et al. (1987)](https://doi.org/10.1016/0092-640X(87)90013-1) for O, Ne, Ne22, S, Al, Ca, Fe, Cu and W, for Pb those of ²⁰⁷Pb, and for C those of ¹³C. Au is as in [arXiv:1403.2232](https://arxiv.org/abs/1403.2232), Xe has the values of Sb scaled to A = 129, as in TGlauberMC ([arXiv:1408.2549](https://arxiv.org/abs/1408.2549)), U is from [arXiv:0907.0202](https://arxiv.org/abs/0907.0202), and Ru and Zr are from [arXiv:1607.04697](https://arxiv.org/abs/1607.04697). The deformations of Au and Cu are from FRDM(1995) ([nucl-th/9308022](https://arxiv.org/abs/nucl-th/9308022)), those of O and Xe from FRDM(2012) ([arXiv:1508.06294](https://arxiv.org/abs/1508.06294)), $\beta_2$ of U from [nucl-th/0411054](https://arxiv.org/abs/nucl-th/0411054) with $\beta_4$ from FRDM(1995), and $\beta_2$ of Ru from the measured $B(E2)$ ([Raman et al. (2001)](https://doi.org/10.1006/adnd.2001.0858)). Pt and Ar have no known source, and $\beta_4$ of Cu has the opposite sign of FRDM(1995).
+Xe is triaxial, so it keeps `dMin` only with `forceDMin 1` (see `dMin`). The sources are given with the parameters in `src/Glauber.cpp`, and [#177](https://github.com/schenke/ipglasma/issues/177) has the discussion of the values. $R$, $a$ and $w$ are mostly those of nuclear charge densities, used as the density of the nucleon centers: from elastic electron scattering compiled by [De Vries et al. (1987)](https://doi.org/10.1016/0092-640X(87)90013-1) for O, Ne, Ne22, S, Ar, Al, Ca, Fe, Cu, W and U, for Pb those of ²⁰⁷Pb (as for ²⁰⁸Pb in TGlauberMC, [arXiv:1408.2549](https://arxiv.org/abs/1408.2549)), for C the modified harmonic oscillator of ¹²C of [De Jager et al. (1974)](https://doi.org/10.1016/S0092-640X(74)80002-1), and for Pt, which is ¹⁹⁶Pt, the two-parameter Fermi distribution from muonic atoms of [Fricke et al. (1995)](https://doi.org/10.1006/adnd.1995.1007) (skin thickness 2.30 fm). Au is as in Table I of [arXiv:1403.2232](https://arxiv.org/abs/1403.2232). Ru and Zr ([arXiv:1607.04697](https://arxiv.org/abs/1607.04697)) and Xe, the triaxial Woods-Saxon fit of [arXiv:2108.09578](https://arxiv.org/abs/2108.09578) to energy-density-functional calculations, are nucleon densities. The deformations of Au are those of arXiv:1403.2232 (those of FRDM(1995), [nucl-th/9308022](https://arxiv.org/abs/nucl-th/9308022), rounded), those of Cu from FRDM(1995), those of O from FRDM(2012) ([arXiv:1508.06294](https://arxiv.org/abs/1508.06294)), $\beta_2$ of U from [nucl-th/0411054](https://arxiv.org/abs/nucl-th/0411054) with $\beta_4$ from FRDM(1995) (a Woods-Saxon fit to energy-density-functional densities gives $\beta_2 = 0.247$ and $\beta_4 = 0.081$, [arXiv:2302.13617](https://arxiv.org/abs/2302.13617)), $\beta_2$ of Ru from the measured $B(E2)$ ([Raman et al. (2001)](https://doi.org/10.1006/adnd.2001.0858)), and those of Xe from arXiv:2108.09578. Zr and Ar are spherical.
 
 - **useInputWSParams**: `1` makes both nuclei with A > 2 Woods-Saxon nuclei (3-parameter Fermi with $w = 0$, whatever their built-in profile) with the input values of `radiusWS`, `diffusenessWS`, `beta2`, `beta3`, `beta4`, `gamma`, `deltaRnp` and `deltaAnp`, which are only used with `1`, instead of the built-in ones. The proton and the deuteron keep their own description, so e.g. d+Au can use the input parameters for Au. A nucleus whose deformation parameters are all 0 (within $10^{-8}$) is sampled as spherical
 - **radiusWS**: radius $R$ in fm, positive

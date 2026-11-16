@@ -1362,6 +1362,25 @@ TEST_CASE(
         "nucleonModel "
         "hotspots or strings, which this input does not set"));
 
+    // stringHotSpotPower needs the string model (the example input has hot
+    // spots)
+    TemporaryFile power(
+        "ipglasma_test_posterior_power.csv", "stringHotSpotPower\n1\n");
+    CHECK(anyContains(
+        readErrors(exampleInputWithPosterior(power.name())),
+        "ipglasma_test_posterior_power.csv: column stringHotSpotPower is only "
+        "used with nucleonModel strings, which this input does not set"));
+    {
+        Parameters param;
+        const std::vector<std::string> errors =
+            param.readInput(inputFromText(inputWith(
+                exampleInputWithPosterior(power.name()), "nucleonModel",
+                "strings")));
+        for (const std::string &error : errors) CAPTURE(error);
+        CHECK(errors.empty());
+        CHECK(param.subnucleon.stringHotSpotPower == 1.);
+    }
+
     // the Woods-Saxon parameters need useInputWSParams 1 (the example input
     // has 0)
     for (const char *name :

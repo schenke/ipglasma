@@ -600,6 +600,7 @@ std::string settingOf(Condition condition) {
     if (condition == qsSmeared) return "smearQs 1";
     if (condition == gaussianNucleons) return "nucleonModel gaussian";
     if (condition == hotSpotNucleons) return "nucleonModel hotspots";
+    if (condition == stringNucleons) return "nucleonModel strings";
     if (condition == hotSpotSubstructure) {
         return "nucleonModel hotspots or strings";
     }

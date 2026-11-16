@@ -643,7 +643,7 @@ TEST_CASE(
     glauber.findNucleusData(
         &carbon, "C", false, 0., 0., 0., 0., 0., 0., false, 0., 0., 0.);
     CHECK(carbon.densityFunc == 1);
-    CHECK(carbon.w_WS == 1.403);
+    CHECK(carbon.w_WS == 1.247);
     glauber.findNucleusData(
         &carbon, "C", true, 2.5, 0.5, 0., 0., 0., 0., false, 0., 0., 0.);
     CHECK(carbon.densityFunc == 3);

@@ -46,10 +46,11 @@ TEST_CASE(
     Glauber glauber;
     struct Case {
         const char *name;
-        double beta2, beta4;
+        double beta2, beta4, gamma;
     };
     for (const Case &c :
-         {Case {"U", 0.28, 0.093}, Case {"Xe", 0.162, -0.003}}) {
+         {Case {"U", 0.28, 0.093, 0.},
+          Case {"Xe", 0.207, 0., 26.93 * M_PI / 180.}}) {
         CAPTURE(c.name);
         Nucleus nucleus {};
         glauber.findNucleusData(
@@ -57,13 +58,51 @@ TEST_CASE(
             0., /*forceDminFlag=*/false, 0., 0., 0.);
         CHECK(nucleus.beta2 == doctest::Approx(c.beta2));
         CHECK(nucleus.beta4 == doctest::Approx(c.beta4));
+        CHECK(nucleus.gamma == doctest::Approx(c.gamma));
 
         glauber.findNucleusData(
             &nucleus, c.name, /*setWSDeformParams=*/true, 6., 0.5, 0.2, 0.,
             0.05, 0., /*forceDminFlag=*/false, 0., 0., 0.);
         CHECK(nucleus.beta2 == doctest::Approx(0.2));
         CHECK(nucleus.beta4 == doctest::Approx(0.05));
+        CHECK(nucleus.gamma == 0.);
     }
+}
+
+TEST_CASE("Glauber::findNucleusData: the built-in parameters decided in #177") {
+    struct Case {
+        const char *name;
+        int A, Z;
+        double R, w, a, beta2, beta3, beta4, gammaDegrees;
+    };
+    // 12C oscillator of De Jager et al. 1974; muonic 196Pt of Fricke et al.
+    // 1995 (skin thickness 2.30 fm); Xe triaxial (Bally et al. 2022); the
+    // others from De Vries et al. 1987 and FRDM
+    const double aPt = 2.30 / (4. * std::log(3.));
+    for (const Case &c : {
+             Case {"C", 12, 6, 2.46, 1.247, 1.649, 0., 0., 0., 0.},
+             Case {"O", 16, 8, 2.608, -0.051, 0.513, -0.01, -0.258, -0.122, 0.},
+             Case {"Ne", 20, 10, 2.805, 0., 0.571, 0., 0., 0., 0.},
+             Case {"Ar", 40, 18, 3.53, 0., 0.542, 0., 0., 0., 0.},
+             Case {"Cu", 63, 29, 4.163, 0., 0.606, 0.162, 0., -0.006, 0.},
+             Case {"Pt", 196, 78, 6.5472, 0., aPt, 0., 0., 0., 0.},
+             Case {"Au", 197, 79, 6.37, 0., 0.535, -0.13, 0., -0.03, 0.},
+             Case {"U", 238, 92, 6.874, 0., 0.556, 0.28, 0., 0.093, 0.},
+             Case {"Xe", 129, 54, 5.601, 0., 0.492, 0.207, 0., 0., 26.93},
+         }) {
+        CAPTURE(c.name);
+        const Nucleus nucleus = lookup(c.name);
+        CHECK(nucleus.A == c.A);
+        CHECK(nucleus.Z == c.Z);
+        CHECK(nucleus.R_WS == doctest::Approx(c.R));
+        CHECK(nucleus.w_WS == doctest::Approx(c.w));
+        CHECK(nucleus.a_WS == doctest::Approx(c.a));
+        CHECK(nucleus.beta2 == doctest::Approx(c.beta2));
+        CHECK(nucleus.beta3 == doctest::Approx(c.beta3));
+        CHECK(nucleus.beta4 == doctest::Approx(c.beta4));
+        CHECK(nucleus.gamma == doctest::Approx(c.gammaDegrees * M_PI / 180.));
+    }
+    CHECK(aPt == doctest::Approx(0.52339).epsilon(1e-5));
 }
 
 TEST_CASE("Glauber::findNucleusData: setWSDeformParams overrides beta2/R_WS") {

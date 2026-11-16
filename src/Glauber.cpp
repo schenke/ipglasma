@@ -56,31 +56,39 @@ struct NucleusTemplate {
     int funcCode;
 };
 
+/// ln 3, for the diffuseness a = t/(4 ln 3) of a skin thickness t.
+constexpr double kLn3 = 1.0986122886681098;
+
 /// Built-in Woods-Saxon/density-profile parameters, one row per
 /// supported species name; see NucleusTemplate for the field meanings.
-/// Sources (issue #177 collects the open questions):
-/// - R_WS, w_WS and a_WS: the charge densities from elastic electron
-///   scattering compiled in \cite DeVries:1987atn for O, Ne, Ne22, S, Al,
-///   Ca, Fe, Cu and W; for Pb those of 207Pb, which are also used for 208Pb
-///   in \cite Loizides:2014vua; for C the modified harmonic oscillator of
-///   13C (#177). Au as in \cite Schenke:2014tga (6.38 fm in
-///   \cite DeVries:1987atn, #177); Xe the Sb values of
-///   \cite DeVries:1987atn with R scaled by (129/122)^(1/3), as in
-///   \cite Loizides:2014vua; U the set of \cite Masui:2009qk; Ru and Zr from
-///   \cite Deng:2016knn.
-/// - Deformations: Au (rounded) and Cu from FRDM(1995) \cite Moller:1993ed
-///   (the sign of Cu's beta4: #177); O and Xe from FRDM(2012)
-///   \cite Moller:2015fba (without the beta3 = -0.258 of O, #177); U with
-///   beta2 of \cite Heinz:2004ir, as in \cite Masui:2009qk, and beta4 of
-///   \cite Moller:1993ed; Ru with beta2 from B(E2) \cite Raman:2001nnq, as
-///   in \cite Deng:2016knn; Zr spherical, as in \cite Schenke:2019ruo
-///   (#177).
+/// Sources (decided in issue #177):
+/// - R_WS, w_WS and a_WS: nuclear charge densities, used as the density of
+///   the nucleon centers, from elastic electron scattering compiled in
+///   \cite DeVries:1987atn for O, Ne, Ne22, S, Ar, Al, Ca, Fe, Cu, W and U;
+///   for Pb those of 207Pb, which are also used for 208Pb in
+///   \cite Loizides:2014vua; for C the modified harmonic oscillator of 12C
+///   of \cite DeJager:1974liz; for Pt (196Pt) the two-parameter Fermi
+///   distribution from muonic atoms of \cite Fricke:1995zz. Au as in
+///   \cite Schenke:2014tga. Nucleon densities: Ru and Zr from
+///   \cite Deng:2016knn, and Xe the triaxial Woods-Saxon fit of
+///   \cite Bally:2021qys to the density of energy-density-functional
+///   calculations.
+/// - Deformations: Au as in \cite Schenke:2014tga (those of FRDM(1995)
+///   \cite Moller:1993ed, rounded); Cu from FRDM(1995); O from FRDM(2012)
+///   \cite Moller:2015fba; U with beta2 of \cite Heinz:2004ir, as in
+///   \cite Masui:2009qk, and beta4 of FRDM(1995) (a Woods-Saxon fit to
+///   energy-density-functional densities gives beta2 = 0.247 and
+///   beta4 = 0.081 \cite Ryssens:2023fkv); Ru with beta2 from B(E2)
+///   \cite Raman:2001nnq, as in \cite Deng:2016knn; Xe triaxial, from
+///   \cite Bally:2021qys; Zr spherical, as in \cite Schenke:2019ruo; Ar
+///   spherical.
 /// - The deuteron: the Hulthen parameters of \cite Miller:2007ri.
-/// - Pt and Ar (also Ar's deformation): no source found (#177).
 const NucleusTemplate kNucleusTemplates[] = {
-    // R, a: Schenke:2014tga; beta2, beta4: FRDM(1995), rounded
+    // R, a, beta2, beta4: Table I of Schenke:2014tga (the betas of
+    // FRDM(1995), -0.131 and -0.031, rounded)
     {"Au", 197, 79, 6.37, 0, 0.535, -0.13, 0., -0.03, 0., 3},
-    // 207Pb of DeVries:1987atn
+    // 207Pb of DeVries:1987atn (208Pb there: 6.624 fm, 0.549 fm), as for
+    // 208Pb in Loizides:2014vua
     {"Pb", 208, 82, 6.62, 0., 0.546, 0.0, 0., 0.0, 0., 3},
     {"p", 1, 1, 1., 0., 1., 0.0, 0., 0.0, 0., 3},
     {"He3", 3, 2, 0, 0, 0, 0.0, 0., 0.0, 0., 1},
@@ -88,40 +96,43 @@ const NucleusTemplate kNucleusTemplates[] = {
     // Hulthen alpha = 0.228/fm (a_WS) and beta = 1.18/fm (w_WS),
     // Miller:2007ri
     {"d", 2, 1, 1.0, 1.18, 0.228, 0.0, 0., 0.0, 0., 8},
-    // the modified harmonic oscillator of 13C of DeVries:1987atn (R_WS, not
-    // used, is its rms radius); #177
-    {"C", 12, 6, 2.44, 1.403, 1.635, 0.0, 0., 0.0, 0., 1},
-    // DeVries:1987atn; beta2 and beta4 from FRDM(2012), without beta3; #177
-    {"O", 16, 8, 2.608, -0.051, 0.513, -0.01, 0., -0.122, 0., 3},
-    // DeVries:1987atn, R rounded
-    {"Ne", 20, 10, 2.8, 0.0, 0.57, 0.0, 0., 0.0, 0., 3},
+    // the modified harmonic oscillator of 12C of DeJager:1974liz (Sick and
+    // McCarthy 1970), alpha = 1.247 (w_WS) and a = 1.649 fm; R_WS, not used,
+    // is the rms radius listed with it
+    {"C", 12, 6, 2.46, 1.247, 1.649, 0.0, 0., 0.0, 0., 1},
+    // DeVries:1987atn; beta2, beta3 and beta4 from FRDM(2012)
+    {"O", 16, 8, 2.608, -0.051, 0.513, -0.01, -0.258, -0.122, 0., 3},
+    // DeVries:1987atn
+    {"Ne", 20, 10, 2.805, 0.0, 0.571, 0.0, 0., 0.0, 0., 3},
     // DeVries:1987atn
     {"Ne22", 22, 10, 2.782, 0.0, 0.549, 0.0, 0., 0.0, 0., 3},
     // DeVries:1987atn (3-parameter Gauss)
     {"S", 32, 16, 2.54, 0.16, 2.191, 0.0, 0., 0.0, 0., 2},
-    // no source found; #177
-    {"Ar", 40, 18, 3.61, 0.0, 0.516, 0.1668, 0., 0.00695, 0., 3},
+    // 40Ar of DeVries:1987atn (Finn et al. 1976), spherical
+    {"Ar", 40, 18, 3.53, 0.0, 0.542, 0.0, 0., 0.0, 0., 3},
     // 184W of DeVries:1987atn
     {"W", 184, 74, 6.51, 0, 0.535, 0.0, 0., 0.0, 0., 3},
     // DeVries:1987atn
     {"Al", 27, 13, 3.07, 0, 0.519, 0.0, 0., 0.0, 0., 3},
     // DeVries:1987atn
     {"Ca", 40, 20, 3.766, -0.161, 0.586, 0.0, 0., 0.0, 0., 3},
-    // DeVries:1987atn; beta2 from FRDM(1995), which has beta4 = -0.006; #177
-    {"Cu", 63, 29, 4.163, 0, 0.606, 0.162, 0., 0.006, 0., 3},
+    // DeVries:1987atn; beta2 and beta4 from FRDM(1995)
+    {"Cu", 63, 29, 4.163, 0, 0.606, 0.162, 0., -0.006, 0., 3},
     // DeVries:1987atn
     {"Fe", 56, 26, 4.106, 0, 0.519, 0.0, 0., 0.0, 0., 3},
-    // no source found; #177
-    {"Pt", 195, 78, 6.78, 0, 0.54, 0.0, 0., 0.0, 0., 3},
-    // Masui:2009qk: beta2 of Heinz:2004ir, beta4 of FRDM(1995); #177
-    {"U", 238, 92, 6.81, 0, 0.55, 0.28, 0., 0.093, 0., 3},
+    // 196Pt: two-parameter Fermi distribution from muonic atoms of
+    // Fricke:1995zz, c = 6.5472 fm with the skin thickness t = 2.30 fm
+    {"Pt", 196, 78, 6.5472, 0, 2.30 / (4. * kLn3), 0.0, 0., 0.0, 0., 3},
+    // 238U of DeVries:1987atn (its reference Cr77); beta2 of Heinz:2004ir,
+    // as in Masui:2009qk, and beta4 of FRDM(1995)
+    {"U", 238, 92, 6.874, 0, 0.556, 0.28, 0., 0.093, 0., 3},
     // Deng:2016knn, beta2 from B(E2) (Raman:2001nnq)
     {"Ru", 96, 44, 5.085, 0, 0.46, 0.158, 0., 0.0, 0., 3},
-    // R, a: Deng:2016knn; spherical as in Schenke:2019ruo; #177
+    // R, a: Deng:2016knn; spherical as in Schenke:2019ruo
     {"Zr", 96, 40, 5.02, 0, 0.46, 0.0, 0., 0.0, 0., 3},
-    // Sb of DeVries:1987atn scaled to A = 129 (Loizides:2014vua); beta2 and
-    // beta4 from FRDM(2012)
-    {"Xe", 129, 54, 5.42, 0, 0.57, 0.162, 0., -0.003, 0., 3},
+    // the triaxial Woods-Saxon fit of Bally:2021qys: beta = 0.207,
+    // gamma = 26.93 degrees
+    {"Xe", 129, 54, 5.601, 0, 0.492, 0.207, 0., 0.0, 26.93 * M_PI / 180., 3},
 };
 
 }  // namespace

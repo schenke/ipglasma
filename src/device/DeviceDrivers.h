@@ -39,7 +39,6 @@ class JimwlkDevice {
     JimwlkDevice(
         Backend &backend, int n, const double *generators, const double *kernel,
         const double *sqrtAlphasNoise, double ds);
-    ~JimwlkDevice();
     JimwlkDevice(const JimwlkDevice &) = delete;
     JimwlkDevice &operator=(const JimwlkDevice &) = delete;
 
@@ -71,8 +70,8 @@ class JimwlkDevice {
     const std::size_t sites_;
     const double sqrtDs_;
     const bool noiseCoupling_;
-    Buffer wilson_, generators_, kernel_, alphas_;
-    Buffer noise_, xi_, eta_, ck_, v_, w_;
+    DeviceBuffer wilson_, generators_, kernel_, alphas_;
+    DeviceBuffer noise_, xi_, eta_, ck_, v_, w_;
 
     /// The step once the noise is in noise_.
     void evolveWithNoise();
@@ -87,7 +86,6 @@ class JimwlkDevice {
 class YangMillsDevice {
   public:
     YangMillsDevice(Backend &backend, int n, bool periodic, double g);
-    ~YangMillsDevice();
     YangMillsDevice(const YangMillsDevice &) = delete;
     YangMillsDevice &operator=(const YangMillsDevice &) = delete;
 
@@ -117,8 +115,8 @@ class YangMillsDevice {
     const std::size_t sites_;
     const int periodic_;
     const double g_;
-    Buffer e1_, e2_, ux_, uy_, pi_, phi_;
-    Buffer e1Backup_, e2Backup_, piBackup_;
+    DeviceBuffer e1_, e2_, ux_, uy_, pi_, phi_;
+    DeviceBuffer e1Backup_, e2Backup_, piBackup_;
 };
 
 /**
@@ -132,7 +130,6 @@ class YangMillsDevice {
 class GaugeFixDevice {
   public:
     GaugeFixDevice(Backend &backend, int n);
-    ~GaugeFixDevice();
     GaugeFixDevice(const GaugeFixDevice &) = delete;
     GaugeFixDevice &operator=(const GaugeFixDevice &) = delete;
 
@@ -153,7 +150,7 @@ class GaugeFixDevice {
     Backend &backend_;
     const int n_;
     const std::size_t sites_;
-    Buffer ux0_, uy0_, ux_, uy_, g_, chi_, residual_, partial_, poisson_;
+    DeviceBuffer ux0_, uy0_, ux_, uy_, g_, chi_, residual_, partial_, poisson_;
     /// The number of partial sums of the residual the device returns.
     std::size_t partialCount_;
     std::vector<double> partialSums_;
@@ -173,7 +170,6 @@ class WilsonLineDevice {
      * momentum space, per site (Init::computeWilsonLineMomentumKernel()).
      */
     WilsonLineDevice(Backend &backend, int n, const double *momentumKernel);
-    ~WilsonLineDevice();
     WilsonLineDevice(const WilsonLineDevice &) = delete;
     WilsonLineDevice &operator=(const WilsonLineDevice &) = delete;
 
@@ -196,7 +192,7 @@ class WilsonLineDevice {
     Backend &backend_;
     const int n_;
     const std::size_t sites_;
-    Buffer wilson_, kernel_, scale_, gauss_, rho_;
+    DeviceBuffer wilson_, kernel_, scale_, gauss_, rho_;
 
     /// The sheet once the numbers are in gauss_.
     void multiplySheet();

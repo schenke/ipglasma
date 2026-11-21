@@ -399,7 +399,11 @@ edge margin and ε threshold do not apply.
 `computeEccentricities 1`. The line is *appended*, so rerunning an event
 id in the same directory adds lines. The weights are ε u^τ (times the
 running-coupling factor), over cells with ε at least `eccentricityCutoff`
-(default 0), about the energy-weighted centroid.
+(default 0), about the energy-weighted centroid. With the default 0, a
+vacuum cell, where ε is floating-point rounding, counts or not by the sign
+of that rounding: columns 16, 17, 20, 22 and 23 then are dominated by the
+vacuum and change from run to run (see `eccentricityCutoff` in
+README.md); the other columns are not affected.
 
 | Column | Content |
 |---|---|

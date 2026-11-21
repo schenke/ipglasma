@@ -346,7 +346,7 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
     ux_ = DeviceBuffer(backend_, 18 * sites_);
     uy_ = DeviceBuffer(backend_, 18 * sites_);
     g_ = DeviceBuffer(backend_, 18 * sites_);
-    chi_ = DeviceBuffer(backend_, 18 * sites_);
+    chi_ = DeviceBuffer(backend_, 8 * sites_);
     residual_ = DeviceBuffer(backend_, sites_);
     // the residual is summed on the device into partialCount_ partial
     // sums, which the host adds up: a small download per iteration
@@ -416,10 +416,11 @@ double GaugeFixDevice::divergence() {
 void GaugeFixDevice::relax() {
     Params p;
     p.n = n_;
-    backend_.centeredFft(chi_, n_, 9, 1);
-    p.ncomp = 9;
-    backend_.launch(kScaleBySite, 9 * sites_, p, {chi_, poisson_});
-    backend_.centeredFft(chi_, n_, 9, -1);
+    // chi packed as 4 complex components (ipg_gf_unpack)
+    backend_.centeredFft(chi_, n_, 4, 1);
+    p.ncomp = 4;
+    backend_.launch(kScaleBySite, 4 * sites_, p, {chi_, poisson_});
+    backend_.centeredFft(chi_, n_, 4, -1);
     backend_.launch(kGfUpdate, sites_, p, {chi_, g_});
     backend_.launch(kGfTransform, sites_, p, {g_, ux0_, uy0_, ux_, uy_});
 }
@@ -448,7 +449,7 @@ WilsonLineDevice::WilsonLineDevice(
     kernel_ = DeviceBuffer(backend_, sites_);
     scale_ = DeviceBuffer(backend_, sites_);
     gauss_ = DeviceBuffer(backend_, 8 * sites_);
-    rho_ = DeviceBuffer(backend_, 16 * sites_);
+    rho_ = DeviceBuffer(backend_, 8 * sites_);
     backend_.upload(kernel_, momentumKernel, sites_);
 }
 
@@ -487,11 +488,12 @@ void WilsonLineDevice::sheetWithDeviceNoise(
 void WilsonLineDevice::multiplySheet() {
     Params p;
     p.n = n_;
-    p.ncomp = 8;
+    // the 8 real charges of a site as 4 complex components
     backend_.launch(kWilsonCharge, 8 * sites_, p, {gauss_, scale_, rho_});
-    backend_.centeredFft(rho_, n_, 8, 1);
-    backend_.launch(kScaleBySite, 8 * sites_, p, {rho_, kernel_});
-    backend_.centeredFft(rho_, n_, 8, -1);
+    backend_.centeredFft(rho_, n_, 4, 1);
+    p.ncomp = 4;
+    backend_.launch(kScaleBySite, 4 * sites_, p, {rho_, kernel_});
+    backend_.centeredFft(rho_, n_, 4, -1);
     backend_.launch(kWilsonExponent, sites_, p, {rho_, wilson_});
 }
 

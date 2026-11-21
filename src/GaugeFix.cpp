@@ -290,6 +290,9 @@ void GaugeFix::fftChi(
         messager_.flush("info");
         device.download(lat->Ux1);
         applyGaugeTransformation(lat, N);
+        // the residual of the messages below if the device used up all
+        // iterations, so that the host loop does not run
+        gresidual = deviceResidual;
     }
 
     for (int gfiter = 0; gfiter < max_gfiter - deviceIterations; gfiter++) {

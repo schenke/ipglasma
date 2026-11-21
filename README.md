@@ -47,7 +47,7 @@ cmake -B build -Dunittest=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
-It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`), as do the quick modes of two validation setups, `lattice_symmetries` and `dilute_limit` (`.github/workflows/validations.yml`, see [validations/README.md](validations/README.md)), which run the calculation end to end (without JIMWLK).
+It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`), as do the quick modes of two validation setups, `lattice_symmetries` and `dilute_limit` (`.github/workflows/validations.yml`, see [validations/README.md](validations/README.md)), which run the calculation end to end (without JIMWLK). The device layer (see [Running on a GPU](#running-on-a-gpu)) is tested there through its host backend; `.github/workflows/device.yml` also runs the unit tests with the OpenCL backend on the CPU (PoCL) and compiles the CUDA backend, since the runners have no GPU.
 
 ## Running
 ```

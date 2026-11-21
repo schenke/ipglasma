@@ -32,6 +32,9 @@ constexpr int kGaugeFixStagnation = 1000;
 /// (kGaugeFixStagnation): the residual can rise for more than 100
 /// iterations before it falls again.
 constexpr double kGaugeFixSingleFloor = 2e-14;
+/// Iterations without a new minimum after which a single-precision device
+/// whose lowest residual is below kGaugeFixSingleFloor hands the gauge
+/// fixing over to the host.
 constexpr int kGaugeFixStagnationSingle = 50;
 
 // chi is a traceless Hermitian SU(3) algebra element,
@@ -117,6 +120,8 @@ inline double projectGaugeDivergenceSU3(
  * the links and to the adjoint fields:
  * \f$U_i(x) \to g(x) U_i(x) g^\dagger(x+\hat i)\f$ (periodic),
  * \f$E(x) \to g(x) E(x) g^\dagger(x)\f$.
+ * \param[in,out] lat The lattice, whose Ux1 holds \f$g(x)\f$.
+ * \param[in] N The number of sites in each direction.
  */
 void applyGaugeTransformation(Lattice *lat, const int N) {
     {

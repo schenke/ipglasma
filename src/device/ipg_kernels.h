@@ -4,10 +4,11 @@
  *
  * Device kernels of IP-Glasma: the per-site (or per-element) bodies of the
  * JIMWLK step, of the classical Yang-Mills leapfrog, of the Coulomb gauge
- * fixing, of the Wilson lines of a nucleus and of a mixed-radix FFT, in the common subset of C99, C++, CUDA C++ and OpenCL C 1.2, so
- * that the same source runs
+ * fixing, of the Wilson lines of a nucleus and of a mixed-radix FFT, in
+ * the common subset of C99, C++, CUDA C++ and OpenCL C 1.2, so that the
+ * same source runs
  *
- *   - on the host (HostBackend.cpp, the reference of the device layer),
+ *   - on the host (HostBackendImpl.h, the reference of the device layer),
  *   - on NVIDIA GPUs with CUDA (CudaBackend.cu),
  *   - on OpenCL devices, among them the GPUs of Apple M processors
  *     (OpenCLBackend.cpp).

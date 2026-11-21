@@ -988,6 +988,14 @@ threads:
   system.
 - **Repeats:** the runs are sequential and repeated (`--repeats`, default
   2), and the fastest repeat is kept.
+- **Devices:** with `--devices` (e.g. `cuda:double cuda:single`), the
+  size scan is repeated with the Wilson lines, JIMWLK, the Yang–Mills
+  steps and the gauge fixing on that device (see "Running on a GPU" in the
+  main `README.md`), with the same number of threads for the stages on the
+  CPU and the random numbers drawn on the device (`--device-noise`,
+  default `device`). The summary has these scans in `device_scans`. The
+  device runs asynchronously, so the time per step of its runs is only the
+  time to launch the step; the stage times include the waits.
 
 The timings depend on the machine and on what else runs on it: run the
 script on an otherwise idle machine. The summary records the CPU model, the
@@ -1000,6 +1008,9 @@ cd performance
 python3 performance.py --ipglasma-path ../.. --quick
 # the setup of the paper (80 minutes)
 python3 performance.py --ipglasma-path ../..
+# with an NVIDIA GPU (-DIPGLASMA_CUDA=ON), without the thread scan
+python3 performance.py --ipglasma-path ../.. \
+    --devices cuda:double cuda:single --thread-counts 8
 ```
 
 The results go to `performance_summary.json` and `performance.pdf` in

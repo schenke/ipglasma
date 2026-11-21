@@ -31,6 +31,16 @@ evolution (jimwlk.step) and of the Yang-Mills evolution
 N, that of the Yang-Mills steps grows like N. The peak resident memory of
 each run comes from the operating system (wait4).
 
+With --devices (e.g. cuda:double cuda:single), the size scan is repeated
+with the stages that a device can take on that device (see "Running on a
+GPU" in README.md), with the same --threads for the stages on the CPU and
+the random numbers drawn on the device (--device-noise device, the setting
+for production runs; host draws them on the CPU as in a CPU run). The
+summary has these scans in device_scans, and the log line of the run that
+names the device. The device runs asynchronously, so the time per step of
+its runs is only the time to launch the step; the stage times include the
+waits.
+
 Timings depend on the machine and on what else runs on it: run the script
 on an otherwise idle machine. The summary records the CPU model, the
 number of CPUs and the load average before the runs, and the script warns
@@ -41,6 +51,10 @@ Usage (from validations/performance/):
     python3 performance.py --ipglasma-path ../.. --quick
     # the setup of the paper (80 minutes on 24 CPUs)
     python3 performance.py --ipglasma-path ../..
+    # with an NVIDIA GPU (build with -DIPGLASMA_CUDA=ON), without the
+    # thread scan
+    python3 performance.py --ipglasma-path ../.. \
+        --devices cuda:double cuda:single --thread-counts 8
 
 --ipglasma-path is a directory with the ipglasma executable,
 qs2Adj_vs_Tp_vs_Y_240.in, nucleusConfigurations/ and tables/. The results
@@ -94,7 +108,10 @@ def per_step(result, phase):
 
 
 def run_tag(cfg):
-    return f"size{cfg['size']}_threads{cfg['threads']}_rep{cfg['repeat']}"
+    tag = f"size{cfg['size']}_threads{cfg['threads']}_rep{cfg['repeat']}"
+    if cfg.get("device"):
+        tag += "_" + cfg["device"].replace(":", "-")
+    return tag
 
 
 def run_one(cfg, settings):
@@ -122,6 +139,14 @@ def run_one(cfg, settings):
                 os.path.join(workdir, "input"))
     env = dict(os.environ, OMP_NUM_THREADS=str(cfg["threads"]),
                IPGLASMA_PROFILE="1", IPGLASMA_PROFILE_DIR=workdir)
+    # the device settings only from cfg, none from the environment
+    for name in [n for n in env if n.startswith("IPGLASMA_DEVICE")]:
+        del env[name]
+    if cfg.get("device"):
+        backend, _, precision = cfg["device"].partition(":")
+        env.update(IPGLASMA_DEVICE=backend,
+                   IPGLASMA_DEVICE_PRECISION=precision or "double",
+                   IPGLASMA_DEVICE_NOISE=settings["device_noise"])
     with open(os.path.join(workdir, "run.log"), "w") as log:
         start = time.perf_counter()
         process = subprocess.Popen([settings["ipglasma"], "input"],
@@ -133,7 +158,15 @@ def run_one(cfg, settings):
     if returncode != 0 or not os.path.exists(profile):
         return None, f"ipglasma failed (exit {returncode}), see {workdir}"
     phases, calls = read_profile(profile)
-    result = dict(cfg, wall_s=wall,
+    device_line = ""
+    if cfg.get("device"):
+        with open(os.path.join(workdir, "run.log")) as log:
+            device_line = next(
+                (line.split("[main::main]: ")[-1].strip() for line in log
+                 if "[main::main]: Device " in line), "")
+        if not device_line:
+            return None, f"the run did not use the device, see {workdir}"
+    result = dict(cfg, wall_s=wall, device_line=device_line,
                   # ru_maxrss is in kilobytes on Linux
                   max_rss_MiB=usage.ru_maxrss / 1024.,
                   phases=phases, calls=calls)
@@ -148,9 +181,10 @@ def run_one(cfg, settings):
     return result, None
 
 
-def fastest(results, size, threads):
+def fastest(results, size, threads, device=None):
     runs = [r for r in results
-            if r["size"] == size and r["threads"] == threads]
+            if r["size"] == size and r["threads"] == threads
+            and r.get("device") == device]
     return min(runs, key=lambda r: r["phases"].get("event.total", r["wall_s"])) \
         if runs else None
 
@@ -210,6 +244,14 @@ def plot(summary, path):
     middle.set_ylabel(f"speed-up against {p[0]} thread(s)")
     middle.set_title(f"N = {summary['settings']['scan_size']}", fontsize=9)
     middle.legend(fontsize=7)
+    for (device, scan), style in zip(summary.get("device_scans", {}).items(),
+                                     ["--", ":"]):
+        left.plot([r["size"] for r in scan],
+                  [r["phases"].get("event.total", np.nan) for r in scan],
+                  "o" + style, color=colors[-1], ms=3,
+                  label=f"event, {device}")
+    if summary.get("device_scans"):
+        left.legend(fontsize=7)
     right.plot(n, [r["max_rss_MiB"] / 1024. for r in sizes], "o-",
                color=colors[0], ms=3)
     right.set_xscale("log")
@@ -241,6 +283,13 @@ def main():
     parser.add_argument("--scan-size", type=int, default=800,
                         help="the size of the thread scan")
     parser.add_argument("--repeats", type=int, default=2)
+    parser.add_argument("--devices", nargs="*", default=[],
+                        metavar="DEVICE[:PRECISION]",
+                        help="size scans on these devices too, e.g. "
+                             "cuda:double cuda:single")
+    parser.add_argument("--device-noise", choices=["device", "host"],
+                        default="device",
+                        help="IPGLASMA_DEVICE_NOISE of the device runs")
     parser.add_argument("--quick", action="store_true",
                         help="N = 64 and 128, 1 and 2 threads, one repeat")
     args = parser.parse_args()
@@ -254,6 +303,7 @@ def main():
         "template": os.path.abspath(args.template),
         "datadir": os.path.abspath(args.datadir),
         "tables": os.path.join(path, "tables"),
+        "device_noise": args.device_noise,
         "overrides": {
             "L": args.L, "LOutput": args.L, "seed": args.seed, "bMin": 0.,
             "bMax": 0., "rotateReactionPlane": 0, "writeWilsonLines": 0,
@@ -276,7 +326,9 @@ def main():
     configs = [{"size": n, "threads": args.threads} for n in args.sizes] \
         + [{"size": args.scan_size, "threads": t}
            for t in args.thread_counts if t != args.threads
-           or args.scan_size not in args.sizes]
+           or args.scan_size not in args.sizes] \
+        + [{"size": n, "threads": args.threads, "device": device}
+           for device in args.devices for n in args.sizes]
     runs, failures = [], []
     start = time.time()
     for repeat in range(args.repeats):
@@ -287,8 +339,9 @@ def main():
                                 f"{error}")
                 continue
             runs.append(result)
-            print(f"  N = {cfg['size']:5d}, {cfg['threads']:2d} threads, "
-                  f"repeat {repeat}: event "
+            print(f"  N = {cfg['size']:5d}, {cfg['threads']:2d} threads"
+                  + (f", {cfg['device']}" if cfg.get("device") else "")
+                  + f", repeat {repeat}: event "
                   f"{result['phases'].get('event.total', float('nan')):8.1f} s,"
                   f" peak memory {result['max_rss_MiB'] / 1024.:.2f} GiB",
                   flush=True)
@@ -299,9 +352,13 @@ def main():
     size_scan = [fastest(runs, n, args.threads) for n in args.sizes]
     thread_scan = [fastest(runs, args.scan_size, t)
                    for t in args.thread_counts]
+    device_scans = {device: [r for r in (fastest(runs, n, args.threads, device)
+                                         for n in args.sizes) if r]
+                    for device in args.devices}
     summary = {"settings": vars(args), "machine": info, "runs": runs,
                "size_scan": [r for r in size_scan if r],
                "thread_scan": [r for r in thread_scan if r],
+               "device_scans": device_scans,
                "checks": {"all runs succeeded": not failures,
                           "every event has a profile": all(
                               "event.total" in r["phases"] for r in runs)}}
@@ -309,12 +366,14 @@ def main():
     print(f"  {'N':>5s} {'threads':>7s}" + "".join(
         f"{label[:18]:>20s}" for _, label in STAGES + STEPS)
         + f"{'memory [GiB]':>14s}")
-    for r in summary["size_scan"] + summary["thread_scan"]:
+    for r in summary["size_scan"] + summary["thread_scan"] + [
+            r for scan in device_scans.values() for r in scan]:
         print(f"  {r['size']:5d} {r['threads']:7d}" + "".join(
             f"{r['phases'].get(phase, float('nan')):20.2f}"
             for phase, _ in STAGES) + "".join(
             f"{per_step(r, phase):20.4f}" for phase, _ in STEPS)
-            + f"{r['max_rss_MiB'] / 1024.:14.2f}")
+            + f"{r['max_rss_MiB'] / 1024.:14.2f}"
+            + (f"  {r['device']}" if r.get("device") else ""))
     passed = all(summary["checks"].values())
     summary["passed"] = passed
     for name, ok in summary["checks"].items():

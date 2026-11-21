@@ -96,27 +96,9 @@ namespace {
 
 // the order of ipgdev::Kernel
 const char *const kKernelNames[kNumKernels] = {
-    "ipg_k_copy",
-    "ipg_k_real_to_complex",
-    "ipg_k_complex_to_real",
-    "ipg_k_scale_by_site",
-    "ipg_k_checker_scale",
-    "ipg_k_fft_pass",
-    "ipg_k_gauss_noise",
-    "ipg_k_jimwlk_kernel_noise",
-    "ipg_k_jimwlk_rotate",
-    "ipg_k_jimwlk_kernel_matrix",
-    "ipg_k_jimwlk_update",
-    "ipg_k_cym_pi",
-    "ipg_k_cym_e",
-    "ipg_k_cym_phi",
-    "ipg_k_cym_u",
-    "ipg_k_gf_divergence",
-    "ipg_k_partial_sum",
-    "ipg_k_gf_update",
-    "ipg_k_gf_transform",
-    "ipg_k_wilson_charge",
-    "ipg_k_wilson_exponent",
+#define IPG_KERNEL_NAME(id, name) #name,
+    IPG_KERNEL_LIST(IPG_KERNEL_NAME)
+#undef IPG_KERNEL_NAME
 };
 static_assert(
     sizeof(kKernelNames) / sizeof(kKernelNames[0]) == kNumKernels,

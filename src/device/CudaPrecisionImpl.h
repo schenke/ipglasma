@@ -10,7 +10,7 @@
 #include "ipg_kernels.h"
 
 // One __global__ function per kernel: thread i of the launch runs index i.
-#define IPG_CUDA_KERNEL(name)                                              \
+#define IPG_CUDA_KERNEL(id, name)                                          \
     __global__ void name##_cuda(                                           \
         int count, ipg_params p, ipg_real *b0, ipg_real *b1, ipg_real *b2, \
         ipg_real *b3, ipg_real *b4, ipg_real *b5) {                        \
@@ -47,27 +47,7 @@ inline void launchKernel(
         function##_cuda<<<grid, block>>>(                  \
             count, p, b[0], b[1], b[2], b[3], b[4], b[5]); \
         break;
-        IPG_CUDA_CASE(kCopy, ipg_k_copy)
-        IPG_CUDA_CASE(kRealToComplex, ipg_k_real_to_complex)
-        IPG_CUDA_CASE(kComplexToReal, ipg_k_complex_to_real)
-        IPG_CUDA_CASE(kScaleBySite, ipg_k_scale_by_site)
-        IPG_CUDA_CASE(kCheckerScale, ipg_k_checker_scale)
-        IPG_CUDA_CASE(kFftPass, ipg_k_fft_pass)
-        IPG_CUDA_CASE(kGaussNoise, ipg_k_gauss_noise)
-        IPG_CUDA_CASE(kJimwlkKernelNoise, ipg_k_jimwlk_kernel_noise)
-        IPG_CUDA_CASE(kJimwlkRotate, ipg_k_jimwlk_rotate)
-        IPG_CUDA_CASE(kJimwlkKernelMatrix, ipg_k_jimwlk_kernel_matrix)
-        IPG_CUDA_CASE(kJimwlkUpdate, ipg_k_jimwlk_update)
-        IPG_CUDA_CASE(kCymPi, ipg_k_cym_pi)
-        IPG_CUDA_CASE(kCymE, ipg_k_cym_e)
-        IPG_CUDA_CASE(kCymPhi, ipg_k_cym_phi)
-        IPG_CUDA_CASE(kCymU, ipg_k_cym_u)
-        IPG_CUDA_CASE(kGfDivergence, ipg_k_gf_divergence)
-        IPG_CUDA_CASE(kPartialSum, ipg_k_partial_sum)
-        IPG_CUDA_CASE(kGfUpdate, ipg_k_gf_update)
-        IPG_CUDA_CASE(kGfTransform, ipg_k_gf_transform)
-        IPG_CUDA_CASE(kWilsonCharge, ipg_k_wilson_charge)
-        IPG_CUDA_CASE(kWilsonExponent, ipg_k_wilson_exponent)
+        IPG_KERNEL_LIST(IPG_CUDA_CASE)
 #undef IPG_CUDA_CASE
         default:
             throw std::runtime_error("unknown device kernel");

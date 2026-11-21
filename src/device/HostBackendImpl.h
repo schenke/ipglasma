@@ -62,9 +62,12 @@ class HostBackend : public ipgdev::Backend {
         used_.push_back(true);
         return static_cast<ipgdev::Buffer>(buffers_.size() - 1);
     }
+    // Never throws (see the CUDA and OpenCL backends).
     void releaseBuffer(ipgdev::Buffer buffer) override {
-        std::vector<ipg_real>().swap(storage(buffer));
-        used_[static_cast<std::size_t>(buffer)] = false;
+        const std::size_t index = static_cast<std::size_t>(buffer);
+        if (buffer < 0 || index >= buffers_.size()) return;
+        std::vector<ipg_real>().swap(buffers_[index]);
+        used_[index] = false;
     }
     std::size_t bufferSize(ipgdev::Buffer buffer) const override {
         return buffers_.at(static_cast<std::size_t>(buffer)).size();

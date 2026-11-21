@@ -326,13 +326,13 @@ class ProfilingBackend : public Backend {
     }
     void upload(Buffer buffer, const double *source, std::size_t nReals)
         override {
-        Timer timer(*inner_, "device.upload");
-        inner_->upload(buffer, source, nReals);
+        timed("device.upload", [&] { inner_->upload(buffer, source, nReals); });
     }
     void download(Buffer buffer, double *destination, std::size_t nReals)
         override {
-        Timer timer(*inner_, "device.download");
-        inner_->download(buffer, destination, nReals);
+        timed("device.download", [&] {
+            inner_->download(buffer, destination, nReals);
+        });
     }
     void swapBuffers(Buffer a, Buffer b) override {
         inner_->swapBuffers(a, b);
@@ -341,40 +341,36 @@ class ProfilingBackend : public Backend {
         Kernel kernel, std::size_t count, const Params &params,
         std::initializer_list<Buffer> buffers) override {
         // "ipg_k_" left out
-        Timer timer(
-            *inner_, std::string("device.kernel.") + (kernelName(kernel) + 6));
-        inner_->launch(kernel, count, params, buffers);
+        timed(std::string("device.kernel.") + (kernelName(kernel) + 6), [&] {
+            inner_->launch(kernel, count, params, buffers);
+        });
     }
     void finish() override { inner_->finish(); }
     void centeredFft(Buffer field, int n, int ncomp, int isign) override {
-        Timer timer(*inner_, "device.fft");
-        inner_->centeredFft(field, n, ncomp, isign);
+        timed(
+            "device.fft", [&] { inner_->centeredFft(field, n, ncomp, isign); });
     }
     bool fftAvailable(int n) const override { return inner_->fftAvailable(n); }
 
   private:
-    /// Times its scope, from an idle device to an idle device.
-    class Timer {
-      public:
-        Timer(Backend &backend, std::string phase)
-            : backend_(backend), phase_(std::move(phase)) {
-            backend_.finish();
-            start_ = std::chrono::steady_clock::now();
+    /// Runs \p call from an idle device to an idle device and adds its
+    /// time to the profile as \p phase. Waiting for the device after the
+    /// call also reports an error of this call here, with its name (not in
+    /// a destructor, which must not throw).
+    template <class Call>
+    void timed(const std::string &phase, Call &&call) {
+        inner_->finish();
+        const auto start = std::chrono::steady_clock::now();
+        try {
+            call();
+            inner_->finish();
+        } catch (const std::exception &e) {
+            throw std::runtime_error(phase + ": " + e.what());
         }
-        ~Timer() {
-            backend_.finish();
-            const std::chrono::duration<double> elapsed =
-                std::chrono::steady_clock::now() - start_;
-            ipg::Profiler::instance().add(phase_, elapsed.count());
-        }
-        Timer(const Timer &) = delete;
-        Timer &operator=(const Timer &) = delete;
-
-      private:
-        Backend &backend_;
-        const std::string phase_;
-        std::chrono::steady_clock::time_point start_;
-    };
+        const std::chrono::duration<double> elapsed =
+            std::chrono::steady_clock::now() - start;
+        ipg::Profiler::instance().add(phase, elapsed.count());
+    }
 
     std::unique_ptr<Backend> inner_;
 };
@@ -444,6 +440,13 @@ void setRunBackend(const Config &config) {
     device.initialized = true;
     device.config = config;
     if (config.enabled()) device.backend = createBackend(config);
+}
+
+void releaseRunBackend() {
+    RunDevice &device = runDevice();
+    device.backend.reset();
+    device.initialized = true;
+    device.config = Config();
 }
 
 }  // namespace ipgdev

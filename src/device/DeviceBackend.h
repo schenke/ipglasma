@@ -104,6 +104,9 @@ class Backend {
 
     /// A buffer of \p nReals real numbers, zero initialized.
     virtual Buffer createBuffer(std::size_t nReals) = 0;
+    /// Frees \p buffer. Must not throw, since destructors call it (also at
+    /// program exit, when a device runtime may already be shutting down);
+    /// a buffer released before is left alone.
     virtual void releaseBuffer(Buffer buffer) = 0;
     virtual std::size_t bufferSize(Buffer buffer) const = 0;
     /// Copies \p nReals doubles of the host to the start of the buffer
@@ -221,6 +224,12 @@ const Config &runConfig();
 /// Replaces the backend of the run (for tests); an empty Config::backend
 /// removes it.
 void setRunBackend(const Config &config);
+/**
+ * Releases the backend of the run, with its buffers, FFT plans and
+ * kernels, while the device runtime is still up: main() calls it at the
+ * end of the run. runBackend() returns nullptr afterwards.
+ */
+void releaseRunBackend();
 
 // factories of the backends, defined where they are built
 std::unique_ptr<Backend> createHostBackendDouble();

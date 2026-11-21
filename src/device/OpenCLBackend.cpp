@@ -309,10 +309,15 @@ class OpenCLBackend : public ipgdev::Backend {
         sizes_.push_back(nReals);
         return static_cast<ipgdev::Buffer>(buffers_.size() - 1);
     }
+    // Never throws, since the destructors of the drivers and of the backend
+    // call it: a buffer released before is left alone.
     void releaseBuffer(ipgdev::Buffer buffer) override {
-        clReleaseMemObject(memory(buffer));
-        buffers_[static_cast<std::size_t>(buffer)] = nullptr;
-        sizes_[static_cast<std::size_t>(buffer)] = 0;
+        const std::size_t index = static_cast<std::size_t>(buffer);
+        if (buffer < 0 || index >= buffers_.size()) return;
+        const cl_mem mem = buffers_[index];
+        buffers_[index] = nullptr;
+        sizes_[index] = 0;
+        if (mem != nullptr) clReleaseMemObject(mem);
     }
     std::size_t bufferSize(ipgdev::Buffer buffer) const override {
         return sizes_.at(static_cast<std::size_t>(buffer));

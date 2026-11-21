@@ -153,6 +153,54 @@ void makeDeviceTestParam(Parameters &param, int size) {
 
 }  // namespace
 
+TEST_CASE(
+    "a device buffer can be released twice, and releaseRunBackend leaves "
+    "no device") {
+    for (DeviceCase &deviceCase : deviceCases()) {
+        CAPTURE(deviceCase.label);
+        ipgdev::Backend &backend = *deviceCase.backend;
+        const ipgdev::Buffer buffer = backend.createBuffer(16);
+        CHECK_NOTHROW(backend.releaseBuffer(buffer));
+        // destructors may release what was released before
+        CHECK_NOTHROW(backend.releaseBuffer(buffer));
+        CHECK_NOTHROW(backend.releaseBuffer(-1));
+    }
+    ipgdev::Config config;
+    config.backend = "host";
+    ipgdev::setRunBackend(config);
+    REQUIRE(ipgdev::runBackend() != nullptr);
+    ipgdev::releaseRunBackend();
+    CHECK(ipgdev::runBackend() == nullptr);
+    CHECK_FALSE(ipgdev::runConfig().enabled());
+    ipgdev::setRunBackend(ipgdev::Config());
+}
+
+TEST_CASE(
+    "with IPGLASMA_DEVICE_PROFILE, an error of a device call names the call") {
+    for (const std::string &name : ipgdev::availableBackends()) {
+        CAPTURE(name);
+        ipgdev::Config config;
+        config.backend = name;
+        config.profileKernels = true;
+        std::unique_ptr<ipgdev::Backend> backend;
+        try {
+            backend = ipgdev::createBackend(config);
+        } catch (const std::exception &) {
+            continue;  // no such device on this machine
+        }
+        const ipgdev::Buffer buffer = backend->createBuffer(4);
+        const std::vector<double> data(8, 1.);
+        // too many numbers for the buffer
+        try {
+            backend->upload(buffer, data.data(), data.size());
+            FAIL("no error");
+        } catch (const std::runtime_error &e) {
+            CHECK(std::string(e.what()).rfind("device.upload: ", 0) == 0);
+        }
+        backend->releaseBuffer(buffer);
+    }
+}
+
 TEST_CASE("fftRadices factorizes the lattice sizes of the device FFT") {
     auto product = [](const std::vector<int> &radices) {
         int result = 1;

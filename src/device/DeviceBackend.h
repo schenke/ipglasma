@@ -62,6 +62,9 @@ enum Kernel {
     kNumKernels
 };
 
+/// The name of a kernel in ipg_kernels.h, e.g. "ipg_k_copy".
+const char *kernelName(Kernel kernel);
+
 /// The parameters of a kernel launch (ipg_params of ipg_kernels.h, with
 /// the real numbers in double precision; a backend converts them).
 struct Params {
@@ -166,6 +169,12 @@ struct Config {
     /// Coulomb gauge fixing (GaugeFix::fftChi()) run on the device.
     bool wilsonLines = true;
     bool gaugeFix = true;
+    /// Whether every kernel launch, FFT and copy is timed
+    /// (IPGLASMA_DEVICE_PROFILE): the device then waits after each of
+    /// them, so the run gets slower, and the times go to the profile of
+    /// the run (IPGLASMA_PROFILE) as device.kernel.<name>, device.fft,
+    /// device.upload and device.download.
+    bool profileKernels = false;
     /// Where the Gaussian numbers of the color charges and the noise of
     /// the JIMWLK evolution are drawn: on the
     /// host from the random numbers of the run, exactly as in a CPU run
@@ -182,6 +191,8 @@ struct Config {
  *     `none` or `off` for the CPU code,
  *   - `IPGLASMA_DEVICE_PRECISION` = `single` or `double` (default: double
  *     if the device has it, e.g. not on the GPUs of Apple M processors),
+ *   - `IPGLASMA_DEVICE_PROFILE` = 1 times every launch (see
+ *     Config::profileKernels),
  *   - `IPGLASMA_DEVICE_STAGES` = a comma separated list of `wilsonlines`,
  *     `jimwlk`, `yangmills` and `gaugefix` (default: all),
  *   - `IPGLASMA_DEVICE_NOISE` = `host` (default) or `device`, see

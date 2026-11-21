@@ -442,6 +442,21 @@ void setRunBackend(const Config &config) {
     if (config.enabled()) device.backend = createBackend(config);
 }
 
+int nodeLocalRank() {
+    for (const char *name :
+         {"OMPI_COMM_WORLD_LOCAL_RANK", "MPI_LOCALRANKID",
+          "MV2_COMM_WORLD_LOCAL_RANK", "PMI_LOCAL_RANK", "SLURM_LOCALID"}) {
+        const char *value = std::getenv(name);
+        if (value == nullptr || *value == '\0') continue;
+        char *end = nullptr;
+        const long rank = std::strtol(value, &end, 10);
+        if (*end == '\0' && rank >= 0 && rank <= 1000000) {
+            return static_cast<int>(rank);
+        }
+    }
+    return -1;
+}
+
 void releaseRunBackend() {
     RunDevice &device = runDevice();
     device.backend.reset();

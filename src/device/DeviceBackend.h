@@ -231,6 +231,14 @@ void setRunBackend(const Config &config);
  * end of the run. runBackend() returns nullptr afterwards.
  */
 void releaseRunBackend();
+/**
+ * The rank of this process among the processes of the run on its node,
+ * from the environment of the MPI launcher or of Slurm
+ * (OMPI_COMM_WORLD_LOCAL_RANK, MPI_LOCALRANKID, MV2_COMM_WORLD_LOCAL_RANK,
+ * PMI_LOCAL_RANK, SLURM_LOCALID, in this order); -1 if none of them is
+ * set. The CUDA backend uses it to give every rank on a node its own GPU.
+ */
+int nodeLocalRank();
 
 // factories of the backends, defined where they are built
 std::unique_ptr<Backend> createHostBackendDouble();

@@ -126,15 +126,33 @@ JimwlkDevice::JimwlkDevice(
     generators_ = DeviceBuffer(backend_, 8 * 18);
     kernel_ = DeviceBuffer(backend_, 4 * sites_);
     noise_ = DeviceBuffer(backend_, 16 * sites_);
-    xi_ = DeviceBuffer(backend_, 32 * sites_);
-    ck_ = DeviceBuffer(backend_, 16 * sites_);
-    v_ = DeviceBuffer(backend_, 36 * sites_);
-    w_ = DeviceBuffer(backend_, 18 * sites_);
+    zxi_ = DeviceBuffer(backend_, 16 * sites_);
+    zv_ = DeviceBuffer(backend_, 16 * sites_);
+    ck_ = DeviceBuffer(backend_, 8 * sites_);
+    w_ = DeviceBuffer(backend_, 8 * sites_);
     backend_.upload(generators_, generators, 8 * 18);
-    backend_.upload(kernel_, kernel, 4 * sites_);
+    // K with K(-k) = K(k)^*, so that the convolutions of real fields are
+    // real (ipg_k_jimwlk_combine): (K(k) + K(-k)^*) / 2; the CPU code takes
+    // the real part of its convolutions instead, the same up to rounding
+    std::vector<double> symmetric(4 * sites_);
+    for (int ix = 0; ix < n; ix++) {
+        for (int iy = 0; iy < n; iy++) {
+            const std::size_t k = static_cast<std::size_t>(ix) * n + iy;
+            const std::size_t m =
+                static_cast<std::size_t>((n - ix) % n) * n + (n - iy) % n;
+            for (int d = 0; d < 2; d++) {
+                symmetric[4 * k + 2 * d] =
+                    0.5 * (kernel[4 * k + 2 * d] + kernel[4 * m + 2 * d]);
+                symmetric[4 * k + 2 * d + 1] =
+                    0.5
+                    * (kernel[4 * k + 2 * d + 1] - kernel[4 * m + 2 * d + 1]);
+            }
+        }
+    }
+    backend_.upload(kernel_, symmetric.data(), 4 * sites_);
     if (noiseCoupling_) {
         alphas_ = DeviceBuffer(backend_, sites_);
-        eta_ = DeviceBuffer(backend_, 32 * sites_);
+        eta_ = DeviceBuffer(backend_, 16 * sites_);
         backend_.upload(alphas_, sqrtAlphasNoise, sites_);
     }
 }
@@ -180,30 +198,32 @@ void JimwlkDevice::evolveWithNoise() {
     Params p;
     p.n = n_;
 
-    // the noise xi and its Fourier transform
-    backend_.launch(kRealToComplex, 16 * sites_, p, {noise_, xi_});
-    backend_.centeredFft(xi_, n_, 16, 1);
+    // the transform of the noise, two real fields per complex one:
+    // Z^a = F(xi_x^a + i xi_y^a)
+    backend_.launch(kJimwlkPackNoise, sites_, p, {noise_, zxi_});
+    backend_.centeredFft(zxi_, n_, 8, 1);
 
     if (noiseCoupling_) {
         // eta = F^{-1}(sqrt(alpha_s(k)) F(xi)) replaces xi in both factors
-        // (JIMWLK::applyNoiseCoupling())
-        p.ncomp = 16;
-        backend_.launch(kScaleBySite, 16 * sites_, p, {xi_, alphas_});
-        backend_.launch(kCopy, 32 * sites_, p, {xi_, eta_});
-        backend_.centeredFft(eta_, n_, 16, -1);
-        backend_.launch(kComplexToReal, 16 * sites_, p, {eta_, noise_});
+        // (JIMWLK::applyNoiseCoupling()); sqrt(alpha_s(k)) is real and
+        // even, so the pairs stay real
+        p.ncomp = 8;
+        backend_.launch(kScaleBySite, 8 * sites_, p, {zxi_, alphas_});
+        backend_.launch(kCopy, 16 * sites_, p, {zxi_, eta_});
+        backend_.centeredFft(eta_, n_, 8, -1);
+        backend_.launch(kJimwlkUnpackNoise, sites_, p, {eta_, noise_});
     }
 
-    // C(K_i, xi_i^a) = F^{-1}(F(K_x) F(xi_x^a) + F(K_y) F(xi_y^a))
-    backend_.launch(kJimwlkKernelNoise, sites_, p, {kernel_, xi_, ck_});
-    backend_.centeredFft(ck_, n_, 8, -1);
+    // CK^a = K_x * xi_x^a + K_y * xi_y^a (convolutions), real
+    backend_.launch(kJimwlkCombine, sites_, p, {kernel_, zxi_, ck_});
+    backend_.centeredFft(ck_, n_, 4, -1);
 
-    // V xi V^dagger, convolved with K
+    // the coefficients of V xi V^dagger, convolved with K: W^a
     backend_.launch(
-        kJimwlkRotate, sites_, p, {wilson_, noise_, generators_, v_});
-    backend_.centeredFft(v_, n_, 18, 1);
-    backend_.launch(kJimwlkKernelMatrix, sites_, p, {kernel_, v_, w_});
-    backend_.centeredFft(w_, n_, 9, -1);
+        kJimwlkRotate, sites_, p, {wilson_, noise_, generators_, zv_});
+    backend_.centeredFft(zv_, n_, 8, 1);
+    backend_.launch(kJimwlkCombine, sites_, p, {kernel_, zv_, w_});
+    backend_.centeredFft(w_, n_, 4, -1);
 
     // the new Wilson lines
     p.r0 = sqrtDs_;

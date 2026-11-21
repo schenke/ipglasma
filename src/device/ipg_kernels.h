@@ -1115,10 +1115,37 @@ IPG_FN void ipg_k_cym_u(IPG_KERNEL_ARGS) {
  * G^dagger(x + ex): they then carry the rounding of one product, not of
  * all iterations, which matters in single precision. */
 
+/* chi is Hermitian and traceless, 8 real numbers per site, which the
+ * transforms of the gauge fixing take as 4 complex components: (chi_00,
+ * chi_11), chi_01, chi_02, chi_12; chi_22 = -chi_00 - chi_11. The Poisson
+ * factor is real and even in k, so the transforms keep the parts apart:
+ * 4 complex transforms each way per iteration instead of 9. This rebuilds
+ * the matrix from them. */
+IPG_FN ipg_su3 ipg_gf_unpack(IPG_GLOBAL const ipg_real *b, int i) {
+    ipg_su3 g = ipg_zero();
+    g.e[0] = b[8 * i];
+    g.e[8] = b[8 * i + 1];
+    g.e[16] = -b[8 * i] - b[8 * i + 1];
+    g.e[2] = b[8 * i + 2];
+    g.e[3] = b[8 * i + 3];
+    g.e[6] = b[8 * i + 2];
+    g.e[7] = -b[8 * i + 3];
+    g.e[4] = b[8 * i + 4];
+    g.e[5] = b[8 * i + 5];
+    g.e[12] = b[8 * i + 4];
+    g.e[13] = -b[8 * i + 5];
+    g.e[10] = b[8 * i + 6];
+    g.e[11] = b[8 * i + 7];
+    g.e[14] = b[8 * i + 6];
+    g.e[15] = -b[8 * i + 7];
+    return g;
+}
+
 /* chi = the Hermitian traceless projection of the lattice divergence
  * D = Ux(x) - Ux(x - ex) + Uy(x) - Uy(x - ey), and Tr(chi^2)/3
  * (projectGaugeDivergenceSU3()); periodic.
- *   b0 Ux, b1 Uy, b2 chi [site] su3, b3 residual [site] */
+ *   b0 Ux, b1 Uy, b2 chi [site][8] packed (ipg_gf_unpack),
+ *   b3 residual [site] */
 IPG_FN void ipg_k_gf_divergence(IPG_KERNEL_ARGS) {
     const int n = p.n;
     const int ix = i / n;
@@ -1156,7 +1183,15 @@ IPG_FN void ipg_k_gf_divergence(IPG_KERNEL_ARGS) {
     g.e[11] = IPG_C(0.25) * (d.e[14] - d.e[10]);
     g.e[14] = g.e[10];
     g.e[15] = -g.e[11];
-    ipg_store(b2, i, g);
+    /* chi packed as 4 complex numbers (ipg_gf_unpack) */
+    b2[8 * i] = g00;
+    b2[8 * i + 1] = g11;
+    b2[8 * i + 2] = g.e[2];
+    b2[8 * i + 3] = g.e[3];
+    b2[8 * i + 4] = g.e[4];
+    b2[8 * i + 5] = g.e[5];
+    b2[8 * i + 6] = g.e[10];
+    b2[8 * i + 7] = g.e[11];
     b3[i] = (g00 * g00 + g11 * g11 + g22 * g22
              + IPG_C(2.)
                    * (g.e[2] * g.e[2] + g.e[3] * g.e[3] + g.e[4] * g.e[4]
@@ -1182,7 +1217,7 @@ IPG_FN void ipg_k_partial_sum(IPG_KERNEL_ARGS) {
  * iterations.
  *   b0 chi [site] su3 (Hermitian traceless), b1 G */
 IPG_FN void ipg_k_gf_update(IPG_KERNEL_ARGS) {
-    ipg_su3 g = ipg_expi_hermitian(ipg_load(b0, i));
+    ipg_su3 g = ipg_expi_hermitian(ipg_gf_unpack(b0, i));
     ipg_su3 G, h;
     int k;
     /* as GaugeFix::fftChi(): no transformation where the exponential
@@ -1217,23 +1252,24 @@ IPG_FN void ipg_k_gf_transform(IPG_KERNEL_ARGS) {
 
 /* ---- Wilson lines of a nucleus (Init::setV()) ---- */
 
-/* The color charges of a sheet: complex rho[site][a] = scale[site] *
- * gauss[site][a]; i over the 8 complex elements per site.
- *   b0 gauss [site][8] real, b1 scale [site], b2 rho [site][8] complex */
-IPG_FN void ipg_k_wilson_charge(IPG_KERNEL_ARGS) {
-    b2[2 * i] = b1[i / 8] * b0[i];
-    b2[2 * i + 1] = IPG_C(0.);
-}
+/* The color charges of a sheet, rho[site][a] = scale[site] *
+ * gauss[site][a], real; as a field of 4 complex components per site,
+ * rho^{2j} + i rho^{2j+1}, they are transformed two at a time, and the
+ * real, even kernel of the Poisson equation keeps the pairs apart. i over
+ * the 8 real numbers per site.
+ *   b0 gauss [site][8], b1 scale [site], b2 rho [site][8] */
+IPG_FN void ipg_k_wilson_charge(IPG_KERNEL_ARGS) { b2[i] = b1[i / 8] * b0[i]; }
 
-/* V <- exp(-i Re(rho^a) t_a) V, with t_a = lambda_a / 2
+/* V <- exp(-i rho^a t_a) V, with t_a = lambda_a / 2
  * (Matrix::fromAlgebraExponent()).
- *   b0 rho [site][8] complex, b1 V */
+ *   b0 rho [site][8] real (after the transforms of ipg_k_wilson_charge),
+ *   b1 V */
 IPG_FN void ipg_k_wilson_exponent(IPG_KERNEL_ARGS) {
     const ipg_real s3 = IPG_C(0.57735026918962576450914878050196);
     ipg_real q[8];
     ipg_su3 H;
     int a;
-    for (a = 0; a < 8; a++) q[a] = -b0[16 * i + 2 * a];
+    for (a = 0; a < 8; a++) q[a] = -b0[8 * i + a];
     H = ipg_zero();
     H.e[0] = IPG_C(0.5) * (q[2] + s3 * q[7]);
     H.e[8] = IPG_C(0.5) * (-q[2] + s3 * q[7]);

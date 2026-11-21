@@ -198,7 +198,7 @@ class OpenCLBackend : public ipgdev::Backend {
             "#define IPG_GLOBAL __global\n";
         source += kKernelSource;
         source +=
-            "\n#define IPG_CL_KERNEL(name) \\\n"
+            "\n#define IPG_CL_KERNEL(id, name) \\\n"
             "__kernel void name##_cl(int count, ipg_params p, \\\n"
             "    __global ipg_real *b0, __global ipg_real *b1, \\\n"
             "    __global ipg_real *b2, __global ipg_real *b3, \\\n"

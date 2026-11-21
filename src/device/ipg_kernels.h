@@ -37,6 +37,38 @@
  * the order pos = ix * N + iy of LatticeIndex.h.
  */
 
+/* The kernels, the one list of them: X(id, name), with the id of
+ * ipgdev::Kernel (DeviceBackend.h) and the kernel function; the order
+ * defines the ids. The enum, the names and the launch tables of all
+ * backends are made from it. With IPG_KERNEL_LIST_ONLY defined, this file
+ * gives only the list (DeviceBackend.h); it is a macro, since the OpenCL
+ * backend compiles this file from a string, without its includes. */
+#ifndef IPG_KERNEL_LIST
+#define IPG_KERNEL_LIST(X)                             \
+    X(kCopy, ipg_k_copy)                               \
+    X(kRealToComplex, ipg_k_real_to_complex)           \
+    X(kComplexToReal, ipg_k_complex_to_real)           \
+    X(kScaleBySite, ipg_k_scale_by_site)               \
+    X(kCheckerScale, ipg_k_checker_scale)              \
+    X(kFftPass, ipg_k_fft_pass)                        \
+    X(kGaussNoise, ipg_k_gauss_noise)                  \
+    X(kJimwlkKernelNoise, ipg_k_jimwlk_kernel_noise)   \
+    X(kJimwlkRotate, ipg_k_jimwlk_rotate)              \
+    X(kJimwlkKernelMatrix, ipg_k_jimwlk_kernel_matrix) \
+    X(kJimwlkUpdate, ipg_k_jimwlk_update)              \
+    X(kCymPi, ipg_k_cym_pi)                            \
+    X(kCymE, ipg_k_cym_e)                              \
+    X(kCymPhi, ipg_k_cym_phi)                          \
+    X(kCymU, ipg_k_cym_u)                              \
+    X(kGfDivergence, ipg_k_gf_divergence)              \
+    X(kPartialSum, ipg_k_partial_sum)                  \
+    X(kGfUpdate, ipg_k_gf_update)                      \
+    X(kGfTransform, ipg_k_gf_transform)                \
+    X(kWilsonCharge, ipg_k_wilson_charge)              \
+    X(kWilsonExponent, ipg_k_wilson_exponent)
+#endif
+
+#ifndef IPG_KERNEL_LIST_ONLY
 #ifndef SRC_DEVICE_IPG_KERNELS_H_
 #define SRC_DEVICE_IPG_KERNELS_H_
 
@@ -1184,29 +1216,5 @@ IPG_FN void ipg_k_wilson_exponent(IPG_KERNEL_ARGS) {
     ipg_store(b1, i, ipg_mul(ipg_expi_hermitian(H), ipg_load(b1, i)));
 }
 
-/* The kernels, for the launch tables of the backends: X(name). The order
- * defines the kernel ids (DeviceBackend.h). */
-#define IPG_KERNEL_LIST(X)        \
-    X(ipg_k_copy)                 \
-    X(ipg_k_real_to_complex)      \
-    X(ipg_k_complex_to_real)      \
-    X(ipg_k_scale_by_site)        \
-    X(ipg_k_checker_scale)        \
-    X(ipg_k_fft_pass)             \
-    X(ipg_k_gauss_noise)          \
-    X(ipg_k_jimwlk_kernel_noise)  \
-    X(ipg_k_jimwlk_rotate)        \
-    X(ipg_k_jimwlk_kernel_matrix) \
-    X(ipg_k_jimwlk_update)        \
-    X(ipg_k_cym_pi)               \
-    X(ipg_k_cym_e)                \
-    X(ipg_k_cym_phi)              \
-    X(ipg_k_cym_u)                \
-    X(ipg_k_gf_divergence)        \
-    X(ipg_k_partial_sum)          \
-    X(ipg_k_gf_update)            \
-    X(ipg_k_gf_transform)         \
-    X(ipg_k_wilson_charge)        \
-    X(ipg_k_wilson_exponent)
-
 #endif /* SRC_DEVICE_IPG_KERNELS_H_ */
+#endif /* IPG_KERNEL_LIST_ONLY */

@@ -124,27 +124,7 @@ class HostBackend : public ipgdev::Backend {
         _Pragma("omp parallel for") for (int i = 0; i < n; i++) \
             function(i, p, b[0], b[1], b[2], b[3], b[4], b[5]); \
     } break;
-            IPG_HOST_CASE(kCopy, ipg_k_copy)
-            IPG_HOST_CASE(kRealToComplex, ipg_k_real_to_complex)
-            IPG_HOST_CASE(kComplexToReal, ipg_k_complex_to_real)
-            IPG_HOST_CASE(kScaleBySite, ipg_k_scale_by_site)
-            IPG_HOST_CASE(kCheckerScale, ipg_k_checker_scale)
-            IPG_HOST_CASE(kFftPass, ipg_k_fft_pass)
-            IPG_HOST_CASE(kGaussNoise, ipg_k_gauss_noise)
-            IPG_HOST_CASE(kJimwlkKernelNoise, ipg_k_jimwlk_kernel_noise)
-            IPG_HOST_CASE(kJimwlkRotate, ipg_k_jimwlk_rotate)
-            IPG_HOST_CASE(kJimwlkKernelMatrix, ipg_k_jimwlk_kernel_matrix)
-            IPG_HOST_CASE(kJimwlkUpdate, ipg_k_jimwlk_update)
-            IPG_HOST_CASE(kCymPi, ipg_k_cym_pi)
-            IPG_HOST_CASE(kCymE, ipg_k_cym_e)
-            IPG_HOST_CASE(kCymPhi, ipg_k_cym_phi)
-            IPG_HOST_CASE(kCymU, ipg_k_cym_u)
-            IPG_HOST_CASE(kGfDivergence, ipg_k_gf_divergence)
-            IPG_HOST_CASE(kPartialSum, ipg_k_partial_sum)
-            IPG_HOST_CASE(kGfUpdate, ipg_k_gf_update)
-            IPG_HOST_CASE(kGfTransform, ipg_k_gf_transform)
-            IPG_HOST_CASE(kWilsonCharge, ipg_k_wilson_charge)
-            IPG_HOST_CASE(kWilsonExponent, ipg_k_wilson_exponent)
+            IPG_KERNEL_LIST(IPG_HOST_CASE)
 #undef IPG_HOST_CASE
             default:
                 throw std::runtime_error("unknown device kernel");

@@ -36,32 +36,19 @@
  * `IPGLASMA_DEVICE` (see deviceConfigFromEnvironment()); without it the
  * code runs as before, on the CPU, and this layer is not used.
  */
+// the kernel list of ipg_kernels.h, without the kernels
+#define IPG_KERNEL_LIST_ONLY
+#include "ipg_kernels.h"
+#undef IPG_KERNEL_LIST_ONLY
+
 namespace ipgdev {
 
-/// The kernels of ipg_kernels.h, in the order of its IPG_KERNEL_LIST.
+/// The kernels of ipg_kernels.h, made from its IPG_KERNEL_LIST.
 enum Kernel {
-    kCopy = 0,
-    kRealToComplex,
-    kComplexToReal,
-    kScaleBySite,
-    kCheckerScale,
-    kFftPass,
-    kGaussNoise,
-    kJimwlkKernelNoise,
-    kJimwlkRotate,
-    kJimwlkKernelMatrix,
-    kJimwlkUpdate,
-    kCymPi,
-    kCymE,
-    kCymPhi,
-    kCymU,
-    kGfDivergence,
-    kPartialSum,
-    kGfUpdate,
-    kGfTransform,
-    kWilsonCharge,
-    kWilsonExponent,
-    kNumKernels
+#define IPG_KERNEL_ENUM(id, name) id,
+    IPG_KERNEL_LIST(IPG_KERNEL_ENUM)
+#undef IPG_KERNEL_ENUM
+        kNumKernels
 };
 
 /// The name of a kernel in ipg_kernels.h, e.g. "ipg_k_copy".

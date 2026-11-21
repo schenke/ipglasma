@@ -122,30 +122,20 @@ JimwlkDevice::JimwlkDevice(
             "lattice size (the FFT of the kernels needs an even size with "
             "prime factors up to 32, cuFFT an even size)");
     }
-    wilson_ = backend_.createBuffer(18 * sites_);
-    generators_ = backend_.createBuffer(8 * 18);
-    kernel_ = backend_.createBuffer(4 * sites_);
-    noise_ = backend_.createBuffer(16 * sites_);
-    xi_ = backend_.createBuffer(32 * sites_);
-    ck_ = backend_.createBuffer(16 * sites_);
-    v_ = backend_.createBuffer(36 * sites_);
-    w_ = backend_.createBuffer(18 * sites_);
-    alphas_ = -1;
-    eta_ = -1;
+    wilson_ = DeviceBuffer(backend_, 18 * sites_);
+    generators_ = DeviceBuffer(backend_, 8 * 18);
+    kernel_ = DeviceBuffer(backend_, 4 * sites_);
+    noise_ = DeviceBuffer(backend_, 16 * sites_);
+    xi_ = DeviceBuffer(backend_, 32 * sites_);
+    ck_ = DeviceBuffer(backend_, 16 * sites_);
+    v_ = DeviceBuffer(backend_, 36 * sites_);
+    w_ = DeviceBuffer(backend_, 18 * sites_);
     backend_.upload(generators_, generators, 8 * 18);
     backend_.upload(kernel_, kernel, 4 * sites_);
     if (noiseCoupling_) {
-        alphas_ = backend_.createBuffer(sites_);
-        eta_ = backend_.createBuffer(32 * sites_);
+        alphas_ = DeviceBuffer(backend_, sites_);
+        eta_ = DeviceBuffer(backend_, 32 * sites_);
         backend_.upload(alphas_, sqrtAlphasNoise, sites_);
-    }
-}
-
-JimwlkDevice::~JimwlkDevice() {
-    for (const Buffer buffer :
-         {wilson_, generators_, kernel_, noise_, xi_, ck_, v_, w_, alphas_,
-          eta_}) {
-        if (buffer >= 0) backend_.releaseBuffer(buffer);
     }
 }
 
@@ -226,17 +216,10 @@ YangMillsDevice::YangMillsDevice(
       periodic_(periodic ? 1 : 0),
       g_(g) {
     checkIndexRange(sites_);
-    for (Buffer *buffer :
+    for (DeviceBuffer *buffer :
          {&e1_, &e2_, &ux_, &uy_, &pi_, &phi_, &e1Backup_, &e2Backup_,
           &piBackup_}) {
-        *buffer = backend_.createBuffer(18 * sites_);
-    }
-}
-
-YangMillsDevice::~YangMillsDevice() {
-    for (const Buffer buffer :
-         {e1_, e2_, ux_, uy_, pi_, phi_, e1Backup_, e2Backup_, piBackup_}) {
-        backend_.releaseBuffer(buffer);
+        *buffer = DeviceBuffer(backend_, 18 * sites_);
     }
 }
 
@@ -336,19 +319,19 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
             "device gauge fixing: the FFT of the device is not available "
             "for this lattice size");
     }
-    ux0_ = backend_.createBuffer(18 * sites_);
-    uy0_ = backend_.createBuffer(18 * sites_);
-    ux_ = backend_.createBuffer(18 * sites_);
-    uy_ = backend_.createBuffer(18 * sites_);
-    g_ = backend_.createBuffer(18 * sites_);
-    chi_ = backend_.createBuffer(18 * sites_);
-    residual_ = backend_.createBuffer(sites_);
+    ux0_ = DeviceBuffer(backend_, 18 * sites_);
+    uy0_ = DeviceBuffer(backend_, 18 * sites_);
+    ux_ = DeviceBuffer(backend_, 18 * sites_);
+    uy_ = DeviceBuffer(backend_, 18 * sites_);
+    g_ = DeviceBuffer(backend_, 18 * sites_);
+    chi_ = DeviceBuffer(backend_, 18 * sites_);
+    residual_ = DeviceBuffer(backend_, sites_);
     // the residual is summed on the device into partialCount_ partial
     // sums, which the host adds up: a small download per iteration
     partialCount_ = std::min<std::size_t>(sites_, 1024);
-    partial_ = backend_.createBuffer(partialCount_);
+    partial_ = DeviceBuffer(backend_, partialCount_);
     partialSums_.resize(partialCount_);
-    poisson_ = backend_.createBuffer(sites_);
+    poisson_ = DeviceBuffer(backend_, sites_);
 
     // the factor of the Poisson step of GaugeFix::fftChi()
     std::vector<double> factor(sites_);
@@ -374,13 +357,6 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
         factor[static_cast<std::size_t>(n / 2) * n + n / 2] = 0.;
     }
     backend_.upload(poisson_, factor.data(), sites_);
-}
-
-GaugeFixDevice::~GaugeFixDevice() {
-    for (const Buffer buffer :
-         {ux0_, uy0_, ux_, uy_, g_, chi_, residual_, partial_, poisson_}) {
-        backend_.releaseBuffer(buffer);
-    }
 }
 
 void GaugeFixDevice::upload(
@@ -444,18 +420,12 @@ WilsonLineDevice::WilsonLineDevice(
             "device Wilson lines: the FFT of the device is not available "
             "for this lattice size");
     }
-    wilson_ = backend_.createBuffer(18 * sites_);
-    kernel_ = backend_.createBuffer(sites_);
-    scale_ = backend_.createBuffer(sites_);
-    gauss_ = backend_.createBuffer(8 * sites_);
-    rho_ = backend_.createBuffer(16 * sites_);
+    wilson_ = DeviceBuffer(backend_, 18 * sites_);
+    kernel_ = DeviceBuffer(backend_, sites_);
+    scale_ = DeviceBuffer(backend_, sites_);
+    gauss_ = DeviceBuffer(backend_, 8 * sites_);
+    rho_ = DeviceBuffer(backend_, 16 * sites_);
     backend_.upload(kernel_, momentumKernel, sites_);
-}
-
-WilsonLineDevice::~WilsonLineDevice() {
-    for (const Buffer buffer : {wilson_, kernel_, scale_, gauss_, rho_}) {
-        backend_.releaseBuffer(buffer);
-    }
 }
 
 void WilsonLineDevice::upload(

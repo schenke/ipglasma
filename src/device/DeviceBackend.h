@@ -146,6 +146,48 @@ class Backend {
     std::map<int, Buffer> twiddles_;
 };
 
+/**
+ * A buffer on a device that releases itself: it owns one Buffer of a
+ * Backend, can be moved but not copied, and converts to the Buffer for the
+ * calls of the Backend. An empty one (default constructed, or moved from)
+ * is the Buffer -1. The backend must outlive it.
+ */
+class DeviceBuffer {
+  public:
+    DeviceBuffer() = default;
+    /// A buffer of \p nReals real numbers on \p backend, zero initialized.
+    DeviceBuffer(Backend &backend, std::size_t nReals)
+        : backend_(&backend), id_(backend.createBuffer(nReals)) {}
+    ~DeviceBuffer() { reset(); }
+    DeviceBuffer(DeviceBuffer &&other) noexcept
+        : backend_(other.backend_), id_(other.id_) {
+        other.id_ = -1;
+    }
+    DeviceBuffer &operator=(DeviceBuffer &&other) noexcept {
+        if (this != &other) {
+            reset();
+            backend_ = other.backend_;
+            id_ = other.id_;
+            other.id_ = -1;
+        }
+        return *this;
+    }
+    DeviceBuffer(const DeviceBuffer &) = delete;
+    DeviceBuffer &operator=(const DeviceBuffer &) = delete;
+
+    /// The Buffer, for the calls of the Backend.
+    operator Buffer() const { return id_; }
+    /// Releases the buffer; it is empty afterwards.
+    void reset() noexcept {
+        if (id_ >= 0 && backend_ != nullptr) backend_->releaseBuffer(id_);
+        id_ = -1;
+    }
+
+  private:
+    Backend *backend_ = nullptr;
+    Buffer id_ = -1;
+};
+
 /// The choice of a device for a run.
 struct Config {
     /// Empty: no device, the CPU code. Otherwise `host`, `cuda`, `opencl`.

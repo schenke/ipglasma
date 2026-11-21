@@ -201,6 +201,35 @@ TEST_CASE(
     }
 }
 
+TEST_CASE("DeviceBuffer owns a buffer, moves it and releases it") {
+    ipgdev::Config config;
+    config.backend = "host";
+    std::unique_ptr<ipgdev::Backend> backend = ipgdev::createBackend(config);
+    ipgdev::Buffer id = -1;
+    {
+        ipgdev::DeviceBuffer a(*backend, 10);
+        id = a;
+        REQUIRE(id >= 0);
+        CHECK(backend->bufferSize(id) == 10);
+        ipgdev::DeviceBuffer b(std::move(a));
+        CHECK(static_cast<ipgdev::Buffer>(a) == -1);
+        CHECK(static_cast<ipgdev::Buffer>(b) == id);
+        ipgdev::DeviceBuffer c;
+        CHECK(static_cast<ipgdev::Buffer>(c) == -1);
+        c = std::move(b);
+        CHECK(static_cast<ipgdev::Buffer>(c) == id);
+        CHECK(backend->bufferSize(id) == 10);
+    }
+    // released when its last owner went out of scope
+    CHECK(backend->bufferSize(id) == 0);
+
+    ipgdev::DeviceBuffer d(*backend, 4);
+    const ipgdev::Buffer dId = d;
+    d.reset();
+    CHECK(static_cast<ipgdev::Buffer>(d) == -1);
+    CHECK(backend->bufferSize(dId) == 0);
+}
+
 TEST_CASE("nodeLocalRank reads the rank on the node from the launcher") {
     const char *const names[] = {
         "OMPI_COMM_WORLD_LOCAL_RANK", "MPI_LOCALRANKID",

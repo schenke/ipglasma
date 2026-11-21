@@ -126,8 +126,9 @@ def write_input(template, path, size, seed, steps_per_spacing):
     for key, value in changes.items():
         if key not in seen:
             lines.append(f"{key} {value}\n")
-    # a cutoff well above the rounding of the vacuum: with the default 0,
-    # the columns of the eccentricity file that count the cells above the
+    # a cutoff well above the rounding of the vacuum, with a margin over
+    # the default 0.01 for single precision: with a cutoff of 0, the
+    # columns of the eccentricity file that count the cells above the
     # cutoff depend on the sign of the rounding there
     lines.append("eccentricityCutoff 0.1\n")
     lines.append("EndOfFile\n")

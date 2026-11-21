@@ -33,8 +33,10 @@
  *
  * Layout of the data: a complex number is two consecutive reals (re, im);
  * an SU(3) matrix is 9 complex numbers in row-major order, as in Matrix; a
- * field has its components of one site next to each other, the sites in
- * the order pos = ix * N + iy of LatticeIndex.h.
+ * field is planar, component c of site pos at c * N^2 + pos (see
+ * ipg_load_planar), the sites in the order pos = ix * N + iy of
+ * LatticeIndex.h. The drivers reorder the fields of the host, which keep
+ * the components of a site together, on every copy.
  */
 
 /* The kernels, the one list of them: X(id, name), with the id of
@@ -120,17 +122,37 @@ typedef struct {
 /* SU(3) algebra on values                                             */
 /* ------------------------------------------------------------------ */
 
-IPG_FN ipg_su3 ipg_load(IPG_GLOBAL const ipg_real *b, int idx) {
+/* The fields on the device are planar: element c (of the 9 complex
+ * elements of a matrix, or the components of another field) of site s is
+ * the complex number c * S + s of the field, S = n^2 sites, so that the
+ * threads of neighboring sites read neighboring addresses and cuFFT
+ * transforms the planes as they are. Real fields with several components
+ * per site (the noise) keep component c at the real number c * S + s. */
+IPG_FN ipg_su3 ipg_load_planar(IPG_GLOBAL const ipg_real *b, int S, int idx) {
     ipg_su3 m;
     int k;
-    for (k = 0; k < 18; k++) m.e[k] = b[18 * idx + k];
+    for (k = 0; k < 9; k++) {
+        m.e[2 * k] = b[2 * (k * S + idx)];
+        m.e[2 * k + 1] = b[2 * (k * S + idx) + 1];
+    }
     return m;
 }
 
-IPG_FN void ipg_store(IPG_GLOBAL ipg_real *b, int idx, ipg_su3 m) {
+IPG_FN void ipg_store_planar(
+    IPG_GLOBAL ipg_real *b, int S, int idx, ipg_su3 m) {
     int k;
-    for (k = 0; k < 18; k++) b[18 * idx + k] = m.e[k];
+    for (k = 0; k < 9; k++) {
+        b[2 * (k * S + idx)] = m.e[2 * k];
+        b[2 * (k * S + idx) + 1] = m.e[2 * k + 1];
+    }
 }
+
+/* The matrix of site idx of a field, in a kernel (with its parameters p). */
+#define ipg_load(b, idx) ipg_load_planar((b), (p.n) * (p.n), (idx))
+#define ipg_store(b, idx, m) ipg_store_planar((b), (p.n) * (p.n), (idx), (m))
+/* The real number of coefficient a (0..7) of site idx of a field of 8 real
+ * coefficients kept as 4 complex planes (pairs a = 2j, 2j + 1 in plane j). */
+#define IPG_COEF(a, idx, S) (2 * (((a) / 2) * (S) + (idx)) + ((a) % 2))
 
 IPG_FN ipg_su3 ipg_zero(void) {
     ipg_su3 m;
@@ -572,21 +594,21 @@ ipg_threefry2x32(ipg_u32 c0, ipg_u32 c1, ipg_u32 k0, ipg_u32 k1) {
 /* b1[i] = b0[i]; i over reals */
 IPG_FN void ipg_k_copy(IPG_KERNEL_ARGS) { b1[i] = b0[i]; }
 
-/* complex b0[site][c] *= real b1[site]; i over the complex elements,
- * p.ncomp components per site */
+/* complex b0[c][site] *= real b1[site]; i over the complex elements of
+ * the p.ncomp planes */
 IPG_FN void ipg_k_scale_by_site(IPG_KERNEL_ARGS) {
-    const ipg_real s = b1[i / p.ncomp];
+    const ipg_real s = b1[i % (p.n * p.n)];
     b0[2 * i] *= s;
     b0[2 * i + 1] *= s;
 }
 
 /* complex b0[i] *= r0 * (-1)^(ix + iy) if i0, else r0; i over the complex
- * elements, p.ncomp components per site. The checkerboard signs turn an
- * FFT in natural order into the centered FFT of FFT.cpp (see there). */
+ * elements of the p.ncomp planes. The checkerboard signs turn an FFT in
+ * natural order into the centered FFT of FFT.cpp (see there). */
 IPG_FN void ipg_k_checker_scale(IPG_KERNEL_ARGS) {
     ipg_real s = p.r0;
     if (p.i0 != 0) {
-        const int site = i / p.ncomp;
+        const int site = i % (p.n * p.n);
         if ((((site / p.n) + (site % p.n)) & 1) != 0) s = -s;
     }
     b0[2 * i] *= s;
@@ -596,10 +618,10 @@ IPG_FN void ipg_k_checker_scale(IPG_KERNEL_ARGS) {
 /* The largest radix of ipg_k_fft_pass (ipgdev::fftRadices()). */
 #define IPG_FFT_MAX_RADIX 32
 
-/* One pass of a mixed-radix Stockham FFT along one axis of a field with
- * p.ncomp complex components per site; i over the butterflies, N / r per
- * line and component, with the component fastest:
- * i = ((line * (N / r)) + b) * ncomp + comp.
+/* One pass of a mixed-radix Stockham FFT along one axis of a field of
+ * p.ncomp complex planes (component comp of a site at comp * N^2 + site);
+ * i over the butterflies, N / r per line and component, with the
+ * component slowest: i = (comp * N + line) * (N / r) + b.
  *   b0 source, b1 destination (a different buffer), b2 the table
  *   (cos, sin)(2 pi t / N), t = 0 .. N-1
  *   i0 axis: 0 along iy, 1 along ix
@@ -647,7 +669,7 @@ IPG_FN void ipg_fft_load(
     const int n = p.n;
     const int tj = q + p.i2 * (pp + j * m);
     const int site = (p.i0 == 0) ? (line * n + tj) : (tj * n + line);
-    const int src = site * p.ncomp + comp;
+    const int src = comp * n * n + site;
     ipg_real vr = b0[2 * src];
     ipg_real vi = b0[2 * src + 1];
     if ((p.i4 & 1) != 0 && ((tj + line) & 1) != 0) {
@@ -669,7 +691,7 @@ IPG_FN void ipg_fft_store(
     const int s = p.i2;
     const int t = q + s * (k + p.i1 * pp);
     const int site = (p.i0 == 0) ? (line * n + t) : (t * n + line);
-    const int dst = site * p.ncomp + comp;
+    const int dst = comp * n * n + site;
     /* k s pp < N */
     const int tw = k * s * pp;
     const ipg_real wr = b2[2 * tw];
@@ -686,10 +708,9 @@ IPG_FN void ipg_k_fft_pass(IPG_KERNEL_ARGS) {
     const int s = p.i2;
     const int butterflies = n / r;
     const int m = butterflies / s;
-    const int comp = i % p.ncomp;
-    const int rest = i / p.ncomp;
-    const int b = rest % butterflies;
-    const int line = rest / butterflies;
+    const int b = i % butterflies;
+    const int line = (i / butterflies) % n;
+    const int comp = i / (butterflies * n);
     const int q = b % s;
     const int pp = b / s;
     /* the sign of the exponent: W = cos - i sin forward */
@@ -723,31 +744,31 @@ IPG_FN void ipg_k_fft_pass(IPG_KERNEL_ARGS) {
          * X_{k+4} = E_k - w^k O_k with w = exp(d i pi / 4) */
         ipg_fft_dft4(xr, xi, 0, 2, d);
         ipg_fft_dft4(xr, xi, 1, 2, d);
-        ipg_fft_store(b1, b2, p, line, q, pp, 0, d, xr[0] + xr[1],
-                      xi[0] + xi[1], comp);
-        ipg_fft_store(b1, b2, p, line, q, pp, 4, d, xr[0] - xr[1],
-                      xi[0] - xi[1], comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 0, d, xr[0] + xr[1], xi[0] + xi[1], comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 4, d, xr[0] - xr[1], xi[0] - xi[1], comp);
         /* w^1 = (1 + d i) / sqrt 2 */
         or_ = h * (xr[3] - d * xi[3]);
         oi = h * (xi[3] + d * xr[3]);
-        ipg_fft_store(b1, b2, p, line, q, pp, 1, d, xr[2] + or_, xi[2] + oi,
-                      comp);
-        ipg_fft_store(b1, b2, p, line, q, pp, 5, d, xr[2] - or_, xi[2] - oi,
-                      comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 1, d, xr[2] + or_, xi[2] + oi, comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 5, d, xr[2] - or_, xi[2] - oi, comp);
         /* w^2 = d i */
         or_ = -d * xi[5];
         oi = d * xr[5];
-        ipg_fft_store(b1, b2, p, line, q, pp, 2, d, xr[4] + or_, xi[4] + oi,
-                      comp);
-        ipg_fft_store(b1, b2, p, line, q, pp, 6, d, xr[4] - or_, xi[4] - oi,
-                      comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 2, d, xr[4] + or_, xi[4] + oi, comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 6, d, xr[4] - or_, xi[4] - oi, comp);
         /* w^3 = (-1 + d i) / sqrt 2 */
         or_ = h * (-xr[7] - d * xi[7]);
         oi = h * (-xi[7] + d * xr[7]);
-        ipg_fft_store(b1, b2, p, line, q, pp, 3, d, xr[6] + or_, xi[6] + oi,
-                      comp);
-        ipg_fft_store(b1, b2, p, line, q, pp, 7, d, xr[6] - or_, xi[6] - oi,
-                      comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 3, d, xr[6] + or_, xi[6] + oi, comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 7, d, xr[6] - or_, xi[6] - oi, comp);
     } else if (r == 4) {
         ipg_fft_dft4(xr, xi, 0, 1, d);
         ipg_fft_store(b1, b2, p, line, q, pp, 0, d, xr[0], xi[0], comp);
@@ -755,10 +776,10 @@ IPG_FN void ipg_k_fft_pass(IPG_KERNEL_ARGS) {
         ipg_fft_store(b1, b2, p, line, q, pp, 2, d, xr[2], xi[2], comp);
         ipg_fft_store(b1, b2, p, line, q, pp, 3, d, xr[3], xi[3], comp);
     } else if (r == 2) {
-        ipg_fft_store(b1, b2, p, line, q, pp, 0, d, xr[0] + xr[1],
-                      xi[0] + xi[1], comp);
-        ipg_fft_store(b1, b2, p, line, q, pp, 1, d, xr[0] - xr[1],
-                      xi[0] - xi[1], comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 0, d, xr[0] + xr[1], xi[0] + xi[1], comp);
+        ipg_fft_store(
+            b1, b2, p, line, q, pp, 1, d, xr[0] - xr[1], xi[0] - xi[1], comp);
     } else {
         /* other radices: the DFT of length r directly, with
          * w^(k j) = W^((k j mod r) N / r) from the table */
@@ -823,9 +844,10 @@ IPG_FN int ipg_mirror(int i, int n) {
  *   complex */
 IPG_FN void ipg_k_jimwlk_pack_noise(IPG_KERNEL_ARGS) {
     int a;
+    const int S = p.n * p.n;
     for (a = 0; a < 8; a++) {
-        b1[16 * i + 2 * a] = b0[16 * i + a];
-        b1[16 * i + 2 * a + 1] = b0[16 * i + 8 + a];
+        b1[2 * (a * S + i)] = b0[a * S + i];
+        b1[2 * (a * S + i) + 1] = b0[(8 + a) * S + i];
     }
 }
 
@@ -833,9 +855,10 @@ IPG_FN void ipg_k_jimwlk_pack_noise(IPG_KERNEL_ARGS) {
  *   b0 Z [site][8] complex, b1 real noise [site][16] */
 IPG_FN void ipg_k_jimwlk_unpack_noise(IPG_KERNEL_ARGS) {
     int a;
+    const int S = p.n * p.n;
     for (a = 0; a < 8; a++) {
-        b1[16 * i + a] = b0[16 * i + 2 * a];
-        b1[16 * i + 8 + a] = b0[16 * i + 2 * a + 1];
+        b1[a * S + i] = b0[2 * (a * S + i)];
+        b1[(8 + a) * S + i] = b0[2 * (a * S + i) + 1];
     }
 }
 
@@ -853,17 +876,18 @@ IPG_FN void ipg_k_jimwlk_unpack_noise(IPG_KERNEL_ARGS) {
  *   inverse transform */
 IPG_FN void ipg_k_jimwlk_combine(IPG_KERNEL_ARGS) {
     const int m = ipg_mirror(i, p.n);
-    const ipg_real kxr = b0[4 * i];
-    const ipg_real kxi = b0[4 * i + 1];
-    const ipg_real kyr = b0[4 * i + 2];
-    const ipg_real kyi = b0[4 * i + 3];
+    const int S = p.n * p.n;
+    const ipg_real kxr = b0[2 * i];
+    const ipg_real kxi = b0[2 * i + 1];
+    const ipg_real kyr = b0[2 * (S + i)];
+    const ipg_real kyi = b0[2 * (S + i) + 1];
     ipg_real rr[8], ri[8];
     int a;
     for (a = 0; a < 8; a++) {
-        const ipg_real zkr = b1[16 * i + 2 * a];
-        const ipg_real zki = b1[16 * i + 2 * a + 1];
-        const ipg_real zmr = b1[16 * m + 2 * a];
-        const ipg_real zmi = b1[16 * m + 2 * a + 1];
+        const ipg_real zkr = b1[2 * (a * S + i)];
+        const ipg_real zki = b1[2 * (a * S + i) + 1];
+        const ipg_real zmr = b1[2 * (a * S + m)];
+        const ipg_real zmi = b1[2 * (a * S + m) + 1];
         /* X = (Z(k) + Z(m)^*) / 2, Y = (Z(k) - Z(m)^*) / (2 i) */
         const ipg_real xr = IPG_C(0.5) * (zkr + zmr);
         const ipg_real xi = IPG_C(0.5) * (zki - zmi);
@@ -874,8 +898,8 @@ IPG_FN void ipg_k_jimwlk_combine(IPG_KERNEL_ARGS) {
     }
     for (a = 0; a < 4; a++) {
         /* R^{2a} + i R^{2a+1} */
-        b2[8 * i + 2 * a] = rr[2 * a] - ri[2 * a + 1];
-        b2[8 * i + 2 * a + 1] = ri[2 * a] + rr[2 * a + 1];
+        b2[2 * (a * S + i)] = rr[2 * a] - ri[2 * a + 1];
+        b2[2 * (a * S + i) + 1] = ri[2 * a] + rr[2 * a + 1];
     }
 }
 
@@ -899,18 +923,19 @@ IPG_FN ipg_real ipg_re_trace_mul(ipg_su3 a, ipg_su3 b) {
  *   b3 Z [site][8] complex */
 IPG_FN void ipg_k_jimwlk_rotate(IPG_KERNEL_ARGS) {
     const ipg_su3 U = ipg_load(b0, i);
+    const int S = p.n * p.n;
     int d, a, k;
     for (d = 0; d < 2; d++) {
         ipg_su3 A = ipg_zero();
         ipg_su3 V, t;
         for (a = 0; a < 8; a++) {
-            const ipg_real c = b1[16 * i + 8 * d + a];
+            const ipg_real c = b1[(8 * d + a) * S + i];
             for (k = 0; k < 18; k++) A.e[k] += c * b2[18 * a + k];
         }
         V = ipg_mul(U, ipg_mul_adj(A, U));
         for (a = 0; a < 8; a++) {
             for (k = 0; k < 18; k++) t.e[k] = b2[18 * a + k];
-            b3[16 * i + 2 * a + d] = IPG_C(2.) * ipg_re_trace_mul(t, V);
+            b3[2 * (a * S + i) + d] = IPG_C(2.) * ipg_re_trace_mul(t, V);
         }
     }
 }
@@ -942,8 +967,8 @@ IPG_FN void ipg_k_jimwlk_update(IPG_KERNEL_ARGS) {
     int a, k;
     /* the left factor is exp(i Q) with Q = -sqrt(ds) W */
     for (a = 0; a < 8; a++) {
-        const ipg_real w = -p.r0 * b1[8 * i + a];
-        const ipg_real c = p.r0 * b2[8 * i + a];
+        const ipg_real w = -p.r0 * b1[IPG_COEF(a, i, p.n * p.n)];
+        const ipg_real c = p.r0 * b2[IPG_COEF(a, i, p.n * p.n)];
         for (k = 0; k < 18; k++) {
             Q.e[k] += w * b3[18 * a + k];
             A.e[k] += c * b3[18 * a + k];
@@ -1121,23 +1146,23 @@ IPG_FN void ipg_k_cym_u(IPG_KERNEL_ARGS) {
  * factor is real and even in k, so the transforms keep the parts apart:
  * 4 complex transforms each way per iteration instead of 9. This rebuilds
  * the matrix from them. */
-IPG_FN ipg_su3 ipg_gf_unpack(IPG_GLOBAL const ipg_real *b, int i) {
+IPG_FN ipg_su3 ipg_gf_unpack(IPG_GLOBAL const ipg_real *b, int S, int i) {
     ipg_su3 g = ipg_zero();
-    g.e[0] = b[8 * i];
-    g.e[8] = b[8 * i + 1];
-    g.e[16] = -b[8 * i] - b[8 * i + 1];
-    g.e[2] = b[8 * i + 2];
-    g.e[3] = b[8 * i + 3];
-    g.e[6] = b[8 * i + 2];
-    g.e[7] = -b[8 * i + 3];
-    g.e[4] = b[8 * i + 4];
-    g.e[5] = b[8 * i + 5];
-    g.e[12] = b[8 * i + 4];
-    g.e[13] = -b[8 * i + 5];
-    g.e[10] = b[8 * i + 6];
-    g.e[11] = b[8 * i + 7];
-    g.e[14] = b[8 * i + 6];
-    g.e[15] = -b[8 * i + 7];
+    g.e[0] = b[IPG_COEF(0, i, S)];
+    g.e[8] = b[IPG_COEF(1, i, S)];
+    g.e[16] = -b[IPG_COEF(0, i, S)] - b[IPG_COEF(1, i, S)];
+    g.e[2] = b[IPG_COEF(2, i, S)];
+    g.e[3] = b[IPG_COEF(3, i, S)];
+    g.e[6] = b[IPG_COEF(2, i, S)];
+    g.e[7] = -b[IPG_COEF(3, i, S)];
+    g.e[4] = b[IPG_COEF(4, i, S)];
+    g.e[5] = b[IPG_COEF(5, i, S)];
+    g.e[12] = b[IPG_COEF(4, i, S)];
+    g.e[13] = -b[IPG_COEF(5, i, S)];
+    g.e[10] = b[IPG_COEF(6, i, S)];
+    g.e[11] = b[IPG_COEF(7, i, S)];
+    g.e[14] = b[IPG_COEF(6, i, S)];
+    g.e[15] = -b[IPG_COEF(7, i, S)];
     return g;
 }
 
@@ -1184,20 +1209,20 @@ IPG_FN void ipg_k_gf_divergence(IPG_KERNEL_ARGS) {
     g.e[14] = g.e[10];
     g.e[15] = -g.e[11];
     /* chi packed as 4 complex numbers (ipg_gf_unpack) */
-    b2[8 * i] = g00;
-    b2[8 * i + 1] = g11;
-    b2[8 * i + 2] = g.e[2];
-    b2[8 * i + 3] = g.e[3];
-    b2[8 * i + 4] = g.e[4];
-    b2[8 * i + 5] = g.e[5];
-    b2[8 * i + 6] = g.e[10];
-    b2[8 * i + 7] = g.e[11];
-    b3[i] = (g00 * g00 + g11 * g11 + g22 * g22
-             + IPG_C(2.)
-                   * (g.e[2] * g.e[2] + g.e[3] * g.e[3] + g.e[4] * g.e[4]
-                      + g.e[5] * g.e[5] + g.e[10] * g.e[10]
-                      + g.e[11] * g.e[11]))
-            / IPG_C(3.);
+    b2[IPG_COEF(0, i, p.n * p.n)] = g00;
+    b2[IPG_COEF(1, i, p.n * p.n)] = g11;
+    b2[IPG_COEF(2, i, p.n * p.n)] = g.e[2];
+    b2[IPG_COEF(3, i, p.n * p.n)] = g.e[3];
+    b2[IPG_COEF(4, i, p.n * p.n)] = g.e[4];
+    b2[IPG_COEF(5, i, p.n * p.n)] = g.e[5];
+    b2[IPG_COEF(6, i, p.n * p.n)] = g.e[10];
+    b2[IPG_COEF(7, i, p.n * p.n)] = g.e[11];
+    b3[i] =
+        (g00 * g00 + g11 * g11 + g22 * g22
+         + IPG_C(2.)
+               * (g.e[2] * g.e[2] + g.e[3] * g.e[3] + g.e[4] * g.e[4]
+                  + g.e[5] * g.e[5] + g.e[10] * g.e[10] + g.e[11] * g.e[11]))
+        / IPG_C(3.);
 }
 
 /* Partial sums of b0[0 .. i0 - 1]: b1[i] = sum of b0[i + j count] over j,
@@ -1217,7 +1242,7 @@ IPG_FN void ipg_k_partial_sum(IPG_KERNEL_ARGS) {
  * iterations.
  *   b0 chi [site] su3 (Hermitian traceless), b1 G */
 IPG_FN void ipg_k_gf_update(IPG_KERNEL_ARGS) {
-    ipg_su3 g = ipg_expi_hermitian(ipg_gf_unpack(b0, i));
+    ipg_su3 g = ipg_expi_hermitian(ipg_gf_unpack(b0, p.n * p.n, i));
     ipg_su3 G, h;
     int k;
     /* as GaugeFix::fftChi(): no transformation where the exponential
@@ -1243,11 +1268,9 @@ IPG_FN void ipg_k_gf_transform(IPG_KERNEL_ARGS) {
     const int pY = ix * n + ipg_coord(iy, 1, n, 1);
     const ipg_su3 G = ipg_load(b0, i);
     ipg_store(
-        b3, i,
-        ipg_mul_adj(ipg_mul(G, ipg_load(b1, i)), ipg_load(b0, pX)));
+        b3, i, ipg_mul_adj(ipg_mul(G, ipg_load(b1, i)), ipg_load(b0, pX)));
     ipg_store(
-        b4, i,
-        ipg_mul_adj(ipg_mul(G, ipg_load(b2, i)), ipg_load(b0, pY)));
+        b4, i, ipg_mul_adj(ipg_mul(G, ipg_load(b2, i)), ipg_load(b0, pY)));
 }
 
 /* ---- Wilson lines of a nucleus (Init::setV()) ---- */
@@ -1258,7 +1281,13 @@ IPG_FN void ipg_k_gf_transform(IPG_KERNEL_ARGS) {
  * real, even kernel of the Poisson equation keeps the pairs apart. i over
  * the 8 real numbers per site.
  *   b0 gauss [site][8], b1 scale [site], b2 rho [site][8] */
-IPG_FN void ipg_k_wilson_charge(IPG_KERNEL_ARGS) { b2[i] = b1[i / 8] * b0[i]; }
+IPG_FN void ipg_k_wilson_charge(IPG_KERNEL_ARGS) {
+    /* i = 2 (j S + site) + part: coefficient a = 2 j + part */
+    const int S = p.n * p.n;
+    const int site = (i % (2 * S)) / 2;
+    const int a = 2 * (i / (2 * S)) + i % 2;
+    b2[i] = b1[site] * b0[a * S + site];
+}
 
 /* V <- exp(-i rho^a t_a) V, with t_a = lambda_a / 2
  * (Matrix::fromAlgebraExponent()).
@@ -1269,7 +1298,7 @@ IPG_FN void ipg_k_wilson_exponent(IPG_KERNEL_ARGS) {
     ipg_real q[8];
     ipg_su3 H;
     int a;
-    for (a = 0; a < 8; a++) q[a] = -b0[8 * i + a];
+    for (a = 0; a < 8; a++) q[a] = -b0[IPG_COEF(a, i, p.n * p.n)];
     H = ipg_zero();
     H.e[0] = IPG_C(0.5) * (q[2] + s3 * q[7]);
     H.e[8] = IPG_C(0.5) * (-q[2] + s3 * q[7]);

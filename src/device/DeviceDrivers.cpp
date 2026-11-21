@@ -8,12 +8,64 @@
 #include <cmath>
 #include <complex>
 #include <stdexcept>
+#include <vector>
 
 #include "../Instrumentation.h"
 
 namespace ipgdev {
 
 namespace {
+
+// The fields on the device are planar (ipg_kernels.h): component c of site
+// s at c * sites + s, each component `width` real numbers (2 for complex
+// numbers, 1 for real ones), while the host keeps the components of a site
+// together. These copy a field from the host layout [site][component] to
+// the device and back, reordering on the host with OpenMP threads.
+thread_local std::vector<double> planarHost;
+
+void uploadPlanar(
+    Backend &backend, Buffer buffer, const double *source, std::size_t sites,
+    int comps, int width) {
+    const std::size_t nc = static_cast<std::size_t>(comps);
+    const std::size_t nw = static_cast<std::size_t>(width);
+    const std::size_t total = sites * nc * nw;
+    planarHost.resize(total);
+    double *destination = planarHost.data();
+    const long long count = static_cast<long long>(sites);
+#pragma omp parallel for schedule(static)
+    for (long long ls = 0; ls < count; ls++) {
+        const std::size_t s = static_cast<std::size_t>(ls);
+        for (std::size_t c = 0; c < nc; c++) {
+            for (std::size_t w = 0; w < nw; w++) {
+                destination[(c * sites + s) * nw + w] =
+                    source[(s * nc + c) * nw + w];
+            }
+        }
+    }
+    backend.upload(buffer, destination, total);
+}
+
+void downloadPlanar(
+    Backend &backend, Buffer buffer, double *destination, std::size_t sites,
+    int comps, int width) {
+    const std::size_t nc = static_cast<std::size_t>(comps);
+    const std::size_t nw = static_cast<std::size_t>(width);
+    const std::size_t total = sites * nc * nw;
+    planarHost.resize(total);
+    backend.download(buffer, planarHost.data(), total);
+    const double *source = planarHost.data();
+    const long long count = static_cast<long long>(sites);
+#pragma omp parallel for schedule(static)
+    for (long long ls = 0; ls < count; ls++) {
+        const std::size_t s = static_cast<std::size_t>(ls);
+        for (std::size_t c = 0; c < nc; c++) {
+            for (std::size_t w = 0; w < nw; w++) {
+                destination[(s * nc + c) * nw + w] =
+                    source[(c * sites + s) * nw + w];
+            }
+        }
+    }
+}
 
 // a Matrix is 9 complex<double>, i.e. 18 doubles (re, im), which is the
 // layout of the device
@@ -149,7 +201,7 @@ JimwlkDevice::JimwlkDevice(
             }
         }
     }
-    backend_.upload(kernel_, symmetric.data(), 4 * sites_);
+    uploadPlanar(backend_, kernel_, symmetric.data(), sites_, 2, 2);
     if (noiseCoupling_) {
         alphas_ = DeviceBuffer(backend_, sites_);
         eta_ = DeviceBuffer(backend_, 16 * sites_);
@@ -161,18 +213,18 @@ JimwlkDevice::~JimwlkDevice() { backend_.releaseCaches(); }
 
 void JimwlkDevice::upload(const std::vector<Matrix> &wilsonLines) {
     checkSites(wilsonLines, sites_);
-    backend_.upload(wilson_, reals(wilsonLines), 18 * sites_);
+    uploadPlanar(backend_, wilson_, reals(wilsonLines), sites_, 9, 2);
 }
 
 void JimwlkDevice::download(std::vector<Matrix> &wilsonLines) {
     checkSites(wilsonLines, sites_);
-    backend_.download(wilson_, reals(wilsonLines), 18 * sites_);
+    downloadPlanar(backend_, wilson_, reals(wilsonLines), sites_, 9, 2);
     // the rounding of single precision is not unitary, see projectOnSU3()
     if (backend_.singlePrecision()) projectOnSU3(wilsonLines);
 }
 
 void JimwlkDevice::step(const double *noise) {
-    backend_.upload(noise_, noise, 16 * sites_);
+    uploadPlanar(backend_, noise_, noise, sites_, 16, 1);
     evolveWithNoise();
 }
 
@@ -191,7 +243,7 @@ void JimwlkDevice::stepWithDeviceNoise(
 
 void JimwlkDevice::downloadNoise(std::vector<double> &noise) {
     noise.resize(16 * sites_);
-    backend_.download(noise_, noise.data(), 16 * sites_);
+    downloadPlanar(backend_, noise_, noise.data(), sites_, 16, 1);
 }
 
 void JimwlkDevice::evolveWithNoise() {
@@ -247,19 +299,19 @@ YangMillsDevice::YangMillsDevice(
 
 void YangMillsDevice::upload(const Lattice &lat) {
     checkSites(lat.U, sites_);
-    backend_.upload(e1_, reals(lat.U), 18 * sites_);
-    backend_.upload(e2_, reals(lat.U2), 18 * sites_);
-    backend_.upload(ux_, reals(lat.Ux), 18 * sites_);
-    backend_.upload(uy_, reals(lat.Uy), 18 * sites_);
-    backend_.upload(pi_, reals(lat.Ux2), 18 * sites_);
-    backend_.upload(phi_, reals(lat.Uy2), 18 * sites_);
+    uploadPlanar(backend_, e1_, reals(lat.U), sites_, 9, 2);
+    uploadPlanar(backend_, e2_, reals(lat.U2), sites_, 9, 2);
+    uploadPlanar(backend_, ux_, reals(lat.Ux), sites_, 9, 2);
+    uploadPlanar(backend_, uy_, reals(lat.Uy), sites_, 9, 2);
+    uploadPlanar(backend_, pi_, reals(lat.Ux2), sites_, 9, 2);
+    uploadPlanar(backend_, phi_, reals(lat.Uy2), sites_, 9, 2);
 }
 
 void YangMillsDevice::download(Lattice &lat) {
     downloadMomenta(lat);
-    backend_.download(ux_, reals(lat.Ux), 18 * sites_);
-    backend_.download(uy_, reals(lat.Uy), 18 * sites_);
-    backend_.download(phi_, reals(lat.Uy2), 18 * sites_);
+    downloadPlanar(backend_, ux_, reals(lat.Ux), sites_, 9, 2);
+    downloadPlanar(backend_, uy_, reals(lat.Uy), sites_, 9, 2);
+    downloadPlanar(backend_, phi_, reals(lat.Uy2), sites_, 9, 2);
     // the links, for the plaquettes of the observables; the fields on the
     // device are not changed
     if (backend_.singlePrecision()) {
@@ -270,9 +322,9 @@ void YangMillsDevice::download(Lattice &lat) {
 
 void YangMillsDevice::downloadMomenta(Lattice &lat) {
     checkSites(lat.U, sites_);
-    backend_.download(e1_, reals(lat.U), 18 * sites_);
-    backend_.download(e2_, reals(lat.U2), 18 * sites_);
-    backend_.download(pi_, reals(lat.Ux2), 18 * sites_);
+    downloadPlanar(backend_, e1_, reals(lat.U), sites_, 9, 2);
+    downloadPlanar(backend_, e2_, reals(lat.U2), sites_, 9, 2);
+    downloadPlanar(backend_, pi_, reals(lat.Ux2), sites_, 9, 2);
 }
 
 void YangMillsDevice::evolvePhi(double dtau, double tau) {
@@ -387,14 +439,14 @@ void GaugeFixDevice::upload(
     const std::vector<Matrix> &ux, const std::vector<Matrix> &uy) {
     checkSites(ux, sites_);
     checkSites(uy, sites_);
-    backend_.upload(ux0_, reals(ux), 18 * sites_);
-    backend_.upload(uy0_, reals(uy), 18 * sites_);
+    uploadPlanar(backend_, ux0_, reals(ux), sites_, 9, 2);
+    uploadPlanar(backend_, uy0_, reals(uy), sites_, 9, 2);
     Params p;
     p.n = n_;
     backend_.launch(kCopy, 18 * sites_, p, {ux0_, ux_});
     backend_.launch(kCopy, 18 * sites_, p, {uy0_, uy_});
     const std::vector<Matrix> one(sites_, Matrix(1.));
-    backend_.upload(g_, reals(one), 18 * sites_);
+    uploadPlanar(backend_, g_, reals(one), sites_, 9, 2);
 }
 
 double GaugeFixDevice::divergence() {
@@ -427,7 +479,7 @@ void GaugeFixDevice::relax() {
 
 void GaugeFixDevice::download(std::vector<Matrix> &g) {
     g.resize(sites_);
-    backend_.download(g_, reals(g), 18 * sites_);
+    downloadPlanar(backend_, g_, reals(g), sites_, 9, 2);
     // Also in double precision: the zero mode of chi, rounding times
     // 1.5e9, is not exactly Hermitian and traceless, which leaves G with a
     // phase and a non-unitary part of 1e-9.
@@ -458,18 +510,18 @@ WilsonLineDevice::~WilsonLineDevice() { backend_.releaseCaches(); }
 void WilsonLineDevice::upload(
     const std::vector<Matrix> &wilsonLines, const double *scale) {
     checkSites(wilsonLines, sites_);
-    backend_.upload(wilson_, reals(wilsonLines), 18 * sites_);
+    uploadPlanar(backend_, wilson_, reals(wilsonLines), sites_, 9, 2);
     backend_.upload(scale_, scale, sites_);
 }
 
 void WilsonLineDevice::download(std::vector<Matrix> &wilsonLines) {
     checkSites(wilsonLines, sites_);
-    backend_.download(wilson_, reals(wilsonLines), 18 * sites_);
+    downloadPlanar(backend_, wilson_, reals(wilsonLines), sites_, 9, 2);
     if (backend_.singlePrecision()) projectOnSU3(wilsonLines);
 }
 
 void WilsonLineDevice::sheet(const double *gauss) {
-    backend_.upload(gauss_, gauss, 8 * sites_);
+    uploadPlanar(backend_, gauss_, gauss, sites_, 8, 1);
     multiplySheet();
 }
 

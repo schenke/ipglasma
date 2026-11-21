@@ -308,8 +308,16 @@ TEST_CASE("the device FFT is the centered FFT of FFT::fftnArray") {
             for (const int isign : {1, -1}) {
                 CAPTURE(isign);
                 fft.fftnArray(dataPtr.data(), refPtr.data(), nn, isign, mDim);
+                // the device keeps the components planar: component c of
+                // site pos at c * ntot + pos
+                std::vector<std::complex<double>> planar(ntot * mDim);
+                for (int pos = 0; pos < ntot; pos++) {
+                    for (int c = 0; c < mDim; c++) {
+                        planar[c * ntot + pos] = data[pos * mDim + c];
+                    }
+                }
                 backend.upload(
-                    buffer, reinterpret_cast<const double *>(data.data()),
+                    buffer, reinterpret_cast<const double *>(planar.data()),
                     2 * ntot * mDim);
                 backend.centeredFft(buffer, n, mDim, isign);
                 backend.download(
@@ -317,10 +325,15 @@ TEST_CASE("the device FFT is the centered FFT of FFT::fftnArray") {
                     2 * ntot * mDim);
                 double difference = 0.;
                 double size = 0.;
-                for (int i = 0; i < ntot * mDim; i++) {
-                    difference = std::max(
-                        difference, std::abs(result[i] - reference[i]));
-                    size = std::max(size, std::abs(reference[i]));
+                for (int pos = 0; pos < ntot; pos++) {
+                    for (int c = 0; c < mDim; c++) {
+                        const std::complex<double> &expected =
+                            reference[pos * mDim + c];
+                        difference = std::max(
+                            difference,
+                            std::abs(result[c * ntot + pos] - expected));
+                        size = std::max(size, std::abs(expected));
+                    }
                 }
                 report(
                     device.label + " FFT n=" + std::to_string(n)

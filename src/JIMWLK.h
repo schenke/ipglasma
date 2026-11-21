@@ -17,7 +17,12 @@
 #include "PhysConst.h"
 #include "PrettyOstream.h"
 #include "Random.h"
-#include "device/DeviceDrivers.h"
+
+// the device layer (device/DeviceDrivers.h), only through pointers here
+namespace ipgdev {
+class Backend;
+class JimwlkDevice;
+}  // namespace ipgdev
 
 /**
  * JIMWLK small-x evolution of the projectile's and target's Wilson
@@ -41,6 +46,7 @@
  * correlator is \f$\int_k e^{ik\cdot(x-y)}\alpha_s(k)\f$
  * (Eqs. (24)-(25) of \cite Lappi:2012vw).
  */
+
 class JIMWLK {
   private:
     /// Simulation parameters.

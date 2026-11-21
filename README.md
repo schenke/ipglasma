@@ -112,7 +112,7 @@ The device is chosen at run time with environment variables. Without `IPGLASMA_D
 | `IPGLASMA_DEVICE_STAGES` | comma separated list of `wilsonlines`, `jimwlk`, `yangmills`, `gaugefix` | the stages on the device; default: all |
 | `IPGLASMA_DEVICE_NOISE` | `host` (default), `device` | where the random numbers of the color charges and of the JIMWLK noise are drawn, see below |
 | `IPGLASMA_DEVICE_PROFILE` | `1` | time every kernel, FFT and copy on the device; the times go to the profile of the run (`IPGLASMA_PROFILE=1`) as `device.kernel.<name>`, `device.fft`, `device.upload`, `device.download`. The device then waits after every call, so the run is slower. `device_vs_cpu.py --kernel-timing` sets it and lists the times |
-| `IPGLASMA_CUDA_DEVICE` | number | the GPU (default 0) |
+| `IPGLASMA_CUDA_DEVICE` | number | the GPU; default: the rank of the process on its node (from the MPI launcher or Slurm) modulo the number of GPUs, 0 without MPI |
 | `IPGLASMA_CUDA_FFT` | `cufft` (default), `kernel` | `kernel`: the FFT of the kernels instead of cuFFT, to cross-check it |
 | `IPGLASMA_OPENCL_DEVICE` | number, part of the device name, or `list` | the OpenCL device (default: the first GPU); `list` prints the devices |
 
@@ -120,7 +120,7 @@ The device is chosen at run time with environment variables. Without `IPGLASMA_D
 IPGLASMA_DEVICE=cuda ./ipglasma input
 IPGLASMA_DEVICE=opencl ./ipglasma input
 ```
-The log names the device and its precision. With MPI, every rank uses the device by itself.
+The log names the device and its precision. With MPI, the ranks on a node use their GPUs in turn (rank r on the node uses GPU r modulo the number of GPUs), so with as many ranks as GPUs every rank has a GPU of its own; if the job gives every rank its own GPU (e.g. Slurm with `--gpus-per-task=1`), each rank uses that one. `IPGLASMA_CUDA_DEVICE` chooses the GPU instead.
 
 **Lattice size.** With cuFFT, any even `size`. The FFT of the kernels (`opencl`, `host`) needs an even `size` whose prime factors are at most 32, e.g. 512, 600, 800 or 1024; the run stops at start-up otherwise.
 

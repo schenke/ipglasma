@@ -7,7 +7,9 @@
 // default; IPGLASMA_DEVICE_PRECISION=single for single precision.
 //
 // Environment:
-//   IPGLASMA_CUDA_DEVICE  number of the GPU (default 0)
+//   IPGLASMA_CUDA_DEVICE  number of the GPU (default: the rank of the
+//                         process on its node, ipgdev::nodeLocalRank(),
+//                         modulo the number of GPUs; 0 without MPI)
 //   IPGLASMA_CUDA_FFT     `cufft` (default) or `kernel`, the mixed-radix
 //                         FFT of ipg_kernels.h (slower; to cross-check
 //                         cuFFT)
@@ -130,12 +132,16 @@ void checkFft(cufftResult status, const char *what) {
 class CudaBackend : public ipgdev::Backend {
   public:
     explicit CudaBackend(int precision) : single_(precision == 1) {
-        int device = 0;
+        int count = 0;
+        check(cudaGetDeviceCount(&count), "cudaGetDeviceCount");
+        // by default every MPI rank on a node gets its own GPU (with as
+        // many ranks as GPUs); with one GPU per rank, e.g. from Slurm, the
+        // rank sees only that one
+        const int localRank = ipgdev::nodeLocalRank();
+        int device = (localRank >= 0 && count > 0) ? localRank % count : 0;
         if (const char *request = std::getenv("IPGLASMA_CUDA_DEVICE")) {
             device = std::atoi(request);
         }
-        int count = 0;
-        check(cudaGetDeviceCount(&count), "cudaGetDeviceCount");
         if (device < 0 || device >= count) {
             std::ostringstream message;
             message << "CUDA: no GPU number " << device << " (" << count
@@ -148,6 +154,10 @@ class CudaBackend : public ipgdev::Backend {
             cudaGetDeviceProperties(&properties, device),
             "cudaGetDeviceProperties");
         deviceName_ = properties.name;
+        if (count > 1) {
+            deviceName_ += " (GPU " + std::to_string(device) + " of "
+                           + std::to_string(count) + ")";
+        }
         if (const char *fft = std::getenv("IPGLASMA_CUDA_FFT")) {
             const std::string choice(fft);
             if (choice == "kernel") {

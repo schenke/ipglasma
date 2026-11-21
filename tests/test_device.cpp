@@ -201,6 +201,33 @@ TEST_CASE(
     }
 }
 
+TEST_CASE("nodeLocalRank reads the rank on the node from the launcher") {
+    const char *const names[] = {
+        "OMPI_COMM_WORLD_LOCAL_RANK", "MPI_LOCALRANKID",
+        "MV2_COMM_WORLD_LOCAL_RANK", "PMI_LOCAL_RANK", "SLURM_LOCALID"};
+    // the environment of this process, restored at the end
+    std::vector<std::pair<std::string, std::string>> saved;
+    for (const char *name : names) {
+        if (const char *value = std::getenv(name)) {
+            saved.emplace_back(name, value);
+        }
+        unsetenv(name);
+    }
+    CHECK(ipgdev::nodeLocalRank() == -1);
+    setenv("SLURM_LOCALID", "3", 1);
+    CHECK(ipgdev::nodeLocalRank() == 3);
+    // the MPI launcher comes first
+    setenv("OMPI_COMM_WORLD_LOCAL_RANK", "1", 1);
+    CHECK(ipgdev::nodeLocalRank() == 1);
+    // a value that is not a rank is skipped
+    setenv("OMPI_COMM_WORLD_LOCAL_RANK", "x1", 1);
+    CHECK(ipgdev::nodeLocalRank() == 3);
+    for (const char *name : names) unsetenv(name);
+    for (const auto &entry : saved) {
+        setenv(entry.first.c_str(), entry.second.c_str(), 1);
+    }
+}
+
 TEST_CASE("fftRadices factorizes the lattice sizes of the device FFT") {
     auto product = [](const std::vector<int> &radices) {
         int result = 1;

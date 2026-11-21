@@ -18,6 +18,12 @@
 #include "PrettyOstream.h"
 #include "Random.h"
 
+// the device layer (device/DeviceDrivers.h), only through pointers here
+namespace ipgdev {
+class Backend;
+class JimwlkDevice;
+}  // namespace ipgdev
+
 /**
  * JIMWLK small-x evolution of the projectile's and target's Wilson
  * lines, run before the classical Yang-Mills evolution.
@@ -40,6 +46,7 @@
  * correlator is \f$\int_k e^{ik\cdot(x-y)}\alpha_s(k)\f$
  * (Eqs. (24)-(25) of \cite Lappi:2012vw).
  */
+
 class JIMWLK {
   private:
     /// Simulation parameters.
@@ -249,6 +256,30 @@ class JIMWLK {
      * evolves the projectile and target in turn via runEvolutionLoop().
      */
     void evolution();
+    /**
+     * Creates the device evolution of this JIMWLK object on \p backend: it
+     * copies the kernel, the generators and the coupling of the noise to
+     * the device (see ipgdev::JimwlkDevice).
+     * \param[in] backend The device.
+     * \return The device evolution, for evolutionStepOnDevice().
+     */
+    std::unique_ptr<ipgdev::JimwlkDevice> makeDevice(ipgdev::Backend &backend);
+    /**
+     * One step of the evolution on a device, for the Wilson lines that were
+     * copied to \p device: draws the noise of the step from the random
+     * numbers of the run, exactly as evolutionStep() does, and passes it
+     * to the device.
+     * \param[in,out] device The device evolution, from makeDevice().
+     */
+    void evolutionStepOnDevice(ipgdev::JimwlkDevice &device);
+    /**
+     * Draws the key of the device noise generator of one nucleus'
+     * evolution from the random numbers of the run (one 64-bit number), so
+     * that the device noise follows the seed of the run and differs
+     * between the nuclei and the events.
+     * \param[out] key0, key1 The two words of the key.
+     */
+    void drawDeviceNoiseKey(unsigned int &key0, unsigned int &key1);
     /**
      * Advances one nucleus' Wilson-line field by one JIMWLK Langevin
      * step: draws Gaussian noise per site/color (via

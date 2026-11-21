@@ -33,7 +33,7 @@ docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/work" -w /work ipglasma ipglasm
 File names in the input file are relative to the working directory, so data files from the repository are given with their path in the image, e.g. `nuclearConfigurationsPath /home/ipglasma/nucleusConfigurations`. Without `-u`, the container runs as root, and its outputs in the mounted directory belong to root.
 
 ### Reproducible runs
-By default, FFTW picks its FFT algorithms by timing them when the program starts, so two runs with the same seed can differ by floating-point rounding (around 1e-14). For bit-identical output, build with
+By default, FFTW picks its FFT algorithms by timing them when the program starts, so two runs with the same seed can differ by floating-point rounding, which the evolution accumulates to about 1e-12 (relative) in dN/dy and the gluon spectrum. Quantities that count lattice cells above a threshold can differ by more: with `eccentricityCutoff 0`, the area of the cells above the cutoff in `eccentricities<id>.dat` and the averages over it depend on the sign of the rounding in the vacuum (see `eccentricityCutoff`). For bit-identical output, build with
 ```
 cmake -B build -DIPGLASMA_DETERMINISTIC_FFT=ON
 cmake --build build
@@ -47,7 +47,7 @@ cmake -B build -Dunittest=ON
 cmake --build build
 ctest --test-dir build --output-on-failure
 ```
-It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`), as do the quick modes of two validation setups, `lattice_symmetries` and `dilute_limit` (`.github/workflows/validations.yml`, see [validations/README.md](validations/README.md)), which run the calculation end to end (without JIMWLK).
+It also runs automatically on every push/PR to `devel`/`main` via GitHub Actions (see `.github/workflows/tests.yml`), as do the quick modes of two validation setups, `lattice_symmetries` and `dilute_limit` (`.github/workflows/validations.yml`, see [validations/README.md](validations/README.md)), which run the calculation end to end (without JIMWLK). The device layer (see [Running on a GPU](#running-on-a-gpu)) is tested there through its host backend; `.github/workflows/device.yml` also runs the unit tests with the OpenCL backend on the CPU (PoCL) and compiles the CUDA backend, since the runners have no GPU.
 
 ## Running
 ```
@@ -78,6 +78,72 @@ mpirun -np 4 --map-by slot:PE=8 --bind-to core ./ipglasma input   # Open MPI
 srun --ntasks=4 --cpus-per-task=8 ./ipglasma input                # SLURM
 ```
 
+
+## Running on a GPU
+The four stages that take almost all of the time of an event can run on a GPU: the Wilson lines of the nuclei, the JIMWLK evolution, the time steps of the classical Yang-Mills evolution, and the Coulomb gauge fixing for the gluon multiplicity. Everything else (the nuclei, the light-cone fields, $T^{\mu\nu}$, the flow velocity, the gluon spectrum and all output) runs on the CPU as before, and the input and output files do not change.
+
+The GPU code is the device layer in `src/device/`. Its kernels (`ipg_kernels.h`: the sheets of the Wilson lines, the JIMWLK step, the leapfrog updates, the gauge-fixing iteration, an FFT and a random number generator) are written once, in the common subset of C, CUDA C++ and OpenCL C, and compiled for three backends:
+
+| Backend | Build option | Hardware | Precision | FFT |
+|---|---|---|---|---|
+| `cuda` | `-DIPGLASMA_CUDA=ON` | NVIDIA GPUs | double (default) or single | cuFFT |
+| `opencl` | `-DIPGLASMA_OPENCL=ON` | the GPU of Apple M processors; any other OpenCL 1.2 device | single on Apple M (their GPUs have no double precision); double elsewhere | mixed-radix FFT of the kernels |
+| `host` | always built | the CPU | double (default) or single | mixed-radix FFT of the kernels |
+
+The `host` backend runs the same kernels on the CPU. It is slower than the normal CPU code and is there to test the device layer, and the effect of single precision, on any machine.
+
+### Building
+```
+# NVIDIA (CUDA toolkit with cuFFT; CMake 3.17 or newer)
+cmake -B build -DIPGLASMA_CUDA=ON
+# Apple M (OpenCL is part of macOS, nothing to install)
+cmake -B build -DIPGLASMA_OPENCL=ON
+cmake --build build
+```
+Both options can be on. `-DCMAKE_CUDA_ARCHITECTURES=80` selects the GPU generation (80: A100), and `-DCUDAToolkit_ROOT=...` a toolkit that is not on the path. On Perlmutter, load `cudatoolkit` before running CMake.
+
+### Running
+The device is chosen at run time with environment variables. Without `IPGLASMA_DEVICE` the code runs on the CPU as before.
+
+| Variable | Values | |
+|---|---|---|
+| `IPGLASMA_DEVICE` | `cuda`, `opencl`, `host`; unset or `cpu` for the CPU code | the backend |
+| `IPGLASMA_DEVICE_PRECISION` | `double`, `single` | default: double if the device has it |
+| `IPGLASMA_DEVICE_STAGES` | comma separated list of `wilsonlines`, `jimwlk`, `yangmills`, `gaugefix` | the stages on the device; default: all |
+| `IPGLASMA_DEVICE_NOISE` | `host` (default), `device` | where the random numbers of the color charges and of the JIMWLK noise are drawn, see below |
+| `IPGLASMA_DEVICE_PROFILE` | `1` | time every kernel, FFT and copy on the device; the times go to the profile of the run (`IPGLASMA_PROFILE=1`) as `device.kernel.<name>`, `device.fft`, `device.upload`, `device.download`. The device then waits after every call, so the run is slower. `device_vs_cpu.py --kernel-timing` sets it and lists the times |
+| `IPGLASMA_CUDA_DEVICE` | number | the GPU; default: the rank of the process on its node (from the MPI launcher or Slurm) modulo the number of GPUs, 0 without MPI |
+| `IPGLASMA_CUDA_FFT` | `cufft` (default), `kernel` | `kernel`: the FFT of the kernels instead of cuFFT, to cross-check it |
+| `IPGLASMA_OPENCL_DEVICE` | number, part of the device name, or `list` | the OpenCL device (default: the first GPU); `list` prints the devices |
+
+```
+IPGLASMA_DEVICE=cuda ./ipglasma input
+IPGLASMA_DEVICE=opencl ./ipglasma input
+```
+The log names the device and its precision. With MPI, the ranks on a node use their GPUs in turn (rank r on the node uses GPU r modulo the number of GPUs), so with as many ranks as GPUs every rank has a GPU of its own; if the job gives every rank its own GPU (e.g. Slurm with `--gpus-per-task=1`), each rank uses that one. `IPGLASMA_CUDA_DEVICE` chooses the GPU instead.
+
+**Lattice size.** With cuFFT, any even `size`. The FFT of the kernels (`opencl`, `host`) needs an even `size` whose prime factors are at most 32, e.g. 512, 600, 800 or 1024; the run stops at start-up otherwise.
+
+With the random numbers on the host, the host draws the noise of a JIMWLK step while the device still copies and computes the previous one, so their times overlap, and the slower of the two sets the pace. Whether drawing them on the device (`IPGLASMA_DEVICE_NOISE=device`) saves time therefore depends on the device: at 512² on an Apple M1 Pro the JIMWLK evolution took 10–12 s either way. On an NVIDIA RTX 4070 Laptop GPU (CUDA), in a Pb+Pb event of the example input at 800² (the CPU code with 16 threads: about 165 s), the host sets the pace in both precisions: the event takes 30 s in double and 26 s in single precision with the random numbers on the host, and 22 s and 10.5 s with the random numbers on the device (the JIMWLK evolution 14.3 s and 13.7 s on the host, 8.5 s and 1.4 s on the device). For production runs on a GPU, `IPGLASMA_DEVICE_NOISE=device` is therefore recommended; its events are statistically equivalent to those of the CPU code, but not the same events for the same seed (so a comparison with the CPU, like `validations/device_vs_cpu`, needs the default `host`).
+
+**Random numbers.** By default the Gaussian numbers of the color charges of every sheet of the Wilson lines and of the noise of every JIMWLK step are drawn on the CPU from the random numbers of the run and copied to the device. A device run then uses the random numbers exactly like a CPU run and gives the same event for the same seed, which is what the comparison with the CPU needs. The generator is serial, however, and on a fast GPU it takes longer than the step itself. `IPGLASMA_DEVICE_NOISE=device` draws them on the device instead (Threefry-2x32 with 20 rounds, a counter-based generator, with a key from the random numbers of the run, and the Box-Muller transformation). The events are then statistically equivalent, but not the events a CPU run gives for the same seeds.
+
+**Memory.** The fields on the device take about 90 real numbers per lattice site during the JIMWLK evolution (about 110 with the noise coupling) and 160 during the Yang-Mills evolution: 0.8 GB at 800² in double precision, half of that in single precision. With the CUDA context and the cuFFT plans, a Pb+Pb event of the example input at 800² in double precision took at most 0.95 GB of an RTX 4070 (`nvidia-smi`), during the Yang-Mills evolution; every stage releases its fields, and the stages with FFTs also the buffers and plans of the FFT, before the next one. It also keeps two pinned buffers on the host of the size of its largest copy to the device, about 90 MB each at 800² in double precision.
+
+**Gauge fixing.** The device iterates the gauge transformation $G(x)$ only, and forms the links from the original ones in every iteration. The host applies $G$, projected onto SU(3), to its fields in double precision, and then checks the residual with the criterion of the CPU code, continuing the iteration there if necessary. The gauge-fixed fields are therefore an exact gauge transformation of the fields of the evolution also when the device computes in single precision, and the gauge is fixed to the same threshold. In single precision the residual the device measures cannot fall below the rounding of its links, about $3\times10^{-15}$; the threshold is lower than that for `size` above about 1300 at `L` = 30 fm. The device then stops when its residual no longer improves and the remaining iterations run on the CPU (two in the unit test of this case).
+
+### Precision
+In double precision the device repeats the arithmetic of the CPU code up to rounding. For a Pb+Pb event of the example input at 256² (`validations/device_vs_cpu`, with the `host` and `opencl` backends in double precision), the Wilson lines after the JIMWLK evolution differ by $10^{-14}$ from those of the CPU run, dN/dy and dE/dy by $10^{-12}$, and the hydro output agrees in all printed digits.
+
+In single precision, which is all the GPU of an Apple M processor has, every operation rounds at $6\times10^{-8}$, and the about 300 JIMWLK steps accumulate this. This rounding is not unitary, and the energy density is linear in a non-unitary error of the links, so a single-precision device moves its Wilson lines and links back towards SU(3) after every JIMWLK and Yang-Mills step (one Newton-Schulz step), and the Wilson lines and links it returns are projected onto SU(3) in double precision on the host; without this the vacuum around the nuclei gets a spurious energy density that grows with the lattice size as $a^{-4}$ relative to the fields. In the same comparison, with CUDA on an RTX 4070 in single precision, the Wilson lines differ by $3\times10^{-6}$ (256²) and $4\times10^{-6}$ (800²) from those of the CPU run, dN/dy by $8\times10^{-7}$ and $5\times10^{-5}$, dE/dy by $10^{-6}$ or less, the energy density by at most $2\times10^{-5}$ where it is above 1% of its maximum and $10^{-4}$ between 0.1% and 1%, and the flow velocity by $10^{-5}$ where the energy density is above 10% of its maximum and $7\times10^{-5}$ between 1% and 10%; the `host` backend and `opencl` give the same. In the dilute cells between 0.1% and 1% of the maximum, the Landau matching amplifies the rounding: there the flow velocity differs by $3\times10^{-5}$ at 256² but by up to $3\times10^{-2}$ at 800² (up to $10^{-1}$ before the device moved its fields back towards SU(3) after every step). Where the flow velocity of dilute cells matters, use double precision. The run prints a warning when the device computes in single precision.
+
+### Testing a build
+The unit tests (`-Dunittest=ON`, see above) compare the FFT, the JIMWLK step and the leapfrog of every backend the build has, in both precisions, with the CPU code, and skip the backends without a device on the machine. `validations/device_vs_cpu/device_vs_cpu.py` compares a whole event (see `validations/README.md`):
+```
+cd validations/device_vs_cpu
+python3 device_vs_cpu.py --ipglasma-path ../.. --devices cuda      # or opencl
+```
+Run both on a new machine before production. As of this version, the `host` backend and the `opencl` backend (on PoCL, an OpenCL implementation for CPUs) have been run and compared with the CPU code in both precisions; the `cuda` backend has been compiled and linked with the CUDA toolkit 13.5 (and its kernels assembled for the A100) but not yet run on a GPU, and the `opencl` backend has not yet been run on an Apple GPU.
 
 ## Input parameters
 Every parameter is listed once in `src/ParameterTable.cpp`, together with its default value (if it is optional) and its validity checks; see `src/Parameters.h` for a more detailed description of each parameter.
@@ -248,7 +314,7 @@ The files themselves (names, order, layout, columns and units) are described in 
    - `0`: from the electric fields in Coulomb gauge, n(k) = 2|E(k)|²/ω, the estimator of IP-Glasma 1.x. This is the gluon number only on average over the oscillation of the fields, i.e. for kτ ≫ 1; since all modes of the glasma start in phase, it is off by tens of percent for kτ of a few (at τ = 0.4 fm, k ≲ 2 GeV)
    - the difference: in central Pb+Pb events of the example input at τ = 0.4 fm and later, dN/dy and ⟨k_T⟩ of the two agree within 4% per event and about 1% on average; at τ = 0.2 fm they differ by 6–13% (`validations/gluon_spectrum_estimator`). In the dilute limit, `0` is off by up to tens of percent at all times. `0` is the estimator of IP-Glasma 1.x; its results differ from those of 1.x through the other changes of 2.0 (see CHANGELOG.md), among them the time at which its electric term is normalized (#83)
  - **computeEccentricities**: at the final time, compute the eccentricities of the energy density (`eccentricities<id>.dat`)
- - **eccentricityCutoff** (optional, default `0`, only used with `computeEccentricities 1`): energy density in GeV/fm³ below which a cell is left out of the eccentricities
+ - **eccentricityCutoff** (optional, default `0.01`, only used with `computeEccentricities 1`): energy density in GeV/fm³ below which a cell is left out of the eccentricities. It also defines the columns of `eccentricities<id>.dat` that count the cells above the cutoff (the area, the averages over it and the extent along the axes, see OUTPUT.md). ε falls off exponentially at the edge of the nuclei, so these columns depend on the cutoff: in a central Pb+Pb event of the example input at τ = 0.4 fm, the area is 285, 183 and 159 fm² for cutoffs of 10⁻⁶, 0.01 and 0.1 GeV/fm³, while ε₂ and ε₃ change by less than 3·10⁻⁵ from 0 to 0.01 and 2·10⁻⁴ to 0.1. With `0`, a cell of the vacuum, where ε is floating-point rounding (about 10⁻⁹ GeV/fm³ there), counts or not by the sign of that rounding, so that these columns are dominated by the vacuum (an area of about 590 fm²) and change from run to run; the eccentricities do not notice it. The default `0.01` is well above that rounding, also in single precision on a GPU, where ε below about 0.01 GeV/fm³ can be off by tens of percent (see [Running on a GPU](#running-on-a-gpu)). IP-Glasma 1.x used `0`
  - **writeNpartList**, **writeNcollList** and **writeNgluonEstimators** (optional, default `1`): write the positions of the nucleons and whether they collided (`NpartList<id>.dat`), the binary collisions (`NcollList<id>.dat`) and the gluon-number estimators (`NgluonEstimators<id>.dat`)
  - **writeWilsonLineSnapshot** (optional, default `0`): `1` writes the initial Wilson lines of both nuclei as one binary file with a JSON header (`initialWilsonLines<id>.ipgw`) when they are built, with any `runEvolution` (not with `readInitialWilsonLines` 1 or 2)
  - **writeOutputsToHDF5**: this parameter decides whether to collect output files into an HDF5 file

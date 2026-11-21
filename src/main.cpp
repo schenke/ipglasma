@@ -4,10 +4,12 @@
 
 #include <stdio.h>
 
+#include <chrono>
 #include <cmath>
 #include <complex>
 #include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -32,6 +34,7 @@
 #include "PrettyOstream.h"
 #include "Random.h"
 #include "WilsonLineIO.h"
+#include "device/DeviceBackend.h"
 
 // IPGLASMA_GIT_DESCRIBE, generated at every build by
 // CMakeModules/GitDescribe.cmake (src/CMakeLists.txt)
@@ -71,6 +74,28 @@ std::string versionString() {
     return version;
 }
 
+namespace {
+/// The handler of std::terminate (set in main()): prints the exception that
+/// nothing caught and ends the run, with MPI_Abort for all ranks.
+[[noreturn]] void terminateWithMessage() {
+    std::string what = "std::terminate called without an exception";
+    if (const std::exception_ptr exception = std::current_exception()) {
+        try {
+            std::rethrow_exception(exception);
+        } catch (const std::exception &e) {
+            what = e.what();
+        } catch (...) {
+            what = "an exception of unknown type";
+        }
+    }
+    std::cerr << "[Error] [main]: " << what << ". Exiting." << std::endl;
+#ifndef DISABLEMPI
+    MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
+    std::abort();
+}
+}  // namespace
+
 // main program 1
 int main(int argc, char *argv[]) {
     // "ipglasma --version" prints the version and exits, without MPI
@@ -96,6 +121,9 @@ int main(int argc, char *argv[]) {
     rank = 0;
     size = 1;
 #endif
+    // an exception that nothing catches (e.g. an error of the device during
+    // an event) is printed and ends all ranks
+    std::set_terminate(terminateWithMessage);
 
     ipg::Profiler::instance().initialize(rank);
 
@@ -182,6 +210,50 @@ int main(int argc, char *argv[]) {
         messager << "[main::main]: Random seed on rank " << rank << " = "
                  << seedList[rank] << " read from list.";
         messager.flush("info");
+    }
+
+    // the device of the run (IPGLASMA_DEVICE), if any: created here, so
+    // that a wrong setting stops the run before the first event
+    try {
+        const auto deviceStart = std::chrono::steady_clock::now();
+        if (ipgdev::Backend *device = ipgdev::runBackend()) {
+            const std::chrono::duration<double> deviceSetup =
+                std::chrono::steady_clock::now() - deviceStart;
+            const ipgdev::Config &deviceConfig = ipgdev::runConfig();
+            messager << "[main::main]: Device " << device->name() << ": "
+                     << device->description() << "; on it:"
+                     << (deviceConfig.wilsonLines ? " Wilson-lines" : "")
+                     << (deviceConfig.jimwlk ? " JIMWLK" : "")
+                     << (deviceConfig.yangMills ? " Yang-Mills" : "")
+                     << (deviceConfig.gaugeFix ? " gauge-fixing" : "")
+                     << (deviceConfig.noiseOnDevice
+                             ? "; random numbers drawn on the device."
+                             : "; random numbers drawn on the host.");
+            messager.flush("info");
+            // for OpenCL this includes compiling the kernels
+            messager << "[main::main]: The device was set up in "
+                     << deviceSetup.count() << " s.";
+            messager.flush("info");
+            if (device->singlePrecision()) {
+                messager << "[main::main]: The device computes in single "
+                            "precision: the fields it evolves are accurate "
+                            "to about 1e-6, not 1e-15 (see README.md, GPU).";
+                messager.flush("warning");
+            }
+            if (param->jimwlk.enabled && deviceConfig.jimwlk
+                && !device->fftAvailable(param->lattice.size)) {
+                messager << "[main::main]: The FFT of the device needs an "
+                            "even lattice size with prime factors up to 32; "
+                            "size = "
+                         << param->lattice.size << " is not. Exiting.";
+                messager.flush("error");
+                exit(1);
+            }
+        }
+    } catch (const std::exception &e) {
+        messager << "[main::main]: " << e.what() << ". Exiting.";
+        messager.flush("error");
+        exit(1);
     }
 
     // event loop starts ...
@@ -380,6 +452,10 @@ int main(int argc, char *argv[]) {
             messager.flush("warning");
         }
     }
+
+    // the device (IPGLASMA_DEVICE) is released while its runtime is still
+    // up, not by a static destructor at exit
+    ipgdev::releaseRunBackend();
 
 #ifndef DISABLEMPI
     MPI_Finalize();

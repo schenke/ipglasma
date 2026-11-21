@@ -19,6 +19,7 @@
 #include "Instrumentation.h"
 #include "RunningCoupling.h"
 #include "WilsonLineIO.h"
+#include "device/DeviceDrivers.h"
 
 using PhysConst::invHbarc;
 using PhysConst::isClose;

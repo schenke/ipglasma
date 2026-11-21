@@ -111,6 +111,7 @@ The device is chosen at run time with environment variables. Without `IPGLASMA_D
 | `IPGLASMA_DEVICE_PRECISION` | `double`, `single` | default: double if the device has it |
 | `IPGLASMA_DEVICE_STAGES` | comma separated list of `wilsonlines`, `jimwlk`, `yangmills`, `gaugefix` | the stages on the device; default: all |
 | `IPGLASMA_DEVICE_NOISE` | `host` (default), `device` | where the random numbers of the color charges and of the JIMWLK noise are drawn, see below |
+| `IPGLASMA_DEVICE_PROFILE` | `1` | time every kernel, FFT and copy on the device; the times go to the profile of the run (`IPGLASMA_PROFILE=1`) as `device.kernel.<name>`, `device.fft`, `device.upload`, `device.download`. The device then waits after every call, so the run is slower. `device_vs_cpu.py --kernel-timing` sets it and lists the times |
 | `IPGLASMA_CUDA_DEVICE` | number | the GPU (default 0) |
 | `IPGLASMA_CUDA_FFT` | `cufft` (default), `kernel` | `kernel`: the FFT of the kernels instead of cuFFT, to cross-check it |
 | `IPGLASMA_OPENCL_DEVICE` | number, part of the device name, or `list` | the OpenCL device (default: the first GPU); `list` prints the devices |
@@ -122,6 +123,8 @@ IPGLASMA_DEVICE=opencl ./ipglasma input
 The log names the device and its precision. With MPI, every rank uses the device by itself.
 
 **Lattice size.** With cuFFT, any even `size`. The FFT of the kernels (`opencl`, `host`) needs an even `size` whose prime factors are at most 32, e.g. 512, 600, 800 or 1024; the run stops at start-up otherwise.
+
+With the random numbers on the host, the host draws the noise of a JIMWLK step while the device still computes the previous one, so their times overlap; drawing them on the device therefore saves little time (at 512² on an Apple M1 Pro the JIMWLK evolution took 10–12 s either way).
 
 **Random numbers.** By default the Gaussian numbers of the color charges of every sheet of the Wilson lines and of the noise of every JIMWLK step are drawn on the CPU from the random numbers of the run and copied to the device. A device run then uses the random numbers exactly like a CPU run and gives the same event for the same seed, which is what the comparison with the CPU needs. The generator is serial, however, and on a fast GPU it takes longer than the step itself. `IPGLASMA_DEVICE_NOISE=device` draws them on the device instead (Threefry-2x32 with 20 rounds, a counter-based generator, with a key from the random numbers of the run, and the Box-Muller transformation). The events are then statistically equivalent, but not the events a CPU run gives for the same seeds.
 

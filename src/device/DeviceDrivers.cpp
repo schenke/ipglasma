@@ -97,6 +97,31 @@ void checkIndexRange(std::size_t sites) {
     }
 }
 
+// An array in momentum space of the host, in the centered order of FFT.cpp
+// (index j of an axis has the momentum j - n/2), with `width` reals per
+// site, in the natural order of Backend::fft() (index j has the momentum j,
+// or j - n), times `factor`: shifted by n/2 along both axes.
+std::vector<double> fftOrder(
+    const double *centered, int n, int width, double factor) {
+    const std::size_t nw = static_cast<std::size_t>(width);
+    std::vector<double> natural(static_cast<std::size_t>(n) * n * nw);
+    for (int ix = 0; ix < n; ix++) {
+        for (int iy = 0; iy < n; iy++) {
+            const std::size_t to = static_cast<std::size_t>(ix) * n + iy;
+            const std::size_t from =
+                static_cast<std::size_t>((ix + n / 2) % n) * n
+                + (iy + n / 2) % n;
+            for (std::size_t w = 0; w < nw; w++) {
+                natural[to * nw + w] = factor * centered[from * nw + w];
+            }
+        }
+    }
+    return natural;
+}
+
+// The normalization of a backward Backend::fft() on an n x n lattice.
+double inverseNorm(int n) { return 1. / (static_cast<double>(n) * n); }
+
 }  // namespace
 
 /**
@@ -201,11 +226,16 @@ JimwlkDevice::JimwlkDevice(
             }
         }
     }
-    uploadPlanar(backend_, kernel_, symmetric.data(), sites_, 2, 2);
+    // in the order of Backend::fft(), with the 1/n^2 of the backward
+    // transforms of the convolutions
+    uploadPlanar(
+        backend_, kernel_,
+        fftOrder(symmetric.data(), n, 4, inverseNorm(n)).data(), sites_, 2, 2);
     if (noiseCoupling_) {
         alphas_ = DeviceBuffer(backend_, sites_);
         eta_ = DeviceBuffer(backend_, 16 * sites_);
-        backend_.upload(alphas_, sqrtAlphasNoise, sites_);
+        backend_.upload(
+            alphas_, fftOrder(sqrtAlphasNoise, n, 1, 1.).data(), sites_);
     }
 }
 
@@ -253,7 +283,7 @@ void JimwlkDevice::evolveWithNoise() {
     // the transform of the noise, two real fields per complex one:
     // Z^a = F(xi_x^a + i xi_y^a)
     backend_.launch(kJimwlkPackNoise, sites_, p, {noise_, zxi_});
-    backend_.centeredFft(zxi_, n_, 8, 1);
+    backend_.fft(zxi_, n_, 8, 1);
 
     if (noiseCoupling_) {
         // eta = F^{-1}(sqrt(alpha_s(k)) F(xi)) replaces xi in both factors
@@ -262,20 +292,21 @@ void JimwlkDevice::evolveWithNoise() {
         p.ncomp = 8;
         backend_.launch(kScaleBySite, 8 * sites_, p, {zxi_, alphas_});
         backend_.launch(kCopy, 16 * sites_, p, {zxi_, eta_});
-        backend_.centeredFft(eta_, n_, 8, -1);
+        backend_.fft(eta_, n_, 8, -1);
+        p.r0 = inverseNorm(n_);
         backend_.launch(kJimwlkUnpackNoise, sites_, p, {eta_, noise_});
     }
 
     // CK^a = K_x * xi_x^a + K_y * xi_y^a (convolutions), real
     backend_.launch(kJimwlkCombine, sites_, p, {kernel_, zxi_, ck_});
-    backend_.centeredFft(ck_, n_, 4, -1);
+    backend_.fft(ck_, n_, 4, -1);
 
     // the coefficients of V xi V^dagger, convolved with K: W^a
     backend_.launch(
         kJimwlkRotate, sites_, p, {wilson_, noise_, generators_, zv_});
-    backend_.centeredFft(zv_, n_, 8, 1);
+    backend_.fft(zv_, n_, 8, 1);
     backend_.launch(kJimwlkCombine, sites_, p, {kernel_, zv_, w_});
-    backend_.centeredFft(w_, n_, 4, -1);
+    backend_.fft(w_, n_, 4, -1);
 
     // the new Wilson lines
     p.r0 = sqrtDs_;
@@ -430,7 +461,10 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
     if (backend_.singlePrecision()) {
         factor[static_cast<std::size_t>(n / 2) * n + n / 2] = 0.;
     }
-    backend_.upload(poisson_, factor.data(), sites_);
+    // in the order of Backend::fft(), with the 1/n^2 of the backward
+    // transform
+    backend_.upload(
+        poisson_, fftOrder(factor.data(), n, 1, inverseNorm(n)).data(), sites_);
 }
 
 GaugeFixDevice::~GaugeFixDevice() { backend_.releaseCaches(); }
@@ -469,10 +503,10 @@ void GaugeFixDevice::relax() {
     Params p;
     p.n = n_;
     // chi packed as 4 complex components (ipg_gf_unpack)
-    backend_.centeredFft(chi_, n_, 4, 1);
+    backend_.fft(chi_, n_, 4, 1);
     p.ncomp = 4;
     backend_.launch(kScaleBySite, 4 * sites_, p, {chi_, poisson_});
-    backend_.centeredFft(chi_, n_, 4, -1);
+    backend_.fft(chi_, n_, 4, -1);
     backend_.launch(kGfUpdate, sites_, p, {chi_, g_});
     backend_.launch(kGfTransform, sites_, p, {g_, ux0_, uy0_, ux_, uy_});
 }
@@ -502,7 +536,10 @@ WilsonLineDevice::WilsonLineDevice(
     scale_ = DeviceBuffer(backend_, sites_);
     gauss_ = DeviceBuffer(backend_, 8 * sites_);
     rho_ = DeviceBuffer(backend_, 8 * sites_);
-    backend_.upload(kernel_, momentumKernel, sites_);
+    // in the order of Backend::fft(), with the 1/n^2 of the backward
+    // transform
+    backend_.upload(
+        kernel_, fftOrder(momentumKernel, n, 1, inverseNorm(n)).data(), sites_);
 }
 
 WilsonLineDevice::~WilsonLineDevice() { backend_.releaseCaches(); }
@@ -542,10 +579,10 @@ void WilsonLineDevice::multiplySheet() {
     p.n = n_;
     // the 8 real charges of a site as 4 complex components
     backend_.launch(kWilsonCharge, 8 * sites_, p, {gauss_, scale_, rho_});
-    backend_.centeredFft(rho_, n_, 4, 1);
+    backend_.fft(rho_, n_, 4, 1);
     p.ncomp = 4;
     backend_.launch(kScaleBySite, 4 * sites_, p, {rho_, kernel_});
-    backend_.centeredFft(rho_, n_, 4, -1);
+    backend_.fft(rho_, n_, 4, -1);
     backend_.launch(kWilsonExponent, sites_, p, {rho_, wilson_});
 }
 

@@ -118,16 +118,23 @@ class Backend {
     virtual void finish() {}
 
     /**
-     * The centered two-dimensional FFT of FFT::fftn() (FFT.cpp), in place,
-     * of a field with \p ncomp complex components per site on an
-     * \p n x \p n lattice: forward for \p isign = 1, backward and
-     * normalized by 1/n^2 for -1. The default is the mixed-radix FFT of
-     * the kernel ipg_k_fft_pass; a backend with an FFT library overrides
-     * it.
+     * The two-dimensional FFT, in place, of each of the \p ncomp complex
+     * planes of a field on an \p n x \p n lattice (ipg_kernels.h), in
+     * natural order and not normalized: forward (exp(-i k x)) for
+     * \p isign = 1, backward for -1. The centered FFT of FFT::fftn()
+     * (FFT.cpp) is this one with the checkerboard signs (-1)^(ix + iy)
+     * before and after it, and 1/n^2 backward; the drivers
+     * (DeviceDrivers.cpp) leave them out: between a forward and a backward
+     * transform the signs in momentum space cancel, and those in position
+     * space shift momentum by n/2, so the drivers keep their arrays in
+     * momentum space shifted by n/2 (fftOrder()), with the 1/n^2 of the
+     * backward transform. The default is the mixed-radix FFT of the
+     * kernel ipg_k_fft_pass; a backend with an FFT library overrides it.
      */
-    virtual void centeredFft(Buffer field, int n, int ncomp, int isign);
+    virtual void fft(Buffer field, int n, int ncomp, int isign);
 
-    /// Whether centeredFft() can transform a lattice of side \p n.
+    /// Whether fft() can transform a lattice of side \p n, for the
+    /// drivers: an even one, for the shift by n/2.
     virtual bool fftAvailable(int n) const {
         return n % 2 == 0 && !fftRadices(n).empty();
     }

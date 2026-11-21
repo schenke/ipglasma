@@ -111,7 +111,7 @@ const char *kernelName(Kernel kernel) {
     return (k >= 0 && k < kNumKernels) ? kKernelNames[k] : "unknown";
 }
 
-void Backend::centeredFft(Buffer field, int n, int ncomp, int isign) {
+void Backend::fft(Buffer field, int n, int ncomp, int isign) {
     const std::vector<int> radices = fftRadices(n);
     if (radices.empty()) {
         std::ostringstream message;
@@ -125,19 +125,6 @@ void Backend::centeredFft(Buffer field, int n, int ncomp, int isign) {
     const Buffer table = twiddles(n);
     const Buffer scratch = scratchLike(field);
 
-    // S F S = G M F M (FFT.cpp): the checkerboard signs M go into the first
-    // and the last pass, the global sign G and the normalization into the
-    // last
-    const double globalSign = (((n / 2 + n / 2) & 1) != 0) ? -1. : 1.;
-    const double norm = (isign == -1) ? 1. / (static_cast<double>(n) * n) : 1.;
-    const bool checker = (n % 2 == 0);
-    if (!checker && n > 1) {
-        throw std::runtime_error(
-            "the centered device FFT needs an even lattice size");
-    }
-
-    const int passes = 2 * static_cast<int>(radices.size());
-    int pass = 0;
     Buffer source = field;
     Buffer destination = scratch;
     for (int axis = 0; axis < 2; axis++) {
@@ -150,20 +137,12 @@ void Backend::centeredFft(Buffer field, int n, int ncomp, int isign) {
             p.i1 = radix;
             p.i2 = s;
             p.i3 = (isign == 1) ? 1 : -1;
-            p.i4 = 0;
-            p.r0 = 1.;
-            if (pass == 0 && checker) p.i4 |= 1;
-            if (pass == passes - 1) {
-                if (checker) p.i4 |= 2;
-                p.r0 = globalSign * norm;
-            }
             // one element per butterfly of radix `radix`
             launch(
                 kFftPass, elements / static_cast<std::size_t>(radix), p,
                 {source, destination, table});
             std::swap(source, destination);
             s *= radix;
-            pass++;
         }
     }
     // the result is in `source`; an even number of passes leaves it in
@@ -306,19 +285,17 @@ class ProfilingBackend : public Backend {
     std::size_t bufferSize(Buffer buffer) const override {
         return inner_->bufferSize(buffer);
     }
-    void upload(Buffer buffer, const double *source, std::size_t nReals)
-        override {
+    void upload(
+        Buffer buffer, const double *source, std::size_t nReals) override {
         timed("device.upload", [&] { inner_->upload(buffer, source, nReals); });
     }
-    void download(Buffer buffer, double *destination, std::size_t nReals)
-        override {
+    void download(
+        Buffer buffer, double *destination, std::size_t nReals) override {
         timed("device.download", [&] {
             inner_->download(buffer, destination, nReals);
         });
     }
-    void swapBuffers(Buffer a, Buffer b) override {
-        inner_->swapBuffers(a, b);
-    }
+    void swapBuffers(Buffer a, Buffer b) override { inner_->swapBuffers(a, b); }
     void launch(
         Kernel kernel, std::size_t count, const Params &params,
         std::initializer_list<Buffer> buffers) override {
@@ -328,9 +305,8 @@ class ProfilingBackend : public Backend {
         });
     }
     void finish() override { inner_->finish(); }
-    void centeredFft(Buffer field, int n, int ncomp, int isign) override {
-        timed(
-            "device.fft", [&] { inner_->centeredFft(field, n, ncomp, isign); });
+    void fft(Buffer field, int n, int ncomp, int isign) override {
+        timed("device.fft", [&] { inner_->fft(field, n, ncomp, isign); });
     }
     bool fftAvailable(int n) const override { return inner_->fftAvailable(n); }
     void releaseCaches() override { inner_->releaseCaches(); }

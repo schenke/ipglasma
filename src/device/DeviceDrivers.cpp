@@ -139,6 +139,8 @@ JimwlkDevice::JimwlkDevice(
     }
 }
 
+JimwlkDevice::~JimwlkDevice() { backend_.releaseCaches(); }
+
 void JimwlkDevice::upload(const std::vector<Matrix> &wilsonLines) {
     checkSites(wilsonLines, sites_);
     backend_.upload(wilson_, reals(wilsonLines), 18 * sites_);
@@ -359,6 +361,8 @@ GaugeFixDevice::GaugeFixDevice(Backend &backend, int n)
     backend_.upload(poisson_, factor.data(), sites_);
 }
 
+GaugeFixDevice::~GaugeFixDevice() { backend_.releaseCaches(); }
+
 void GaugeFixDevice::upload(
     const std::vector<Matrix> &ux, const std::vector<Matrix> &uy) {
     checkSites(ux, sites_);
@@ -427,6 +431,8 @@ WilsonLineDevice::WilsonLineDevice(
     rho_ = DeviceBuffer(backend_, 16 * sites_);
     backend_.upload(kernel_, momentumKernel, sites_);
 }
+
+WilsonLineDevice::~WilsonLineDevice() { backend_.releaseCaches(); }
 
 void WilsonLineDevice::upload(
     const std::vector<Matrix> &wilsonLines, const double *scale) {

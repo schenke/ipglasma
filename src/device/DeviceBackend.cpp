@@ -333,6 +333,7 @@ class ProfilingBackend : public Backend {
             "device.fft", [&] { inner_->centeredFft(field, n, ncomp, isign); });
     }
     bool fftAvailable(int n) const override { return inner_->fftAvailable(n); }
+    void releaseCaches() override { inner_->releaseCaches(); }
 
   private:
     /// Runs \p call from an idle device to an idle device and adds its

@@ -317,6 +317,12 @@ class CudaBackend : public ipgdev::Backend {
         checkAfterWait(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
     }
 
+    void releaseCaches() override {
+        releaseShared();
+        for (const auto &plan : plans_) cufftDestroy(plan.second);
+        plans_.clear();
+    }
+
     bool fftAvailable(int n) const override {
         // cuFFT transforms any size; the centering needs an even one
         return useCufft_ ? (n % 2 == 0) : Backend::fftAvailable(n);

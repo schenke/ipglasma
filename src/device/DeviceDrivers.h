@@ -39,6 +39,8 @@ class JimwlkDevice {
     JimwlkDevice(
         Backend &backend, int n, const double *generators, const double *kernel,
         const double *sqrtAlphasNoise, double ds);
+    /// Releases the caches of the backend (Backend::releaseCaches()).
+    ~JimwlkDevice();
     JimwlkDevice(const JimwlkDevice &) = delete;
     JimwlkDevice &operator=(const JimwlkDevice &) = delete;
 
@@ -130,6 +132,8 @@ class YangMillsDevice {
 class GaugeFixDevice {
   public:
     GaugeFixDevice(Backend &backend, int n);
+    /// Releases the caches of the backend (Backend::releaseCaches()).
+    ~GaugeFixDevice();
     GaugeFixDevice(const GaugeFixDevice &) = delete;
     GaugeFixDevice &operator=(const GaugeFixDevice &) = delete;
 
@@ -170,6 +174,8 @@ class WilsonLineDevice {
      * momentum space, per site (Init::computeWilsonLineMomentumKernel()).
      */
     WilsonLineDevice(Backend &backend, int n, const double *momentumKernel);
+    /// Releases the caches of the backend (Backend::releaseCaches()).
+    ~WilsonLineDevice();
     WilsonLineDevice(const WilsonLineDevice &) = delete;
     WilsonLineDevice &operator=(const WilsonLineDevice &) = delete;
 

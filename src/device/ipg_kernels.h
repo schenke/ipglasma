@@ -44,27 +44,26 @@
  * gives only the list (DeviceBackend.h); it is a macro, since the OpenCL
  * backend compiles this file from a string, without its includes. */
 #ifndef IPG_KERNEL_LIST
-#define IPG_KERNEL_LIST(X)                             \
-    X(kCopy, ipg_k_copy)                               \
-    X(kRealToComplex, ipg_k_real_to_complex)           \
-    X(kComplexToReal, ipg_k_complex_to_real)           \
-    X(kScaleBySite, ipg_k_scale_by_site)               \
-    X(kCheckerScale, ipg_k_checker_scale)              \
-    X(kFftPass, ipg_k_fft_pass)                        \
-    X(kGaussNoise, ipg_k_gauss_noise)                  \
-    X(kJimwlkKernelNoise, ipg_k_jimwlk_kernel_noise)   \
-    X(kJimwlkRotate, ipg_k_jimwlk_rotate)              \
-    X(kJimwlkKernelMatrix, ipg_k_jimwlk_kernel_matrix) \
-    X(kJimwlkUpdate, ipg_k_jimwlk_update)              \
-    X(kCymPi, ipg_k_cym_pi)                            \
-    X(kCymE, ipg_k_cym_e)                              \
-    X(kCymPhi, ipg_k_cym_phi)                          \
-    X(kCymU, ipg_k_cym_u)                              \
-    X(kGfDivergence, ipg_k_gf_divergence)              \
-    X(kPartialSum, ipg_k_partial_sum)                  \
-    X(kGfUpdate, ipg_k_gf_update)                      \
-    X(kGfTransform, ipg_k_gf_transform)                \
-    X(kWilsonCharge, ipg_k_wilson_charge)              \
+#define IPG_KERNEL_LIST(X)                           \
+    X(kCopy, ipg_k_copy)                             \
+    X(kScaleBySite, ipg_k_scale_by_site)             \
+    X(kCheckerScale, ipg_k_checker_scale)            \
+    X(kFftPass, ipg_k_fft_pass)                      \
+    X(kGaussNoise, ipg_k_gauss_noise)                \
+    X(kJimwlkPackNoise, ipg_k_jimwlk_pack_noise)     \
+    X(kJimwlkUnpackNoise, ipg_k_jimwlk_unpack_noise) \
+    X(kJimwlkCombine, ipg_k_jimwlk_combine)          \
+    X(kJimwlkRotate, ipg_k_jimwlk_rotate)            \
+    X(kJimwlkUpdate, ipg_k_jimwlk_update)            \
+    X(kCymPi, ipg_k_cym_pi)                          \
+    X(kCymE, ipg_k_cym_e)                            \
+    X(kCymPhi, ipg_k_cym_phi)                        \
+    X(kCymU, ipg_k_cym_u)                            \
+    X(kGfDivergence, ipg_k_gf_divergence)            \
+    X(kPartialSum, ipg_k_partial_sum)                \
+    X(kGfUpdate, ipg_k_gf_update)                    \
+    X(kGfTransform, ipg_k_gf_transform)              \
+    X(kWilsonCharge, ipg_k_wilson_charge)            \
     X(kWilsonExponent, ipg_k_wilson_exponent)
 #endif
 
@@ -573,15 +572,6 @@ ipg_threefry2x32(ipg_u32 c0, ipg_u32 c1, ipg_u32 k0, ipg_u32 k1) {
 /* b1[i] = b0[i]; i over reals */
 IPG_FN void ipg_k_copy(IPG_KERNEL_ARGS) { b1[i] = b0[i]; }
 
-/* complex b1[i] = (real b0[i], 0); i over the complex elements */
-IPG_FN void ipg_k_real_to_complex(IPG_KERNEL_ARGS) {
-    b1[2 * i] = b0[i];
-    b1[2 * i + 1] = IPG_C(0.);
-}
-
-/* real b1[i] = Re(complex b0[i]); i over the complex elements */
-IPG_FN void ipg_k_complex_to_real(IPG_KERNEL_ARGS) { b1[i] = b0[2 * i]; }
-
 /* complex b0[site][c] *= real b1[site]; i over the complex elements,
  * p.ncomp components per site */
 IPG_FN void ipg_k_scale_by_site(IPG_KERNEL_ARGS) {
@@ -812,56 +802,116 @@ IPG_FN void ipg_k_gauss_noise(IPG_KERNEL_ARGS) {
     b0[2 * i + 1] = radius * IPG_SIN(angle);
 }
 
-/* CK[site][a] = K_x xi_x^a + K_y xi_y^a in momentum space.
- *   b0 kernel K [site][2] complex, b1 xi [site][16] complex,
- *   b2 CK [site][8] complex */
-IPG_FN void ipg_k_jimwlk_kernel_noise(IPG_KERNEL_ARGS) {
+/* The JIMWLK step transforms real fields only: the noise xi_d^a and the
+ * coefficients v_d^a = 2 Tr(t_a V_d) of V_d = U xi_d U^dagger (d = x, y,
+ * a = 1..8), and the convolutions CK^a and W^a with K are real too. Two
+ * real fields A, B share one complex transform of A + i B; with Z = F(A +
+ * i B) and m the site of -k (ipg_mirror), F(A) = (Z(k) + Z(m)^*) / 2 and
+ * F(B) = (Z(k) - Z(m)^*) / (2 i). This halves the transforms of a step
+ * (24 complex instead of 51 in JIMWLK::evolutionStep()). */
+
+/* The site of -k in the centered layout (index j of an axis has the
+ * momentum j - n/2, so -k is at (n - j) mod n). */
+IPG_FN int ipg_mirror(int i, int n) {
+    const int ix = i / n;
+    const int iy = i % n;
+    return ((n - ix) % n) * n + (n - iy) % n;
+}
+
+/* Z^a = xi_x^a + i xi_y^a.
+ *   b0 real noise [site][16] (x components first), b1 Z [site][8]
+ *   complex */
+IPG_FN void ipg_k_jimwlk_pack_noise(IPG_KERNEL_ARGS) {
+    int a;
+    for (a = 0; a < 8; a++) {
+        b1[16 * i + 2 * a] = b0[16 * i + a];
+        b1[16 * i + 2 * a + 1] = b0[16 * i + 8 + a];
+    }
+}
+
+/* The inverse of ipg_k_jimwlk_pack_noise (for the noise coupling).
+ *   b0 Z [site][8] complex, b1 real noise [site][16] */
+IPG_FN void ipg_k_jimwlk_unpack_noise(IPG_KERNEL_ARGS) {
+    int a;
+    for (a = 0; a < 8; a++) {
+        b1[16 * i + a] = b0[16 * i + 2 * a];
+        b1[16 * i + 8 + a] = b0[16 * i + 2 * a + 1];
+    }
+}
+
+/* From the transforms Z^a = F(A_x^a + i A_y^a) of eight pairs of real
+ * fields, R^a = K_x F(A_x^a) + K_y F(A_y^a), the transform of the real
+ * convolution sum_d K_d * A_d^a, packed in pairs for the inverse
+ * transform: P_j = R^{2j} + i R^{2j+1}, so that its inverse is
+ * r^{2j} + i r^{2j+1} with the real convolutions r^a. K is the kernel with
+ * K(-k) = K(k)^* (JimwlkDevice symmetrizes it), so that R^a(-k) =
+ * R^a(k)^* and r^a is real: its real part where the CPU code
+ * (JIMWLK::evolutionStep()) takes the real part of CK, and the Hermitian
+ * part of its W.
+ *   b0 kernel K [site][2] complex, b1 Z [site][8] complex,
+ *   b2 P [site][4] complex: r^a at the real number 8 site + a after the
+ *   inverse transform */
+IPG_FN void ipg_k_jimwlk_combine(IPG_KERNEL_ARGS) {
+    const int m = ipg_mirror(i, p.n);
     const ipg_real kxr = b0[4 * i];
     const ipg_real kxi = b0[4 * i + 1];
     const ipg_real kyr = b0[4 * i + 2];
     const ipg_real kyi = b0[4 * i + 3];
+    ipg_real rr[8], ri[8];
     int a;
     for (a = 0; a < 8; a++) {
-        const ipg_real xr = b1[32 * i + 2 * a];
-        const ipg_real xi = b1[32 * i + 2 * a + 1];
-        const ipg_real yr = b1[32 * i + 2 * (a + 8)];
-        const ipg_real yi = b1[32 * i + 2 * (a + 8) + 1];
-        b2[16 * i + 2 * a] = (kxr * xr - kxi * xi) + (kyr * yr - kyi * yi);
-        b2[16 * i + 2 * a + 1] = (kxr * xi + kxi * xr) + (kyr * yi + kyi * yr);
+        const ipg_real zkr = b1[16 * i + 2 * a];
+        const ipg_real zki = b1[16 * i + 2 * a + 1];
+        const ipg_real zmr = b1[16 * m + 2 * a];
+        const ipg_real zmi = b1[16 * m + 2 * a + 1];
+        /* X = (Z(k) + Z(m)^*) / 2, Y = (Z(k) - Z(m)^*) / (2 i) */
+        const ipg_real xr = IPG_C(0.5) * (zkr + zmr);
+        const ipg_real xi = IPG_C(0.5) * (zki - zmi);
+        const ipg_real yr = IPG_C(0.5) * (zki + zmi);
+        const ipg_real yi = -IPG_C(0.5) * (zkr - zmr);
+        rr[a] = (kxr * xr - kxi * xi) + (kyr * yr - kyi * yi);
+        ri[a] = (kxr * xi + kxi * xr) + (kyr * yi + kyi * yr);
+    }
+    for (a = 0; a < 4; a++) {
+        /* R^{2a} + i R^{2a+1} */
+        b2[8 * i + 2 * a] = rr[2 * a] - ri[2 * a + 1];
+        b2[8 * i + 2 * a + 1] = ri[2 * a] + rr[2 * a + 1];
     }
 }
 
-/* V_d[site] = U (sum_a xi_d^a t_a) U^dagger for d = x, y.
+/* Re Tr(a b). */
+IPG_FN ipg_real ipg_re_trace_mul(ipg_su3 a, ipg_su3 b) {
+    ipg_real t = IPG_C(0.);
+    int j, k;
+    for (j = 0; j < 3; j++) {
+        for (k = 0; k < 3; k++) {
+            const int jk = 2 * (3 * j + k);
+            const int kj = 2 * (3 * k + j);
+            t += a.e[jk] * b.e[kj] - a.e[jk + 1] * b.e[kj + 1];
+        }
+    }
+    return t;
+}
+
+/* The coefficients v_d^a = 2 Tr(t_a V_d) of V_d = U (sum_b xi_d^b t_b)
+ * U^dagger, d = x, y, packed as Z^a = v_x^a + i v_y^a for the transform.
  *   b0 Wilson lines U, b1 real noise [site][16], b2 generators [8] su3,
- *   b3 V [site][2] su3 */
+ *   b3 Z [site][8] complex */
 IPG_FN void ipg_k_jimwlk_rotate(IPG_KERNEL_ARGS) {
     const ipg_su3 U = ipg_load(b0, i);
     int d, a, k;
     for (d = 0; d < 2; d++) {
         ipg_su3 A = ipg_zero();
+        ipg_su3 V, t;
         for (a = 0; a < 8; a++) {
             const ipg_real c = b1[16 * i + 8 * d + a];
             for (k = 0; k < 18; k++) A.e[k] += c * b2[18 * a + k];
         }
-        ipg_store(b3, 2 * i + d, ipg_mul(U, ipg_mul_adj(A, U)));
-    }
-}
-
-/* W[site] = K_x V_x + K_y V_y in momentum space.
- *   b0 kernel K, b1 V [site][2] su3, b2 W [site] su3 */
-IPG_FN void ipg_k_jimwlk_kernel_matrix(IPG_KERNEL_ARGS) {
-    const ipg_real kxr = b0[4 * i];
-    const ipg_real kxi = b0[4 * i + 1];
-    const ipg_real kyr = b0[4 * i + 2];
-    const ipg_real kyi = b0[4 * i + 3];
-    int k;
-    for (k = 0; k < 9; k++) {
-        const ipg_real xr = b1[36 * i + 2 * k];
-        const ipg_real xi = b1[36 * i + 2 * k + 1];
-        const ipg_real yr = b1[36 * i + 18 + 2 * k];
-        const ipg_real yi = b1[36 * i + 18 + 2 * k + 1];
-        b2[18 * i + 2 * k] = (kxr * xr - kxi * xi) + (kyr * yr - kyi * yi);
-        b2[18 * i + 2 * k + 1] = (kxr * xi + kxi * xr) + (kyr * yi + kyi * yr);
+        V = ipg_mul(U, ipg_mul_adj(A, U));
+        for (a = 0; a < 8; a++) {
+            for (k = 0; k < 18; k++) t.e[k] = b2[18 * a + k];
+            b3[16 * i + 2 * a + d] = IPG_C(2.) * ipg_re_trace_mul(t, V);
+        }
     }
 }
 
@@ -880,39 +930,26 @@ IPG_FN ipg_su3 ipg_unitarize_single(ipg_su3 u) {
     return ipg_scale(ipg_mul(u, h), IPG_C(0.5));
 }
 
-/* U <- exp(-i sqrt(ds) W) U exp(i sqrt(ds) sum_a Re(CK^a) t_a).
- *   b0 Wilson lines U, b1 W [site] su3, b2 CK [site][8] complex,
+/* U <- exp(-i sqrt(ds) W) U exp(i sqrt(ds) sum_a CK^a t_a), with
+ * W = sum_a w^a t_a: Hermitian and traceless, from the real convolutions
+ * w^a and CK^a of ipg_k_jimwlk_combine (JIMWLK::evolutionStep() uses the
+ * Hermitian part of its W and the real part of its CK, up to rounding).
+ *   b0 Wilson lines U, b1 w [site][8] real, b2 CK [site][8] real,
  *   b3 generators; r0 = sqrt(ds) */
 IPG_FN void ipg_k_jimwlk_update(IPG_KERNEL_ARGS) {
-    const ipg_su3 W = ipg_load(b1, i);
-    ipg_su3 Q, A;
-    ipg_real trace;
+    ipg_su3 Q = ipg_zero();
+    ipg_su3 A = ipg_zero();
     int a, k;
-    /* W is Hermitian and traceless up to rounding (the convolution of the
-     * Hermitian traceless V xi V^dagger with a real kernel): its Hermitian
-     * traceless part, times -sqrt(ds), so that the left factor is
-     * exp(i Q), evaluated in closed form like the right one (the CPU code,
-     * JIMWLK::evolutionStep(), uses the Pade exponential for both; the
-     * results agree up to rounding) */
-    for (k = 0; k < 3; k++) {
-        int l;
-        for (l = 0; l < 3; l++) {
-            const int kl = 2 * (3 * k + l);
-            const int lk = 2 * (3 * l + k);
-            Q.e[kl] = -p.r0 * IPG_C(0.5) * (W.e[kl] + W.e[lk]);
-            Q.e[kl + 1] = -p.r0 * IPG_C(0.5) * (W.e[kl + 1] - W.e[lk + 1]);
+    /* the left factor is exp(i Q) with Q = -sqrt(ds) W */
+    for (a = 0; a < 8; a++) {
+        const ipg_real w = -p.r0 * b1[8 * i + a];
+        const ipg_real c = p.r0 * b2[8 * i + a];
+        for (k = 0; k < 18; k++) {
+            Q.e[k] += w * b3[18 * a + k];
+            A.e[k] += c * b3[18 * a + k];
         }
     }
-    trace = (Q.e[0] + Q.e[8] + Q.e[16]) / IPG_C(3.);
-    Q.e[0] -= trace;
-    Q.e[8] -= trace;
-    Q.e[16] -= trace;
-    A = ipg_zero();
-    for (a = 0; a < 8; a++) {
-        const ipg_real c = p.r0 * b2[16 * i + 2 * a];
-        for (k = 0; k < 18; k++) A.e[k] += c * b3[18 * a + k];
-    }
-    /* U <- exp(i Q) U exp(i A), A = sqrt(ds) sum_a Re(CK^a) t_a. In double
+    /* U <- exp(i Q) U exp(i A), A = sqrt(ds) sum_a CK^a t_a. In double
      * precision in closed form (half the time of the Pade exponential on
      * an RTX 4070); in single precision the closed form loses accuracy
      * for the small arguments of a step (sqrt(ds) ~ 0.05: the Wilson lines

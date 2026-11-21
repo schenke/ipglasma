@@ -73,7 +73,10 @@ class JimwlkDevice {
     const double sqrtDs_;
     const bool noiseCoupling_;
     DeviceBuffer wilson_, generators_, kernel_, alphas_;
-    DeviceBuffer noise_, xi_, eta_, ck_, v_, w_;
+    /// the real noise [site][16]; the packed transforms of the noise, of
+    /// the noise coupling and of the rotated noise [site][8] complex; the
+    /// convolutions CK and W, [site][8] real (ipg_k_jimwlk_combine)
+    DeviceBuffer noise_, zxi_, eta_, zv_, ck_, w_;
 
     /// The step once the noise is in noise_.
     void evolveWithNoise();

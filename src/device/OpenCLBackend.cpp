@@ -44,8 +44,6 @@ const char *const kKernelSource =
 #include "ipg_kernels_source.inc"
     ;
 
-
-
 // ipg_params of ipg_kernels.h for the two precisions
 struct ParamsSingle {
     cl_int i[8];
@@ -232,7 +230,9 @@ class OpenCLBackend : public ipgdev::Backend {
             throw std::runtime_error(message.str());
         }
         for (int k = 0; k < ipgdev::kNumKernels; k++) {
-            const std::string name = std::string(ipgdev::kernelName(static_cast<ipgdev::Kernel>(k))) + "_cl";
+            const std::string name =
+                std::string(ipgdev::kernelName(static_cast<ipgdev::Kernel>(k)))
+                + "_cl";
             kernels_[k] = clCreateKernel(program_, name.c_str(), &status);
             check(status, "clCreateKernel");
         }

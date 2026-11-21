@@ -10,9 +10,9 @@
 #include <vector>
 
 #include "Instrumentation.h"
+#include "Matrix.h"
 #include "device/DeviceBackend.h"
 #include "device/DeviceDrivers.h"
-#include "Matrix.h"
 
 namespace {
 
@@ -125,8 +125,7 @@ inline double projectGaugeDivergenceSU3(
  */
 void applyGaugeTransformation(Lattice *lat, const int N) {
     {
-        IPG_PROFILE_SCOPE(
-            "observables.gluon_multiplicity.gauge_fix.transform");
+        IPG_PROFILE_SCOPE("observables.gluon_multiplicity.gauge_fix.transform");
 
         // Apply the complete gauge transformation directly to each field
         // element.  Ux1 stores the already-computed g(x) and is read-only
@@ -141,12 +140,12 @@ void applyGaugeTransformation(Lattice *lat, const int N) {
             for (int i = 0; i < N; i++) {
                 for (int j = 0; j < N; j++) {
                     const int localpos = lat->positionFromXY(i, j);
-                    const int localpospX =
-                        (i == N - 1) ? lat->positionFromXY(0, j)
-                                     : lat->positionFromXY(i + 1, j);
-                    const int localpospY =
-                        (j == N - 1) ? lat->positionFromXY(i, 0)
-                                     : lat->positionFromXY(i, j + 1);
+                    const int localpospX = (i == N - 1)
+                                               ? lat->positionFromXY(0, j)
+                                               : lat->positionFromXY(i + 1, j);
+                    const int localpospY = (j == N - 1)
+                                               ? lat->positionFromXY(i, 0)
+                                               : lat->positionFromXY(i, j + 1);
 
                     g = lat->Ux1[localpos];
                     gdag = g;
@@ -276,8 +275,7 @@ void GaugeFix::fftChi(
                 bestResidual = deviceResidual;
                 bestIteration = gfiter;
             } else if (
-                backend.singlePrecision()
-                && bestResidual < kGaugeFixSingleFloor
+                backend.singlePrecision() && bestResidual < kGaugeFixSingleFloor
                 && gfiter - bestIteration >= kGaugeFixStagnationSingle) {
                 // at the rounding of single precision: the host continues
                 break;

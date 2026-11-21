@@ -42,7 +42,9 @@ jobs:
         run: ctest --test-dir build --output-on-failure
 
   cuda-build:
-    runs-on: ubuntu-latest
+    # the Ubuntu of the NVIDIA repository below; CUDA 12.6 also needs a GCC
+    # of at most 13, which ubuntu-latest (26.04) no longer has
+    runs-on: ubuntu-24.04
     env:
       # the toolkit of the NVIDIA repository; only the compiler and cuFFT
       CUDA_VERSION: "12-6"

@@ -86,6 +86,32 @@ std::vector<DeviceCase> deviceCases() {
     return cases;
 }
 
+// IPGLASMA_TEST_REQUIRE_DEVICES, a comma-separated list of labels such as
+// "opencl/double,opencl/single", names the cases that must exist, so that
+// a CI job fails instead of skipping a backend it is meant to test
+// (.github/workflows/device.yml)
+TEST_CASE("the device cases of IPGLASMA_TEST_REQUIRE_DEVICES exist") {
+    const char *required = std::getenv("IPGLASMA_TEST_REQUIRE_DEVICES");
+    if (required == nullptr) return;
+    std::vector<std::string> labels;
+    for (const DeviceCase &device : deviceCases()) {
+        labels.push_back(device.label);
+    }
+    std::string list(required);
+    std::size_t start = 0;
+    while (start <= list.size()) {
+        std::size_t end = list.find(',', start);
+        if (end == std::string::npos) end = list.size();
+        const std::string label = list.substr(start, end - start);
+        if (!label.empty()) {
+            CAPTURE(label);
+            CHECK(
+                std::find(labels.begin(), labels.end(), label) != labels.end());
+        }
+        start = end + 1;
+    }
+}
+
 // IPGLASMA_TEST_VERBOSE=1 prints the differences the checks compare
 void report(const std::string &what, double difference) {
     if (std::getenv("IPGLASMA_TEST_VERBOSE") != nullptr) {

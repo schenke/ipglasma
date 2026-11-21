@@ -1,0 +1,73 @@
+name: Device backends
+
+# The kernels of the device layer (src/device/ipg_kernels.h) are compiled
+# three ways: as C++ for the host backend, which every build has and
+# tests.yml tests; by nvcc for the CUDA backend; and at run time by the
+# OpenCL driver. The runners have no GPU, so this workflow runs the OpenCL
+# backend on the CPU with PoCL, through the unit tests, which compare every
+# stage on the device with the CPU code (tests/test_device.cpp), and
+# compiles the CUDA backend without running it.
+
+on:
+  push:
+    branches: [devel, main]
+  pull_request:
+    branches: [devel, main]
+
+jobs:
+  opencl-pocl:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfftw3-dev libgsl-dev \
+            ocl-icd-opencl-dev opencl-headers pocl-opencl-icd clinfo
+
+      - name: OpenCL devices
+        run: clinfo -l
+
+      - name: Configure
+        run: cmake -B build -Dunittest=ON -DdisableMPI=ON -DIPGLASMA_OPENCL=ON
+
+      - name: Build
+        run: cmake --build build -j"$(nproc)"
+
+      - name: Run unit tests
+        # fail instead of skipping the OpenCL cases if PoCL does not work
+        env:
+          IPGLASMA_TEST_REQUIRE_DEVICES: opencl/double,opencl/single
+        run: ctest --test-dir build --output-on-failure
+
+  cuda-build:
+    runs-on: ubuntu-latest
+    env:
+      # the toolkit of the NVIDIA repository; only the compiler and cuFFT
+      CUDA_VERSION: "12-6"
+      CUDA_PATH: /usr/local/cuda-12.6
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libfftw3-dev libgsl-dev
+          wget -q https://developer.download.nvidia.com/compute/cuda/repos/ubuntu2404/x86_64/cuda-keyring_1.1-1_all.deb
+          sudo dpkg -i cuda-keyring_1.1-1_all.deb
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            cuda-nvcc-${CUDA_VERSION} cuda-cudart-dev-${CUDA_VERSION} \
+            libcufft-dev-${CUDA_VERSION}
+
+      - name: Configure
+        run: |
+          cmake -B build -Dunittest=ON -DdisableMPI=ON -DIPGLASMA_CUDA=ON \
+            -DCMAKE_CUDA_COMPILER=${CUDA_PATH}/bin/nvcc \
+            -DCUDAToolkit_ROOT=${CUDA_PATH} \
+            -DCMAKE_CUDA_ARCHITECTURES=80
+
+      - name: Build
+        # compiled only: no GPU to run it on
+        run: cmake --build build -j"$(nproc)"

@@ -23,7 +23,7 @@ constexpr double kGaugeFixTolerance = 1e-12;
 constexpr double kGaugeFixReferenceSpacing = 0.1;
 /// Iterations without a new minimum of the residual after which the gauge
 /// fixing stops.
-constexpr int kGaugeFixStagnation = 500;
+constexpr int kGaugeFixStagnation = 1000;
 /// The same for a device in single precision: the residual of its links
 /// cannot fall below their rounding, about 3e-15, and the host continues
 /// from there in double precision.
@@ -207,10 +207,14 @@ void GaugeFix::fftChi(
     bool converged = false;
     int iterations = max_gfiter;
 
-    // The residual can stay flat, or rise by a factor of 30, for up to about
-    // 100 iterations before it falls again (512^2, a = 0.0075 fm); only when
-    // it has not reached a new minimum in kGaugeFixStagnation iterations has
-    // it stopped converging (e.g. at the rounding level, about 1e-35).
+    // The residual can stay flat, or rise by a factor of 30, for a few
+    // hundred iterations before it falls again: in a central Pb+Pb event
+    // with JIMWLK at 512^2 (a = 0.059 fm) its minimum of 5.0e-12 at
+    // iteration 285 was first undercut at iteration 790, and the gauge was
+    // fixed at iteration 943; with a limit of 500 iterations the fixing
+    // stopped at 785 with dN/dy 0.6% low. Only when the residual has not
+    // reached a new minimum in kGaugeFixStagnation iterations has it
+    // stopped converging (e.g. at the rounding level, about 1e-35).
     double bestResidual = 0.;
     int bestIteration = 0;
     double gresidual = 0.;

@@ -16,6 +16,7 @@
 #include <cufft.h>
 
 #include <cstdlib>
+#include <iostream>
 #include <map>
 #include <memory>
 #include <sstream>
@@ -48,6 +49,20 @@ void check(cudaError_t status, const char *what) {
         std::ostringstream message;
         message << "CUDA: " << what << " failed: "
                 << cudaGetErrorString(status);
+        throw std::runtime_error(message.str());
+    }
+}
+
+/// check() for the calls that wait for the device (copies,
+/// synchronization): kernels run asynchronously, so an error of an
+/// earlier kernel only shows up here.
+void checkAfterWait(cudaError_t status, const char *what) {
+    if (status != cudaSuccess) {
+        std::ostringstream message;
+        message << "CUDA: " << what << " failed: " << cudaGetErrorString(status)
+                << " (this can be the error of an earlier kernel; "
+                   "IPGLASMA_DEVICE_PROFILE=1 waits after every kernel and "
+                   "names the one that fails)";
         throw std::runtime_error(message.str());
     }
 }
@@ -125,10 +140,22 @@ class CudaBackend : public ipgdev::Backend {
         sizes_.push_back(nReals);
         return static_cast<ipgdev::Buffer>(buffers_.size() - 1);
     }
+    // Never throws, since the destructors of the drivers and of the backend
+    // call it: a buffer released before is left alone, the error of a CUDA
+    // runtime that is already shutting down (at program exit) is ignored,
+    // and other errors are only reported.
     void releaseBuffer(ipgdev::Buffer buffer) override {
-        check(cudaFree(memory(buffer)), "cudaFree");
-        buffers_[static_cast<std::size_t>(buffer)] = nullptr;
-        sizes_[static_cast<std::size_t>(buffer)] = 0;
+        const std::size_t index = static_cast<std::size_t>(buffer);
+        if (buffer < 0 || index >= buffers_.size()) return;
+        void *pointer = buffers_[index];
+        buffers_[index] = nullptr;
+        sizes_[index] = 0;
+        if (pointer == nullptr) return;
+        const cudaError_t status = cudaFree(pointer);
+        if (status != cudaSuccess && status != cudaErrorCudartUnloading) {
+            std::cerr << "[Warning] CUDA: cudaFree failed: "
+                      << cudaGetErrorString(status) << std::endl;
+        }
     }
     std::size_t bufferSize(ipgdev::Buffer buffer) const override {
         return sizes_.at(static_cast<std::size_t>(buffer));
@@ -145,7 +172,7 @@ class CudaBackend : public ipgdev::Backend {
             }
             data = convert_.data();
         }
-        check(
+        checkAfterWait(
             cudaMemcpy(
                 memory(buffer), data, nReals * realSize(),
                 cudaMemcpyHostToDevice),
@@ -160,7 +187,7 @@ class CudaBackend : public ipgdev::Backend {
             convert_.resize(nReals);
             data = convert_.data();
         }
-        check(
+        checkAfterWait(
             cudaMemcpy(
                 data, memory(buffer), nReals * realSize(),
                 cudaMemcpyDeviceToHost),
@@ -199,7 +226,7 @@ class CudaBackend : public ipgdev::Backend {
     }
 
     void finish() override {
-        check(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
+        checkAfterWait(cudaDeviceSynchronize(), "cudaDeviceSynchronize");
     }
 
     bool fftAvailable(int n) const override {

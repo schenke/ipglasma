@@ -9,6 +9,7 @@
 #include <complex>
 #include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <fstream>
 #include <iostream>
 #include <random>
@@ -73,6 +74,28 @@ std::string versionString() {
     return version;
 }
 
+namespace {
+/// The handler of std::terminate (set in main()): prints the exception that
+/// nothing caught and ends the run, with MPI_Abort for all ranks.
+[[noreturn]] void terminateWithMessage() {
+    std::string what = "std::terminate called without an exception";
+    if (const std::exception_ptr exception = std::current_exception()) {
+        try {
+            std::rethrow_exception(exception);
+        } catch (const std::exception &e) {
+            what = e.what();
+        } catch (...) {
+            what = "an exception of unknown type";
+        }
+    }
+    std::cerr << "[Error] [main]: " << what << ". Exiting." << std::endl;
+#ifndef DISABLEMPI
+    MPI_Abort(MPI_COMM_WORLD, 1);
+#endif
+    std::abort();
+}
+}  // namespace
+
 // main program 1
 int main(int argc, char *argv[]) {
     // "ipglasma --version" prints the version and exits, without MPI
@@ -98,6 +121,9 @@ int main(int argc, char *argv[]) {
     rank = 0;
     size = 1;
 #endif
+    // an exception that nothing catches (e.g. an error of the device during
+    // an event) is printed and ends all ranks
+    std::set_terminate(terminateWithMessage);
 
     ipg::Profiler::instance().initialize(rank);
 
@@ -427,6 +453,10 @@ int main(int argc, char *argv[]) {
             messager.flush("warning");
         }
     }
+
+    // the device (IPGLASMA_DEVICE) is released while its runtime is still
+    // up, not by a static destructor at exit
+    ipgdev::releaseRunBackend();
 
 #ifndef DISABLEMPI
     MPI_Finalize();

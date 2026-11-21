@@ -838,26 +838,59 @@ IPG_FN void ipg_k_jimwlk_kernel_matrix(IPG_KERNEL_ARGS) {
  *   b3 generators; r0 = sqrt(ds) */
 IPG_FN void ipg_k_jimwlk_update(IPG_KERNEL_ARGS) {
     const ipg_su3 W = ipg_load(b1, i);
-    ipg_su3 left, right, A;
+    ipg_su3 Q, A;
+    ipg_real trace;
     int a, k;
-    /* -i sqrt(ds) (re + i im) = sqrt(ds) (im - i re) */
-    for (k = 0; k < 9; k++) {
-        left.e[2 * k] = p.r0 * W.e[2 * k + 1];
-        left.e[2 * k + 1] = -p.r0 * W.e[2 * k];
+    /* W is Hermitian and traceless up to rounding (the convolution of the
+     * Hermitian traceless V xi V^dagger with a real kernel): its Hermitian
+     * traceless part, times -sqrt(ds), so that the left factor is
+     * exp(i Q), evaluated in closed form like the right one (the CPU code,
+     * JIMWLK::evolutionStep(), uses the Pade exponential for both; the
+     * results agree up to rounding) */
+    for (k = 0; k < 3; k++) {
+        int l;
+        for (l = 0; l < 3; l++) {
+            const int kl = 2 * (3 * k + l);
+            const int lk = 2 * (3 * l + k);
+            Q.e[kl] = -p.r0 * IPG_C(0.5) * (W.e[kl] + W.e[lk]);
+            Q.e[kl + 1] = -p.r0 * IPG_C(0.5) * (W.e[kl + 1] - W.e[lk + 1]);
+        }
     }
+    trace = (Q.e[0] + Q.e[8] + Q.e[16]) / IPG_C(3.);
+    Q.e[0] -= trace;
+    Q.e[8] -= trace;
+    Q.e[16] -= trace;
     A = ipg_zero();
     for (a = 0; a < 8; a++) {
-        const ipg_real c = b2[16 * i + 2 * a];
+        const ipg_real c = p.r0 * b2[16 * i + 2 * a];
         for (k = 0; k < 18; k++) A.e[k] += c * b3[18 * a + k];
     }
-    /* i sqrt(ds) (re + i im) = sqrt(ds) (-im + i re) */
-    for (k = 0; k < 9; k++) {
-        right.e[2 * k] = -p.r0 * A.e[2 * k + 1];
-        right.e[2 * k + 1] = p.r0 * A.e[2 * k];
+    /* U <- exp(i Q) U exp(i A), A = sqrt(ds) sum_a Re(CK^a) t_a. In double
+     * precision in closed form (half the time of the Pade exponential on
+     * an RTX 4070); in single precision the closed form loses accuracy
+     * for the small arguments of a step (sqrt(ds) ~ 0.05: the Wilson lines
+     * deviated 1.3e-5 from the CPU instead of 4.5e-6), so there the Pade
+     * exponential of i Q and i A. (sizeof is a compile-time constant in
+     * all four languages of this file.) */
+    if (sizeof(ipg_real) >= 8) {
+        ipg_store(
+            b0, i,
+            ipg_mul(
+                ipg_mul(ipg_expi_hermitian(Q), ipg_load(b0, i)),
+                ipg_expi_hermitian(A)));
+    } else {
+        ipg_su3 left, right;
+        /* i (re + i im) = -im + i re */
+        for (k = 0; k < 9; k++) {
+            left.e[2 * k] = -Q.e[2 * k + 1];
+            left.e[2 * k + 1] = Q.e[2 * k];
+            right.e[2 * k] = -A.e[2 * k + 1];
+            right.e[2 * k + 1] = A.e[2 * k];
+        }
+        ipg_store(
+            b0, i,
+            ipg_mul(ipg_mul(ipg_expm(left), ipg_load(b0, i)), ipg_expm(right)));
     }
-    ipg_store(
-        b0, i,
-        ipg_mul(ipg_mul(ipg_expm(left), ipg_load(b0, i)), ipg_expm(right)));
 }
 
 /* ---- classical Yang-Mills leapfrog (Evolution.cpp) ----

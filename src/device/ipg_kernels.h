@@ -833,6 +833,21 @@ IPG_FN void ipg_k_jimwlk_kernel_matrix(IPG_KERNEL_ARGS) {
     }
 }
 
+/* In single precision, one Newton-Schulz step towards U(3),
+ * U <- U (3 - U^dagger U) / 2, as in ipg_k_gf_update: it removes the
+ * non-unitary part of the rounding of a step to first order, so that it
+ * does not accumulate over the hundreds of steps of an evolution. In double
+ * precision U is returned unchanged (sizeof is a compile-time constant). */
+IPG_FN ipg_su3 ipg_unitarize_single(ipg_su3 u) {
+    ipg_su3 h;
+    int k;
+    if (sizeof(ipg_real) >= 8) return u;
+    h = ipg_adj_mul(u, u);
+    for (k = 0; k < 18; k++) h.e[k] = -h.e[k];
+    h = ipg_add_diag(h, IPG_C(3.));
+    return ipg_scale(ipg_mul(u, h), IPG_C(0.5));
+}
+
 /* U <- exp(-i sqrt(ds) W) U exp(i sqrt(ds) sum_a Re(CK^a) t_a).
  *   b0 Wilson lines U, b1 W [site] su3, b2 CK [site][8] complex,
  *   b3 generators; r0 = sqrt(ds) */
@@ -889,7 +904,8 @@ IPG_FN void ipg_k_jimwlk_update(IPG_KERNEL_ARGS) {
         }
         ipg_store(
             b0, i,
-            ipg_mul(ipg_mul(ipg_expm(left), ipg_load(b0, i)), ipg_expm(right)));
+            ipg_unitarize_single(ipg_mul(
+                ipg_mul(ipg_expm(left), ipg_load(b0, i)), ipg_expm(right))));
     }
 }
 
@@ -1014,14 +1030,14 @@ IPG_FN void ipg_k_cym_phi(IPG_KERNEL_ARGS) { b0[i] += p.r0 * b1[i]; }
 IPG_FN void ipg_k_cym_u(IPG_KERNEL_ARGS) {
     ipg_store(
         b0, i,
-        ipg_mul(
+        ipg_unitarize_single(ipg_mul(
             ipg_expi_hermitian(ipg_scale(ipg_load(b2, i), p.r0)),
-            ipg_load(b0, i)));
+            ipg_load(b0, i))));
     ipg_store(
         b1, i,
-        ipg_mul(
+        ipg_unitarize_single(ipg_mul(
             ipg_expi_hermitian(ipg_scale(ipg_load(b3, i), p.r0)),
-            ipg_load(b1, i)));
+            ipg_load(b1, i))));
 }
 
 /* ---- Coulomb gauge fixing (GaugeFix.cpp) ----

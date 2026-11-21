@@ -258,6 +258,20 @@ class OpenCLBackend : public ipgdev::Backend {
             }
             localSize_ = static_cast<std::size_t>(requested);
         }
+        // a kernel can allow fewer work items per group than the device
+        // (registers, private memory), e.g. the large double-precision
+        // kernels on some GPUs: each is launched with at most its own limit
+        for (int k = 0; k < ipgdev::kNumKernels; k++) {
+            std::size_t kernelMax = localSize_;
+            if (clGetKernelWorkGroupInfo(
+                    kernels_[k], device_, CL_KERNEL_WORK_GROUP_SIZE,
+                    sizeof(kernelMax), &kernelMax, nullptr)
+                    != CL_SUCCESS
+                || kernelMax < 1) {
+                kernelMax = localSize_;
+            }
+            kernelLocalSize_[k] = std::min(localSize_, kernelMax);
+        }
         // bound to the buffer arguments a kernel does not use
         dummy_ = clCreateBuffer(
             context_, CL_MEM_READ_WRITE, 8 * realSize(), nullptr, &status);
@@ -402,11 +416,11 @@ class OpenCLBackend : public ipgdev::Backend {
                 clSetKernelArg(clKernel, k + 2, sizeof(cl_mem), &arguments[k]),
                 "clSetKernelArg");
         }
-        const std::size_t global =
-            (count + localSize_ - 1) / localSize_ * localSize_;
+        const std::size_t local = kernelLocalSize_[kernel];
+        const std::size_t global = (count + local - 1) / local * local;
         check(
             clEnqueueNDRangeKernel(
-                queue_, clKernel, 1, nullptr, &global, &localSize_, 0, nullptr,
+                queue_, clKernel, 1, nullptr, &global, &local, 0, nullptr,
                 nullptr),
             "clEnqueueNDRangeKernel");
     }
@@ -437,6 +451,9 @@ class OpenCLBackend : public ipgdev::Backend {
     cl_command_queue queue_ = nullptr;
     cl_program program_ = nullptr;
     cl_kernel kernels_[ipgdev::kNumKernels] = {};
+    /// The work-group size of each kernel: localSize_, or less where the
+    /// kernel allows less (CL_KERNEL_WORK_GROUP_SIZE).
+    std::size_t kernelLocalSize_[ipgdev::kNumKernels] = {};
     cl_mem dummy_ = nullptr;
     std::size_t localSize_ = 64;
     std::vector<cl_mem> buffers_;

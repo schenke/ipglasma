@@ -913,10 +913,10 @@ the main `README.md`), and compares what the two runs write:
 - **Wilson lines** of both nuclei after the JIMWLK evolution (binary files,
   all digits) and their unitarity.
 - **Integrated observables:** dN/dy, dE/dy and ⟨k_T⟩ of the gluons, the
-  eccentricities ε₂ to ε₆ (with `eccentricityCutoff 0.1`: with the default
-  cutoff 0, the columns of the eccentricity file that count the cells above
-  the cutoff depend on the sign of the rounding in the vacuum, on the CPU
-  as well).
+  eccentricities ε₂ to ε₆ (with `eccentricityCutoff 0.1`, a margin over
+  the default 0.01 for single precision: with a cutoff of 0, the columns of
+  the eccentricity file that count the cells above the cutoff depend on
+  the sign of the rounding in the vacuum, on the CPU as well).
 - **Hydro fields:** ε and u^μ in three bands of ε/max(ε): above 0.1, 0.01
   to 0.1, and 0.001 to 0.01.
 - **Times** of the JIMWLK evolution, the Yang–Mills evolution and the event,

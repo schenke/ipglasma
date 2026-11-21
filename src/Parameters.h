@@ -381,8 +381,9 @@ struct OutputParameters {
     /// (Eccentricity::compute(), which needs the flow-velocity solve).
     bool computeEccentricities = false;
     /// Energy density [GeV/fm\f$^3\f$] below which a cell is left out of
-    /// the eccentricities (see Eccentricity::compute()).
-    double eccentricityCutoff = 0.;
+    /// the eccentricities (see Eccentricity::compute()); well above the
+    /// rounding of the vacuum, also in single precision on a device.
+    double eccentricityCutoff = 0.01;
     /// Whether to write the hydro initial condition (\f$\epsilon\f$,
     /// \f$u^\mu\f$, \f$\pi^{\mu\nu}\f$), `epsilon-u-Hydro-*.dat`.
     bool writeHydro = false;

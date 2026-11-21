@@ -947,7 +947,7 @@ const std::vector<ParameterSpec> &parameterTable() {
             "eccentricityCutoff", &P::output,
             &OutputParameters::eccentricityCutoff)
             .onlyIf(eccentricitiesComputed)
-            .optional("0")
+            .optional("0.01")
             .check(nonNegative()),
 
         // output

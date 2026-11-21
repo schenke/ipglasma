@@ -221,8 +221,7 @@ int main(int argc, char *argv[]) {
                 std::chrono::steady_clock::now() - deviceStart;
             const ipgdev::Config &deviceConfig = ipgdev::runConfig();
             messager << "[main::main]: Device " << device->name() << ": "
-                     << device->description()
-                     << "; on it:"
+                     << device->description() << "; on it:"
                      << (deviceConfig.wilsonLines ? " Wilson-lines" : "")
                      << (deviceConfig.jimwlk ? " JIMWLK" : "")
                      << (deviceConfig.yangMills ? " Yang-Mills" : "")

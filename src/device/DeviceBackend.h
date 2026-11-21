@@ -14,13 +14,14 @@
 #include <vector>
 
 /**
- * The device layer: the JIMWLK evolution and the classical Yang-Mills
- * leapfrog on a GPU.
+ * The device layer: the Wilson lines of the nuclei, the JIMWLK evolution,
+ * the classical Yang-Mills leapfrog and the Coulomb gauge fixing on a GPU.
  *
  * The physics is in the kernels of ipg_kernels.h, one source for all
  * backends. A Backend only owns buffers of real numbers on its device,
  * copies them from and to the host, and runs a kernel over an index range.
- * The drivers (DeviceJimwlk, DeviceYangMills) are written against this
+ * The drivers (WilsonLineDevice, JimwlkDevice, YangMillsDevice and
+ * GaugeFixDevice in DeviceDrivers.h) are written against this
  * interface, so they are the same code for every backend:
  *
  *   - `host`   the kernels on the CPU (with OpenMP), always built: the

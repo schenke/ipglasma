@@ -140,8 +140,7 @@ class GaugeFixDevice {
     void upload(const std::vector<Matrix> &ux, const std::vector<Matrix> &uy);
     /**
      * Computes chi, the projected divergence of the links, on the device.
-     *
-eturn The residual, the mean of Tr(chi^2)/3 over the lattice.
+     * \return The residual, the mean of Tr(chi^2)/3 over the lattice.
      */
     double divergence();
     /// The step after divergence(): the Poisson equation for chi,

@@ -119,8 +119,8 @@ JimwlkDevice::JimwlkDevice(
     if (!backend_.fftAvailable(n)) {
         throw std::runtime_error(
             "device JIMWLK: the FFT of the device is not available for this "
-            "lattice size (it needs an even size with prime factors up to "
-            "16)");
+            "lattice size (the FFT of the kernels needs an even size with "
+            "prime factors up to 32, cuFFT an even size)");
     }
     wilson_ = backend_.createBuffer(18 * sites_);
     generators_ = backend_.createBuffer(8 * 18);

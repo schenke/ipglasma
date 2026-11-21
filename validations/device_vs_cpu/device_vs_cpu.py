@@ -146,8 +146,12 @@ def run_event(ipglasma_path, rundir, input_file, environment, threads):
                    os.path.join(rundir, name))
     shutil.copy(input_file, os.path.join(rundir, "input"))
     env = dict(os.environ)
+    # the settings of the run come from the script alone; the noise must be
+    # drawn on the host (from the random numbers of the run), or a device
+    # run is another event than the CPU run it is compared with site by site
     for key in ("IPGLASMA_DEVICE", "IPGLASMA_DEVICE_PRECISION",
-                "IPGLASMA_DEVICE_STAGES", "IPGLASMA_DEVICE_PROFILE"):
+                "IPGLASMA_DEVICE_STAGES", "IPGLASMA_DEVICE_PROFILE",
+                "IPGLASMA_DEVICE_NOISE"):
         env.pop(key, None)
     env.update(environment)
     env["OMP_NUM_THREADS"] = str(threads)

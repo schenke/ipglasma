@@ -49,8 +49,8 @@ namespace cuda_single {
 void check(cudaError_t status, const char *what) {
     if (status != cudaSuccess) {
         std::ostringstream message;
-        message << "CUDA: " << what << " failed: "
-                << cudaGetErrorString(status);
+        message << "CUDA: " << what
+                << " failed: " << cudaGetErrorString(status);
         throw std::runtime_error(message.str());
     }
 }
@@ -188,9 +188,8 @@ class CudaBackend : public ipgdev::Backend {
     // JIMWLK step while the device copies and computes this one. A staging
     // buffer is filled again only after its previous copy has finished
     // (its event); the caller may reuse source at once, as before.
-    void upload(
-        ipgdev::Buffer buffer, const double *source,
-        std::size_t nReals) override {
+    void upload(ipgdev::Buffer buffer, const double *source, std::size_t nReals)
+        override {
         checkSize(buffer, nReals);
         if (nReals == 0) return;
         const std::size_t bytes = nReals * realSize();
@@ -273,40 +272,19 @@ class CudaBackend : public ipgdev::Backend {
     }
 
     bool fftAvailable(int n) const override {
-        // cuFFT transforms any size; the centering needs an even one
+        // cuFFT transforms any size; the drivers need an even one
         return useCufft_ ? (n % 2 == 0) : Backend::fftAvailable(n);
     }
 
-    void centeredFft(
-        ipgdev::Buffer field, int n, int ncomp, int isign) override {
+    void fft(ipgdev::Buffer field, int n, int ncomp, int isign) override {
         if (!useCufft_) {
-            Backend::centeredFft(field, n, ncomp, isign);
+            Backend::fft(field, n, ncomp, isign);
             return;
         }
-        if (n % 2 != 0) {
-            throw std::runtime_error(
-                "the centered device FFT needs an even lattice size");
-        }
-        const long long elements = static_cast<long long>(n) * n * ncomp;
-        // S F S = G M F M (FFT.cpp): checkerboard signs M before and after
-        // the transform, with the global sign G and the normalization
-        const double globalSign = (((n / 2 + n / 2) & 1) != 0) ? -1. : 1.;
-        const double scaleAfter =
-            globalSign
-            * ((isign == -1) ? 1. / (static_cast<double>(n) * n) : 1.);
         // the fields are planar (ipg_kernels.h), the layout of cuFFT's
-        // fast path: a batch of ncomp planes, stride 1, transformed in
-        // place, with the signs before and the signs and scale after
+        // fast path: a batch of ncomp planes, stride 1, in place
         const cufftHandle plan = planFor(n, ncomp);
         const int direction = (isign == 1) ? CUFFT_FORWARD : CUFFT_INVERSE;
-        ipgdev::Params p;
-        p.n = n;
-        p.ncomp = ncomp;
-        p.i0 = 1;
-        p.r0 = 1.;
-        launch(
-            ipgdev::kCheckerScale, static_cast<std::size_t>(elements), p,
-            {field});
         if (single_) {
             cufftComplex *data = static_cast<cufftComplex *>(memory(field));
             checkFft(cufftExecC2C(plan, data, data, direction), "cufftExecC2C");
@@ -315,10 +293,6 @@ class CudaBackend : public ipgdev::Backend {
                 static_cast<cufftDoubleComplex *>(memory(field));
             checkFft(cufftExecZ2Z(plan, data, data, direction), "cufftExecZ2Z");
         }
-        p.r0 = scaleAfter;
-        launch(
-            ipgdev::kCheckerScale, static_cast<std::size_t>(elements), p,
-            {field});
     }
 
   private:

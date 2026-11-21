@@ -276,7 +276,9 @@ TEST_CASE("fftRadices factorizes the lattice sizes of the device FFT") {
     CHECK(ipgdev::fftRadices(4 * 41 * 3).empty());
 }
 
-TEST_CASE("the device FFT is the centered FFT of FFT::fftnArray") {
+TEST_CASE(
+    "the device FFT with the checkerboard signs is the centered FFT of "
+    "FFT::fftnArray") {
     for (DeviceCase &device : deviceCases()) {
         CAPTURE(device.label);
         // sizes with every radix: 8, 4, 2, 3, 5, 7, 11, 13
@@ -309,17 +311,26 @@ TEST_CASE("the device FFT is the centered FFT of FFT::fftnArray") {
                 CAPTURE(isign);
                 fft.fftnArray(dataPtr.data(), refPtr.data(), nn, isign, mDim);
                 // the device keeps the components planar: component c of
-                // site pos at c * ntot + pos
+                // site pos at c * ntot + pos; its FFT is in natural order
+                // and not normalized, the centered FFT (FFT.cpp, n even)
+                // is S F S with the checkerboard signs S, and 1/n^2
+                // backward
+                std::vector<double> sign(ntot);
+                for (int pos = 0; pos < ntot; pos++) {
+                    sign[pos] = ((pos / n + pos % n) % 2 == 0) ? 1. : -1.;
+                }
+                const double norm = (isign == 1) ? 1. : 1. / ntot;
                 std::vector<std::complex<double>> planar(ntot * mDim);
                 for (int pos = 0; pos < ntot; pos++) {
                     for (int c = 0; c < mDim; c++) {
-                        planar[c * ntot + pos] = data[pos * mDim + c];
+                        planar[c * ntot + pos] =
+                            sign[pos] * data[pos * mDim + c];
                     }
                 }
                 backend.upload(
                     buffer, reinterpret_cast<const double *>(planar.data()),
                     2 * ntot * mDim);
-                backend.centeredFft(buffer, n, mDim, isign);
+                backend.fft(buffer, n, mDim, isign);
                 backend.download(
                     buffer, reinterpret_cast<double *>(result.data()),
                     2 * ntot * mDim);
@@ -329,9 +340,10 @@ TEST_CASE("the device FFT is the centered FFT of FFT::fftnArray") {
                     for (int c = 0; c < mDim; c++) {
                         const std::complex<double> &expected =
                             reference[pos * mDim + c];
-                        difference = std::max(
-                            difference,
-                            std::abs(result[c * ntot + pos] - expected));
+                        const std::complex<double> value =
+                            sign[pos] * norm * result[c * ntot + pos];
+                        difference =
+                            std::max(difference, std::abs(value - expected));
                         size = std::max(size, std::abs(expected));
                     }
                 }
@@ -539,8 +551,10 @@ TEST_CASE("the Wilson lines of a nucleus on a device agree with the host") {
                     kernel[ix * N + iy] =
                         std::exp(-0.1 * std::sqrt(kt2)) / (kt2 + 0.04);
                     scale[ix * N + iy] =
-                        0.3 * (1.2 + std::cos(2. * M_PI * ix / N)
-                               * std::sin(2. * M_PI * iy / N));
+                        0.3
+                        * (1.2
+                           + std::cos(2. * M_PI * ix / N)
+                                 * std::sin(2. * M_PI * iy / N));
                 }
             }
             std::vector<Matrix> reference(sites, Matrix(1.));
@@ -580,9 +594,9 @@ TEST_CASE("the Wilson lines of a nucleus on a device agree with the host") {
                 device.label + " Wilson lines N=" + std::to_string(N),
                 maxDifference(reference, result));
             // not the unit matrix
-            CHECK(maxDifference(reference, std::vector<Matrix>(
-                                               sites, Matrix(1.)))
-                  > 0.3);
+            CHECK(
+                maxDifference(reference, std::vector<Matrix>(sites, Matrix(1.)))
+                > 0.3);
             CHECK(maxDifference(reference, result) < 10. * device.tolerance);
             CHECK(maxNonUnitarity(result) < 1e-13);
         }
@@ -649,10 +663,8 @@ void checkDeviceGaugeFixing(const double spacing) {
                 Matrix gY = g[ix * N + (iy + 1) % N];
                 gX.conjg();
                 gY.conjg();
-                initial.Ux[pos] =
-                    g[pos] * Matrix::fromAlgebraExponent(qx) * gX;
-                initial.Uy[pos] =
-                    g[pos] * Matrix::fromAlgebraExponent(qy) * gY;
+                initial.Ux[pos] = g[pos] * Matrix::fromAlgebraExponent(qx) * gX;
+                initial.Uy[pos] = g[pos] * Matrix::fromAlgebraExponent(qy) * gY;
                 initial.U[pos] = randomAlgebraElement(engine, group, 0.3);
                 initial.U2[pos] = randomAlgebraElement(engine, group, 0.3);
                 initial.Ux2[pos] = randomAlgebraElement(engine, group, 0.3);
@@ -679,8 +691,7 @@ void checkDeviceGaugeFixing(const double spacing) {
                            - lattice.Uy[ix * N + (iy + N - 1) % N];
                 Matrix dDagger = d;
                 dDagger.conjg();
-                Matrix chi =
-                    std::complex<double>(0., -0.25) * (d - dDagger);
+                Matrix chi = std::complex<double>(0., -0.25) * (d - dDagger);
                 chi = chi - (chi.trace() / 3.) * Matrix(1.);
                 sum += (chi * chi).trace().real() / 3.;
             }
@@ -699,8 +710,8 @@ void checkDeviceGaugeFixing(const double spacing) {
                 Matrix uyDagger = lattice.Uy[pos];
                 uxDagger.conjg();
                 uyDagger.conjg();
-                const Matrix plaquette = lattice.Ux[pos] * lattice.Uy[posX]
-                                         * uxDagger * uyDagger;
+                const Matrix plaquette =
+                    lattice.Ux[pos] * lattice.Uy[posX] * uxDagger * uyDagger;
                 values.push_back(plaquette.trace().real());
                 values.push_back(plaquette.trace().imag());
                 values.push_back(

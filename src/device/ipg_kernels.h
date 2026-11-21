@@ -49,7 +49,6 @@
 #define IPG_KERNEL_LIST(X)                           \
     X(kCopy, ipg_k_copy)                             \
     X(kScaleBySite, ipg_k_scale_by_site)             \
-    X(kCheckerScale, ipg_k_checker_scale)            \
     X(kFftPass, ipg_k_fft_pass)                      \
     X(kGaussNoise, ipg_k_gauss_noise)                \
     X(kJimwlkPackNoise, ipg_k_jimwlk_pack_noise)     \
@@ -602,19 +601,6 @@ IPG_FN void ipg_k_scale_by_site(IPG_KERNEL_ARGS) {
     b0[2 * i + 1] *= s;
 }
 
-/* complex b0[i] *= r0 * (-1)^(ix + iy) if i0, else r0; i over the complex
- * elements of the p.ncomp planes. The checkerboard signs turn an FFT in
- * natural order into the centered FFT of FFT.cpp (see there). */
-IPG_FN void ipg_k_checker_scale(IPG_KERNEL_ARGS) {
-    ipg_real s = p.r0;
-    if (p.i0 != 0) {
-        const int site = i % (p.n * p.n);
-        if ((((site / p.n) + (site % p.n)) & 1) != 0) s = -s;
-    }
-    b0[2 * i] *= s;
-    b0[2 * i + 1] *= s;
-}
-
 /* The largest radix of ipg_k_fft_pass (ipgdev::fftRadices()). */
 #define IPG_FFT_MAX_RADIX 32
 
@@ -628,8 +614,6 @@ IPG_FN void ipg_k_checker_scale(IPG_KERNEL_ARGS) {
  *   i1 radix r of the pass
  *   i2 s, the product of the radices of the earlier passes of the axis
  *   i3 +1 forward (exp(-i...), FFTW_FORWARD), -1 backward
- *   i4 bit 0: multiply the source by (-1)^(ix+iy); bit 1: the destination
- *   r0 factor of the destination (the normalization and global sign)
  * With m = N / (s r) and the butterfly b = q + s pp (q < s, pp < m), the
  * destinations t = q + s (k + r pp), k < r, are
  *   W^(k s pp) sum_j source[q + s (pp + j m)] w^(k j),
@@ -661,7 +645,7 @@ IPG_FN void ipg_fft_dft4(
 }
 
 /* Source j of the butterfly (q, pp) of ipg_k_fft_pass into (xr[j],
- * xi[j]), with the checkerboard sign. */
+ * xi[j]). */
 IPG_FN void ipg_fft_load(
     IPG_GLOBAL const ipg_real *b0, const ipg_params p, const int line,
     const int q, const int pp, const int m, const int j, const int comp,
@@ -670,19 +654,12 @@ IPG_FN void ipg_fft_load(
     const int tj = q + p.i2 * (pp + j * m);
     const int site = (p.i0 == 0) ? (line * n + tj) : (tj * n + line);
     const int src = comp * n * n + site;
-    ipg_real vr = b0[2 * src];
-    ipg_real vi = b0[2 * src + 1];
-    if ((p.i4 & 1) != 0 && ((tj + line) & 1) != 0) {
-        vr = -vr;
-        vi = -vi;
-    }
-    xr[j] = vr;
-    xi[j] = vi;
+    xr[j] = b0[2 * src];
+    xi[j] = b0[2 * src + 1];
 }
 
 /* One destination of ipg_k_fft_pass: the result (re, im) of the DFT for
- * index k, times the twiddle factor, with the checkerboard sign and the
- * factor of the pass. */
+ * index k, times the twiddle factor. */
 IPG_FN void ipg_fft_store(
     IPG_GLOBAL ipg_real *b1, IPG_GLOBAL const ipg_real *b2, const ipg_params p,
     const int line, const int q, const int pp, const int k, const ipg_real d,
@@ -696,10 +673,8 @@ IPG_FN void ipg_fft_store(
     const int tw = k * s * pp;
     const ipg_real wr = b2[2 * tw];
     const ipg_real wi = d * b2[2 * tw + 1];
-    ipg_real f = p.r0;
-    if ((p.i4 & 2) != 0 && ((t + line) & 1) != 0) f = -f;
-    b1[2 * dst] = f * (re * wr - im * wi);
-    b1[2 * dst + 1] = f * (re * wi + im * wr);
+    b1[2 * dst] = re * wr - im * wi;
+    b1[2 * dst + 1] = re * wi + im * wr;
 }
 
 IPG_FN void ipg_k_fft_pass(IPG_KERNEL_ARGS) {
@@ -831,8 +806,8 @@ IPG_FN void ipg_k_gauss_noise(IPG_KERNEL_ARGS) {
  * F(B) = (Z(k) - Z(m)^*) / (2 i). This halves the transforms of a step
  * (24 complex instead of 51 in JIMWLK::evolutionStep()). */
 
-/* The site of -k in the centered layout (index j of an axis has the
- * momentum j - n/2, so -k is at (n - j) mod n). */
+/* The site of -k after the FFT of the device, in natural order (index j
+ * of an axis has the momentum j, or j - n, so -k is at (n - j) mod n). */
 IPG_FN int ipg_mirror(int i, int n) {
     const int ix = i / n;
     const int iy = i % n;
@@ -851,14 +826,16 @@ IPG_FN void ipg_k_jimwlk_pack_noise(IPG_KERNEL_ARGS) {
     }
 }
 
-/* The inverse of ipg_k_jimwlk_pack_noise (for the noise coupling).
+/* The inverse of ipg_k_jimwlk_pack_noise (for the noise coupling), times
+ * r0 (the normalization 1/n^2 of the inverse FFT).
  *   b0 Z [site][8] complex, b1 real noise [site][16] */
 IPG_FN void ipg_k_jimwlk_unpack_noise(IPG_KERNEL_ARGS) {
     int a;
     const int S = p.n * p.n;
+    const ipg_real f = p.r0;
     for (a = 0; a < 8; a++) {
-        b1[a * S + i] = b0[2 * (a * S + i)];
-        b1[(8 + a) * S + i] = b0[2 * (a * S + i) + 1];
+        b1[a * S + i] = f * b0[2 * (a * S + i)];
+        b1[(8 + a) * S + i] = f * b0[2 * (a * S + i) + 1];
     }
 }
 

@@ -46,57 +46,6 @@ namespace cuda_single {
 #undef IPG_REAL
 }  // namespace cuda_single
 
-// The layout of cuFFT's fast path. The device layer keeps the ncomp
-// complex components of a site next to each other (component c of site s
-// at c + ncomp * s), which cuFFT can only transform with stride ncomp, its
-// slow path (about 3 times slower in double and 6-9 times in single
-// precision at 800^2 on an RTX 4070). centeredFft() therefore copies a
-// field into ncomp contiguous planes (component c of site s at
-// c * sites + s), transforms them with stride 1, and copies them back. The
-// checkerboard signs and the scale of the centered FFT (FFT.cpp) are
-// applied in these copies, so they need no passes of their own.
-
-/// field (interleaved) -> planes, times scale * (-1)^(x + y); i over the
-/// complex elements of the field.
-template <class Complex, class Real>
-__global__ void interleavedToPlanes(
-    const Complex *__restrict__ field, Complex *__restrict__ planes, int n,
-    int ncomp, long long elements, Real scale) {
-    const long long i =
-        static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
-    if (i >= elements) return;
-    const long long sites = static_cast<long long>(n) * n;
-    const long long site = i / ncomp;
-    const int c = static_cast<int>(i % ncomp);
-    const int x = static_cast<int>(site / n);
-    const int y = static_cast<int>(site % n);
-    const Real s = (((x + y) & 1) != 0) ? -scale : scale;
-    Complex v = field[i];
-    v.x *= s;
-    v.y *= s;
-    planes[c * sites + site] = v;
-}
-
-/// planes -> field (interleaved), times scale * (-1)^(x + y).
-template <class Complex, class Real>
-__global__ void planesToInterleaved(
-    const Complex *__restrict__ planes, Complex *__restrict__ field, int n,
-    int ncomp, long long elements, Real scale) {
-    const long long i =
-        static_cast<long long>(blockIdx.x) * blockDim.x + threadIdx.x;
-    if (i >= elements) return;
-    const long long sites = static_cast<long long>(n) * n;
-    const long long site = i / ncomp;
-    const int c = static_cast<int>(i % ncomp);
-    const int x = static_cast<int>(site / n);
-    const int y = static_cast<int>(site % n);
-    const Real s = (((x + y) & 1) != 0) ? -scale : scale;
-    Complex v = planes[c * sites + site];
-    v.x *= s;
-    v.y *= s;
-    field[i] = v;
-}
-
 void check(cudaError_t status, const char *what) {
     if (status != cudaSuccess) {
         std::ostringstream message;
@@ -340,47 +289,40 @@ class CudaBackend : public ipgdev::Backend {
         }
         const long long elements = static_cast<long long>(n) * n * ncomp;
         // S F S = G M F M (FFT.cpp): checkerboard signs M before and after
-        // the transform, with the global sign G and the normalization, here
-        // in the copies into and out of the planes of cuFFT's fast path
+        // the transform, with the global sign G and the normalization
         const double globalSign = (((n / 2 + n / 2) & 1) != 0) ? -1. : 1.;
         const double scaleAfter =
             globalSign
             * ((isign == -1) ? 1. / (static_cast<double>(n) * n) : 1.);
-        const ipgdev::Buffer planes = scratchLike(field);
+        // the fields are planar (ipg_kernels.h), the layout of cuFFT's
+        // fast path: a batch of ncomp planes, stride 1, transformed in
+        // place, with the signs before and the signs and scale after
         const cufftHandle plan = planFor(n, ncomp);
         const int direction = (isign == 1) ? CUFFT_FORWARD : CUFFT_INVERSE;
-        const int threads = 256;
-        const unsigned int blocks =
-            static_cast<unsigned int>((elements + threads - 1) / threads);
+        ipgdev::Params p;
+        p.n = n;
+        p.ncomp = ncomp;
+        p.i0 = 1;
+        p.r0 = 1.;
+        launch(
+            ipgdev::kCheckerScale, static_cast<std::size_t>(elements), p,
+            {field});
         if (single_) {
             cufftComplex *data = static_cast<cufftComplex *>(memory(field));
-            cufftComplex *planar = static_cast<cufftComplex *>(memory(planes));
-            interleavedToPlanes<<<blocks, threads>>>(
-                data, planar, n, ncomp, elements, 1.f);
-            check(cudaGetLastError(), "a kernel launch");
-            checkFft(
-                cufftExecC2C(plan, planar, planar, direction), "cufftExecC2C");
-            planesToInterleaved<<<blocks, threads>>>(
-                planar, data, n, ncomp, elements,
-                static_cast<float>(scaleAfter));
+            checkFft(cufftExecC2C(plan, data, data, direction), "cufftExecC2C");
         } else {
             cufftDoubleComplex *data =
                 static_cast<cufftDoubleComplex *>(memory(field));
-            cufftDoubleComplex *planar =
-                static_cast<cufftDoubleComplex *>(memory(planes));
-            interleavedToPlanes<<<blocks, threads>>>(
-                data, planar, n, ncomp, elements, 1.);
-            check(cudaGetLastError(), "a kernel launch");
-            checkFft(
-                cufftExecZ2Z(plan, planar, planar, direction), "cufftExecZ2Z");
-            planesToInterleaved<<<blocks, threads>>>(
-                planar, data, n, ncomp, elements, scaleAfter);
+            checkFft(cufftExecZ2Z(plan, data, data, direction), "cufftExecZ2Z");
         }
-        check(cudaGetLastError(), "a kernel launch");
+        p.r0 = scaleAfter;
+        launch(
+            ipgdev::kCheckerScale, static_cast<std::size_t>(elements), p,
+            {field});
     }
 
   private:
-    // The plan for the ncomp planes of a field (see interleavedToPlanes):
+    // The plan for the ncomp planes of a field (ipg_kernels.h):
     // a batch of ncomp transforms with stride 1 and distance n * n.
     cufftHandle planFor(int n, int ncomp) {
         const std::pair<int, int> key(n, ncomp);

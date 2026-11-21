@@ -239,6 +239,16 @@ void releaseRunBackend();
  * set. The CUDA backend uses it to give every rank on a node its own GPU.
  */
 int nodeLocalRank();
+/**
+ * Copies or converts \p n numbers on the host with OpenMP threads, for the
+ * staging buffers of the backends (their sources are not compiled with
+ * OpenMP, e.g. CudaBackend.cu).
+ */
+void parallelCopy(const double *source, double *destination, std::size_t n);
+/// \copydoc parallelCopy
+void parallelCopy(const double *source, float *destination, std::size_t n);
+/// \copydoc parallelCopy
+void parallelCopy(const float *source, double *destination, std::size_t n);
 
 // factories of the backends, defined where they are built
 std::unique_ptr<Backend> createHostBackendDouble();

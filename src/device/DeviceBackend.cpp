@@ -442,6 +442,27 @@ void setRunBackend(const Config &config) {
     if (config.enabled()) device.backend = createBackend(config);
 }
 
+namespace {
+template <class From, class To>
+void copyWithThreads(const From *source, To *destination, std::size_t n) {
+    const long long count = static_cast<long long>(n);
+#pragma omp parallel for schedule(static)
+    for (long long k = 0; k < count; k++) {
+        destination[k] = static_cast<To>(source[k]);
+    }
+}
+}  // namespace
+
+void parallelCopy(const double *source, double *destination, std::size_t n) {
+    copyWithThreads(source, destination, n);
+}
+void parallelCopy(const double *source, float *destination, std::size_t n) {
+    copyWithThreads(source, destination, n);
+}
+void parallelCopy(const float *source, double *destination, std::size_t n) {
+    copyWithThreads(source, destination, n);
+}
+
 int nodeLocalRank() {
     for (const char *name :
          {"OMPI_COMM_WORLD_LOCAL_RANK", "MPI_LOCALRANKID",

@@ -149,6 +149,11 @@ class CudaBackend : public ipgdev::Backend {
             throw std::runtime_error(message.str());
         }
         check(cudaSetDevice(device), "cudaSetDevice");
+        for (Staging &staging : staging_) {
+            check(
+                cudaEventCreateWithFlags(&staging.done, cudaEventDisableTiming),
+                "cudaEventCreateWithFlags");
+        }
         cudaDeviceProp properties;
         check(
             cudaGetDeviceProperties(&properties, device),
@@ -172,6 +177,12 @@ class CudaBackend : public ipgdev::Backend {
 
     ~CudaBackend() override {
         releaseShared();
+        // errors are ignored here (e.g. a runtime that is shutting down)
+        cudaDeviceSynchronize();
+        for (Staging &staging : staging_) {
+            if (staging.data != nullptr) cudaFreeHost(staging.data);
+            if (staging.done != nullptr) cudaEventDestroy(staging.done);
+        }
         for (const auto &plan : plans_) cufftDestroy(plan.second);
         for (void *buffer : buffers_) {
             if (buffer != nullptr) cudaFree(buffer);
@@ -221,23 +232,41 @@ class CudaBackend : public ipgdev::Backend {
     std::size_t bufferSize(ipgdev::Buffer buffer) const override {
         return sizes_.at(static_cast<std::size_t>(buffer));
     }
+    // The copy to the device is asynchronous: the numbers are copied (in
+    // single precision converted) with OpenMP threads into one of two
+    // pinned staging buffers, and cudaMemcpyAsync sends them from there,
+    // so that the host returns at once, e.g. to draw the noise of the next
+    // JIMWLK step while the device copies and computes this one. A staging
+    // buffer is filled again only after its previous copy has finished
+    // (its event); the caller may reuse source at once, as before.
     void upload(
         ipgdev::Buffer buffer, const double *source,
         std::size_t nReals) override {
         checkSize(buffer, nReals);
-        const void *data = source;
-        if (single_) {
-            convert_.resize(nReals);
-            for (std::size_t k = 0; k < nReals; k++) {
-                convert_[k] = static_cast<float>(source[k]);
-            }
-            data = convert_.data();
+        if (nReals == 0) return;
+        const std::size_t bytes = nReals * realSize();
+        Staging &staging = staging_[nextStaging_];
+        nextStaging_ = 1 - nextStaging_;
+        check(cudaEventSynchronize(staging.done), "cudaEventSynchronize");
+        if (staging.bytes < bytes) {
+            if (staging.data != nullptr) cudaFreeHost(staging.data);
+            staging.data = nullptr;
+            staging.bytes = 0;
+            check(cudaMallocHost(&staging.data, bytes), "cudaMallocHost");
+            staging.bytes = bytes;
         }
-        checkAfterWait(
-            cudaMemcpy(
-                memory(buffer), data, nReals * realSize(),
-                cudaMemcpyHostToDevice),
-            "cudaMemcpy to the device");
+        if (single_) {
+            ipgdev::parallelCopy(
+                source, static_cast<float *>(staging.data), nReals);
+        } else {
+            ipgdev::parallelCopy(
+                source, static_cast<double *>(staging.data), nReals);
+        }
+        check(
+            cudaMemcpyAsync(
+                memory(buffer), staging.data, bytes, cudaMemcpyHostToDevice, 0),
+            "cudaMemcpyAsync to the device");
+        check(cudaEventRecord(staging.done, 0), "cudaEventRecord");
     }
     void download(
         ipgdev::Buffer buffer, double *destination,
@@ -254,9 +283,7 @@ class CudaBackend : public ipgdev::Backend {
                 cudaMemcpyDeviceToHost),
             "cudaMemcpy from the device");
         if (single_) {
-            for (std::size_t k = 0; k < nReals; k++) {
-                destination[k] = static_cast<double>(convert_[k]);
-            }
+            ipgdev::parallelCopy(convert_.data(), destination, nReals);
         }
     }
     void swapBuffers(ipgdev::Buffer a, ipgdev::Buffer b) override {
@@ -386,6 +413,15 @@ class CudaBackend : public ipgdev::Backend {
     std::vector<void *> buffers_;
     std::vector<std::size_t> sizes_;
     std::vector<float> convert_;
+    /// A pinned host buffer of the asynchronous uploads, with the event of
+    /// its last copy.
+    struct Staging {
+        void *data = nullptr;
+        std::size_t bytes = 0;
+        cudaEvent_t done = nullptr;
+    };
+    Staging staging_[2];
+    int nextStaging_ = 0;
     std::map<std::pair<int, int>, cufftHandle> plans_;
 };
 

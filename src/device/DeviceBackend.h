@@ -132,6 +132,15 @@ class Backend {
         return n % 2 == 0 && !fftRadices(n).empty();
     }
 
+    /**
+     * Releases what the backend keeps between calls (the scratch buffers
+     * and twiddle tables of the FFT, and the cuFFT plans of the CUDA
+     * backend), so that the next stage of an event starts without the
+     * memory of the previous one; the drivers that use the FFT call it
+     * when they end. It is made again when needed.
+     */
+    virtual void releaseCaches() { releaseShared(); }
+
   protected:
     /// A scratch buffer of the size of \p like, kept for later calls.
     Buffer scratchLike(Buffer like);

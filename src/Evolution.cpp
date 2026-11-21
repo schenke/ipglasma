@@ -838,6 +838,12 @@ void Evolution::run(Lattice *lat, Group *group, Parameters *param) {
                 // below read the fields on the host
                 device->step(dtau / 2., it * dtau, false);
                 device->downloadMomenta(*lat);
+                // all fields are on the host now (the measurement at this
+                // time downloaded them, and the momenta of the half step
+                // just now): the device fields are released before the
+                // observables, whose gauge fixing on the device needs
+                // memory of its own (0.6 GB at 800^2 in double precision)
+                device.reset();
             }
         } else if (it < itmax) {
             evolveStepPersistent(lat, param, dtau, (it)*dtau, true);

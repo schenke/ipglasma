@@ -1067,8 +1067,10 @@ IPG_FN void ipg_k_gf_update(IPG_KERNEL_ARGS) {
     ipg_su3 G, h;
     int k;
     /* as GaugeFix::fftChi(): no transformation where the exponential
-     * failed */
-    if (g.e[4] != g.e[4]) g = ipg_identity();
+     * failed, i.e. where element (0, 2), real part e[4] or imaginary part
+     * e[5], is NaN (the CPU code also prints a warning, which a kernel
+     * cannot) */
+    if (g.e[4] != g.e[4] || g.e[5] != g.e[5]) g = ipg_identity();
     G = ipg_mul(g, ipg_load(b1, i));
     h = ipg_adj_mul(G, G);
     for (k = 0; k < 18; k++) h.e[k] = -h.e[k];

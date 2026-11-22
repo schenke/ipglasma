@@ -938,7 +938,9 @@ python3 device_vs_cpu.py --ipglasma-path ../.. --devices cuda
 python3 device_vs_cpu.py --ipglasma-path ../.. --devices opencl
 ```
 `--devices` takes `device[:precision]` entries (`cuda:single`,
-`host:double`, ...), `--size` the lattice size (default 256). The script
+`host:double`, ...; without a precision, the default of the device),
+`--size` the lattice size (default 256). A device run whose log does not
+name the device fails. The script
 prints the differences with their tolerances, PASSED or FAILED per run, the
 times of the stages, and writes everything to
 `device_vs_cpu_output/device_vs_cpu_summary.json`. `--kernel-timing` also
@@ -993,7 +995,9 @@ threads:
   steps and the gauge fixing on that device (see "Running on a GPU" in the
   main `README.md`), with the same number of threads for the stages on the
   CPU and the random numbers drawn on the device (`--device-noise`,
-  default `device`). The summary has these scans in `device_scans`. The
+  default `device`; the other mode gets run directories of its own).
+  Without a precision (`cuda`), the device uses its default. The summary
+  has these scans in `device_scans`. The
   device runs asynchronously, so the time per step of its runs is only the
   time to launch the step; the stage times include the waits.
 

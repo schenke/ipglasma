@@ -62,9 +62,11 @@ go to <datadir>/performance_summary.json and performance.pdf.
 """
 
 import argparse
+import itertools
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -107,10 +109,24 @@ def per_step(result, phase):
     return result["phases"][phase] / calls if calls else float("nan")
 
 
+def device_spec(value):
+    """A --devices entry, BACKEND[:PRECISION]; it names the run
+    directories, so nothing else is accepted."""
+    if not re.fullmatch(r"(cuda|opencl|host)(:(double|single))?", value):
+        raise argparse.ArgumentTypeError(
+            f"{value!r}: expected cuda, opencl or host, optionally with "
+            ":double or :single")
+    return value
+
+
 def run_tag(cfg):
     tag = f"size{cfg['size']}_threads{cfg['threads']}_rep{cfg['repeat']}"
     if cfg.get("device"):
         tag += "_" + cfg["device"].replace(":", "-")
+        # a run directory per noise mode, so that the cache of one mode is
+        # not taken for the other (the default, device, keeps the plain tag)
+        if cfg.get("device_noise", "device") != "device":
+            tag += "_noise-" + cfg["device_noise"]
     return tag
 
 
@@ -145,8 +161,11 @@ def run_one(cfg, settings):
     if cfg.get("device"):
         backend, _, precision = cfg["device"].partition(":")
         env.update(IPGLASMA_DEVICE=backend,
-                   IPGLASMA_DEVICE_PRECISION=precision or "double",
-                   IPGLASMA_DEVICE_NOISE=settings["device_noise"])
+                   IPGLASMA_DEVICE_NOISE=cfg["device_noise"])
+        # without a precision, the default of the device (e.g. single on
+        # GPUs without double precision)
+        if precision:
+            env["IPGLASMA_DEVICE_PRECISION"] = precision
     with open(os.path.join(workdir, "run.log"), "w") as log:
         start = time.perf_counter()
         process = subprocess.Popen([settings["ipglasma"], "input"],
@@ -245,7 +264,7 @@ def plot(summary, path):
     middle.set_title(f"N = {summary['settings']['scan_size']}", fontsize=9)
     middle.legend(fontsize=7)
     for (device, scan), style in zip(summary.get("device_scans", {}).items(),
-                                     ["--", ":"]):
+                                     itertools.cycle(["--", ":", "-."])):
         left.plot([r["size"] for r in scan],
                   [r["phases"].get("event.total", np.nan) for r in scan],
                   "o" + style, color=colors[-1], ms=3,
@@ -284,7 +303,7 @@ def main():
                         help="the size of the thread scan")
     parser.add_argument("--repeats", type=int, default=2)
     parser.add_argument("--devices", nargs="*", default=[],
-                        metavar="DEVICE[:PRECISION]",
+                        type=device_spec, metavar="DEVICE[:PRECISION]",
                         help="size scans on these devices too, e.g. "
                              "cuda:double cuda:single")
     parser.add_argument("--device-noise", choices=["device", "host"],
@@ -303,7 +322,6 @@ def main():
         "template": os.path.abspath(args.template),
         "datadir": os.path.abspath(args.datadir),
         "tables": os.path.join(path, "tables"),
-        "device_noise": args.device_noise,
         "overrides": {
             "L": args.L, "LOutput": args.L, "seed": args.seed, "bMin": 0.,
             "bMax": 0., "rotateReactionPlane": 0, "writeWilsonLines": 0,
@@ -327,7 +345,8 @@ def main():
         + [{"size": args.scan_size, "threads": t}
            for t in args.thread_counts if t != args.threads
            or args.scan_size not in args.sizes] \
-        + [{"size": n, "threads": args.threads, "device": device}
+        + [{"size": n, "threads": args.threads, "device": device,
+            "device_noise": args.device_noise}
            for device in args.devices for n in args.sizes]
     runs, failures = [], []
     start = time.time()

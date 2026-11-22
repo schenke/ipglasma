@@ -66,6 +66,7 @@ import argparse
 import glob
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -110,6 +111,11 @@ def write_input(template, path, size, seed, steps_per_spacing):
         "writeWilsonLines": "2",
         "writeWilsonLineGeometry": "0",
         "writeHydro": "1",
+        # a cutoff well above the rounding of the vacuum, with a margin over
+        # the default 0.01 for single precision: with a cutoff of 0, the
+        # columns of the eccentricity file that count the cells above the
+        # cutoff depend on the sign of the rounding there
+        "eccentricityCutoff": "0.1",
     }
     lines = []
     seen = set()
@@ -126,14 +132,19 @@ def write_input(template, path, size, seed, steps_per_spacing):
     for key, value in changes.items():
         if key not in seen:
             lines.append(f"{key} {value}\n")
-    # a cutoff well above the rounding of the vacuum, with a margin over
-    # the default 0.01 for single precision: with a cutoff of 0, the
-    # columns of the eccentricity file that count the cells above the
-    # cutoff depend on the sign of the rounding there
-    lines.append("eccentricityCutoff 0.1\n")
     lines.append("EndOfFile\n")
     with open(path, "w") as f:
         f.writelines(lines)
+
+
+def device_spec(value):
+    """A --devices entry, BACKEND[:PRECISION]; it names the run directory,
+    which is deleted before the run, so nothing else is accepted."""
+    if not re.fullmatch(r"(cuda|opencl|host)(:(double|single))?", value):
+        raise argparse.ArgumentTypeError(
+            f"{value!r}: expected cuda, opencl or host, optionally with "
+            ":double or :single")
+    return value
 
 
 def run_event(ipglasma_path, rundir, input_file, environment, threads):
@@ -157,6 +168,8 @@ def run_event(ipglasma_path, rundir, input_file, environment, threads):
     env.update(environment)
     env["OMP_NUM_THREADS"] = str(threads)
     env["IPGLASMA_PROFILE"] = "1"
+    # the profile in the run directory, where read_profile() looks
+    env["IPGLASMA_PROFILE_DIR"] = rundir
     executable = os.path.abspath(os.path.join(ipglasma_path, "ipglasma"))
     start = time.time()
     with open(os.path.join(rundir, "log.txt"), "w") as log:
@@ -269,7 +282,7 @@ def main():
                         "Qs table, nucleusConfigurations/, tables/ and "
                         "the example input")
     parser.add_argument("--devices", nargs="+", default=None,
-                        metavar="DEVICE[:PRECISION]",
+                        type=device_spec, metavar="DEVICE[:PRECISION]",
                         help="runs to compare with the CPU: cuda, opencl "
                         "or host, optionally with :single or :double "
                         "(default precision: that of the device; "
@@ -333,6 +346,16 @@ def main():
             passed = False
             continue
         event = read_event(os.path.join(datadir, label))
+        if not event["device_line"]:
+            # e.g. an executable without the device layer, which ignores
+            # IPGLASMA_DEVICE and repeats the CPU run exactly
+            error = (f"the run did not use the device (no '[main::main]: "
+                     f"Device' line in {os.path.join(datadir, label)}"
+                     f"/log.txt)")
+            print(f"  FAILED: {error}")
+            results[label] = {"error": error, "passed": False}
+            passed = False
+            continue
         profiles[label] = event["profile"]
         result = compare(reference, event)
         single = "single precision" in event["device_line"]

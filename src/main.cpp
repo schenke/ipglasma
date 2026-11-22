@@ -240,12 +240,31 @@ int main(int argc, char *argv[]) {
                             "to about 1e-6, not 1e-15 (see README.md, GPU).";
                 messager.flush("warning");
             }
-            if (param->jimwlk.enabled && deviceConfig.jimwlk
+            // the stages on the device that run in this event and need its
+            // FFT; without it they would fall back to the CPU unannounced
+            std::string fftStages;
+            if (deviceConfig.wilsonLines
+                && param->wilsonLines.readInitialWilsonLines == 0) {
+                fftStages += " Wilson-lines";
+            }
+            if (deviceConfig.jimwlk && param->jimwlk.enabled) {
+                fftStages += " JIMWLK";
+            }
+            if (deviceConfig.gaugeFix
+                && param->output.computeGluonMultiplicity) {
+                fftStages += " gauge-fixing";
+            }
+            if (!fftStages.empty()
                 && !device->fftAvailable(param->lattice.size)) {
                 messager << "[main::main]: The FFT of the device needs an "
-                            "even lattice size with prime factors up to 32; "
-                            "size = "
-                         << param->lattice.size << " is not. Exiting.";
+                            "even lattice size with prime factors up to 32 "
+                            "(any even size with cuFFT); size = "
+                         << param->lattice.size
+                         << " is not, and the stages on the device that "
+                            "need it are:"
+                         << fftStages
+                         << ". Choose another size or leave them on the "
+                            "CPU (IPGLASMA_DEVICE_STAGES). Exiting.";
                 messager.flush("error");
                 exit(1);
             }

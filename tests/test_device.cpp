@@ -16,6 +16,7 @@
 #include <complex>
 #include <cstdlib>
 #include <iostream>
+#include <limits>
 #include <memory>
 #include <random>
 #include <string>
@@ -120,13 +121,20 @@ void report(const std::string &what, double difference) {
     }
 }
 
+// the larger error of the two; a non-finite value counts as infinite:
+// std::max(x, NaN) is x, so a NaN of the device would pass the checks
+double maxError(double current, double value) {
+    return std::isfinite(value) ? std::max(current, value)
+                                : std::numeric_limits<double>::infinity();
+}
+
 double maxDifference(
     const std::vector<Matrix> &a, const std::vector<Matrix> &b) {
     double difference = 0.;
     for (std::size_t i = 0; i < a.size(); i++) {
         for (int k = 0; k < 9; k++) {
             difference =
-                std::max(difference, std::abs(a[i].get(k) - b[i].get(k)));
+                maxError(difference, std::abs(a[i].get(k) - b[i].get(k)));
         }
     }
     return difference;
@@ -141,9 +149,9 @@ double maxNonUnitarity(const std::vector<Matrix> &field) {
         product = product * u;
         for (int k = 0; k < 9; k++) {
             const double unit = (k % 4 == 0) ? 1. : 0.;
-            deviation = std::max(deviation, std::abs(product.get(k) - unit));
+            deviation = maxError(deviation, std::abs(product.get(k) - unit));
         }
-        deviation = std::max(deviation, std::abs(u.det() - 1.));
+        deviation = maxError(deviation, std::abs(u.det() - 1.));
     }
     return deviation;
 }
@@ -369,7 +377,7 @@ TEST_CASE(
                         const std::complex<double> value =
                             sign[pos] * norm * result[c * ntot + pos];
                         difference =
-                            std::max(difference, std::abs(value - expected));
+                            maxError(difference, std::abs(value - expected));
                         size = std::max(size, std::abs(expected));
                     }
                 }
@@ -794,7 +802,7 @@ void checkDeviceGaugeFixing(const double spacing) {
             const std::vector<double> after = invariants(deviceLattice);
             double invariantDifference = 0.;
             for (std::size_t k = 0; k < after.size(); k++) {
-                invariantDifference = std::max(
+                invariantDifference = maxError(
                     invariantDifference,
                     std::abs(after[k] - initialInvariants[k]));
             }
@@ -1008,7 +1016,7 @@ TEST_CASE("the device noise is Gaussian, independent and reproducible") {
         {
             double difference = 0.;
             for (std::size_t k = 0; k < n; k++) {
-                difference = std::max(
+                difference = maxError(
                     difference, std::abs(noise[k] - hostDoubleNoise[k]));
             }
             report(

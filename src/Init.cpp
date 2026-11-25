@@ -537,7 +537,7 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             messager_.flush("info");
         }
     }
-    auto evolveNucleusWilsonLineOnDevice =
+    auto buildNucleusWilsonLinesOnDevice =
         [&](const std::vector<double> &colorChargeScale,
             std::vector<Matrix> &U) {
             IPG_PROFILE_SCOPE("initialization.wilson_device");
@@ -561,11 +561,11 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
         };
 
     // loop over longitudinal direction, once for each nucleus
-    auto evolveNucleusWilsonLine =
+    auto buildNucleusWilsonLines =
         [&](const std::vector<double> &colorChargeScale,
             std::vector<Matrix> &U) {
             if (device) {
-                evolveNucleusWilsonLineOnDevice(colorChargeScale, U);
+                buildNucleusWilsonLinesOnDevice(colorChargeScale, U);
                 return;
             }
             for (int k = 0; k < Ny; k++) {
@@ -610,8 +610,8 @@ void Init::setV(Lattice *lat, Parameters *param, Random *random) {
             }
         };
 
-    evolveNucleusWilsonLine(colorChargeScaleA, lat->U);
-    evolveNucleusWilsonLine(colorChargeScaleB, lat->U2);
+    buildNucleusWilsonLines(colorChargeScaleA, lat->U);
+    buildNucleusWilsonLines(colorChargeScaleB, lat->U2);
 
     if (param->output.writeWilsonLineSnapshot) {
         WilsonLineIO().writeTrainingData(lat, param);

@@ -69,6 +69,11 @@ FILTER_PATTERNS        = *.md=@PROJECT_SOURCE_DIR@/doc/markdown_math_filter.py
 # heading anchors like GitHub's, so README links such as
 # (#nuclear-density-profiles) work in both
 MARKDOWN_ID_STYLE      = GITHUB
+# the READMEs of tables/ and validations/ are pages of their own (\ref
+# md_tables_2README in mainpage.dox), not the documentation of their
+# directories, which Doxygen 1.13 and later make of a README.md in a
+# subdirectory by default; older versions ignore this tag with a warning
+IMPLICIT_DIR_DOCS      = NO
 RECURSIVE              = NO
 USE_MDFILE_AS_MAINPAGE =
 EXCLUDE_PATTERNS       =

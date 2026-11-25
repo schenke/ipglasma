@@ -99,6 +99,7 @@ cmake -B build -DIPGLASMA_CUDA=ON
 # Apple M (OpenCL is part of macOS, nothing to install)
 cmake -B build -DIPGLASMA_OPENCL=ON
 cmake --build build
+cmake --install build
 ```
 Both options can be on. `-DCMAKE_CUDA_ARCHITECTURES=80` selects the GPU generation (80: A100), and `-DCUDAToolkit_ROOT=...` a toolkit that is not on the path. On Perlmutter, load `cudatoolkit` before running CMake.
 

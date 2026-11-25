@@ -80,7 +80,11 @@ if (NOT disableMPI)
         message("Found MPI library ${MPI_CXX_INCLUDE_DIRS}")
         include_directories(${MPI_CXX_INCLUDE_PATH})
     else ()
-        option (disableMPI "Build executable without MPI" ON)
+        # a normal variable, not option(): the cache entry above already
+        # exists, so option() would leave it OFF. Not cached, so that MPI
+        # is looked for again at the next configure.
+        message("MPI not found, building without MPI")
+        set(disableMPI ON)
     endif()
 endif()
 
